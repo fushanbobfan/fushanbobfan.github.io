@@ -21,4 +21,7 @@ Read the full research report for more information! Happy reading! :D
   <img src="/assets/IMG/mental_health.png" width="220" height="220">
 </div>
 
+
+
+
 May everyone in this world have a happy life and be free from depression. 
