@@ -20,7 +20,7 @@ Read the full research report for more information! Happy reading! :D
   <span>
     May everyone in this world have a happy life and be free from depression.
   </span>
-  <img src="/assets/IMG/mental_health.png" width="180" height="180">
+  <img src="/assets/IMG/mental_health.png" width="220" height="180">
 </p>
 
 
