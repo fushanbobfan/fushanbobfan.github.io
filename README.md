@@ -16,7 +16,6 @@ Read the full research report for more information! Happy reading! :D
 ## Here is the link to my Code: [Code](https://colab.research.google.com/drive/1h_saQIu_ITup1P5ltFC0QWL80VB7LGa-#scrollTo=k6y0calXJOgO)
 ## Here is the link to the dataset: [Dataset](https://www.kaggle.com/datasets/shariful07/student-mental-health/data)
 
-<img align="right" width="220" height="220" src="/assets/IMG/mental_health.png">
 
 May everyone in this world have a happy life and be free from depression.
 
