@@ -1,7 +1,11 @@
-**Hi class, welcome to the AOS C111/204 final project!** <img align="right" width="220" height="220" src="/assets/IMG/template_logo.png">
+**Mental health issues, especially students’ mental health issues, are always a highly concerning problem among all universities.** <img align="right" width="220" height="220" src="/assets/IMG/template_logo.png">
 
-For this project, you will be applying your skills to train a machine learning model using real-world data, then publishing a report on your own website.
+Even considering only my personal social circle,
+I know many students who suffer from severe depression due to academic, work, financial,
+peer, or other pressures. 
 
+** Here is the link to my full report: [Report](/assets/BobFan AOS C111_C204_Final_Project_Report.pdf)
+** Here is the link to my Code: [Code](https://colab.research.google.com/drive/1h_saQIu_ITup1P5ltFC0QWL80VB7LGa-#scrollTo=k6y0calXJOgO)
 * To get data for your project, you could:
   * use **your own data** from a separate research activity
   * **scour the internet** to find something original, then preprocess it yourself - see the Module Overview on BruinLearn for some resources
