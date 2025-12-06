@@ -16,12 +16,11 @@ Read the full research report for more information! Happy reading! :D
 ## Here is the link to my Code: [Code](https://colab.research.google.com/drive/1h_saQIu_ITup1P5ltFC0QWL80VB7LGa-#scrollTo=k6y0calXJOgO)
 ## Here is the link to the dataset: [Dataset](https://www.kaggle.com/datasets/shariful07/student-mental-health/data)
 
+<p style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+  <span>
+    May everyone in this world have a happy life and be free from depression.
+  </span>
+  <img src="/assets/IMG/mental_health.png" width="180" height="180">
+</p>
 
-<div style="float:right; margin-left:15px;">
-  <img src="/assets/IMG/mental_health.png" width="220" height="220">
-</div>
 
-
-
-
-May everyone in this world have a happy life and be free from depression. 
