@@ -17,7 +17,8 @@ Read the full research report for more information! Happy reading! :D
 ## Here is the link to the dataset: [Dataset](https://www.kaggle.com/datasets/shariful07/student-mental-health/data)
 
 
-<img align="right" width="220" height="220" src="/assets/IMG/mental_health.png">
-
+<div style="float:right; margin-left:15px;">
+  <img src="/assets/IMG/mental_health.png" width="220" height="220">
+</div>
 
 May everyone in this world have a happy life and be free from depression. 
