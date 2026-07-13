@@ -125,6 +125,45 @@ input[type="range"] {
   white-space: pre-line;
 }
 
+.diagnostics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+#diagnostics-chart {
+  width: 100%;
+  height: auto;
+  background: #0b0e17;
+  border: 1px solid #232a3d;
+  border-radius: 6px;
+}
+
+.diagnostics-legend {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.15rem;
+  border-radius: 1px;
+}
+
+.swatch.energy {
+  background: #f8961e;
+}
+
+.swatch.momentum {
+  background: #4cc9f0;
+  margin-left: 0.5rem;
+}
+
 footer {
   margin-top: 2rem;
   color: var(--muted);

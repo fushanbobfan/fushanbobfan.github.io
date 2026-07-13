@@ -40,8 +40,25 @@
         </label>
       </div>
 
+      <div class="control-row">
+        <label for="show-diagnostics">
+          <input id="show-diagnostics" type="checkbox" checked />
+          Show conservation chart
+        </label>
+      </div>
+
       <p class="hint">Click anywhere on the canvas to drop a new body.</p>
       <p class="stats" id="stats" aria-live="polite"></p>
+
+      <div class="diagnostics-panel" id="diagnostics-panel">
+        <canvas id="diagnostics-chart" width="220" height="90" role="img"
+          aria-label="Energy and momentum drift from their starting values, over time"></canvas>
+        <p class="diagnostics-legend">
+          <span class="swatch energy"></span> energy drift
+          <span class="swatch momentum"></span> momentum drift
+        </p>
+        <p class="stats" id="diagnostics-readout" aria-live="polite"></p>
+      </div>
     </section>
   </main>
 
