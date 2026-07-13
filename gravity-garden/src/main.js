@@ -1,5 +1,6 @@
-import { stepSimulation, totalEnergy, mergeCollidingBodies } from "./physics.js";
+import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from "./physics.js";
 import { PRESETS, listPresetNames } from "./presets.js";
+import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -11,6 +12,11 @@ const speedInput = document.getElementById("speed");
 const speedValue = document.getElementById("speed-value");
 const trailsCheckbox = document.getElementById("trails");
 const statsEl = document.getElementById("stats");
+const diagnosticsCheckbox = document.getElementById("show-diagnostics");
+const diagnosticsPanel = document.getElementById("diagnostics-panel");
+const diagnosticsChart = document.getElementById("diagnostics-chart");
+const diagnosticsCtx = diagnosticsChart.getContext("2d");
+const diagnosticsReadout = document.getElementById("diagnostics-readout");
 
 const MAX_TRAIL_LENGTH = 400;
 const BASE_DT = 0.05;
@@ -22,6 +28,8 @@ let softening = 4;
 let running = true;
 let speed = 1;
 let showTrails = true;
+let showDiagnostics = true;
+const diagnosticsHistory = createDiagnosticsHistory();
 
 for (const key of listPresetNames()) {
   const option = document.createElement("option");
@@ -37,6 +45,7 @@ function loadPreset(key) {
   G = preset.G;
   softening = preset.softening;
   bodies = preset.build().map((b) => ({ ...b, trail: [] }));
+  resetDiagnosticsHistory(diagnosticsHistory);
 }
 
 function worldToScreen(x, y) {
@@ -77,6 +86,49 @@ function draw() {
   }
 }
 
+function drawTrace(samples, key, color, scale) {
+  if (samples.length < 2) return;
+  const w = diagnosticsChart.width;
+  const h = diagnosticsChart.height;
+  const midY = h / 2;
+
+  diagnosticsCtx.beginPath();
+  diagnosticsCtx.strokeStyle = color;
+  diagnosticsCtx.lineWidth = 1.5;
+  samples.forEach((sample, i) => {
+    const x = (i / (diagnosticsHistory.maxLength - 1)) * w;
+    const y = midY - (sample[key] / scale) * midY;
+    if (i === 0) diagnosticsCtx.moveTo(x, y);
+    else diagnosticsCtx.lineTo(x, y);
+  });
+  diagnosticsCtx.stroke();
+}
+
+function drawDiagnostics() {
+  const w = diagnosticsChart.width;
+  const h = diagnosticsChart.height;
+  diagnosticsCtx.clearRect(0, 0, w, h);
+
+  // Zero line, since "no drift" is the whole point of the chart.
+  diagnosticsCtx.strokeStyle = "#232a3d";
+  diagnosticsCtx.lineWidth = 1;
+  diagnosticsCtx.beginPath();
+  diagnosticsCtx.moveTo(0, h / 2);
+  diagnosticsCtx.lineTo(w, h / 2);
+  diagnosticsCtx.stroke();
+
+  const samples = diagnosticsHistory.samples;
+  if (samples.length === 0) return;
+
+  // Auto-scale each trace to its own largest magnitude so slow drift is still visible,
+  // with a small floor so a perfectly flat trace doesn't divide by zero.
+  const energyScale = Math.max(...samples.map((s) => Math.abs(s.energyDriftPct)), 1e-6);
+  const momentumScale = Math.max(...samples.map((s) => Math.abs(s.momentumDrift)), 1e-6);
+
+  drawTrace(samples, "energyDriftPct", "#f8961e", energyScale);
+  drawTrace(samples, "momentumDrift", "#4cc9f0", momentumScale);
+}
+
 function tick() {
   if (running) {
     const dt = BASE_DT * speed;
@@ -91,9 +143,20 @@ function tick() {
         body.trail.length = 0;
       }
     }
+
+    const energy = totalEnergy(bodies, G, softening);
+    const { px, py } = totalMomentum(bodies);
+    const sample = recordSample(diagnosticsHistory, energy, Math.hypot(px, py));
+
+    if (showDiagnostics) {
+      diagnosticsReadout.textContent =
+        `energy drift: ${sample.energyDriftPct.toFixed(2)}%\n` +
+        `momentum drift: ${sample.momentumDrift.toFixed(3)}`;
+    }
   }
 
   draw();
+  if (showDiagnostics) drawDiagnostics();
   statsEl.textContent =
     `bodies: ${bodies.length}\n` + `energy: ${totalEnergy(bodies, G, softening).toFixed(1)}`;
 
@@ -121,6 +184,11 @@ speedInput.addEventListener("input", () => {
 
 trailsCheckbox.addEventListener("change", () => {
   showTrails = trailsCheckbox.checked;
+});
+
+diagnosticsCheckbox.addEventListener("change", () => {
+  showDiagnostics = diagnosticsCheckbox.checked;
+  diagnosticsPanel.hidden = !showDiagnostics;
 });
 
 canvas.addEventListener("click", (event) => {
