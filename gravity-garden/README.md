@@ -26,6 +26,7 @@ Then open the printed URL in a browser.
 - **Pause / Reset** — stop the simulation or reload the current scenario's initial conditions.
 - **Speed** — scale the simulation timestep.
 - **Show trails** — toggle position trails for each body.
+- **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
 - **Click the canvas** — drop a new body at that point, with zero initial velocity.
 
 ## Presets
@@ -54,6 +55,16 @@ total mass and momentum, rather than orbiting forever at zero distance.
 
 The core simulation logic lives in [`src/physics.js`](src/physics.js) and has no
 dependency on the DOM or canvas, so it can be tested and reused on its own.
+
+### Conservation chart
+
+Energy and momentum should stay constant in a real Newtonian system; any drift
+you see is purely numerical error from the leapfrog integrator taking finite
+steps. The conservation chart plots that drift live, as a percentage of each
+quantity's value when tracking started, so you can watch the integrator's
+accuracy hold up (or degrade at high speeds/small softening) instead of only
+checking it in a test suite. [`src/diagnostics.js`](src/diagnostics.js) keeps a
+short rolling history of these samples and has no DOM dependency either.
 
 ## Development
 
