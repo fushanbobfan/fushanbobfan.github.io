@@ -1,6 +1,7 @@
 import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from "./physics.js";
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
+import { predictTrajectory } from "./trajectory.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -17,9 +18,14 @@ const diagnosticsPanel = document.getElementById("diagnostics-panel");
 const diagnosticsChart = document.getElementById("diagnostics-chart");
 const diagnosticsCtx = diagnosticsChart.getContext("2d");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
+const predictCheckbox = document.getElementById("predict");
 
 const MAX_TRAIL_LENGTH = 400;
 const BASE_DT = 0.05;
+const PREDICTION_STEPS = 150;
+// Recomputing every tick is cheap even for the largest preset, but throttling avoids
+// wasted work if someone clicks a burst of new bodies into the scene in one frame.
+const PREDICTION_RECOMPUTE_INTERVAL = 10;
 
 let currentPresetKey = "sun-and-planets";
 let bodies = [];
@@ -29,6 +35,10 @@ let running = true;
 let speed = 1;
 let showTrails = true;
 let showDiagnostics = true;
+let showPrediction = false;
+let predictedPaths = [];
+let ticksSincePrediction = Infinity;
+let lastPredictedBodyCount = -1;
 const diagnosticsHistory = createDiagnosticsHistory();
 
 for (const key of listPresetNames()) {
@@ -46,6 +56,8 @@ function loadPreset(key) {
   softening = preset.softening;
   bodies = preset.build().map((b) => ({ ...b, trail: [] }));
   resetDiagnosticsHistory(diagnosticsHistory);
+  predictedPaths = [];
+  lastPredictedBodyCount = -1;
 }
 
 function worldToScreen(x, y) {
@@ -75,6 +87,27 @@ function draw() {
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
+  }
+
+  if (showPrediction && predictedPaths.length === bodies.length) {
+    ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.5;
+    bodies.forEach((body, i) => {
+      const path = predictedPaths[i];
+      if (path.length < 2) return;
+      ctx.beginPath();
+      ctx.strokeStyle = body.color;
+      ctx.lineWidth = 1;
+      const start = worldToScreen(path[0].x, path[0].y);
+      ctx.moveTo(start.sx, start.sy);
+      for (let j = 1; j < path.length; j++) {
+        const p = worldToScreen(path[j].x, path[j].y);
+        ctx.lineTo(p.sx, p.sy);
+      }
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
   }
 
   for (const body of bodies) {
@@ -155,6 +188,15 @@ function tick() {
     }
   }
 
+  if (showPrediction) {
+    ticksSincePrediction++;
+    if (bodies.length !== lastPredictedBodyCount || ticksSincePrediction >= PREDICTION_RECOMPUTE_INTERVAL) {
+      predictedPaths = predictTrajectory(bodies, PREDICTION_STEPS, BASE_DT * speed, G, softening);
+      lastPredictedBodyCount = bodies.length;
+      ticksSincePrediction = 0;
+    }
+  }
+
   draw();
   if (showDiagnostics) drawDiagnostics();
   statsEl.textContent =
@@ -189,6 +231,11 @@ trailsCheckbox.addEventListener("change", () => {
 diagnosticsCheckbox.addEventListener("change", () => {
   showDiagnostics = diagnosticsCheckbox.checked;
   diagnosticsPanel.hidden = !showDiagnostics;
+});
+
+predictCheckbox.addEventListener("change", () => {
+  showPrediction = predictCheckbox.checked;
+  ticksSincePrediction = Infinity;
 });
 
 function addBodyAt(x, y) {
@@ -251,6 +298,11 @@ document.addEventListener("keydown", (event) => {
     case "C":
       diagnosticsCheckbox.checked = !diagnosticsCheckbox.checked;
       diagnosticsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "p":
+    case "P":
+      predictCheckbox.checked = !predictCheckbox.checked;
+      predictCheckbox.dispatchEvent(new Event("change"));
       break;
     case "ArrowUp":
       event.preventDefault();

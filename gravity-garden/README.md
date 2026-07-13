@@ -27,6 +27,8 @@ Then open the printed URL in a browser.
 - **Speed** — scale the simulation timestep.
 - **Show trails** — toggle position trails for each body.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
+- **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
+  (see below).
 - **Click the canvas** — drop a new body at that point, with zero initial velocity. Focus the
   canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from the keyboard, at a
   random point.
@@ -40,6 +42,7 @@ Then open the printed URL in a browser.
 | `↑` / `↓` | Raise / lower speed |
 | `T` | Toggle trails |
 | `C` | Toggle the conservation chart |
+| `P` | Toggle predicted paths |
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
 
 Shortcuts are ignored while a form control (the scenario dropdown, speed slider, etc.) has
@@ -81,6 +84,15 @@ quantity's value when tracking started, so you can watch the integrator's
 accuracy hold up (or degrade at high speeds/small softening) instead of only
 checking it in a test suite. [`src/diagnostics.js`](src/diagnostics.js) keeps a
 short rolling history of these samples and has no DOM dependency either.
+
+### Predicted paths
+
+[`src/trajectory.js`](src/trajectory.js) forecasts each body's future path by re-running the
+same leapfrog integrator on a throwaway copy of the current state, without touching the live
+simulation. The result is drawn as a dashed ghost line ahead of each body — a look at where
+gravity is about to take it, updated every few ticks (or immediately, if the number of bodies
+changes). The forecast doesn't run collision merging, so a predicted close encounter shows the
+bodies' unmerged paths rather than the merge itself.
 
 ## Development
 
