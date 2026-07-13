@@ -35,6 +35,7 @@ Then open the printed URL in a browser.
 | Sun & Planets | A central mass with three planets in circular orbits at increasing radii. |
 | Binary Star + Planet | Two unequal-mass stars orbiting their common center of mass, with a planet further out. |
 | Figure-Eight Three-Body | The Chenciner–Montgomery choreography: three equal masses chasing each other around a stable figure-eight curve. |
+| Rogue Flyby | A sun and one orbiting planet, plus a fast interloper on a hyperbolic path that gets deflected by a gravitational slingshot. |
 | Random Cluster | A randomized cluster of bodies with varied mass, useful for watching chaotic multi-body dynamics emerge. |
 
 ## Physics
