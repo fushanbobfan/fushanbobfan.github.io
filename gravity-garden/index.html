@@ -13,8 +13,8 @@
   </header>
 
   <main>
-    <canvas id="stage" width="800" height="600" role="img"
-      aria-label="Simulation of orbiting bodies under gravity"></canvas>
+    <canvas id="stage" width="800" height="600" role="img" tabindex="0"
+      aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point."></canvas>
 
     <section class="controls" aria-label="Simulation controls">
       <div class="control-row">
@@ -23,8 +23,8 @@
       </div>
 
       <div class="control-row">
-        <button id="toggle-play" type="button" aria-pressed="false">Pause</button>
-        <button id="reset" type="button">Reset</button>
+        <button id="toggle-play" type="button" aria-pressed="false" aria-keyshortcuts="Space">Pause</button>
+        <button id="reset" type="button" aria-keyshortcuts="r">Reset</button>
       </div>
 
       <div class="control-row">
@@ -47,7 +47,18 @@
         </label>
       </div>
 
-      <p class="hint">Click anywhere on the canvas to drop a new body.</p>
+      <p class="hint">Click anywhere on the canvas, or focus it and press Enter/Space, to drop a new body.</p>
+      <details class="shortcuts">
+        <summary>Keyboard shortcuts</summary>
+        <ul>
+          <li><kbd>Space</kbd> play / pause</li>
+          <li><kbd>R</kbd> reset the scenario</li>
+          <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> raise / lower speed</li>
+          <li><kbd>T</kbd> toggle trails</li>
+          <li><kbd>C</kbd> toggle the conservation chart</li>
+          <li><kbd>Enter</kbd> / <kbd>Space</kbd> on the canvas: drop a body</li>
+        </ul>
+      </details>
       <p class="stats" id="stats" aria-live="polite"></p>
 
       <div class="diagnostics-panel" id="diagnostics-panel">

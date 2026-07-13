@@ -191,14 +191,7 @@ diagnosticsCheckbox.addEventListener("change", () => {
   diagnosticsPanel.hidden = !showDiagnostics;
 });
 
-canvas.addEventListener("click", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const sx = (event.clientX - rect.left) * scaleX;
-  const sy = (event.clientY - rect.top) * scaleY;
-  const { x, y } = screenToWorld(sx, sy);
-
+function addBodyAt(x, y) {
   bodies.push({
     mass: 40,
     x,
@@ -209,6 +202,69 @@ canvas.addEventListener("click", (event) => {
     color: "#f8961e",
     trail: [],
   });
+}
+
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const sx = (event.clientX - rect.left) * scaleX;
+  const sy = (event.clientY - rect.top) * scaleY;
+  const { x, y } = screenToWorld(sx, sy);
+  addBodyAt(x, y);
+});
+
+// Dropping a body by clicking the canvas has no keyboard equivalent otherwise, so Enter/Space
+// on the focused canvas drops one at a random point within its bounds. Stops the event from
+// reaching the document-level shortcut handler below, since Space is also the play/pause key.
+canvas.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  event.stopPropagation();
+  const { x, y } = screenToWorld(Math.random() * canvas.width, Math.random() * canvas.height);
+  addBodyAt(x, y);
+});
+
+const FORM_CONTROL_TAGS = new Set(["INPUT", "SELECT", "TEXTAREA", "BUTTON"]);
+
+// Global shortcuts for the transport controls, so the simulation can be driven without a
+// mouse. Skipped while a form control has focus so arrow keys keep working on the speed
+// slider and Enter/Space keep working on buttons and the canvas handler above.
+document.addEventListener("keydown", (event) => {
+  if (FORM_CONTROL_TAGS.has(document.activeElement?.tagName)) return;
+
+  switch (event.key) {
+    case " ":
+      event.preventDefault();
+      toggleBtn.click();
+      break;
+    case "r":
+    case "R":
+      resetBtn.click();
+      break;
+    case "t":
+    case "T":
+      trailsCheckbox.checked = !trailsCheckbox.checked;
+      trailsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "c":
+    case "C":
+      diagnosticsCheckbox.checked = !diagnosticsCheckbox.checked;
+      diagnosticsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "ArrowUp":
+      event.preventDefault();
+      speedInput.value = Math.min(Number(speedInput.max), speed + 0.1).toFixed(1);
+      speedInput.dispatchEvent(new Event("input"));
+      break;
+    case "ArrowDown":
+      event.preventDefault();
+      speedInput.value = Math.max(Number(speedInput.min), speed - 0.1).toFixed(1);
+      speedInput.dispatchEvent(new Event("input"));
+      break;
+    default:
+      break;
+  }
 });
 
 loadPreset(currentPresetKey);

@@ -27,7 +27,23 @@ Then open the printed URL in a browser.
 - **Speed** — scale the simulation timestep.
 - **Show trails** — toggle position trails for each body.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
-- **Click the canvas** — drop a new body at that point, with zero initial velocity.
+- **Click the canvas** — drop a new body at that point, with zero initial velocity. Focus the
+  canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from the keyboard, at a
+  random point.
+
+### Keyboard shortcuts
+
+| Key | Action |
+| --- | --- |
+| `Space` | Play / pause |
+| `R` | Reset the current scenario |
+| `↑` / `↓` | Raise / lower speed |
+| `T` | Toggle trails |
+| `C` | Toggle the conservation chart |
+| `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
+
+Shortcuts are ignored while a form control (the scenario dropdown, speed slider, etc.) has
+focus, so their own native keyboard behavior still works as expected.
 
 ## Presets
 
