@@ -129,6 +129,44 @@ export const PRESETS = {
     },
   },
 
+  "rogue-flyby": {
+    label: "Rogue Flyby",
+    G: 1,
+    softening: 4,
+    // A stable sun-and-planet pair plus a fast interloper on a hyperbolic
+    // path, demonstrating a gravitational slingshot: the rogue body's course
+    // bends sharply near closest approach but it is moving far too fast to
+    // be captured into orbit.
+    build() {
+      const G = this.G;
+      const sunMass = 15000;
+      const sun = { mass: sunMass, x: 0, y: 0, vx: 0, vy: 0, radius: 14, color: "#ffd166" };
+
+      const planetDist = 140;
+      const planet = {
+        mass: 10,
+        x: planetDist,
+        y: 0,
+        vx: 0,
+        vy: circularOrbitVelocity(G, sunMass, planetDist),
+        radius: 5,
+        color: "#4cc9f0",
+      };
+
+      const rogue = {
+        mass: 15,
+        x: -600,
+        y: 60,
+        vx: 22,
+        vy: 0,
+        radius: 4,
+        color: "#ff006e",
+      };
+
+      return [sun, planet, rogue];
+    },
+  },
+
   "random-cluster": {
     label: "Random Cluster",
     G: 1,
