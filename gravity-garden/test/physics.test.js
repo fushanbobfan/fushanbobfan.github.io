@@ -6,6 +6,7 @@ import {
   totalMomentum,
   totalEnergy,
   centerOfMass,
+  mergeCollidingBodies,
 } from "../src/physics.js";
 
 function twoBodySystem() {
@@ -78,4 +79,57 @@ test("softening keeps acceleration finite even when two bodies coincide", () => 
   const [a0] = computeAccelerations(bodies, 1, 0.05);
   assert.ok(Number.isFinite(a0.ax));
   assert.ok(Number.isFinite(a0.ay));
+});
+
+test("mergeCollidingBodies leaves separated bodies untouched", () => {
+  const bodies = [
+    { mass: 10, x: 0, y: 0, vx: 1, vy: 0, radius: 3, color: "a" },
+    { mass: 10, x: 100, y: 0, vx: -1, vy: 0, radius: 3, color: "b" },
+  ];
+  const result = mergeCollidingBodies(bodies);
+  assert.equal(result.length, 2);
+});
+
+test("mergeCollidingBodies combines overlapping bodies, conserving mass and momentum", () => {
+  const bodies = [
+    { mass: 10, x: 0, y: 0, vx: 2, vy: 0, radius: 5, color: "a" },
+    { mass: 30, x: 4, y: 0, vx: -1, vy: 1, radius: 5, color: "b" },
+  ];
+  const beforeMomentum = totalMomentum(bodies);
+
+  const result = mergeCollidingBodies(bodies);
+
+  assert.equal(result.length, 1);
+  const merged = result[0];
+  assert.equal(merged.mass, 40);
+
+  const afterMomentum = totalMomentum(result);
+  assert.ok(Math.abs(afterMomentum.px - beforeMomentum.px) < 1e-9);
+  assert.ok(Math.abs(afterMomentum.py - beforeMomentum.py) < 1e-9);
+
+  // Heavier body's color should win.
+  assert.equal(merged.color, "b");
+  // Radius grows (area-conserving in 2D) but stays smaller than the naive sum.
+  assert.ok(merged.radius > 5 && merged.radius < 10);
+});
+
+test("mergeCollidingBodies resolves a chain of three overlapping bodies into one", () => {
+  const bodies = [
+    { mass: 10, x: 0, y: 0, vx: 0, vy: 0, radius: 5, color: "a" },
+    { mass: 10, x: 6, y: 0, vx: 0, vy: 0, radius: 5, color: "b" },
+    { mass: 10, x: 12, y: 0, vx: 0, vy: 0, radius: 5, color: "c" },
+  ];
+  const result = mergeCollidingBodies(bodies);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].mass, 30);
+});
+
+test("mergeCollidingBodies does not mutate its input", () => {
+  const bodies = [
+    { mass: 10, x: 0, y: 0, vx: 0, vy: 0, radius: 5, color: "a" },
+    { mass: 10, x: 4, y: 0, vx: 0, vy: 0, radius: 5, color: "b" },
+  ];
+  mergeCollidingBodies(bodies);
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].x, 0);
 });
