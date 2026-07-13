@@ -75,6 +75,56 @@ export function centerOfMass(bodies) {
   return { x: weighted.x / totalMass, y: weighted.y / totalMass };
 }
 
+/**
+ * Merges bodies that overlap (distance between centers less than the sum of
+ * their radii) into a single inelastic body, conserving total mass and
+ * momentum. Returns a new array; the input is left untouched.
+ * @param {object[]} bodies each needs mass, x, y, vx, vy, radius, color
+ * @returns {object[]}
+ */
+export function mergeCollidingBodies(bodies) {
+  const remaining = bodies.map((b) => ({ ...b }));
+  const merged = [];
+
+  while (remaining.length > 0) {
+    let current = remaining.shift();
+
+    // Keep re-scanning after every merge: growing `current` can now reach
+    // bodies that were too far away to merge with it on an earlier pass.
+    let mergedAny = true;
+    while (mergedAny) {
+      mergedAny = false;
+
+      for (let i = remaining.length - 1; i >= 0; i--) {
+        const other = remaining[i];
+        const dx = other.x - current.x;
+        const dy = other.y - current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < current.radius + other.radius) {
+          const totalMass = current.mass + other.mass;
+          current = {
+            mass: totalMass,
+            x: (current.mass * current.x + other.mass * other.x) / totalMass,
+            y: (current.mass * current.y + other.mass * other.y) / totalMass,
+            vx: (current.mass * current.vx + other.mass * other.vx) / totalMass,
+            vy: (current.mass * current.vy + other.mass * other.vy) / totalMass,
+            radius: Math.sqrt(current.radius ** 2 + other.radius ** 2),
+            color: current.mass >= other.mass ? current.color : other.color,
+            trail: [],
+          };
+          remaining.splice(i, 1);
+          mergedAny = true;
+        }
+      }
+    }
+
+    merged.push(current);
+  }
+
+  return merged;
+}
+
 export function totalEnergy(bodies, G, softening = DEFAULT_SOFTENING) {
   let kinetic = 0;
   for (const b of bodies) {

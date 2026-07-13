@@ -1,4 +1,4 @@
-import { stepSimulation, totalEnergy } from "./physics.js";
+import { stepSimulation, totalEnergy, mergeCollidingBodies } from "./physics.js";
 import { PRESETS, listPresetNames } from "./presets.js";
 
 const canvas = document.getElementById("stage");
@@ -81,6 +81,7 @@ function tick() {
   if (running) {
     const dt = BASE_DT * speed;
     stepSimulation(bodies, dt, G, softening);
+    bodies = mergeCollidingBodies(bodies);
 
     for (const body of bodies) {
       if (showTrails) {

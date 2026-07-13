@@ -48,6 +48,9 @@ the squared distance in the force calculation so that accelerations stay finite
 if two bodies pass very close to each other, a standard technique in N-body
 simulation.
 
+When two bodies overlap, they merge into one inelastic body that conserves
+total mass and momentum, rather than orbiting forever at zero distance.
+
 The core simulation logic lives in [`src/physics.js`](src/physics.js) and has no
 dependency on the DOM or canvas, so it can be tested and reused on its own.
 
