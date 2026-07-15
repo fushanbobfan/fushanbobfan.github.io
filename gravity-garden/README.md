@@ -29,9 +29,12 @@ Then open the printed URL in a browser.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
 - **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
   (see below).
-- **Click the canvas** — drop a new body at that point, with zero initial velocity. Focus the
-  canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from the keyboard, at a
-  random point.
+- **Click empty space on the canvas** — drop a new body at that point, with zero initial
+  velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
+  the keyboard, at a random point.
+- **Click an existing body** — select it and open the inspector panel, showing its live mass,
+  position, speed, and kinetic energy (see below). Click it again, or the panel's **Deselect**
+  button, to close it.
 
 ### Keyboard shortcuts
 
@@ -44,6 +47,8 @@ Then open the printed URL in a browser.
 | `C` | Toggle the conservation chart |
 | `P` | Toggle predicted paths |
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
+| `[` / `]` | Select the previous / next body |
+| `Esc` | Deselect the current body |
 
 Shortcuts are ignored while a form control (the scenario dropdown, speed slider, etc.) has
 focus, so their own native keyboard behavior still works as expected.
@@ -93,6 +98,16 @@ simulation. The result is drawn as a dashed ghost line ahead of each body — a 
 gravity is about to take it, updated every few ticks (or immediately, if the number of bodies
 changes). The forecast doesn't run collision merging, so a predicted close encounter shows the
 bodies' unmerged paths rather than the merge itself.
+
+### Inspector panel
+
+Selecting a body (by clicking it, or cycling with <kbd>[</kbd>/<kbd>]</kbd>) opens a panel
+showing its current mass, position, speed, and kinetic energy, refreshed every tick — useful
+for, say, watching a planet's speed peak at perihelion or a rogue body's kinetic energy stay
+enormous even as gravity bends its path. Selection tracks the body by identity across ticks;
+if the selected body merges with another, the resulting fused body has no history to select, so
+the panel closes automatically. [`src/inspector.js`](src/inspector.js) has no DOM dependency
+either — it just picks a body from a point or a neighbor in the list, and reads off its stats.
 
 ## Development
 
