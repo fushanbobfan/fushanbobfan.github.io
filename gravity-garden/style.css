@@ -54,6 +54,12 @@ main {
   border: 1px solid #232a3d;
   max-width: 100%;
   height: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+#stage.panning {
+  cursor: grabbing;
 }
 
 .controls {
