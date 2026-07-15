@@ -339,6 +339,17 @@ function canvasScale() {
   return { rect, scaleX: canvas.width / rect.width, scaleY: canvas.height / rect.height };
 }
 
+// Manual panning and "keep centered" both drive the same viewport, and would
+// otherwise fight each other every tick, so taking the wheel manually turns
+// auto-follow back off.
+function manualPanBy(dxScreen, dyScreen) {
+  if (followSelected) {
+    followSelected = false;
+    followCheckbox.checked = false;
+  }
+  viewport = panBy(viewport, dxScreen, dyScreen);
+}
+
 canvas.addEventListener("mousedown", (event) => {
   isPointerDown = true;
   dragMoved = false;
@@ -353,7 +364,7 @@ window.addEventListener("mousemove", (event) => {
 
   dragMoved = true;
   const { scaleX, scaleY } = canvasScale();
-  viewport = panBy(viewport, dx * scaleX, dy * scaleY);
+  manualPanBy(dx * scaleX, dy * scaleY);
   lastDragPoint = { x: event.clientX, y: event.clientY };
   canvas.classList.add("panning");
 });
@@ -455,7 +466,7 @@ document.addEventListener("keydown", (event) => {
     case "ArrowUp":
       event.preventDefault();
       if (event.shiftKey) {
-        viewport = panBy(viewport, 0, PAN_STEP);
+        manualPanBy(0, PAN_STEP);
       } else {
         speedInput.value = Math.min(Number(speedInput.max), speed + 0.1).toFixed(1);
         speedInput.dispatchEvent(new Event("input"));
@@ -464,7 +475,7 @@ document.addEventListener("keydown", (event) => {
     case "ArrowDown":
       event.preventDefault();
       if (event.shiftKey) {
-        viewport = panBy(viewport, 0, -PAN_STEP);
+        manualPanBy(0, -PAN_STEP);
       } else {
         speedInput.value = Math.max(Number(speedInput.min), speed - 0.1).toFixed(1);
         speedInput.dispatchEvent(new Event("input"));
@@ -472,11 +483,11 @@ document.addEventListener("keydown", (event) => {
       break;
     case "ArrowLeft":
       event.preventDefault();
-      viewport = panBy(viewport, PAN_STEP, 0);
+      manualPanBy(PAN_STEP, 0);
       break;
     case "ArrowRight":
       event.preventDefault();
-      viewport = panBy(viewport, -PAN_STEP, 0);
+      manualPanBy(-PAN_STEP, 0);
       break;
     case "+":
     case "=":
