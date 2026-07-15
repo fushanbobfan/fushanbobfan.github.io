@@ -2,7 +2,7 @@ import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
-import { findBodyAtPoint, describeBody } from "./inspector.js";
+import { findBodyAtPoint, describeBody, adjacentBodyId } from "./inspector.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -355,6 +355,15 @@ document.addEventListener("keydown", (event) => {
     case "P":
       predictCheckbox.checked = !predictCheckbox.checked;
       predictCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "]":
+      selectedBodyId = adjacentBodyId(bodies, selectedBodyId, 1);
+      break;
+    case "[":
+      selectedBodyId = adjacentBodyId(bodies, selectedBodyId, -1);
+      break;
+    case "Escape":
+      selectedBodyId = null;
       break;
     case "ArrowUp":
       event.preventDefault();
