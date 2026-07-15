@@ -54,7 +54,10 @@
         </label>
       </div>
 
-      <p class="hint">Click anywhere on the canvas, or focus it and press Enter/Space, to drop a new body.</p>
+      <p class="hint">
+        Click empty space on the canvas, or focus it and press Enter/Space, to drop a new body.
+        Click an existing body, or press <kbd>[</kbd>/<kbd>]</kbd>, to inspect it.
+      </p>
       <details class="shortcuts">
         <summary>Keyboard shortcuts</summary>
         <ul>
@@ -65,6 +68,8 @@
           <li><kbd>C</kbd> toggle the conservation chart</li>
           <li><kbd>P</kbd> toggle predicted paths</li>
           <li><kbd>Enter</kbd> / <kbd>Space</kbd> on the canvas: drop a body</li>
+          <li><kbd>[</kbd> / <kbd>]</kbd> select the previous / next body</li>
+          <li><kbd>Esc</kbd> deselect the current body</li>
         </ul>
       </details>
       <p class="stats" id="stats" aria-live="polite"></p>
@@ -77,6 +82,14 @@
           <span class="swatch momentum"></span> momentum drift
         </p>
         <p class="stats" id="diagnostics-readout" aria-live="polite"></p>
+      </div>
+
+      <div class="inspector-panel" id="inspector-panel" hidden>
+        <div class="inspector-header">
+          <span>Selected body</span>
+          <button id="deselect" type="button" aria-keyshortcuts="Escape">Deselect</button>
+        </div>
+        <p class="stats" id="inspector-readout" aria-live="polite"></p>
       </div>
     </section>
   </main>

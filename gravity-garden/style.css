@@ -193,6 +193,27 @@ kbd {
   margin-left: 0.5rem;
 }
 
+.inspector-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-top: 1px solid #232a3d;
+  padding-top: 0.85rem;
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.inspector-header button {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+}
+
 footer {
   margin-top: 2rem;
   color: var(--muted);
