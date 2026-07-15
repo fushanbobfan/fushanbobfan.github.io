@@ -14,7 +14,7 @@
 
   <main>
     <canvas id="stage" width="800" height="600" role="img" tabindex="0"
-      aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point."></canvas>
+      aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag to pan the view, scroll to zoom."></canvas>
 
     <section class="controls" aria-label="Simulation controls">
       <div class="control-row">
@@ -25,6 +25,11 @@
       <div class="control-row">
         <button id="toggle-play" type="button" aria-pressed="false" aria-keyshortcuts="Space">Pause</button>
         <button id="reset" type="button" aria-keyshortcuts="r">Reset</button>
+      </div>
+
+      <div class="control-row">
+        <button id="reset-view" type="button" aria-keyshortcuts="0">Reset view</button>
+        <span id="zoom-value">1.0&times;</span>
       </div>
 
       <div class="control-row">
@@ -57,6 +62,7 @@
       <p class="hint">
         Click empty space on the canvas, or focus it and press Enter/Space, to drop a new body.
         Click an existing body, or press <kbd>[</kbd>/<kbd>]</kbd>, to inspect it.
+        Drag to pan the view, or scroll to zoom.
       </p>
       <details class="shortcuts">
         <summary>Keyboard shortcuts</summary>
@@ -70,6 +76,10 @@
           <li><kbd>Enter</kbd> / <kbd>Space</kbd> on the canvas: drop a body</li>
           <li><kbd>[</kbd> / <kbd>]</kbd> select the previous / next body</li>
           <li><kbd>Esc</kbd> deselect the current body</li>
+          <li><kbd>+</kbd> / <kbd>-</kbd> zoom in / out</li>
+          <li><kbd>0</kbd> reset the view</li>
+          <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> pan left / right</li>
+          <li><kbd>Shift</kbd>+<kbd>&uarr;</kbd> / <kbd>Shift</kbd>+<kbd>&darr;</kbd> pan up / down</li>
         </ul>
       </details>
       <p class="stats" id="stats" aria-live="polite"></p>

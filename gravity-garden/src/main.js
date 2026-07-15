@@ -3,6 +3,14 @@ import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId } from "./inspector.js";
+import {
+  createViewport,
+  worldToScreen as vpWorldToScreen,
+  screenToWorld as vpScreenToWorld,
+  panBy,
+  zoomAt,
+  resetViewport,
+} from "./viewport.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -23,8 +31,11 @@ const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
 const deselectBtn = document.getElementById("deselect");
+const resetViewBtn = document.getElementById("reset-view");
+const zoomValue = document.getElementById("zoom-value");
 
 const MAX_TRAIL_LENGTH = 400;
+const PAN_STEP = 40;
 const BASE_DT = 0.05;
 const PREDICTION_STEPS = 150;
 // Recomputing every tick is cheap even for the largest preset, but throttling avoids
@@ -45,6 +56,7 @@ let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
 let nextBodyId = 1;
 let selectedBodyId = null;
+let viewport = createViewport();
 const diagnosticsHistory = createDiagnosticsHistory();
 
 for (const key of listPresetNames()) {
@@ -65,14 +77,15 @@ function loadPreset(key) {
   predictedPaths = [];
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
+  viewport = resetViewport();
 }
 
 function worldToScreen(x, y) {
-  return { sx: canvas.width / 2 + x, sy: canvas.height / 2 + y };
+  return vpWorldToScreen(viewport, canvas.width, canvas.height, x, y);
 }
 
 function screenToWorld(sx, sy) {
-  return { x: sx - canvas.width / 2, y: sy - canvas.height / 2 };
+  return vpScreenToWorld(viewport, canvas.width, canvas.height, sx, sy);
 }
 
 function draw() {
@@ -119,16 +132,17 @@ function draw() {
 
   for (const body of bodies) {
     const { sx, sy } = worldToScreen(body.x, body.y);
+    const screenRadius = body.radius * viewport.zoom;
     ctx.beginPath();
     ctx.fillStyle = body.color;
-    ctx.arc(sx, sy, body.radius, 0, Math.PI * 2);
+    ctx.arc(sx, sy, screenRadius, 0, Math.PI * 2);
     ctx.fill();
 
     if (body.id === selectedBodyId) {
       ctx.beginPath();
       ctx.strokeStyle = "#e8ecf4";
       ctx.lineWidth = 1.5;
-      ctx.arc(sx, sy, body.radius + 4, 0, Math.PI * 2);
+      ctx.arc(sx, sy, screenRadius + 4, 0, Math.PI * 2);
       ctx.stroke();
     }
   }
@@ -277,6 +291,15 @@ deselectBtn.addEventListener("click", () => {
   selectedBodyId = null;
 });
 
+function updateZoomReadout() {
+  zoomValue.textContent = `${viewport.zoom.toFixed(1)}×`;
+}
+
+resetViewBtn.addEventListener("click", () => {
+  viewport = resetViewport();
+  updateZoomReadout();
+});
+
 function addBodyAt(x, y) {
   bodies.push({
     mass: 40,
@@ -295,10 +318,49 @@ function selectBody(id) {
   selectedBodyId = selectedBodyId === id ? null : id;
 }
 
-canvas.addEventListener("click", (event) => {
+const DRAG_THRESHOLD = 4;
+let isPointerDown = false;
+let dragMoved = false;
+let lastDragPoint = null;
+
+function canvasScale() {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  return { rect, scaleX: canvas.width / rect.width, scaleY: canvas.height / rect.height };
+}
+
+canvas.addEventListener("mousedown", (event) => {
+  isPointerDown = true;
+  dragMoved = false;
+  lastDragPoint = { x: event.clientX, y: event.clientY };
+});
+
+window.addEventListener("mousemove", (event) => {
+  if (!isPointerDown) return;
+  const dx = event.clientX - lastDragPoint.x;
+  const dy = event.clientY - lastDragPoint.y;
+  if (!dragMoved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
+  dragMoved = true;
+  const { scaleX, scaleY } = canvasScale();
+  viewport = panBy(viewport, dx * scaleX, dy * scaleY);
+  lastDragPoint = { x: event.clientX, y: event.clientY };
+  canvas.classList.add("panning");
+});
+
+window.addEventListener("mouseup", () => {
+  isPointerDown = false;
+  canvas.classList.remove("panning");
+});
+
+canvas.addEventListener("click", (event) => {
+  // A click that ended a drag pans the view; it shouldn't also select or
+  // drop a body under the pointer's final position.
+  if (dragMoved) {
+    dragMoved = false;
+    return;
+  }
+
+  const { rect, scaleX, scaleY } = canvasScale();
   const sx = (event.clientX - rect.left) * scaleX;
   const sy = (event.clientY - rect.top) * scaleY;
   const { x, y } = screenToWorld(sx, sy);
@@ -312,6 +374,20 @@ canvas.addEventListener("click", (event) => {
     addBodyAt(x, y);
   }
 });
+
+canvas.addEventListener(
+  "wheel",
+  (event) => {
+    event.preventDefault();
+    const { rect, scaleX, scaleY } = canvasScale();
+    const sx = (event.clientX - rect.left) * scaleX;
+    const sy = (event.clientY - rect.top) * scaleY;
+    const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+    viewport = zoomAt(viewport, canvas.width, canvas.height, sx, sy, factor);
+    updateZoomReadout();
+  },
+  { passive: false }
+);
 
 // Dropping a body by clicking the canvas has no keyboard equivalent otherwise, so Enter/Space
 // on the focused canvas drops one at a random point within its bounds. Stops the event from
@@ -367,13 +443,42 @@ document.addEventListener("keydown", (event) => {
       break;
     case "ArrowUp":
       event.preventDefault();
-      speedInput.value = Math.min(Number(speedInput.max), speed + 0.1).toFixed(1);
-      speedInput.dispatchEvent(new Event("input"));
+      if (event.shiftKey) {
+        viewport = panBy(viewport, 0, PAN_STEP);
+      } else {
+        speedInput.value = Math.min(Number(speedInput.max), speed + 0.1).toFixed(1);
+        speedInput.dispatchEvent(new Event("input"));
+      }
       break;
     case "ArrowDown":
       event.preventDefault();
-      speedInput.value = Math.max(Number(speedInput.min), speed - 0.1).toFixed(1);
-      speedInput.dispatchEvent(new Event("input"));
+      if (event.shiftKey) {
+        viewport = panBy(viewport, 0, -PAN_STEP);
+      } else {
+        speedInput.value = Math.max(Number(speedInput.min), speed - 0.1).toFixed(1);
+        speedInput.dispatchEvent(new Event("input"));
+      }
+      break;
+    case "ArrowLeft":
+      event.preventDefault();
+      viewport = panBy(viewport, PAN_STEP, 0);
+      break;
+    case "ArrowRight":
+      event.preventDefault();
+      viewport = panBy(viewport, -PAN_STEP, 0);
+      break;
+    case "+":
+    case "=":
+      viewport = zoomAt(viewport, canvas.width, canvas.height, canvas.width / 2, canvas.height / 2, 1.2);
+      updateZoomReadout();
+      break;
+    case "-":
+      viewport = zoomAt(viewport, canvas.width, canvas.height, canvas.width / 2, canvas.height / 2, 1 / 1.2);
+      updateZoomReadout();
+      break;
+    case "0":
+      viewport = resetViewport();
+      updateZoomReadout();
       break;
     default:
       break;
@@ -381,4 +486,5 @@ document.addEventListener("keydown", (event) => {
 });
 
 loadPreset(currentPresetKey);
+updateZoomReadout();
 requestAnimationFrame(tick);
