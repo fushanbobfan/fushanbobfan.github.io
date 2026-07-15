@@ -33,6 +33,7 @@ const inspectorReadout = document.getElementById("inspector-readout");
 const deselectBtn = document.getElementById("deselect");
 const resetViewBtn = document.getElementById("reset-view");
 const zoomValue = document.getElementById("zoom-value");
+const followCheckbox = document.getElementById("follow-selected");
 
 const MAX_TRAIL_LENGTH = 400;
 const PAN_STEP = 40;
@@ -56,6 +57,7 @@ let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
 let nextBodyId = 1;
 let selectedBodyId = null;
+let followSelected = false;
 let viewport = createViewport();
 const diagnosticsHistory = createDiagnosticsHistory();
 
@@ -245,6 +247,11 @@ function tick() {
     }
   }
 
+  if (followSelected && selectedBodyId !== null) {
+    const selected = bodies.find((b) => b.id === selectedBodyId);
+    if (selected) viewport = { ...viewport, panX: selected.x, panY: selected.y };
+  }
+
   updateInspectorPanel();
   draw();
   if (showDiagnostics) drawDiagnostics();
@@ -285,6 +292,10 @@ diagnosticsCheckbox.addEventListener("change", () => {
 predictCheckbox.addEventListener("change", () => {
   showPrediction = predictCheckbox.checked;
   ticksSincePrediction = Infinity;
+});
+
+followCheckbox.addEventListener("change", () => {
+  followSelected = followCheckbox.checked;
 });
 
 deselectBtn.addEventListener("click", () => {
