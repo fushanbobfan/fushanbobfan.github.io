@@ -33,8 +33,8 @@ Then open the printed URL in a browser.
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
 - **Click an existing body** — select it and open the inspector panel, showing its live mass,
-  position, speed, and kinetic energy (see below). Click it again, or the panel's **Deselect**
-  button, to close it.
+  position, speed, and kinetic energy (see below), plus a **Keep centered** checkbox to have the
+  view follow it. Click it again, or the panel's **Deselect** button, to close it.
 - **Drag the canvas** — pan the view. **Scroll** over it — zoom in or out, centered on the
   pointer. **Reset view** — return to the default pan and zoom.
 
@@ -114,6 +114,11 @@ enormous even as gravity bends its path. Selection tracks the body by identity a
 if the selected body merges with another, the resulting fused body has no history to select, so
 the panel closes automatically. [`src/inspector.js`](src/inspector.js) has no DOM dependency
 either — it just picks a body from a point or a neighbor in the list, and reads off its stats.
+
+The panel's **Keep centered** checkbox re-centers the view on the selected body every tick,
+handy for following a fast body (like the rogue flyby's interloper) without it drifting out of
+frame. Panning manually — by dragging or with the arrow keys — turns it back off, so the two
+don't fight over the viewport.
 
 ### Pan and zoom
 
