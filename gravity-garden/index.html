@@ -54,7 +54,10 @@
         </label>
       </div>
 
-      <p class="hint">Click anywhere on the canvas, or focus it and press Enter/Space, to drop a new body.</p>
+      <p class="hint">
+        Click empty space on the canvas, or focus it and press Enter/Space, to drop a new body.
+        Click an existing body to inspect it.
+      </p>
       <details class="shortcuts">
         <summary>Keyboard shortcuts</summary>
         <ul>
@@ -77,6 +80,14 @@
           <span class="swatch momentum"></span> momentum drift
         </p>
         <p class="stats" id="diagnostics-readout" aria-live="polite"></p>
+      </div>
+
+      <div class="inspector-panel" id="inspector-panel" hidden>
+        <div class="inspector-header">
+          <span>Selected body</span>
+          <button id="deselect" type="button">Deselect</button>
+        </div>
+        <p class="stats" id="inspector-readout" aria-live="polite"></p>
       </div>
     </section>
   </main>

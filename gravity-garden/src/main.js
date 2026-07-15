@@ -2,7 +2,7 @@ import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
-import { findBodyAtPoint } from "./inspector.js";
+import { findBodyAtPoint, describeBody } from "./inspector.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -20,6 +20,9 @@ const diagnosticsChart = document.getElementById("diagnostics-chart");
 const diagnosticsCtx = diagnosticsChart.getContext("2d");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
+const inspectorPanel = document.getElementById("inspector-panel");
+const inspectorReadout = document.getElementById("inspector-readout");
+const deselectBtn = document.getElementById("deselect");
 
 const MAX_TRAIL_LENGTH = 400;
 const BASE_DT = 0.05;
@@ -174,6 +177,19 @@ function drawDiagnostics() {
   drawTrace(samples, "momentumDrift", "#4cc9f0", momentumScale);
 }
 
+function updateInspectorPanel() {
+  const selected = bodies.find((b) => b.id === selectedBodyId);
+  inspectorPanel.hidden = !selected;
+  if (!selected) return;
+
+  const info = describeBody(selected);
+  inspectorReadout.textContent =
+    `mass: ${info.mass.toFixed(1)}\n` +
+    `position: (${info.x.toFixed(1)}, ${info.y.toFixed(1)})\n` +
+    `speed: ${info.speed.toFixed(2)}\n` +
+    `kinetic energy: ${info.kineticEnergy.toFixed(1)}`;
+}
+
 function tick() {
   if (running) {
     const dt = BASE_DT * speed;
@@ -215,6 +231,7 @@ function tick() {
     }
   }
 
+  updateInspectorPanel();
   draw();
   if (showDiagnostics) drawDiagnostics();
   statsEl.textContent =
@@ -254,6 +271,10 @@ diagnosticsCheckbox.addEventListener("change", () => {
 predictCheckbox.addEventListener("change", () => {
   showPrediction = predictCheckbox.checked;
   ticksSincePrediction = Infinity;
+});
+
+deselectBtn.addEventListener("click", () => {
+  selectedBodyId = null;
 });
 
 function addBodyAt(x, y) {
