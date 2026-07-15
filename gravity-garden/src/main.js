@@ -2,6 +2,7 @@ import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
+import { findBodyAtPoint } from "./inspector.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -39,6 +40,8 @@ let showPrediction = false;
 let predictedPaths = [];
 let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
+let nextBodyId = 1;
+let selectedBodyId = null;
 const diagnosticsHistory = createDiagnosticsHistory();
 
 for (const key of listPresetNames()) {
@@ -54,10 +57,11 @@ function loadPreset(key) {
   currentPresetKey = key;
   G = preset.G;
   softening = preset.softening;
-  bodies = preset.build().map((b) => ({ ...b, trail: [] }));
+  bodies = preset.build().map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
   resetDiagnosticsHistory(diagnosticsHistory);
   predictedPaths = [];
   lastPredictedBodyCount = -1;
+  selectedBodyId = null;
 }
 
 function worldToScreen(x, y) {
@@ -116,6 +120,14 @@ function draw() {
     ctx.fillStyle = body.color;
     ctx.arc(sx, sy, body.radius, 0, Math.PI * 2);
     ctx.fill();
+
+    if (body.id === selectedBodyId) {
+      ctx.beginPath();
+      ctx.strokeStyle = "#e8ecf4";
+      ctx.lineWidth = 1.5;
+      ctx.arc(sx, sy, body.radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 }
 
@@ -167,6 +179,12 @@ function tick() {
     const dt = BASE_DT * speed;
     stepSimulation(bodies, dt, G, softening);
     bodies = mergeCollidingBodies(bodies);
+
+    // Merging fuses two bodies into a new one with no id of its own, so a
+    // selection pointed at either parent no longer resolves to anything.
+    if (selectedBodyId !== null && !bodies.some((b) => b.id === selectedBodyId)) {
+      selectedBodyId = null;
+    }
 
     for (const body of bodies) {
       if (showTrails) {
@@ -248,7 +266,12 @@ function addBodyAt(x, y) {
     radius: 5,
     color: "#f8961e",
     trail: [],
+    id: nextBodyId++,
   });
+}
+
+function selectBody(id) {
+  selectedBodyId = selectedBodyId === id ? null : id;
 }
 
 canvas.addEventListener("click", (event) => {
@@ -258,7 +281,15 @@ canvas.addEventListener("click", (event) => {
   const sx = (event.clientX - rect.left) * scaleX;
   const sy = (event.clientY - rect.top) * scaleY;
   const { x, y } = screenToWorld(sx, sy);
-  addBodyAt(x, y);
+
+  // Clicking an existing body selects it (or deselects it, on a second click)
+  // instead of dropping a new one on top of it.
+  const hit = findBodyAtPoint(bodies, x, y);
+  if (hit) {
+    selectBody(hit.id);
+  } else {
+    addBodyAt(x, y);
+  }
 });
 
 // Dropping a body by clicking the canvas has no keyboard equivalent otherwise, so Enter/Space
