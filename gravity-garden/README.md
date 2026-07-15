@@ -35,6 +35,8 @@ Then open the printed URL in a browser.
 - **Click an existing body** — select it and open the inspector panel, showing its live mass,
   position, speed, and kinetic energy (see below). Click it again, or the panel's **Deselect**
   button, to close it.
+- **Drag the canvas** — pan the view. **Scroll** over it — zoom in or out, centered on the
+  pointer. **Reset view** — return to the default pan and zoom.
 
 ### Keyboard shortcuts
 
@@ -49,6 +51,10 @@ Then open the printed URL in a browser.
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
 | `[` / `]` | Select the previous / next body |
 | `Esc` | Deselect the current body |
+| `+` / `-` | Zoom in / out, centered on the canvas |
+| `0` | Reset the view |
+| `←` / `→` | Pan left / right |
+| `Shift`+`↑` / `Shift`+`↓` | Pan up / down |
 
 Shortcuts are ignored while a form control (the scenario dropdown, speed slider, etc.) has
 focus, so their own native keyboard behavior still works as expected.
@@ -108,6 +114,16 @@ enormous even as gravity bends its path. Selection tracks the body by identity a
 if the selected body merges with another, the resulting fused body has no history to select, so
 the panel closes automatically. [`src/inspector.js`](src/inspector.js) has no DOM dependency
 either — it just picks a body from a point or a neighbor in the list, and reads off its stats.
+
+### Pan and zoom
+
+The canvas has its own viewport, independent of the physics: [`src/viewport.js`](src/viewport.js)
+maps world coordinates (where the simulation actually lives) to screen pixels through a pan
+offset and a zoom factor, with no DOM dependency of its own. Zooming keeps the world point under
+the cursor fixed on screen, the same way map applications zoom toward the pointer rather than
+the canvas center, so a scroll while examining a tight binary pair doesn't fling it off-screen.
+Switching presets or hitting **Reset** also resets the view, so a scenario always starts framed
+the same way.
 
 ## Development
 
