@@ -40,6 +40,11 @@ Then open the printed URL in a browser.
 - **Touchscreens** — the canvas responds to touch the same way it does to mouse and wheel: tap
   empty space to drop a body or tap a body to select it, drag with one finger to pan, and pinch
   with two fingers to zoom in or out around their midpoint.
+- **Export scenario** — download the running simulation (every body's mass, position, velocity,
+  and color, plus the gravitational constant, softening, and current view) as a JSON file.
+- **Import scenario&hellip;** — load a previously exported file back in, replacing the running
+  simulation. A malformed or hand-edited file is rejected with a description of what's wrong,
+  rather than partially applied.
 
 ### Keyboard shortcuts
 
@@ -136,6 +141,18 @@ the same way.
 Touch reuses the same transform: a one-finger drag panning is the touch equivalent of dragging
 with the mouse, and a two-finger pinch zooms around the pinch's midpoint the same way the wheel
 handler zooms around the cursor, both calling the same `zoomAt` and `panBy` functions.
+
+### Scenario export/import
+
+A scenario built up interactively — dropping bodies, nudging the view, letting a cluster
+settle — is otherwise lost on reload. [`src/scenario.js`](src/scenario.js) turns the running
+state into a plain JSON snapshot (each body's mass, position, velocity, radius, and color, plus
+`G`, softening, and the viewport) and back, with no DOM dependency of its own, so it can be
+tested without a File or Blob API. Each body's `id` and trail are deliberately left out of the
+snapshot: they're session bookkeeping that a freshly loaded scenario regenerates rather than
+replays. Loading validates every field and throws a specific, human-readable error on the first
+problem found — instead of silently corrupting the running simulation with a malformed or
+hand-edited file — which the UI surfaces without applying any of the (possibly partial) change.
 
 ## Development
 
