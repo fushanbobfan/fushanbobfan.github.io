@@ -3,6 +3,7 @@ import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId } from "./inspector.js";
+import { serializeScenario, deserializeScenario } from "./scenario.js";
 import {
   createViewport,
   worldToScreen as vpWorldToScreen,
@@ -36,6 +37,10 @@ const deselectBtn = document.getElementById("deselect");
 const resetViewBtn = document.getElementById("reset-view");
 const zoomValue = document.getElementById("zoom-value");
 const followCheckbox = document.getElementById("follow-selected");
+const exportBtn = document.getElementById("export-scenario");
+const importBtn = document.getElementById("import-scenario");
+const importFileInput = document.getElementById("import-scenario-file");
+const scenarioIoStatus = document.getElementById("scenario-io-status");
 
 const MAX_TRAIL_LENGTH = 400;
 const PAN_STEP = 40;
@@ -311,6 +316,53 @@ function updateZoomReadout() {
 resetViewBtn.addEventListener("click", () => {
   viewport = resetViewport();
   updateZoomReadout();
+});
+
+exportBtn.addEventListener("click", () => {
+  const snapshot = serializeScenario({ bodies, G, softening, viewport });
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "gravity-garden-scenario.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  scenarioIoStatus.textContent = `Exported ${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}.`;
+});
+
+importBtn.addEventListener("click", () => {
+  importFileInput.click();
+});
+
+importFileInput.addEventListener("change", () => {
+  const file = importFileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const restored = deserializeScenario(JSON.parse(reader.result));
+      G = restored.G;
+      softening = restored.softening;
+      bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+      viewport = restored.viewport;
+      resetDiagnosticsHistory(diagnosticsHistory);
+      predictedPaths = [];
+      lastPredictedBodyCount = -1;
+      selectedBodyId = null;
+      updateZoomReadout();
+      scenarioIoStatus.textContent = `Imported ${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}.`;
+    } catch (err) {
+      scenarioIoStatus.textContent = `Import failed: ${err.message}`;
+    }
+  };
+  reader.onerror = () => {
+    scenarioIoStatus.textContent = "Import failed: could not read the file.";
+  };
+  reader.readAsText(file);
+
+  // Reset so choosing the same file again still fires a "change" event.
+  importFileInput.value = "";
 });
 
 function addBodyAt(x, y) {
