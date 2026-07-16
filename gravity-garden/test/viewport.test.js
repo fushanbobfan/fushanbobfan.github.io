@@ -9,6 +9,8 @@ import {
   panBy,
   zoomAt,
   resetViewport,
+  touchDistance,
+  touchMidpoint,
 } from "../src/viewport.js";
 
 const W = 800;
@@ -75,4 +77,24 @@ test("zoomAt clamps to MIN_ZOOM and MAX_ZOOM", () => {
 
 test("resetViewport returns a fresh default viewport", () => {
   assert.deepEqual(resetViewport(), { panX: 0, panY: 0, zoom: 1 });
+});
+
+test("touchDistance measures the straight-line distance between two touch points", () => {
+  assert.equal(touchDistance({ x: 0, y: 0 }, { x: 3, y: 4 }), 5);
+  assert.equal(touchDistance({ x: 10, y: 10 }, { x: 10, y: 10 }), 0);
+});
+
+test("touchMidpoint averages two touch points", () => {
+  assert.deepEqual(touchMidpoint({ x: 0, y: 0 }, { x: 10, y: 20 }), { x: 5, y: 10 });
+  assert.deepEqual(touchMidpoint({ x: -4, y: 6 }, { x: 4, y: -6 }), { x: 0, y: 0 });
+});
+
+test("spreading two touches to double their distance, via zoomAt, doubles the zoom", () => {
+  const viewport = { panX: 0, panY: 0, zoom: 1 };
+  const start = touchDistance({ x: 250, y: 300 }, { x: 550, y: 300 });
+  const end = touchDistance({ x: 100, y: 300 }, { x: 700, y: 300 });
+  const mid = touchMidpoint({ x: 100, y: 300 }, { x: 700, y: 300 });
+
+  const zoomed = zoomAt(viewport, W, H, mid.x, mid.y, end / start);
+  assert.ok(Math.abs(zoomed.zoom - 2) < 1e-9);
 });

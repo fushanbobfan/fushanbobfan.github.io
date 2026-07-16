@@ -10,6 +10,8 @@ import {
   panBy,
   zoomAt,
   resetViewport,
+  touchDistance,
+  touchMidpoint,
 } from "./viewport.js";
 
 const canvas = document.getElementById("stage");
@@ -334,6 +336,12 @@ let isPointerDown = false;
 let dragMoved = false;
 let lastDragPoint = null;
 
+let isTouchDown = false;
+let touchDragMoved = false;
+let lastTouchPoint = null;
+let pinching = false;
+let lastPinchDistance = null;
+
 function canvasScale() {
   const rect = canvas.getBoundingClientRect();
   return { rect, scaleX: canvas.width / rect.width, scaleY: canvas.height / rect.height };
@@ -374,6 +382,22 @@ window.addEventListener("mouseup", () => {
   canvas.classList.remove("panning");
 });
 
+// Shared by mouse clicks and touch taps: selects the body under the point,
+// or drops a new one if the point is empty space.
+function tapAt(clientX, clientY) {
+  const { rect, scaleX, scaleY } = canvasScale();
+  const sx = (clientX - rect.left) * scaleX;
+  const sy = (clientY - rect.top) * scaleY;
+  const { x, y } = screenToWorld(sx, sy);
+
+  const hit = findBodyAtPoint(bodies, x, y);
+  if (hit) {
+    selectBody(hit.id);
+  } else {
+    addBodyAt(x, y);
+  }
+}
+
 canvas.addEventListener("click", (event) => {
   // A click that ended a drag pans the view; it shouldn't also select or
   // drop a body under the pointer's final position.
@@ -382,19 +406,7 @@ canvas.addEventListener("click", (event) => {
     return;
   }
 
-  const { rect, scaleX, scaleY } = canvasScale();
-  const sx = (event.clientX - rect.left) * scaleX;
-  const sy = (event.clientY - rect.top) * scaleY;
-  const { x, y } = screenToWorld(sx, sy);
-
-  // Clicking an existing body selects it (or deselects it, on a second click)
-  // instead of dropping a new one on top of it.
-  const hit = findBodyAtPoint(bodies, x, y);
-  if (hit) {
-    selectBody(hit.id);
-  } else {
-    addBodyAt(x, y);
-  }
+  tapAt(event.clientX, event.clientY);
 });
 
 canvas.addEventListener(
@@ -410,6 +422,84 @@ canvas.addEventListener(
   },
   { passive: false }
 );
+
+function touchPoint(touch) {
+  return { x: touch.clientX, y: touch.clientY };
+}
+
+// One finger pans and taps (mirroring mousedown/mousemove/click); two fingers pinch-zoom
+// around their midpoint (mirroring wheel). `{ passive: false }` plus preventDefault keeps
+// the browser from scrolling the page or firing synthetic mouse events for the same
+// gesture, since #stage already sets `touch-action: none`.
+canvas.addEventListener(
+  "touchstart",
+  (event) => {
+    event.preventDefault();
+    if (event.touches.length === 1) {
+      isTouchDown = true;
+      touchDragMoved = false;
+      pinching = false;
+      lastTouchPoint = touchPoint(event.touches[0]);
+    } else if (event.touches.length === 2) {
+      isTouchDown = false;
+      pinching = true;
+      lastPinchDistance = touchDistance(touchPoint(event.touches[0]), touchPoint(event.touches[1]));
+    }
+  },
+  { passive: false }
+);
+
+canvas.addEventListener(
+  "touchmove",
+  (event) => {
+    event.preventDefault();
+    if (pinching && event.touches.length >= 2) {
+      const a = touchPoint(event.touches[0]);
+      const b = touchPoint(event.touches[1]);
+      const distance = touchDistance(a, b);
+      const mid = touchMidpoint(a, b);
+      const { rect, scaleX, scaleY } = canvasScale();
+      const sx = (mid.x - rect.left) * scaleX;
+      const sy = (mid.y - rect.top) * scaleY;
+      viewport = zoomAt(viewport, canvas.width, canvas.height, sx, sy, distance / lastPinchDistance);
+      updateZoomReadout();
+      lastPinchDistance = distance;
+    } else if (isTouchDown && event.touches.length === 1) {
+      const point = touchPoint(event.touches[0]);
+      const dx = point.x - lastTouchPoint.x;
+      const dy = point.y - lastTouchPoint.y;
+      if (!touchDragMoved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
+      touchDragMoved = true;
+      const { scaleX, scaleY } = canvasScale();
+      manualPanBy(dx * scaleX, dy * scaleY);
+      lastTouchPoint = point;
+      canvas.classList.add("panning");
+    }
+  },
+  { passive: false }
+);
+
+function endTouch(event) {
+  event.preventDefault();
+  // A single touch that never moved past the drag threshold is a tap; drop or select a
+  // body at it. A pinch ending, or a pan that already moved, isn't a tap.
+  if (isTouchDown && !touchDragMoved && !pinching && event.changedTouches.length > 0) {
+    const point = touchPoint(event.changedTouches[0]);
+    tapAt(point.x, point.y);
+  }
+
+  // Lifting one finger of a two-finger pinch, or ending a pan early, just ends the
+  // current gesture rather than trying to hand off into the other mode mid-touch.
+  isTouchDown = false;
+  touchDragMoved = false;
+  pinching = false;
+  lastTouchPoint = null;
+  canvas.classList.remove("panning");
+}
+
+canvas.addEventListener("touchend", endTouch, { passive: false });
+canvas.addEventListener("touchcancel", endTouch, { passive: false });
 
 // Dropping a body by clicking the canvas has no keyboard equivalent otherwise, so Enter/Space
 // on the focused canvas drops one at a random point within its bounds. Stops the event from

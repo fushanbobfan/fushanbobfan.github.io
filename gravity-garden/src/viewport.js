@@ -62,3 +62,17 @@ export function zoomAt(viewport, canvasWidth, canvasHeight, sx, sy, factor) {
 export function resetViewport() {
   return createViewport();
 }
+
+/**
+ * Distance and midpoint between two touch points, in screen pixels. Pulled
+ * out as pure functions so pinch-to-zoom's math (comparing the distance
+ * across successive touchmove events, zooming around the midpoint) can be
+ * tested without simulating actual TouchEvents.
+ */
+export function touchDistance(a, b) {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+export function touchMidpoint(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
