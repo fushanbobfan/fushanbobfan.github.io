@@ -34,7 +34,9 @@ Then open the printed URL in a browser.
   the keyboard, at a random point.
 - **Click an existing body** — select it and open the inspector panel, showing its live mass,
   position, speed, and kinetic energy (see below), plus a **Keep centered** checkbox to have the
-  view follow it. Click it again, or the panel's **Deselect** button, to close it.
+  view follow it. Click it again, or the panel's **Deselect** button, to close it. Its **Remove
+  body** button (or <kbd>Delete</kbd>/<kbd>Backspace</kbd>) takes the selected body out of the
+  simulation entirely.
 - **Drag the canvas** — pan the view. **Scroll** over it — zoom in or out, centered on the
   pointer. **Reset view** — return to the default pan and zoom.
 - **Touchscreens** — the canvas responds to touch the same way it does to mouse and wheel: tap

@@ -69,3 +69,17 @@ export function adjacentBodyId(bodies, currentId, direction) {
   const nextIndex = (index + direction + bodies.length) % bodies.length;
   return bodies[nextIndex].id;
 }
+
+/**
+ * Returns a new array with the body matching `id` removed, or the same
+ * array (by reference) if no body has that id — e.g. it already merged
+ * into another body since being selected.
+ * @param {{id:*}[]} bodies
+ * @param {*} id
+ * @returns {object[]}
+ */
+export function removeBody(bodies, id) {
+  const index = bodies.findIndex((b) => b.id === id);
+  if (index === -1) return bodies;
+  return [...bodies.slice(0, index), ...bodies.slice(index + 1)];
+}

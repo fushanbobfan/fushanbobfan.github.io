@@ -6,6 +6,7 @@ import {
   kineticEnergy,
   describeBody,
   adjacentBodyId,
+  removeBody,
 } from "../src/inspector.js";
 
 function threeBodies() {
@@ -83,4 +84,32 @@ test("adjacentBodyId falls back to an edge body when the current id is gone", ()
 
 test("adjacentBodyId returns null when there are no bodies", () => {
   assert.equal(adjacentBodyId([], 1, 1), null);
+});
+
+test("removeBody drops the matching body and leaves the others in order", () => {
+  const bodies = threeBodies();
+  const result = removeBody(bodies, 2);
+  assert.deepEqual(
+    result.map((b) => b.id),
+    [1, 3]
+  );
+});
+
+test("removeBody does not mutate the array passed in", () => {
+  const bodies = threeBodies();
+  removeBody(bodies, 2);
+  assert.deepEqual(
+    bodies.map((b) => b.id),
+    [1, 2, 3]
+  );
+});
+
+test("removeBody returns the same array reference when the id is not found", () => {
+  const bodies = threeBodies();
+  assert.equal(removeBody(bodies, 999), bodies);
+});
+
+test("removeBody on the last remaining body returns an empty array", () => {
+  const bodies = [{ id: 1, mass: 10, x: 0, y: 0, vx: 0, vy: 0, radius: 5 }];
+  assert.deepEqual(removeBody(bodies, 1), []);
 });
