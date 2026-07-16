@@ -37,6 +37,9 @@ Then open the printed URL in a browser.
   view follow it. Click it again, or the panel's **Deselect** button, to close it.
 - **Drag the canvas** — pan the view. **Scroll** over it — zoom in or out, centered on the
   pointer. **Reset view** — return to the default pan and zoom.
+- **Touchscreens** — the canvas responds to touch the same way it does to mouse and wheel: tap
+  empty space to drop a body or tap a body to select it, drag with one finger to pan, and pinch
+  with two fingers to zoom in or out around their midpoint.
 
 ### Keyboard shortcuts
 
@@ -129,6 +132,10 @@ the cursor fixed on screen, the same way map applications zoom toward the pointe
 the canvas center, so a scroll while examining a tight binary pair doesn't fling it off-screen.
 Switching presets or hitting **Reset** also resets the view, so a scenario always starts framed
 the same way.
+
+Touch reuses the same transform: a one-finger drag panning is the touch equivalent of dragging
+with the mouse, and a two-finger pinch zooms around the pinch's midpoint the same way the wheel
+handler zooms around the cursor, both calling the same `zoomAt` and `panBy` functions.
 
 ## Development
 
