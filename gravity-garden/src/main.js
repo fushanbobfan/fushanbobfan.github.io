@@ -2,7 +2,7 @@ import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
-import { findBodyAtPoint, describeBody, adjacentBodyId } from "./inspector.js";
+import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
 import {
   createViewport,
@@ -34,6 +34,7 @@ const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
 const deselectBtn = document.getElementById("deselect");
+const removeBodyBtn = document.getElementById("remove-body");
 const resetViewBtn = document.getElementById("reset-view");
 const zoomValue = document.getElementById("zoom-value");
 const followCheckbox = document.getElementById("follow-selected");
@@ -308,6 +309,14 @@ followCheckbox.addEventListener("change", () => {
 deselectBtn.addEventListener("click", () => {
   selectedBodyId = null;
 });
+
+function removeSelectedBody() {
+  if (selectedBodyId == null) return;
+  bodies = removeBody(bodies, selectedBodyId);
+  selectedBodyId = null;
+}
+
+removeBodyBtn.addEventListener("click", removeSelectedBody);
 
 function updateZoomReadout() {
   zoomValue.textContent = `${viewport.zoom.toFixed(1)}×`;
@@ -604,6 +613,13 @@ document.addEventListener("keydown", (event) => {
       break;
     case "Escape":
       selectedBodyId = null;
+      break;
+    case "Delete":
+    case "Backspace":
+      // Backspace's default action is "navigate back" outside a text field, which would
+      // otherwise leave the page when removing a body with nothing focused.
+      event.preventDefault();
+      removeSelectedBody();
       break;
     case "ArrowUp":
       event.preventDefault();
