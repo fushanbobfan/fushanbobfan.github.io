@@ -51,6 +51,11 @@ Then open the printed URL in a browser.
 - **Import scenario&hellip;** — load a previously exported file back in, replacing the running
   simulation. A malformed or hand-edited file is rejected with a description of what's wrong,
   rather than partially applied.
+- **Save name&hellip; / Save in browser** — save the running simulation under a name, kept in
+  this browser (via `localStorage`) rather than downloaded as a file, for a quicker round-trip
+  than export/import when you're iterating locally.
+- **Saved scenarios / Load / Delete** — pick a save from the dropdown to load it back in
+  (replacing the running simulation, same as importing a file) or delete it.
 
 ### Keyboard shortcuts
 
@@ -170,6 +175,17 @@ snapshot: they're session bookkeeping that a freshly loaded scenario regenerates
 replays. Loading validates every field and throws a specific, human-readable error on the first
 problem found — instead of silently corrupting the running simulation with a malformed or
 hand-edited file — which the UI surfaces without applying any of the (possibly partial) change.
+
+### Local saves
+
+[`src/storage.js`](src/storage.js) saves named scenario snapshots straight to the browser's
+`localStorage`, for a faster round-trip than export/import's file download when you're
+iterating on a scenario in one sitting. It builds on the same `serializeScenario` /
+`deserializeScenario` pair scenario export/import uses — storage.js only owns naming and
+persistence, not the scenario format itself — and takes the storage object as a parameter
+rather than reaching for `window.localStorage` directly, so it can be tested against a plain
+in-memory fake instead of a real browser environment. Saves persist only in the browser and
+device they were made in; export a scenario to a file instead to move it elsewhere.
 
 ## Development
 
