@@ -11,6 +11,7 @@ import {
   deleteScenarioFromStorage,
 } from "./storage.js";
 import { launchVelocityFrom } from "./launch.js";
+import { describeMerge, describeRemoval } from "./announcements.js";
 import {
   createViewport,
   worldToScreen as vpWorldToScreen,
@@ -54,6 +55,7 @@ const saveScenarioBtn = document.getElementById("save-scenario");
 const savedScenariosSelect = document.getElementById("saved-scenarios");
 const loadScenarioBtn = document.getElementById("load-scenario");
 const deleteScenarioBtn = document.getElementById("delete-scenario");
+const announcer = document.getElementById("sim-announcer");
 
 const MAX_TRAIL_LENGTH = 400;
 const PAN_STEP = 40;
@@ -263,7 +265,10 @@ function tick() {
   if (running) {
     const dt = BASE_DT * speed;
     stepSimulation(bodies, dt, G, softening);
+    const countBeforeMerge = bodies.length;
     bodies = mergeCollidingBodies(bodies);
+    const mergeAnnouncement = describeMerge(countBeforeMerge, bodies.length);
+    if (mergeAnnouncement) announcer.textContent = mergeAnnouncement;
 
     // Merging fuses two bodies into a new one with no id of its own, so a
     // selection pointed at either parent no longer resolves to anything.
@@ -359,6 +364,7 @@ function removeSelectedBody() {
   if (selectedBodyId == null) return;
   bodies = removeBody(bodies, selectedBodyId);
   selectedBodyId = null;
+  announcer.textContent = describeRemoval(bodies.length);
 }
 
 removeBodyBtn.addEventListener("click", removeSelectedBody);
