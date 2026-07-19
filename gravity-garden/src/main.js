@@ -4,6 +4,12 @@ import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from 
 import { predictTrajectory } from "./trajectory.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
+import {
+  listSavedScenarioNames,
+  saveScenarioToStorage,
+  loadScenarioFromStorage,
+  deleteScenarioFromStorage,
+} from "./storage.js";
 import { launchVelocityFrom } from "./launch.js";
 import {
   createViewport,
@@ -43,6 +49,11 @@ const exportBtn = document.getElementById("export-scenario");
 const importBtn = document.getElementById("import-scenario");
 const importFileInput = document.getElementById("import-scenario-file");
 const scenarioIoStatus = document.getElementById("scenario-io-status");
+const saveNameInput = document.getElementById("save-name");
+const saveScenarioBtn = document.getElementById("save-scenario");
+const savedScenariosSelect = document.getElementById("saved-scenarios");
+const loadScenarioBtn = document.getElementById("load-scenario");
+const deleteScenarioBtn = document.getElementById("delete-scenario");
 
 const MAX_TRAIL_LENGTH = 400;
 const PAN_STEP = 40;
@@ -377,6 +388,20 @@ importBtn.addEventListener("click", () => {
   importFileInput.click();
 });
 
+// Replaces the running simulation with a validated scenario (from an imported file or a
+// local save), shared by both since they only differ in where the raw JSON came from.
+function applyScenario(restored) {
+  G = restored.G;
+  softening = restored.softening;
+  bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  viewport = restored.viewport;
+  resetDiagnosticsHistory(diagnosticsHistory);
+  predictedPaths = [];
+  lastPredictedBodyCount = -1;
+  selectedBodyId = null;
+  updateZoomReadout();
+}
+
 importFileInput.addEventListener("change", () => {
   const file = importFileInput.files[0];
   if (!file) return;
@@ -384,16 +409,7 @@ importFileInput.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const restored = deserializeScenario(JSON.parse(reader.result));
-      G = restored.G;
-      softening = restored.softening;
-      bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
-      viewport = restored.viewport;
-      resetDiagnosticsHistory(diagnosticsHistory);
-      predictedPaths = [];
-      lastPredictedBodyCount = -1;
-      selectedBodyId = null;
-      updateZoomReadout();
+      applyScenario(deserializeScenario(JSON.parse(reader.result)));
       scenarioIoStatus.textContent = `Imported ${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}.`;
     } catch (err) {
       scenarioIoStatus.textContent = `Import failed: ${err.message}`;
@@ -407,6 +423,66 @@ importFileInput.addEventListener("change", () => {
   // Reset so choosing the same file again still fires a "change" event.
   importFileInput.value = "";
 });
+
+// Repopulates the saved-scenarios dropdown from storage, preserving the previous
+// selection if it still exists, and enables/disables Load and Delete accordingly.
+function refreshSavedScenariosList(selectName) {
+  const names = listSavedScenarioNames(window.localStorage);
+  savedScenariosSelect.innerHTML = "";
+
+  if (names.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No saves yet";
+    savedScenariosSelect.appendChild(option);
+  } else {
+    for (const name of names) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      savedScenariosSelect.appendChild(option);
+    }
+    if (selectName && names.includes(selectName)) {
+      savedScenariosSelect.value = selectName;
+    }
+  }
+
+  loadScenarioBtn.disabled = names.length === 0;
+  deleteScenarioBtn.disabled = names.length === 0;
+}
+
+saveScenarioBtn.addEventListener("click", () => {
+  try {
+    const name = saveNameInput.value;
+    saveScenarioToStorage(window.localStorage, name, serializeScenario({ bodies, G, softening, viewport }));
+    scenarioIoStatus.textContent = `Saved "${name.trim()}" in this browser.`;
+    saveNameInput.value = "";
+    refreshSavedScenariosList(name.trim());
+  } catch (err) {
+    scenarioIoStatus.textContent = `Save failed: ${err.message}`;
+  }
+});
+
+loadScenarioBtn.addEventListener("click", () => {
+  const name = savedScenariosSelect.value;
+  if (!name) return;
+  try {
+    applyScenario(deserializeScenario(loadScenarioFromStorage(window.localStorage, name)));
+    scenarioIoStatus.textContent = `Loaded "${name}" (${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}).`;
+  } catch (err) {
+    scenarioIoStatus.textContent = `Load failed: ${err.message}`;
+  }
+});
+
+deleteScenarioBtn.addEventListener("click", () => {
+  const name = savedScenariosSelect.value;
+  if (!name) return;
+  deleteScenarioFromStorage(window.localStorage, name);
+  scenarioIoStatus.textContent = `Deleted "${name}".`;
+  refreshSavedScenariosList();
+});
+
+refreshSavedScenariosList();
 
 function addBodyAt(x, y) {
   bodies.push({

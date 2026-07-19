@@ -37,6 +37,19 @@
         <button id="import-scenario" type="button">Import scenario&hellip;</button>
         <input id="import-scenario-file" type="file" accept="application/json,.json" hidden />
       </div>
+
+      <div class="control-row">
+        <label for="save-name" class="sr-only">Name for this browser save</label>
+        <input id="save-name" type="text" placeholder="Save name&hellip;" maxlength="60" />
+        <button id="save-scenario" type="button">Save in browser</button>
+      </div>
+
+      <div class="control-row">
+        <label for="saved-scenarios" class="sr-only">Saved scenarios</label>
+        <select id="saved-scenarios"><option value="">No saves yet</option></select>
+        <button id="load-scenario" type="button" disabled>Load</button>
+        <button id="delete-scenario" type="button" disabled>Delete</button>
+      </div>
       <p class="stats" id="scenario-io-status" aria-live="polite"></p>
 
       <div class="control-row">
