@@ -37,11 +37,15 @@ Then open the printed URL in a browser.
   view follow it. Click it again, or the panel's **Deselect** button, to close it. Its **Remove
   body** button (or <kbd>Delete</kbd>/<kbd>Backspace</kbd>) takes the selected body out of the
   simulation entirely.
+- **Drag an existing body** — grab it and pull away to aim a launch: a dashed line previews the
+  velocity you're about to give it, and releasing sets that velocity (see below). Dragging empty
+  space still pans the view, so this only triggers when the drag starts on a body.
 - **Drag the canvas** — pan the view. **Scroll** over it — zoom in or out, centered on the
   pointer. **Reset view** — return to the default pan and zoom.
 - **Touchscreens** — the canvas responds to touch the same way it does to mouse and wheel: tap
-  empty space to drop a body or tap a body to select it, drag with one finger to pan, and pinch
-  with two fingers to zoom in or out around their midpoint.
+  empty space to drop a body or tap a body to select it, drag with one finger on empty space to
+  pan (or on a body to aim and launch it), and pinch with two fingers to zoom in or out around
+  their midpoint.
 - **Export scenario** — download the running simulation (every body's mass, position, velocity,
   and color, plus the gravitational constant, softening, and current view) as a JSON file.
 - **Import scenario&hellip;** — load a previously exported file back in, replacing the running
@@ -129,6 +133,17 @@ The panel's **Keep centered** checkbox re-centers the view on the selected body 
 handy for following a fast body (like the rogue flyby's interloper) without it drifting out of
 frame. Panning manually — by dragging or with the arrow keys — turns it back off, so the two
 don't fight over the viewport.
+
+### Drag to launch
+
+Grabbing a body and dragging (with the mouse, or one finger on touch) previews a launch: a
+dashed line from the body to the pointer shows the velocity a release would give it, scaled
+from the drag distance by [`src/launch.js`](src/launch.js)'s `launchVelocityFrom`, which is
+DOM-free like the rest of the physics code. Dragging farther launches faster in that direction;
+dragging back over the body cancels out to a stop. Releasing applies the velocity and selects
+the body, so the inspector panel confirms the new speed immediately. A drag that starts on
+empty space still pans the view as before — only a drag that starts on an existing body aims a
+launch, so the two gestures never conflict.
 
 ### Pan and zoom
 
