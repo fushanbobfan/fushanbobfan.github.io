@@ -131,7 +131,8 @@ showing its current mass, position, speed, and kinetic energy, refreshed every t
 for, say, watching a planet's speed peak at perihelion or a rogue body's kinetic energy stay
 enormous even as gravity bends its path. Selection tracks the body by identity across ticks;
 if the selected body merges with another, the resulting fused body has no history to select, so
-the panel closes automatically. [`src/inspector.js`](src/inspector.js) has no DOM dependency
+the panel closes automatically (with a screen-reader announcement explaining why — see
+Accessibility announcements below). [`src/inspector.js`](src/inspector.js) has no DOM dependency
 either — it just picks a body from a point or a neighbor in the list, and reads off its stats.
 
 The panel's **Keep centered** checkbox re-centers the view on the selected body every tick,
@@ -186,6 +187,16 @@ persistence, not the scenario format itself — and takes the storage object as 
 rather than reaching for `window.localStorage` directly, so it can be tested against a plain
 in-memory fake instead of a real browser environment. Saves persist only in the browser and
 device they were made in; export a scenario to a file instead to move it elsewhere.
+
+### Accessibility announcements
+
+Two events change the body count without any direct user action to explain them: a collision
+merging two bodies into one, and removing the selected body. A sighted user watching the canvas
+can (usually) see a collision happen, but a screen-reader user has no other way to notice —
+including why the inspector panel they had open just closed on its own. A visually hidden
+`aria-live="polite"` region announces both, with wording formatted by
+[`src/announcements.js`](src/announcements.js), kept DOM-free like the rest of the simulation
+logic so the exact phrasing is tested independently of a live region.
 
 ## Development
 
