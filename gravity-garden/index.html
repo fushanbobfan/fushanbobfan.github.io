@@ -16,6 +16,12 @@
     <canvas id="stage" width="800" height="600" role="img" tabindex="0"
       aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag empty space to pan the view, drag a body to launch it, scroll to zoom."></canvas>
 
+    <!-- Announces events that change the body count without a direct user action to
+         explain them (a collision merging bodies, removing the selected body), since a
+         screen reader user wouldn't otherwise notice the count, or the inspector panel
+         closing if the removed/merged body was selected, just by watching the canvas. -->
+    <p id="sim-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+
     <section class="controls" aria-label="Simulation controls">
       <div class="control-row">
         <label for="preset">Scenario</label>
