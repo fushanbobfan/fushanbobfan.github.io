@@ -4,6 +4,7 @@ import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from 
 import { predictTrajectory } from "./trajectory.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
+import { launchVelocityFrom } from "./launch.js";
 import {
   createViewport,
   worldToScreen as vpWorldToScreen,
@@ -67,6 +68,10 @@ let nextBodyId = 1;
 let selectedBodyId = null;
 let followSelected = false;
 let viewport = createViewport();
+// While set, a mouse or touch drag that started on this body previews a launch velocity
+// (see the mousedown/touchstart handlers below) instead of panning the view.
+let aimingBodyId = null;
+let aimPointerWorld = null;
 const diagnosticsHistory = createDiagnosticsHistory();
 
 for (const key of listPresetNames()) {
@@ -156,6 +161,35 @@ function draw() {
       ctx.stroke();
     }
   }
+
+  if (aimingBodyId !== null && aimPointerWorld) {
+    const body = bodies.find((b) => b.id === aimingBodyId);
+    if (body) drawAimLine(body);
+  }
+}
+
+// A dashed line from the grabbed body to the pointer, with a dot at the pointer end,
+// mirroring the dashed predicted-path styling used elsewhere so it reads as a preview
+// rather than something already part of the simulation.
+function drawAimLine(body) {
+  const from = worldToScreen(body.x, body.y);
+  const to = worldToScreen(aimPointerWorld.x, aimPointerWorld.y);
+
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = "#e8ecf4";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(from.sx, from.sy);
+  ctx.lineTo(to.sx, to.sy);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#e8ecf4";
+  ctx.beginPath();
+  ctx.arc(to.sx, to.sy, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawTrace(samples, key, color, scale) {
@@ -419,10 +453,25 @@ function manualPanBy(dxScreen, dyScreen) {
   viewport = panBy(viewport, dxScreen, dyScreen);
 }
 
+// Converts a client-space point (from a mouse or touch event) to world coordinates.
+function clientPointToWorld(clientX, clientY) {
+  const { rect, scaleX, scaleY } = canvasScale();
+  const sx = (clientX - rect.left) * scaleX;
+  const sy = (clientY - rect.top) * scaleY;
+  return screenToWorld(sx, sy);
+}
+
 canvas.addEventListener("mousedown", (event) => {
   isPointerDown = true;
   dragMoved = false;
   lastDragPoint = { x: event.clientX, y: event.clientY };
+
+  // Starting the drag on an existing body aims a launch instead of panning the view,
+  // so grabbing a body always affects that body rather than whatever's under the
+  // pointer when the drag ends.
+  const { x, y } = clientPointToWorld(event.clientX, event.clientY);
+  const hit = findBodyAtPoint(bodies, x, y);
+  aimingBodyId = hit ? hit.id : null;
 });
 
 window.addEventListener("mousemove", (event) => {
@@ -432,24 +481,55 @@ window.addEventListener("mousemove", (event) => {
   if (!dragMoved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
 
   dragMoved = true;
+  lastDragPoint = { x: event.clientX, y: event.clientY };
+
+  if (aimingBodyId !== null) {
+    aimPointerWorld = clientPointToWorld(event.clientX, event.clientY);
+    canvas.classList.add("aiming");
+    return;
+  }
+
   const { scaleX, scaleY } = canvasScale();
   manualPanBy(dx * scaleX, dy * scaleY);
-  lastDragPoint = { x: event.clientX, y: event.clientY };
   canvas.classList.add("panning");
 });
 
 window.addEventListener("mouseup", () => {
+  applyAimedLaunch(dragMoved);
   isPointerDown = false;
   canvas.classList.remove("panning");
+  canvas.classList.remove("aiming");
 });
+
+// If the drag that's ending was an aim (not a plain click/tap), sets the grabbed body's
+// velocity from where it was released and selects it so the inspector reflects the new
+// speed immediately. A click or tap that never crossed the drag threshold leaves `moved`
+// false, so it falls through to tapAt's normal select/drop handling instead. `moved` is
+// passed in rather than read from module state because mouse and touch track it in
+// separate flags (dragMoved vs. touchDragMoved).
+function applyAimedLaunch(moved) {
+  if (aimingBodyId === null || !moved || !aimPointerWorld) {
+    aimingBodyId = null;
+    aimPointerWorld = null;
+    return;
+  }
+
+  const body = bodies.find((b) => b.id === aimingBodyId);
+  if (body) {
+    const { vx, vy } = launchVelocityFrom(body.x, body.y, aimPointerWorld.x, aimPointerWorld.y);
+    body.vx = vx;
+    body.vy = vy;
+    selectedBodyId = body.id;
+  }
+
+  aimingBodyId = null;
+  aimPointerWorld = null;
+}
 
 // Shared by mouse clicks and touch taps: selects the body under the point,
 // or drops a new one if the point is empty space.
 function tapAt(clientX, clientY) {
-  const { rect, scaleX, scaleY } = canvasScale();
-  const sx = (clientX - rect.left) * scaleX;
-  const sy = (clientY - rect.top) * scaleY;
-  const { x, y } = screenToWorld(sx, sy);
+  const { x, y } = clientPointToWorld(clientX, clientY);
 
   const hit = findBodyAtPoint(bodies, x, y);
   if (hit) {
@@ -501,9 +581,15 @@ canvas.addEventListener(
       touchDragMoved = false;
       pinching = false;
       lastTouchPoint = touchPoint(event.touches[0]);
+
+      const { x, y } = clientPointToWorld(lastTouchPoint.x, lastTouchPoint.y);
+      const hit = findBodyAtPoint(bodies, x, y);
+      aimingBodyId = hit ? hit.id : null;
     } else if (event.touches.length === 2) {
       isTouchDown = false;
       pinching = true;
+      aimingBodyId = null;
+      aimPointerWorld = null;
       lastPinchDistance = touchDistance(touchPoint(event.touches[0]), touchPoint(event.touches[1]));
     }
   },
@@ -532,9 +618,16 @@ canvas.addEventListener(
       if (!touchDragMoved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
 
       touchDragMoved = true;
+      lastTouchPoint = point;
+
+      if (aimingBodyId !== null) {
+        aimPointerWorld = clientPointToWorld(point.x, point.y);
+        canvas.classList.add("aiming");
+        return;
+      }
+
       const { scaleX, scaleY } = canvasScale();
       manualPanBy(dx * scaleX, dy * scaleY);
-      lastTouchPoint = point;
       canvas.classList.add("panning");
     }
   },
@@ -544,11 +637,12 @@ canvas.addEventListener(
 function endTouch(event) {
   event.preventDefault();
   // A single touch that never moved past the drag threshold is a tap; drop or select a
-  // body at it. A pinch ending, or a pan that already moved, isn't a tap.
+  // body at it. A pinch ending, or a pan/aim that already moved, isn't a tap.
   if (isTouchDown && !touchDragMoved && !pinching && event.changedTouches.length > 0) {
     const point = touchPoint(event.changedTouches[0]);
     tapAt(point.x, point.y);
   }
+  applyAimedLaunch(touchDragMoved);
 
   // Lifting one finger of a two-finger pinch, or ending a pan early, just ends the
   // current gesture rather than trying to hand off into the other mode mid-touch.
@@ -557,6 +651,7 @@ function endTouch(event) {
   pinching = false;
   lastTouchPoint = null;
   canvas.classList.remove("panning");
+  canvas.classList.remove("aiming");
 }
 
 canvas.addEventListener("touchend", endTouch, { passive: false });
