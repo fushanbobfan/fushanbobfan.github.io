@@ -200,6 +200,15 @@ kbd {
   gap: 0.35rem;
 }
 
+/* Both panels are toggled with the `hidden` attribute from JS, but each also has its own
+   `display: flex` rule above/below for when it's shown — same specificity as the browser's
+   default `[hidden] { display: none }`, and author rules win ties over the UA stylesheet, so
+   without this the attribute alone would not actually hide either panel. */
+.inspector-panel[hidden],
+.diagnostics-panel[hidden] {
+  display: none;
+}
+
 #diagnostics-chart {
   width: 100%;
   height: auto;
