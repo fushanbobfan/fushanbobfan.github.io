@@ -32,11 +32,12 @@ Then open the printed URL in a browser.
 - **Click empty space on the canvas** — drop a new body at that point, with zero initial
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
-- **Click an existing body** — select it and open the inspector panel, showing its live mass,
-  position, speed, and kinetic energy (see below), plus a **Keep centered** checkbox to have the
-  view follow it. Click it again, or the panel's **Deselect** button, to close it. Its **Remove
-  body** button (or <kbd>Delete</kbd>/<kbd>Backspace</kbd>) takes the selected body out of the
-  simulation entirely.
+- **Click an existing body** — select it and open the inspector panel, showing its live
+  position, speed, and kinetic energy, plus an editable **Mass** field (see below) and a
+  **Keep centered** checkbox to have the view follow it. Click it again, or the panel's
+  **Deselect** button, to close it. Its **Remove body** button (or
+  <kbd>Delete</kbd>/<kbd>Backspace</kbd>) takes the selected body out of the simulation
+  entirely.
 - **Drag an existing body** — grab it and pull away to aim a launch: a dashed line previews the
   velocity you're about to give it, and releasing sets that velocity (see below). Dragging empty
   space still pans the view, so this only triggers when the drag starts on a body.
@@ -129,13 +130,20 @@ bodies' unmerged paths rather than the merge itself.
 ### Inspector panel
 
 Selecting a body (by clicking it, or cycling with <kbd>[</kbd>/<kbd>]</kbd>) opens a panel
-showing its current mass, position, speed, and kinetic energy, refreshed every tick — useful
-for, say, watching a planet's speed peak at perihelion or a rogue body's kinetic energy stay
-enormous even as gravity bends its path. Selection tracks the body by identity across ticks;
-if the selected body merges with another, the resulting fused body has no history to select, so
-the panel closes automatically (with a screen-reader announcement explaining why — see
-Accessibility announcements below). [`src/inspector.js`](src/inspector.js) has no DOM dependency
-either — it just picks a body from a point or a neighbor in the list, and reads off its stats.
+showing its current position, speed, and kinetic energy, refreshed every tick — useful for, say,
+watching a planet's speed peak at perihelion or a rogue body's kinetic energy stay enormous even
+as gravity bends its path. Selection tracks the body by identity across ticks; if the selected
+body merges with another, the resulting fused body has no history to select, so the panel closes
+automatically (with a screen-reader announcement explaining why — see Accessibility
+announcements below). [`src/inspector.js`](src/inspector.js) has no DOM dependency either — it
+just picks a body from a point or a neighbor in the list, and reads off its stats.
+
+The panel's **Mass** field edits the selected body's mass directly, live — heavier or lighter
+immediately changes how strongly it pulls on (and is pulled by) everything else.
+`parseMassInput` rejects anything that isn't a positive, finite number, reverting the field to
+the body's last valid mass rather than applying a zero, negative, or unparseable value. The
+field is left untouched on ticks while it's focused, so a value being typed doesn't get
+overwritten mid-keystroke by the next refresh.
 
 The panel's **Keep centered** checkbox re-centers the view on the selected body every tick,
 handy for following a fast body (like the rogue flyby's interloper) without it drifting out of

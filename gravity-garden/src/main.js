@@ -2,7 +2,7 @@ import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
-import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody } from "./inspector.js";
+import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody, parseMassInput } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
 import {
   listSavedScenarioNames,
@@ -42,6 +42,7 @@ const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
+const massInput = document.getElementById("mass-input");
 const deselectBtn = document.getElementById("deselect");
 const removeBodyBtn = document.getElementById("remove-body");
 const resetViewBtn = document.getElementById("reset-view");
@@ -257,10 +258,15 @@ function updateInspectorPanel() {
 
   const info = describeBody(selected);
   inspectorReadout.textContent =
-    `mass: ${info.mass.toFixed(1)}\n` +
     `position: (${info.x.toFixed(1)}, ${info.y.toFixed(1)})\n` +
     `speed: ${info.speed.toFixed(2)}\n` +
     `kinetic energy: ${info.kineticEnergy.toFixed(1)}`;
+
+  // Leave the field alone while the user is actively editing it, so a tick landing between
+  // keystrokes doesn't stomp on a value they haven't finished typing yet.
+  if (document.activeElement !== massInput) {
+    massInput.value = info.mass;
+  }
 }
 
 function tick() {
@@ -370,6 +376,19 @@ function removeSelectedBody() {
 }
 
 removeBodyBtn.addEventListener("click", removeSelectedBody);
+
+// Fires on blur/Enter rather than every keystroke, so a value like "150" doesn't get rejected
+// (or momentarily applied) partway through typing it.
+massInput.addEventListener("change", () => {
+  const body = bodies.find((b) => b.id === selectedBodyId);
+  if (!body) return;
+  const mass = parseMassInput(massInput.value);
+  if (mass === null) {
+    massInput.value = body.mass;
+    return;
+  }
+  body.mass = mass;
+});
 
 function updateZoomReadout() {
   zoomValue.textContent = `${viewport.zoom.toFixed(1)}×`;
