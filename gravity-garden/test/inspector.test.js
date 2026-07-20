@@ -7,6 +7,7 @@ import {
   describeBody,
   adjacentBodyId,
   removeBody,
+  parseMassInput,
 } from "../src/inspector.js";
 
 function threeBodies() {
@@ -112,4 +113,27 @@ test("removeBody returns the same array reference when the id is not found", () 
 test("removeBody on the last remaining body returns an empty array", () => {
   const bodies = [{ id: 1, mass: 10, x: 0, y: 0, vx: 0, vy: 0, radius: 5 }];
   assert.deepEqual(removeBody(bodies, 1), []);
+});
+
+test("parseMassInput accepts a positive number string", () => {
+  assert.equal(parseMassInput("42"), 42);
+  assert.equal(parseMassInput("0.5"), 0.5);
+  assert.equal(parseMassInput("1e3"), 1000);
+});
+
+test("parseMassInput trims surrounding whitespace", () => {
+  assert.equal(parseMassInput("  42  "), 42);
+});
+
+test("parseMassInput rejects zero, negative, or non-finite values", () => {
+  assert.equal(parseMassInput("0"), null);
+  assert.equal(parseMassInput("-5"), null);
+  assert.equal(parseMassInput("Infinity"), null);
+  assert.equal(parseMassInput("NaN"), null);
+});
+
+test("parseMassInput rejects non-numeric or empty text", () => {
+  assert.equal(parseMassInput("heavy"), null);
+  assert.equal(parseMassInput(""), null);
+  assert.equal(parseMassInput("   "), null);
 });
