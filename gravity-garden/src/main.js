@@ -11,6 +11,7 @@ import {
   deleteScenarioFromStorage,
 } from "./storage.js";
 import { launchVelocityFrom } from "./launch.js";
+import { buildShareUrl, extractShareFragment, decodeScenarioFromFragment } from "./shareLink.js";
 import { describeMerge, describeRemoval } from "./announcements.js";
 import {
   createViewport,
@@ -49,6 +50,7 @@ const followCheckbox = document.getElementById("follow-selected");
 const exportBtn = document.getElementById("export-scenario");
 const importBtn = document.getElementById("import-scenario");
 const importFileInput = document.getElementById("import-scenario-file");
+const copyShareLinkBtn = document.getElementById("copy-share-link");
 const scenarioIoStatus = document.getElementById("scenario-io-status");
 const saveNameInput = document.getElementById("save-name");
 const saveScenarioBtn = document.getElementById("save-scenario");
@@ -430,6 +432,18 @@ importFileInput.addEventListener("change", () => {
   importFileInput.value = "";
 });
 
+copyShareLinkBtn.addEventListener("click", async () => {
+  const url = buildShareUrl({ bodies, G, softening, viewport }, window.location.href);
+  try {
+    await navigator.clipboard.writeText(url);
+    scenarioIoStatus.textContent = "Share link copied to clipboard.";
+  } catch {
+    // Clipboard access can be denied (permissions, insecure context, older browsers); fall
+    // back to putting the link itself in the status line so it can still be copied by hand.
+    scenarioIoStatus.textContent = `Copy this link to share: ${url}`;
+  }
+});
+
 // Repopulates the saved-scenarios dropdown from storage, preserving the previous
 // selection if it still exists, and enables/disables Load and Delete accordingly.
 function refreshSavedScenariosList(selectName) {
@@ -489,6 +503,20 @@ deleteScenarioBtn.addEventListener("click", () => {
 });
 
 refreshSavedScenariosList();
+
+// If the page was opened from a share link, load the scenario it encodes over the default
+// preset. Runs after the rest of the scenario I/O wiring above so applyScenario is ready, and
+// clears the hash afterward so refreshing the page doesn't reapply it over further edits.
+const shareFragment = extractShareFragment(window.location.hash);
+if (shareFragment !== null) {
+  try {
+    applyScenario(decodeScenarioFromFragment(shareFragment));
+    scenarioIoStatus.textContent = `Loaded shared scenario (${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}).`;
+  } catch (err) {
+    scenarioIoStatus.textContent = `Share link failed: ${err.message}`;
+  }
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}
 
 function addBodyAt(x, y) {
   bodies.push({
