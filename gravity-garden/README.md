@@ -51,6 +51,8 @@ Then open the printed URL in a browser.
 - **Import scenario&hellip;** — load a previously exported file back in, replacing the running
   simulation. A malformed or hand-edited file is rejected with a description of what's wrong,
   rather than partially applied.
+- **Copy share link** — copy a URL that reproduces the running simulation to the clipboard.
+  Opening it loads the encoded scenario the same way importing a file does (see below).
 - **Save name&hellip; / Save in browser** — save the running simulation under a name, kept in
   this browser (via `localStorage`) rather than downloaded as a file, for a quicker round-trip
   than export/import when you're iterating locally.
@@ -176,6 +178,20 @@ snapshot: they're session bookkeeping that a freshly loaded scenario regenerates
 replays. Loading validates every field and throws a specific, human-readable error on the first
 problem found — instead of silently corrupting the running simulation with a malformed or
 hand-edited file — which the UI surfaces without applying any of the (possibly partial) change.
+
+### Share links
+
+[`src/shareLink.js`](src/shareLink.js) packs a scenario into a URL instead of a downloaded
+file, for handing a running simulation to someone else with a link rather than an attachment.
+It builds on the same `serializeScenario` / `deserializeScenario` pair as export/import and
+local saves — share links only own turning that snapshot into (and back out of) a URL-safe
+string, not the scenario format itself — so a share link gets the same validation and
+descriptive rejection of malformed data as a hand-edited import file. The encoded scenario
+lives in the URL's hash rather than a query parameter, since a hash is never sent to the
+server, keeping the whole exchange client-side. Opening a share link consumes it once: the
+scenario loads on startup and the hash is then cleared from the address bar, so refreshing the
+page afterward continues from wherever the simulation has since evolved to, instead of
+resetting back to the shared moment.
 
 ### Local saves
 
