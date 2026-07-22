@@ -34,6 +34,10 @@ const toggleBtn = document.getElementById("toggle-play");
 const resetBtn = document.getElementById("reset");
 const speedInput = document.getElementById("speed");
 const speedValue = document.getElementById("speed-value");
+const gravityInput = document.getElementById("gravity");
+const gravityValue = document.getElementById("gravity-value");
+const softeningInput = document.getElementById("softening");
+const softeningValue = document.getElementById("softening-value");
 const trailsCheckbox = document.getElementById("trails");
 const statsEl = document.getElementById("stats");
 const diagnosticsCheckbox = document.getElementById("show-diagnostics");
@@ -104,6 +108,18 @@ for (const key of listPresetNames()) {
 }
 presetSelect.value = currentPresetKey;
 
+// Keeps the G and softening sliders (and their readouts) in sync whenever those values
+// change from somewhere other than dragging the slider itself — loading a preset, resetting,
+// importing a file, or restoring an undo snapshot. Setting `.value` past a slider's min/max
+// clamps to that bound (a browser range input's native behavior), so an out-of-range imported
+// value is visually pinned at the extreme without altering the actual running G/softening.
+function updateGravityReadouts() {
+  gravityInput.value = G;
+  gravityValue.textContent = G.toFixed(1);
+  softeningInput.value = softening;
+  softeningValue.textContent = softening.toFixed(1);
+}
+
 function loadPreset(key) {
   const preset = PRESETS[key];
   currentPresetKey = key;
@@ -117,6 +133,7 @@ function loadPreset(key) {
   viewport = resetViewport();
   undoHistory = createHistory(UNDO_HISTORY_SIZE);
   updateUndoButton();
+  updateGravityReadouts();
 }
 
 function worldToScreen(x, y) {
@@ -354,6 +371,16 @@ speedInput.addEventListener("input", () => {
   speedValue.textContent = `${speed.toFixed(1)}×`;
 });
 
+gravityInput.addEventListener("input", () => {
+  G = Number(gravityInput.value);
+  gravityValue.textContent = G.toFixed(1);
+});
+
+softeningInput.addEventListener("input", () => {
+  softening = Number(softeningInput.value);
+  softeningValue.textContent = softening.toFixed(1);
+});
+
 trailsCheckbox.addEventListener("change", () => {
   showTrails = trailsCheckbox.checked;
 });
@@ -400,6 +427,7 @@ function undo() {
   bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
   selectedBodyId = null;
   updateUndoButton();
+  updateGravityReadouts();
 }
 
 undoBtn.addEventListener("click", undo);
@@ -477,6 +505,7 @@ function applyScenario(restored) {
   undoHistory = createHistory(UNDO_HISTORY_SIZE);
   updateUndoButton();
   updateZoomReadout();
+  updateGravityReadouts();
 }
 
 importFileInput.addEventListener("change", () => {
