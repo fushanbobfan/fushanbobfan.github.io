@@ -25,6 +25,7 @@ import {
   touchMidpoint,
   frameBodies,
 } from "./viewport.js";
+import { computeMinimapTransform, worldToMinimapPoint, viewportRectOnMinimap } from "./minimap.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -46,6 +47,9 @@ const diagnosticsCheckbox = document.getElementById("show-diagnostics");
 const diagnosticsPanel = document.getElementById("diagnostics-panel");
 const diagnosticsChart = document.getElementById("diagnostics-chart");
 const diagnosticsCtx = diagnosticsChart.getContext("2d");
+const minimapCanvas = document.getElementById("minimap");
+const minimapCtx = minimapCanvas.getContext("2d");
+const showMinimapCheckbox = document.getElementById("show-minimap");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
@@ -89,6 +93,7 @@ let showTrails = true;
 let trailLength = 400;
 let showDiagnostics = true;
 let showPrediction = false;
+let showMinimap = true;
 let predictedPaths = [];
 let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
@@ -210,6 +215,30 @@ function draw() {
     const body = bodies.find((b) => b.id === aimingBodyId);
     if (body) drawAimLine(body);
   }
+
+  if (showMinimap) drawMinimap();
+}
+
+// Draws every body at a fixed fit-to-bounds scale (via minimap.js, independent of the main
+// viewport's own pan/zoom), plus an outline of what the main view currently shows — a "you are
+// here" box that shrinks as the main view zooms in, so it's still useful when zoomed in tight
+// on one part of a spread-out system.
+function drawMinimap() {
+  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+  const transform = computeMinimapTransform(bodies, minimapCanvas.width, minimapCanvas.height);
+
+  for (const body of bodies) {
+    const { x, y } = worldToMinimapPoint(transform, body.x, body.y);
+    minimapCtx.beginPath();
+    minimapCtx.fillStyle = body.color;
+    minimapCtx.arc(x, y, Math.max(1.5, body.radius * transform.scale), 0, Math.PI * 2);
+    minimapCtx.fill();
+  }
+
+  const rect = viewportRectOnMinimap(transform, viewport, canvas.width, canvas.height);
+  minimapCtx.strokeStyle = "#e8ecf4";
+  minimapCtx.lineWidth = 1;
+  minimapCtx.strokeRect(rect.x, rect.y, rect.width, rect.height);
 }
 
 // A dashed line from the grabbed body to the pointer, with a dot at the pointer end,
@@ -404,6 +433,11 @@ diagnosticsCheckbox.addEventListener("change", () => {
 predictCheckbox.addEventListener("change", () => {
   showPrediction = predictCheckbox.checked;
   ticksSincePrediction = Infinity;
+});
+
+showMinimapCheckbox.addEventListener("change", () => {
+  showMinimap = showMinimapCheckbox.checked;
+  minimapCanvas.hidden = !showMinimap;
 });
 
 followCheckbox.addEventListener("change", () => {
@@ -938,6 +972,11 @@ document.addEventListener("keydown", (event) => {
     case "P":
       predictCheckbox.checked = !predictCheckbox.checked;
       predictCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "m":
+    case "M":
+      showMinimapCheckbox.checked = !showMinimapCheckbox.checked;
+      showMinimapCheckbox.dispatchEvent(new Event("change"));
       break;
     case "]":
       selectedBodyId = adjacentBodyId(bodies, selectedBodyId, 1);
