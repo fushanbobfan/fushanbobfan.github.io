@@ -40,6 +40,10 @@ Then open the printed URL in a browser.
   already drawn on — erase back to plain empty. The very first cell touched in a drag decides
   whether the whole drag draws or erases, so dragging back over cells you already toggled
   doesn't immediately flip them back.
+- **Keyboard** — the grid is a single Tab stop; once focused, arrow keys move between cells and
+  <kbd>Enter</kbd>/<kbd>Space</kbd> activates the focused one (drawing, erasing, or placing the
+  start/end, exactly like a click — dragging has no keyboard equivalent, so weighted terrain and
+  walls can only be drawn one cell at a time this way).
 
 ## Algorithms
 
@@ -93,6 +97,19 @@ so "fewest steps" and "cheapest path" mean the same kind of step no matter which
 `setNodeType` moves the start or end rather than creating a second one if either already exists
 elsewhere on the grid; `setNodeWeight` changes a cell's cost independently of its type, so
 clearing a wall back to empty doesn't erase whatever weight the ground underneath had.
+
+## Keyboard navigation
+
+The grid uses a roving `tabindex` (the standard keyboard pattern for a grid of same-role
+cells): exactly one cell is a Tab stop at a time, so tabbing into the grid always lands
+somewhere sensible and arrow keys move that one focus point instead of requiring Tab to step
+through all 450 cells individually. Clicking a cell moves the roving focus there too, so
+switching between mouse and keyboard mid-session picks up from wherever you last interacted
+rather than jumping back to a stale position. The grid's cells aren't wrapped in `role="row"`
+elements — the CSS grid layout is a flat list of cells, and adding row wrappers would need
+`display: contents` to keep the visual layout intact, with inconsistent screen reader support
+for a flat grid/gridcell hierarchy either way — so each cell's own label spells out its row and
+column rather than relying on structure alone to convey position.
 
 ## Development
 
