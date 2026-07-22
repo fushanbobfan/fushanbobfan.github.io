@@ -27,6 +27,8 @@ Then open the printed URL in a browser.
 - **Clear path** — remove the last run's highlighting without touching the walls or terrain.
 - **Clear walls & terrain** — remove every wall and reset every cell's weight, keeping the
   current start, end, and any highlighting.
+- **Generate maze** — replace the grid with a freshly generated, always-solvable maze (see
+  below), moving the start and end to its two opposite corners.
 - **Place start&hellip; / Place end&hellip;** — arm placement mode, then click any cell to move
   that marker there. Placing one marker on top of the other isn't prevented — the algorithm
   simply reports the trivial single-cell path.
@@ -66,6 +68,21 @@ the cells visited.
 All three return both the order cells were explored in (what the animation reveals step by
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
 itself works.
+
+## Maze generation
+
+[`src/maze.js`](src/maze.js) builds a maze with a randomized depth-first search (the
+"recursive backtracker"), a standard maze generation algorithm: starting from the top-left
+corner, it repeatedly carves into a random unvisited neighboring passage two cells away,
+backtracking when a cell has none left, until every reachable passage has been visited. Only
+even-indexed rows and columns are ever passages — the odd ones in between start (and, unless a
+carve happens to link through them, stay) walls — so the result is a "perfect" maze: exactly one
+path between any two passages, with no cycles and no isolated, unreachable rooms. The random
+source is a parameter rather than a direct call to `Math.random`, so the algorithm itself can be
+tested deterministically with a seeded generator. **Generate maze** replaces the whole grid with
+one of these (clearing existing walls and weighted terrain along with it) and moves the start
+and end to the two corners farthest apart on the even-cell grid, so the generated maze is always
+solvable end to end.
 
 ## The grid model
 
