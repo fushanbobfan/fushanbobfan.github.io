@@ -78,3 +78,14 @@ export function setNodeType(grid, row, col, type) {
   next[row][col] = { ...next[row][col], type };
   return next;
 }
+
+/**
+ * Returns a new grid with `(row, col)`'s weight changed — the cost a weighted-search algorithm
+ * (Dijkstra, A*) pays to step into that cell. Left untouched by `setNodeType`, so turning a
+ * cell into a wall doesn't erase whatever weight it had if it's later cleared back to empty.
+ */
+export function setNodeWeight(grid, row, col, weight) {
+  const next = cloneGrid(grid);
+  next[row][col] = { ...next[row][col], weight };
+  return next;
+}
