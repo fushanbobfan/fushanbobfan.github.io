@@ -42,7 +42,8 @@ Then open the printed URL in a browser.
   velocity you're about to give it, and releasing sets that velocity (see below). Dragging empty
   space still pans the view, so this only triggers when the drag starts on a body.
 - **Drag the canvas** — pan the view. **Scroll** over it — zoom in or out, centered on the
-  pointer. **Reset view** — return to the default pan and zoom.
+  pointer. **Reset view** — return to the default pan and zoom. **Frame all bodies** — pan and
+  zoom to fit every body on screen at once (see below).
 - **Touchscreens** — the canvas responds to touch the same way it does to mouse and wheel: tap
   empty space to drop a body or tap a body to select it, drag with one finger on empty space to
   pan (or on a body to aim and launch it), and pinch with two fingers to zoom in or out around
@@ -75,6 +76,7 @@ Then open the printed URL in a browser.
 | `Esc` | Deselect the current body |
 | `+` / `-` | Zoom in / out, centered on the canvas |
 | `0` | Reset the view |
+| `F` | Frame all bodies |
 | `←` / `→` | Pan left / right |
 | `Shift`+`↑` / `Shift`+`↓` | Pan up / down |
 
@@ -174,6 +176,14 @@ the same way.
 Touch reuses the same transform: a one-finger drag panning is the touch equivalent of dragging
 with the mouse, and a two-finger pinch zooms around the pinch's midpoint the same way the wheel
 handler zooms around the cursor, both calling the same `zoomAt` and `panBy` functions.
+
+**Frame all bodies** picks a pan and zoom that fits every body on screen at once, computed by
+`viewport.js`'s `frameBodies` from the bodies' current bounding box (padded by 15% so nothing
+sits flush against the edge) rather than a fixed scale, so it works the same whether the system
+is a tight binary or a cluster that's flung itself apart. A single body, or a cluster so tight
+its bounding box is nearly a point, is framed at a bounded minimum extent instead of zooming in
+arbitrarily far. Framing turns off **Keep centered** first, the same way manually panning does,
+so the two don't immediately fight over the viewport.
 
 ### Scenario export/import
 
