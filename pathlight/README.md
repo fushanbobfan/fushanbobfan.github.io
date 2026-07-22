@@ -52,6 +52,7 @@ Then open the printed URL in a browser.
 | Breadth-First Search | Fewest steps | No — every step costs the same regardless of terrain |
 | Dijkstra's Algorithm | Cheapest total cost | Yes |
 | A* Search | Cheapest total cost, usually exploring far fewer cells | Yes |
+| Greedy Best-First Search | None | No |
 
 [`src/algorithms/bfs.js`](src/algorithms/bfs.js) explores the grid one ring of distance at a
 time, so the first time it reaches the end is guaranteed to be via the fewest possible steps —
@@ -69,7 +70,15 @@ direction — same optimality guarantee as Dijkstra (the heuristic never overest
 remaining cost, as long as every cell's weight is at least 1), usually for a small fraction of
 the cells visited.
 
-All three return both the order cells were explored in (what the animation reveals step by
+[`src/algorithms/greedy.js`](src/algorithms/greedy.js) drops A*'s cost-so-far term entirely,
+expanding purely by which frontier cell looks closest to the end — fast, and often good enough,
+but with no optimality guarantee at all: a heuristic pointing straight at a dead end will walk
+it in before ever considering a detour that was actually shorter. On an open grid with nothing
+to route around it usually still finds the shortest path (there's no wrong direction to be
+lured toward), which is exactly when it shines — visiting a small fraction of the cells
+Dijkstra or even A* would.
+
+All four return both the order cells were explored in (what the animation reveals step by
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
 itself works.
 

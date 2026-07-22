@@ -2,6 +2,7 @@ import { createGrid, setNodeType, setNodeWeight, findNodeOfType, EMPTY, WALL, ST
 import { bfs } from "./algorithms/bfs.js";
 import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
+import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { generateMaze } from "./maze.js";
 
 const ROWS = 15;
@@ -26,6 +27,7 @@ const ALGORITHMS = {
   bfs: { label: "Breadth-First Search", run: bfs },
   dijkstra: { label: "Dijkstra's Algorithm", run: dijkstra },
   astar: { label: "A* Search", run: astar },
+  greedy: { label: "Greedy Best-First Search", run: greedyBestFirstSearch },
 };
 
 let grid = createGrid(ROWS, COLS);
