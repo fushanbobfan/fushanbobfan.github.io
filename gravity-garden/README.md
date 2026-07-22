@@ -29,6 +29,7 @@ Then open the printed URL in a browser.
 - **Gravitational constant (G) / Softening length** — adjust the simulation's own physics
   constants live, without switching scenarios (see below).
 - **Show trails** — toggle position trails for each body.
+- **Trail length** — how many past positions each trail keeps before its oldest end drops off.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
 - **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
   (see below).
