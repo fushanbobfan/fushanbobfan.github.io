@@ -2,6 +2,7 @@ import { createGrid, setNodeType, setNodeWeight, findNodeOfType, EMPTY, WALL, ST
 import { bfs } from "./algorithms/bfs.js";
 import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
+import { generateMaze } from "./maze.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -12,6 +13,7 @@ const algorithmSelect = document.getElementById("algorithm");
 const runBtn = document.getElementById("run");
 const clearPathBtn = document.getElementById("clear-path");
 const clearWallsBtn = document.getElementById("clear-walls");
+const generateMazeBtn = document.getElementById("generate-maze");
 const setStartBtn = document.getElementById("set-start");
 const setEndBtn = document.getElementById("set-end");
 const brushWallBtn = document.getElementById("brush-wall");
@@ -172,6 +174,24 @@ clearWallsBtn.addEventListener("click", () => {
   grid = grid.map((row) =>
     row.map((cell) => (cell.type === WALL ? { ...cell, type: EMPTY, weight: 1 } : { ...cell, weight: 1 }))
   );
+  visitedSet.clear();
+  pathSet.clear();
+  renderAll();
+  setStatus("");
+});
+
+// The maze generator only carves passages between even (row, col) cells, so the start and end
+// land on the first and last even cells rather than wherever they happened to be before —
+// anywhere else risks landing on a wall the generator just drew.
+generateMazeBtn.addEventListener("click", () => {
+  const wallGrid = generateMaze(ROWS, COLS);
+  grid = wallGrid.map((row) => row.map((isWall) => ({ type: isWall ? WALL : EMPTY, weight: 1 })));
+
+  const endRow = 2 * Math.floor((ROWS - 1) / 2);
+  const endCol = 2 * Math.floor((COLS - 1) / 2);
+  grid = setNodeType(grid, 0, 0, START);
+  grid = setNodeType(grid, endRow, endCol, END);
+
   visitedSet.clear();
   pathSet.clear();
   renderAll();
