@@ -124,6 +124,7 @@ input[type="range"] {
   border-radius: 8px;
   overflow: hidden;
   user-select: none;
+  touch-action: none;
   flex: 1 1 480px;
   /* A flex item's implicit min-width is auto (its content size), not 0 — for a CSS grid of
      `1fr` columns whose content (empty cells) has no intrinsic size of its own, that can fail

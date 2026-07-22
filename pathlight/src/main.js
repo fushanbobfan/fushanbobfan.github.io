@@ -127,6 +127,15 @@ function cellFromEvent(event) {
   return { row: Number(el.dataset.row), col: Number(el.dataset.col) };
 }
 
+// A touchmove's own `target` stays whatever cell the touch started on, unlike a mouse's, so
+// dragging a finger across the grid needs to look up whatever's actually under it by position
+// instead.
+function cellAtPoint(clientX, clientY) {
+  const el = document.elementFromPoint(clientX, clientY)?.closest("[role='gridcell']");
+  if (!el) return null;
+  return { row: Number(el.dataset.row), col: Number(el.dataset.col) };
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -317,6 +326,42 @@ window.addEventListener("mouseup", () => {
 });
 
 gridEl.addEventListener("dragstart", (event) => event.preventDefault());
+
+// { passive: false } so preventDefault can stop the touch from panning/zooming the page while
+// drawing on the grid — the same reason gravity-garden's canvas sets touch-action: none.
+gridEl.addEventListener(
+  "touchstart",
+  (event) => {
+    const touch = event.touches[0];
+    const pos = cellAtPoint(touch.clientX, touch.clientY);
+    if (!pos) return;
+    event.preventDefault();
+    focusCell(pos.row, pos.col);
+    isDrawing = activateCell(pos.row, pos.col);
+  },
+  { passive: false }
+);
+
+gridEl.addEventListener(
+  "touchmove",
+  (event) => {
+    if (!isDrawing) return;
+    event.preventDefault();
+    const touch = event.touches[0];
+    const pos = cellAtPoint(touch.clientX, touch.clientY);
+    if (!pos) return;
+    continueDraw(pos.row, pos.col);
+  },
+  { passive: false }
+);
+
+gridEl.addEventListener("touchend", () => {
+  isDrawing = false;
+});
+
+gridEl.addEventListener("touchcancel", () => {
+  isDrawing = false;
+});
 
 gridEl.addEventListener("keydown", (event) => {
   switch (event.key) {
