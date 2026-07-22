@@ -24,7 +24,7 @@ Then open the printed URL in a browser.
 
 - **Scenario** — switch between the built-in presets.
 - **Pause / Reset** — stop the simulation or reload the current scenario's initial conditions.
-- **Undo** — reverse the last add, remove, launch, or mass edit (see below).
+- **Undo** — reverse the last add, remove, launch, or mass/color edit (see below).
 - **Speed** — scale the simulation timestep.
 - **Gravitational constant (G) / Softening length** — adjust the simulation's own physics
   constants live, without switching scenarios (see below).
@@ -37,8 +37,8 @@ Then open the printed URL in a browser.
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
 - **Click an existing body** — select it and open the inspector panel, showing its live
-  position, speed, and kinetic energy, plus an editable **Mass** field (see below) and a
-  **Keep centered** checkbox to have the view follow it. Click it again, or the panel's
+  position, speed, and kinetic energy, plus editable **Mass** and **Color** fields (see below)
+  and a **Keep centered** checkbox to have the view follow it. Click it again, or the panel's
   **Deselect** button, to close it. Its **Remove body** button (or
   <kbd>Delete</kbd>/<kbd>Backspace</kbd>) takes the selected body out of the simulation
   entirely.
@@ -71,7 +71,7 @@ Then open the printed URL in a browser.
 | --- | --- |
 | `Space` | Play / pause |
 | `R` | Reset the current scenario |
-| `U` | Undo the last add, remove, launch, or mass edit |
+| `U` | Undo the last add, remove, launch, or mass/color edit |
 | `↑` / `↓` | Raise / lower speed |
 | `T` | Toggle trails |
 | `C` | Toggle the conservation chart |
@@ -162,8 +162,11 @@ The panel's **Mass** field edits the selected body's mass directly, live — hea
 immediately changes how strongly it pulls on (and is pulled by) everything else.
 `parseMassInput` rejects anything that isn't a positive, finite number, reverting the field to
 the body's last valid mass rather than applying a zero, negative, or unparseable value. The
-field is left untouched on ticks while it's focused, so a value being typed doesn't get
-overwritten mid-keystroke by the next refresh.
+**Color** field is a native color picker for the same body, purely cosmetic — it doesn't affect
+the physics, only how the body and its trail are drawn. Both fields are left untouched on ticks
+while focused, so a mass being typed or a color mid-drag doesn't get overwritten by the next
+refresh; the color field only commits (and pushes an undo snapshot) once the picker closes,
+rather than once per intermediate hue while dragging across its gradient.
 
 The panel's **Keep centered** checkbox re-centers the view on the selected body every tick,
 handy for following a fast body (like the rogue flyby's interloper) without it drifting out of
@@ -242,17 +245,17 @@ device they were made in; export a scenario to a file instead to move it elsewhe
 
 ### Undo
 
-Dropping a body in the wrong spot, removing the wrong one, or launching it at the wrong speed
-is otherwise permanent the instant it happens. [`src/history.js`](src/history.js) is a small,
-DOM-free bounded stack of opaque snapshots — pushed before each of those four actions, using
-the same `serializeScenario` that export/import and local saves already rely on, so undo needed
-no scenario-format logic of its own. Undoing pops the most recent snapshot and restores it with
-`deserializeScenario`, the same path a loaded file or share link takes. The stack holds the last
-20 actions and is cleared whenever the whole scenario changes from under it — switching presets,
-resetting, importing a file, loading a save, or opening a share link — since undoing into a
-scenario the current one replaced would restore bodies from an unrelated simulation. Selecting a
-body, panning, or zooming isn't itself undoable; only the four state-changing actions push a
-snapshot.
+Dropping a body in the wrong spot, removing the wrong one, launching it at the wrong speed, or
+editing its mass or color is otherwise permanent the instant it happens. [`src/history.js`](src/history.js)
+is a small, DOM-free bounded stack of opaque snapshots — pushed before each of those five
+actions, using the same `serializeScenario` that export/import and local saves already rely on,
+so undo needed no scenario-format logic of its own. Undoing pops the most recent snapshot and
+restores it with `deserializeScenario`, the same path a loaded file or share link takes. The
+stack holds the last 20 actions and is cleared whenever the whole scenario changes from under
+it — switching presets, resetting, importing a file, loading a save, or opening a share link —
+since undoing into a scenario the current one replaced would restore bodies from an unrelated
+simulation. Selecting a body, panning, zooming, or adjusting G/softening isn't itself undoable;
+only the five body-mutating actions push a snapshot.
 
 ### Accessibility announcements
 
