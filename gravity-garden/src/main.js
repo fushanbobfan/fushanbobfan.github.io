@@ -51,6 +51,7 @@ const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
 const massInput = document.getElementById("mass-input");
+const colorInput = document.getElementById("color-input");
 const deselectBtn = document.getElementById("deselect");
 const removeBodyBtn = document.getElementById("remove-body");
 const resetViewBtn = document.getElementById("reset-view");
@@ -294,6 +295,9 @@ function updateInspectorPanel() {
   if (document.activeElement !== massInput) {
     massInput.value = info.mass;
   }
+  if (document.activeElement !== colorInput) {
+    colorInput.value = selected.color;
+  }
 }
 
 function tick() {
@@ -412,9 +416,10 @@ deselectBtn.addEventListener("click", () => {
 
 // Records the current bodies/G/softening (reusing scenario.js's serialization, so undo
 // doesn't need its own notion of what a "state" is) before a discrete, reversible action —
-// adding, removing, launching, or editing a body's mass. Skipped around actions that replace
-// the whole scenario (loadPreset, applyScenario), which clear the stack instead: undoing back
-// into a scenario the current one replaced would restore bodies from a different simulation.
+// adding, removing, launching, or editing a body's mass or color. Skipped around actions that
+// replace the whole scenario (loadPreset, applyScenario), which clear the stack instead:
+// undoing back into a scenario the current one replaced would restore bodies from a different
+// simulation.
 function snapshotForUndo() {
   undoHistory = pushHistory(undoHistory, serializeScenario({ bodies, G, softening, viewport }));
   updateUndoButton();
@@ -461,6 +466,15 @@ massInput.addEventListener("change", () => {
   }
   snapshotForUndo();
   body.mass = mass;
+});
+
+// Fires once the color picker closes rather than on every drag across its gradient, so
+// undo gets one snapshot per color choice instead of one per intermediate hue.
+colorInput.addEventListener("change", () => {
+  const body = bodies.find((b) => b.id === selectedBodyId);
+  if (!body) return;
+  snapshotForUndo();
+  body.color = colorInput.value;
 });
 
 function updateZoomReadout() {
