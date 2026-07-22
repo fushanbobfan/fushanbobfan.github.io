@@ -61,7 +61,11 @@ main {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  min-width: 220px;
+  flex: 0 0 260px;
+  /* Without an explicit basis, a flex item's default (auto) one is its max-content width — for
+     a panel containing a long, unwrapped-for-measurement paragraph (.hint), that's the width
+     of its longest line laid out on one line, which can balloon to nearly the whole row and
+     starve .grid of space. Fixing .controls to a set width sidesteps that entirely. */
 }
 
 .control-row {
@@ -120,6 +124,13 @@ input[type="range"] {
   border-radius: 8px;
   overflow: hidden;
   user-select: none;
+  touch-action: none;
+  flex: 1 1 480px;
+  /* A flex item's implicit min-width is auto (its content size), not 0 — for a CSS grid of
+     `1fr` columns whose content (empty cells) has no intrinsic size of its own, that can fail
+     to resolve to a sensible width. min-width: 0 lets it size purely from the flex-basis and
+     available space instead. */
+  min-width: 0;
   max-width: 100%;
 }
 

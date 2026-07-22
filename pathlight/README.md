@@ -39,7 +39,7 @@ Then open the printed URL in a browser.
 - **Click or drag across empty cells** — draw with the active tool. Click or drag across cells
   already drawn on — erase back to plain empty. The very first cell touched in a drag decides
   whether the whole drag draws or erases, so dragging back over cells you already toggled
-  doesn't immediately flip them back.
+  doesn't immediately flip them back. Touch works the same way as a mouse drag.
 - **Keyboard** — the grid is a single Tab stop; once focused, arrow keys move between cells and
   <kbd>Enter</kbd>/<kbd>Space</kbd> activates the focused one (drawing, erasing, or placing the
   start/end, exactly like a click — dragging has no keyboard equivalent, so weighted terrain and
