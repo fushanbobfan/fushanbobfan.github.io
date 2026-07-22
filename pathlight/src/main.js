@@ -33,6 +33,8 @@ grid = setNodeType(grid, Math.floor(ROWS / 2), 2, START);
 grid = setNodeType(grid, Math.floor(ROWS / 2), COLS - 3, END);
 
 let cellEls = [];
+let focusedRow = 0;
+let focusedCol = 0;
 const visitedSet = new Set();
 const pathSet = new Set();
 
@@ -79,7 +81,13 @@ function buildGridDom() {
     const rowEls = [];
     for (let col = 0; col < COLS; col++) {
       const el = document.createElement("div");
+      // No intervening role="row" wrapper — the CSS grid layout is a flat list of cells, and
+      // adding row elements would need `display: contents` to keep the visual grid intact.
+      // Screen reader support for a flat grid > gridcell hierarchy without rows is inconsistent,
+      // so each cell's own aria-label spells out its row and column instead of relying on
+      // structure alone to convey position.
       el.setAttribute("role", "gridcell");
+      el.tabIndex = row === 0 && col === 0 ? 0 : -1;
       el.dataset.row = String(row);
       el.dataset.col = String(col);
       gridEl.appendChild(el);
@@ -87,6 +95,8 @@ function buildGridDom() {
     }
     cellEls.push(rowEls);
   }
+  focusedRow = 0;
+  focusedCol = 0;
 }
 
 function renderCell(row, col) {
@@ -255,20 +265,44 @@ function continueDraw(row, col) {
   renderCell(row, col);
 }
 
+// Shared by a mouse click and a keyboard Enter/Space: places the start/end if placement mode
+// is armed, otherwise applies the active brush to a single cell. Returns whether the action
+// can be extended by dragging (only true for a fresh wall/terrain stroke, not a placement).
+function activateCell(row, col) {
+  if (placementMode) {
+    grid = setNodeType(grid, row, col, placementMode === "start" ? START : END);
+    placementMode = null;
+    updatePlacementButtons();
+    renderAll();
+    return false;
+  }
+  return beginDraw(row, col);
+}
+
+// Roving tabindex (the standard keyboard pattern for a grid of same-role cells): exactly one
+// cell is a Tab stop at a time, and arrow keys move that one cell rather than requiring Tab to
+// step through all 450 of them individually.
+function focusCell(row, col) {
+  cellEls[focusedRow][focusedCol].tabIndex = -1;
+  focusedRow = row;
+  focusedCol = col;
+  cellEls[focusedRow][focusedCol].tabIndex = 0;
+}
+
+function moveFocus(dRow, dCol) {
+  const nextRow = Math.min(ROWS - 1, Math.max(0, focusedRow + dRow));
+  const nextCol = Math.min(COLS - 1, Math.max(0, focusedCol + dCol));
+  if (nextRow === focusedRow && nextCol === focusedCol) return;
+  focusCell(nextRow, nextCol);
+  cellEls[focusedRow][focusedCol].focus();
+}
+
 gridEl.addEventListener("mousedown", (event) => {
   const pos = cellFromEvent(event);
   if (!pos) return;
   event.preventDefault();
-
-  if (placementMode) {
-    grid = setNodeType(grid, pos.row, pos.col, placementMode === "start" ? START : END);
-    placementMode = null;
-    updatePlacementButtons();
-    renderAll();
-    return;
-  }
-
-  isDrawing = beginDraw(pos.row, pos.col);
+  focusCell(pos.row, pos.col);
+  isDrawing = activateCell(pos.row, pos.col);
 });
 
 gridEl.addEventListener("mousemove", (event) => {
@@ -283,6 +317,34 @@ window.addEventListener("mouseup", () => {
 });
 
 gridEl.addEventListener("dragstart", (event) => event.preventDefault());
+
+gridEl.addEventListener("keydown", (event) => {
+  switch (event.key) {
+    case "ArrowUp":
+      event.preventDefault();
+      moveFocus(-1, 0);
+      break;
+    case "ArrowDown":
+      event.preventDefault();
+      moveFocus(1, 0);
+      break;
+    case "ArrowLeft":
+      event.preventDefault();
+      moveFocus(0, -1);
+      break;
+    case "ArrowRight":
+      event.preventDefault();
+      moveFocus(0, 1);
+      break;
+    case "Enter":
+    case " ":
+      event.preventDefault();
+      activateCell(focusedRow, focusedCol);
+      break;
+    default:
+      break;
+  }
+});
 
 buildGridDom();
 renderAll();
