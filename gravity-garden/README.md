@@ -26,6 +26,8 @@ Then open the printed URL in a browser.
 - **Pause / Reset** — stop the simulation or reload the current scenario's initial conditions.
 - **Undo** — reverse the last add, remove, launch, or mass edit (see below).
 - **Speed** — scale the simulation timestep.
+- **Gravitational constant (G) / Softening length** — adjust the simulation's own physics
+  constants live, without switching scenarios (see below).
 - **Show trails** — toggle position trails for each body.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
 - **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
@@ -111,6 +113,19 @@ total mass and momentum, rather than orbiting forever at zero distance.
 
 The core simulation logic lives in [`src/physics.js`](src/physics.js) and has no
 dependency on the DOM or canvas, so it can be tested and reused on its own.
+
+### Adjusting gravity and softening
+
+`F = G * m1 * m2 / r^2`'s `G` and the softening length are usually fixed at whatever a preset
+sets them to, but the **Gravitational constant (G)** and **Softening length** sliders let you
+change either one live, for exploring how the same scenario behaves under stronger or weaker
+gravity, or with more or less softening smoothing out close encounters. A softening length near
+zero makes near-collisions dramatic (and, at exactly zero, numerically unstable at very short
+range) — the "Random Cluster" preset deliberately starts with a small softening (`0.05`) for
+that reason, while presets with orbiting bodies use a larger one to keep close passes smooth.
+Both sliders re-sync to the current scenario's values (rather than keeping whatever you'd
+dragged them to) whenever the whole simulation state changes from under them: switching presets,
+resetting, importing a file, loading a save, opening a share link, or undoing.
 
 ### Conservation chart
 
