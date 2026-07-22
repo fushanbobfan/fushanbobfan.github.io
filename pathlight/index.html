@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pathlight</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Pathlight</h1>
+    <p class="subtitle">An interactive pathfinding visualizer for grid search algorithms.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Visualizer controls">
+      <div class="control-row">
+        <label for="algorithm">Algorithm</label>
+        <select id="algorithm">
+          <option value="bfs">Breadth-First Search</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <button id="run" type="button">Run</button>
+        <button id="clear-path" type="button">Clear path</button>
+        <button id="clear-walls" type="button">Clear walls</button>
+      </div>
+
+      <div class="control-row">
+        <button id="set-start" type="button" aria-pressed="false">Place start&hellip;</button>
+        <button id="set-end" type="button" aria-pressed="false">Place end&hellip;</button>
+      </div>
+
+      <div class="control-row">
+        <label for="speed">Animation delay</label>
+        <input id="speed" type="range" min="0" max="100" step="5" value="20" />
+        <span id="speed-value">20ms</span>
+      </div>
+
+      <p class="hint">
+        Click or drag across empty cells to draw walls; click a wall to erase it. Use
+        <strong>Place start&hellip;</strong> / <strong>Place end&hellip;</strong>, then click a
+        cell, to move either marker.
+      </p>
+
+      <p class="status" id="status" aria-live="polite"></p>
+    </section>
+
+    <div class="grid" id="grid" role="grid" aria-label="Pathfinding grid"></div>
+  </main>
+
+  <footer>
+    <p>Grid search visualized step by step, from the algorithm's own exploration order.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
