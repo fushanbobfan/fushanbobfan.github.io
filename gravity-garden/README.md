@@ -24,6 +24,7 @@ Then open the printed URL in a browser.
 
 - **Scenario** — switch between the built-in presets.
 - **Pause / Reset** — stop the simulation or reload the current scenario's initial conditions.
+- **Undo** — reverse the last add, remove, launch, or mass edit (see below).
 - **Speed** — scale the simulation timestep.
 - **Show trails** — toggle position trails for each body.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
@@ -67,6 +68,7 @@ Then open the printed URL in a browser.
 | --- | --- |
 | `Space` | Play / pause |
 | `R` | Reset the current scenario |
+| `U` | Undo the last add, remove, launch, or mass edit |
 | `↑` / `↓` | Raise / lower speed |
 | `T` | Toggle trails |
 | `C` | Toggle the conservation chart |
@@ -221,6 +223,20 @@ persistence, not the scenario format itself — and takes the storage object as 
 rather than reaching for `window.localStorage` directly, so it can be tested against a plain
 in-memory fake instead of a real browser environment. Saves persist only in the browser and
 device they were made in; export a scenario to a file instead to move it elsewhere.
+
+### Undo
+
+Dropping a body in the wrong spot, removing the wrong one, or launching it at the wrong speed
+is otherwise permanent the instant it happens. [`src/history.js`](src/history.js) is a small,
+DOM-free bounded stack of opaque snapshots — pushed before each of those four actions, using
+the same `serializeScenario` that export/import and local saves already rely on, so undo needed
+no scenario-format logic of its own. Undoing pops the most recent snapshot and restores it with
+`deserializeScenario`, the same path a loaded file or share link takes. The stack holds the last
+20 actions and is cleared whenever the whole scenario changes from under it — switching presets,
+resetting, importing a file, loading a save, or opening a share link — since undoing into a
+scenario the current one replaced would restore bodies from an unrelated simulation. Selecting a
+body, panning, or zooming isn't itself undoable; only the four state-changing actions push a
+snapshot.
 
 ### Accessibility announcements
 

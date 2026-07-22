@@ -4,6 +4,7 @@ import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from 
 import { predictTrajectory } from "./trajectory.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody, parseMassInput } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
+import { createHistory, pushHistory, popHistory, canUndo } from "./history.js";
 import {
   listSavedScenarioNames,
   saveScenarioToStorage,
@@ -61,8 +62,10 @@ const savedScenariosSelect = document.getElementById("saved-scenarios");
 const loadScenarioBtn = document.getElementById("load-scenario");
 const deleteScenarioBtn = document.getElementById("delete-scenario");
 const announcer = document.getElementById("sim-announcer");
+const undoBtn = document.getElementById("undo");
 
 const MAX_TRAIL_LENGTH = 400;
+const UNDO_HISTORY_SIZE = 20;
 const PAN_STEP = 40;
 const BASE_DT = 0.05;
 const PREDICTION_STEPS = 150;
@@ -86,6 +89,7 @@ let nextBodyId = 1;
 let selectedBodyId = null;
 let followSelected = false;
 let viewport = createViewport();
+let undoHistory = createHistory(UNDO_HISTORY_SIZE);
 // While set, a mouse or touch drag that started on this body previews a launch velocity
 // (see the mousedown/touchstart handlers below) instead of panning the view.
 let aimingBodyId = null;
@@ -111,6 +115,8 @@ function loadPreset(key) {
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
   viewport = resetViewport();
+  undoHistory = createHistory(UNDO_HISTORY_SIZE);
+  updateUndoButton();
 }
 
 function worldToScreen(x, y) {
@@ -370,8 +376,37 @@ deselectBtn.addEventListener("click", () => {
   selectedBodyId = null;
 });
 
+// Records the current bodies/G/softening (reusing scenario.js's serialization, so undo
+// doesn't need its own notion of what a "state" is) before a discrete, reversible action —
+// adding, removing, launching, or editing a body's mass. Skipped around actions that replace
+// the whole scenario (loadPreset, applyScenario), which clear the stack instead: undoing back
+// into a scenario the current one replaced would restore bodies from a different simulation.
+function snapshotForUndo() {
+  undoHistory = pushHistory(undoHistory, serializeScenario({ bodies, G, softening, viewport }));
+  updateUndoButton();
+}
+
+function updateUndoButton() {
+  undoBtn.disabled = !canUndo(undoHistory);
+}
+
+function undo() {
+  const { snapshot, history: after } = popHistory(undoHistory);
+  if (!snapshot) return;
+  undoHistory = after;
+  const restored = deserializeScenario(snapshot);
+  G = restored.G;
+  softening = restored.softening;
+  bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  selectedBodyId = null;
+  updateUndoButton();
+}
+
+undoBtn.addEventListener("click", undo);
+
 function removeSelectedBody() {
   if (selectedBodyId == null) return;
+  snapshotForUndo();
   bodies = removeBody(bodies, selectedBodyId);
   selectedBodyId = null;
   announcer.textContent = describeRemoval(bodies.length);
@@ -389,6 +424,7 @@ massInput.addEventListener("change", () => {
     massInput.value = body.mass;
     return;
   }
+  snapshotForUndo();
   body.mass = mass;
 });
 
@@ -438,6 +474,8 @@ function applyScenario(restored) {
   predictedPaths = [];
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
+  undoHistory = createHistory(UNDO_HISTORY_SIZE);
+  updateUndoButton();
   updateZoomReadout();
 }
 
@@ -550,6 +588,7 @@ if (shareFragment !== null) {
 }
 
 function addBodyAt(x, y) {
+  snapshotForUndo();
   bodies.push({
     mass: 40,
     x,
@@ -657,6 +696,7 @@ function applyAimedLaunch(moved) {
 
   const body = bodies.find((b) => b.id === aimingBodyId);
   if (body) {
+    snapshotForUndo();
     const { vx, vy } = launchVelocityFrom(body.x, body.y, aimPointerWorld.x, aimPointerWorld.y);
     body.vx = vx;
     body.vy = vy;
@@ -829,6 +869,10 @@ document.addEventListener("keydown", (event) => {
     case "f":
     case "F":
       frameBodiesBtn.click();
+      break;
+    case "u":
+    case "U":
+      undoBtn.click();
       break;
     case "t":
     case "T":
