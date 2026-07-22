@@ -13,8 +13,12 @@
   </header>
 
   <main>
-    <canvas id="stage" width="800" height="600" role="img" tabindex="0"
-      aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag empty space to pan the view, drag a body to launch it, scroll to zoom."></canvas>
+    <div class="stage-wrap">
+      <canvas id="stage" width="800" height="600" role="img" tabindex="0"
+        aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag empty space to pan the view, drag a body to launch it, scroll to zoom."></canvas>
+      <canvas id="minimap" width="160" height="120" role="img"
+        aria-label="Overview of every body in the system, with a box marking the main view's currently visible area"></canvas>
+    </div>
 
     <!-- Announces events that change the body count without a direct user action to
          explain them (a collision merging bodies, removing the selected body), since a
@@ -106,6 +110,13 @@
         </label>
       </div>
 
+      <div class="control-row">
+        <label for="show-minimap">
+          <input id="show-minimap" type="checkbox" checked />
+          Show minimap
+        </label>
+      </div>
+
       <p class="hint">
         Click empty space on the canvas, or focus it and press Enter/Space, to drop a new body.
         Click an existing body, or press <kbd>[</kbd>/<kbd>]</kbd>, to inspect it, or drag it to
@@ -121,6 +132,7 @@
           <li><kbd>T</kbd> toggle trails</li>
           <li><kbd>C</kbd> toggle the conservation chart</li>
           <li><kbd>P</kbd> toggle predicted paths</li>
+          <li><kbd>M</kbd> toggle the minimap</li>
           <li><kbd>Enter</kbd> / <kbd>Space</kbd> on the canvas: drop a body</li>
           <li><kbd>[</kbd> / <kbd>]</kbd> select the previous / next body</li>
           <li><kbd>Esc</kbd> deselect the current body</li>

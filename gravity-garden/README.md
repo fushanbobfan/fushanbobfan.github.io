@@ -33,6 +33,7 @@ Then open the printed URL in a browser.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
 - **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
   (see below).
+- **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Click empty space on the canvas** — drop a new body at that point, with zero initial
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
@@ -76,6 +77,7 @@ Then open the printed URL in a browser.
 | `T` | Toggle trails |
 | `C` | Toggle the conservation chart |
 | `P` | Toggle predicted paths |
+| `M` | Toggle the minimap |
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
 | `[` / `]` | Select the previous / next body |
 | `Esc` | Deselect the current body |
@@ -205,6 +207,17 @@ is a tight binary or a cluster that's flung itself apart. A single body, or a cl
 its bounding box is nearly a point, is framed at a bounded minimum extent instead of zooming in
 arbitrarily far. Framing turns off **Keep centered** first, the same way manually panning does,
 so the two don't immediately fight over the viewport.
+
+### Minimap
+
+Zooming in on one part of a spread-out system loses track of where that part sits relative to
+everything else. [`src/minimap.js`](src/minimap.js) fits every body into a small, fixed-size
+overview in the corner — independent of the main viewport's own pan and zoom, computed the same
+way `frameBodies` fits the main view (a padded bounding box, with a minimum extent so a single
+body doesn't blow up to fill the whole minimap) — plus an outline of exactly what the main view
+currently shows, a "you are here" box that shrinks as the main view zooms in. Both are DOM-free
+pure functions, tested the same way `viewport.js`'s are, with the actual drawing (two `<canvas>`
+elements' worth of circles and a stroked rectangle) left to `main.js`.
 
 ### Scenario export/import
 
