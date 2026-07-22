@@ -18,18 +18,25 @@
         <label for="algorithm">Algorithm</label>
         <select id="algorithm">
           <option value="bfs">Breadth-First Search</option>
+          <option value="dijkstra">Dijkstra's Algorithm</option>
+          <option value="astar">A* Search</option>
         </select>
       </div>
 
       <div class="control-row">
         <button id="run" type="button">Run</button>
         <button id="clear-path" type="button">Clear path</button>
-        <button id="clear-walls" type="button">Clear walls</button>
+        <button id="clear-walls" type="button">Clear walls &amp; terrain</button>
       </div>
 
       <div class="control-row">
         <button id="set-start" type="button" aria-pressed="false">Place start&hellip;</button>
         <button id="set-end" type="button" aria-pressed="false">Place end&hellip;</button>
+      </div>
+
+      <div class="control-row" role="group" aria-label="Drawing tool">
+        <button id="brush-wall" type="button" aria-pressed="true">Draw walls</button>
+        <button id="brush-weight" type="button" aria-pressed="false">Draw weighted terrain</button>
       </div>
 
       <div class="control-row">
@@ -39,9 +46,12 @@
       </div>
 
       <p class="hint">
-        Click or drag across empty cells to draw walls; click a wall to erase it. Use
+        Click or drag across empty cells to draw with the active tool (walls, or weighted
+        terrain that costs more to cross); click a cell already drawn on to erase it. Use
         <strong>Place start&hellip;</strong> / <strong>Place end&hellip;</strong>, then click a
-        cell, to move either marker.
+        cell, to move either marker. Breadth-First Search treats every step as equally costly,
+        so it ignores weighted terrain entirely — Dijkstra and A* are the ones that route
+        around it.
       </p>
 
       <p class="status" id="status" aria-live="polite"></p>
