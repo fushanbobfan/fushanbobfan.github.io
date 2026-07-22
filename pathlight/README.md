@@ -24,28 +24,48 @@ Then open the printed URL in a browser.
 - **Algorithm** — choose which search algorithm to run.
 - **Run** — search from the current start to the current end, animating the exploration order
   and then the path it found.
-- **Clear path** — remove the last run's highlighting without touching the walls.
-- **Clear walls** — remove every wall, keeping the current start, end, and any highlighting.
+- **Clear path** — remove the last run's highlighting without touching the walls or terrain.
+- **Clear walls & terrain** — remove every wall and reset every cell's weight, keeping the
+  current start, end, and any highlighting.
 - **Place start&hellip; / Place end&hellip;** — arm placement mode, then click any cell to move
   that marker there. Placing one marker on top of the other isn't prevented — the algorithm
   simply reports the trivial single-cell path.
+- **Draw walls / Draw weighted terrain** — pick which tool click-drag applies to empty cells
+  (see below).
 - **Animation delay** — milliseconds paused between each revealed cell; set it to 0 for an
   instant result.
-- **Click or drag across empty cells** — draw walls. Click or drag across walls — erase them.
-  The very first cell touched in a drag decides whether the whole drag adds or erases walls, so
-  dragging back over cells you already toggled doesn't immediately flip them back.
+- **Click or drag across empty cells** — draw with the active tool. Click or drag across cells
+  already drawn on — erase back to plain empty. The very first cell touched in a drag decides
+  whether the whole drag draws or erases, so dragging back over cells you already toggled
+  doesn't immediately flip them back.
 
 ## Algorithms
 
-| Algorithm | Guarantee |
-| --- | --- |
-| Breadth-First Search | Fewest steps (every move costs the same) |
+| Algorithm | Guarantee | Accounts for weighted terrain? |
+| --- | --- | --- |
+| Breadth-First Search | Fewest steps | No — every step costs the same regardless of terrain |
+| Dijkstra's Algorithm | Cheapest total cost | Yes |
+| A* Search | Cheapest total cost, usually exploring far fewer cells | Yes |
 
 [`src/algorithms/bfs.js`](src/algorithms/bfs.js) explores the grid one ring of distance at a
-time, so the first time it reaches the end is guaranteed to be via the shortest possible route.
-It returns both the order cells were explored in (what the animation reveals step by step) and
-the reconstructed path, so the UI doesn't need to know anything about how the search itself
-works.
+time, so the first time it reaches the end is guaranteed to be via the fewest possible steps —
+but it has no notion of a step costing more than one, so it walks straight through weighted
+terrain as if it were plain empty ground.
+
+[`src/algorithms/dijkstra.js`](src/algorithms/dijkstra.js) instead always expands whichever
+frontier cell has the cheapest cost-so-far, so it correctly detours around expensive terrain
+for a cheaper overall route, at the cost of potentially exploring more cells than BFS to reach
+the same distance.
+
+[`src/algorithms/astar.js`](src/algorithms/astar.js) is Dijkstra plus a Manhattan-distance
+heuristic that biases exploration toward the end instead of expanding outward evenly in every
+direction — same optimality guarantee as Dijkstra (the heuristic never overestimates the true
+remaining cost, as long as every cell's weight is at least 1), usually for a small fraction of
+the cells visited.
+
+All three return both the order cells were explored in (what the animation reveals step by
+step) and the reconstructed path, so the UI doesn't need to know anything about how the search
+itself works.
 
 ## The grid model
 
@@ -54,7 +74,8 @@ DOM or canvas dependency so it can be built, mutated, and searched in tests with
 Movement is orthogonal only (no diagonals), a rule every algorithm built on `neighbors` shares,
 so "fewest steps" and "cheapest path" mean the same kind of step no matter which one runs.
 `setNodeType` moves the start or end rather than creating a second one if either already exists
-elsewhere on the grid.
+elsewhere on the grid; `setNodeWeight` changes a cell's cost independently of its type, so
+clearing a wall back to empty doesn't erase whatever weight the ground underneath had.
 
 ## Development
 
@@ -63,8 +84,10 @@ npm test
 ```
 
 Tests use Node's built-in test runner (`node:test`) and check the grid model's invariants
-(bounds, wall-avoidance, single start/end) and each algorithm's correctness (shortest path
-length, routing around walls, reporting unreachable when fully walled off).
+(bounds, wall-avoidance, single start/end, independent weight tracking) and each algorithm's
+correctness — shortest path length, routing around walls, reporting unreachable when fully
+walled off, and (for Dijkstra and A*) preferring a longer route over cheap terrain to a shorter
+one through expensive terrain.
 
 ## License
 
