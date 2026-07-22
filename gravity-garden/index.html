@@ -13,8 +13,12 @@
   </header>
 
   <main>
-    <canvas id="stage" width="800" height="600" role="img" tabindex="0"
-      aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag empty space to pan the view, drag a body to launch it, scroll to zoom."></canvas>
+    <div class="stage-wrap">
+      <canvas id="stage" width="800" height="600" role="img" tabindex="0"
+        aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag empty space to pan the view, drag a body to launch it, scroll to zoom."></canvas>
+      <canvas id="minimap" width="160" height="120" role="img"
+        aria-label="Overview of every body in the system, with a box marking the main view's currently visible area"></canvas>
+    </div>
 
     <!-- Announces events that change the body count without a direct user action to
          explain them (a collision merging bodies, removing the selected body), since a
@@ -103,6 +107,13 @@
         <label for="predict">
           <input id="predict" type="checkbox" />
           Show predicted paths
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-minimap">
+          <input id="show-minimap" type="checkbox" checked />
+          Show minimap
         </label>
       </div>
 
