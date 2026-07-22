@@ -10,6 +10,7 @@
   --end: #e63946;
   --visited: #1d3557;
   --path: #ffb703;
+  --weighted: #6b4226;
 }
 
 * {
@@ -145,6 +146,10 @@ input[type="range"] {
 
 .cell.path {
   background: var(--path);
+}
+
+.cell.weighted {
+  background: var(--weighted);
 }
 
 footer {

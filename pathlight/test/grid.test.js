@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createGrid, cloneGrid, neighbors, findNodeOfType, clearType, setNodeType, EMPTY, WALL, START, END } from "../src/grid.js";
+import { createGrid, cloneGrid, neighbors, findNodeOfType, clearType, setNodeType, setNodeWeight, EMPTY, WALL, START, END } from "../src/grid.js";
 
 test("createGrid makes a rows x cols grid of empty, unit-weight cells", () => {
   const grid = createGrid(2, 3);
@@ -76,4 +76,18 @@ test("setNodeType does not mutate the grid passed in", () => {
   const grid = createGrid(2, 2);
   setNodeType(grid, 0, 0, WALL);
   assert.equal(grid[0][0].type, EMPTY);
+});
+
+test("setNodeWeight changes only the targeted cell's weight, leaving its type alone", () => {
+  let grid = createGrid(2, 2);
+  grid = setNodeWeight(grid, 0, 1, 5);
+  assert.equal(grid[0][1].weight, 5);
+  assert.equal(grid[0][1].type, EMPTY);
+  assert.equal(grid[0][0].weight, 1);
+});
+
+test("setNodeWeight does not mutate the grid passed in", () => {
+  const grid = createGrid(2, 2);
+  setNodeWeight(grid, 0, 0, 5);
+  assert.equal(grid[0][0].weight, 1);
 });
