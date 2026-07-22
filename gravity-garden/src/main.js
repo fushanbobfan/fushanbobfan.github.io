@@ -22,6 +22,7 @@ import {
   resetViewport,
   touchDistance,
   touchMidpoint,
+  frameBodies,
 } from "./viewport.js";
 
 const canvas = document.getElementById("stage");
@@ -46,6 +47,7 @@ const massInput = document.getElementById("mass-input");
 const deselectBtn = document.getElementById("deselect");
 const removeBodyBtn = document.getElementById("remove-body");
 const resetViewBtn = document.getElementById("reset-view");
+const frameBodiesBtn = document.getElementById("frame-bodies");
 const zoomValue = document.getElementById("zoom-value");
 const followCheckbox = document.getElementById("follow-selected");
 const exportBtn = document.getElementById("export-scenario");
@@ -396,6 +398,16 @@ function updateZoomReadout() {
 
 resetViewBtn.addEventListener("click", () => {
   viewport = resetViewport();
+  updateZoomReadout();
+});
+
+// Framing all bodies would otherwise be immediately undone by "keep centered"
+// re-panning to the selected body on the very next tick, so this turns that
+// off first, the same way manualPanBy does for a drag or arrow-key pan.
+frameBodiesBtn.addEventListener("click", () => {
+  followSelected = false;
+  followCheckbox.checked = false;
+  viewport = frameBodies(bodies, canvas.width, canvas.height);
   updateZoomReadout();
 });
 
@@ -813,6 +825,10 @@ document.addEventListener("keydown", (event) => {
     case "r":
     case "R":
       resetBtn.click();
+      break;
+    case "f":
+    case "F":
+      frameBodiesBtn.click();
       break;
     case "t":
     case "T":

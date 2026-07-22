@@ -11,6 +11,7 @@ import {
   resetViewport,
   touchDistance,
   touchMidpoint,
+  frameBodies,
 } from "../src/viewport.js";
 
 const W = 800;
@@ -97,4 +98,53 @@ test("spreading two touches to double their distance, via zoomAt, doubles the zo
 
   const zoomed = zoomAt(viewport, W, H, mid.x, mid.y, end / start);
   assert.ok(Math.abs(zoomed.zoom - 2) < 1e-9);
+});
+
+test("frameBodies with no bodies falls back to the default viewport", () => {
+  assert.deepEqual(frameBodies([], W, H), resetViewport());
+});
+
+test("frameBodies centers the pan on the bodies' bounding box", () => {
+  const bodies = [
+    { x: -100, y: 0, radius: 5 },
+    { x: 100, y: 40, radius: 5 },
+  ];
+  const framed = frameBodies(bodies, W, H);
+  assert.equal(framed.panX, 0);
+  assert.equal(framed.panY, 20);
+});
+
+test("frameBodies zooms out to fit a wide spread within the canvas, with padding to spare", () => {
+  const bodies = [
+    { x: -1000, y: 0, radius: 5 },
+    { x: 1000, y: 0, radius: 5 },
+  ];
+  const framed = frameBodies(bodies, W, H);
+
+  // The full 2000-unit spread (plus padding) must fit inside the 800px-wide canvas.
+  const halfWidthOnScreen = 1000 * framed.zoom;
+  assert.ok(halfWidthOnScreen < W / 2);
+  assert.ok(framed.zoom < 1);
+});
+
+test("frameBodies on a single body centers on it and clamps zoom to MAX_ZOOM rather than zooming to its own tiny size", () => {
+  const framed = frameBodies([{ x: 3, y: -7, radius: 2 }], W, H);
+  assert.equal(framed.panX, 3);
+  assert.equal(framed.panY, -7);
+  assert.equal(framed.zoom, MAX_ZOOM);
+});
+
+test("frameBodies on a small but spread-out canvas stays below MAX_ZOOM using MIN_FRAME_EXTENT", () => {
+  const framed = frameBodies([{ x: 0, y: 0, radius: 0 }], 40, 40);
+  assert.ok(framed.zoom < MAX_ZOOM);
+  assert.ok(framed.zoom > 1);
+});
+
+test("frameBodies clamps to MIN_ZOOM for an extremely wide spread", () => {
+  const bodies = [
+    { x: -1e6, y: 0, radius: 1 },
+    { x: 1e6, y: 0, radius: 1 },
+  ];
+  const framed = frameBodies(bodies, W, H);
+  assert.equal(framed.zoom, MIN_ZOOM);
 });
