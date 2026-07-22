@@ -39,6 +39,8 @@ const gravityValue = document.getElementById("gravity-value");
 const softeningInput = document.getElementById("softening");
 const softeningValue = document.getElementById("softening-value");
 const trailsCheckbox = document.getElementById("trails");
+const trailLengthInput = document.getElementById("trail-length");
+const trailLengthValue = document.getElementById("trail-length-value");
 const statsEl = document.getElementById("stats");
 const diagnosticsCheckbox = document.getElementById("show-diagnostics");
 const diagnosticsPanel = document.getElementById("diagnostics-panel");
@@ -68,7 +70,6 @@ const deleteScenarioBtn = document.getElementById("delete-scenario");
 const announcer = document.getElementById("sim-announcer");
 const undoBtn = document.getElementById("undo");
 
-const MAX_TRAIL_LENGTH = 400;
 const UNDO_HISTORY_SIZE = 20;
 const PAN_STEP = 40;
 const BASE_DT = 0.05;
@@ -84,6 +85,7 @@ let softening = 4;
 let running = true;
 let speed = 1;
 let showTrails = true;
+let trailLength = 400;
 let showDiagnostics = true;
 let showPrediction = false;
 let predictedPaths = [];
@@ -312,7 +314,7 @@ function tick() {
     for (const body of bodies) {
       if (showTrails) {
         body.trail.push({ x: body.x, y: body.y });
-        if (body.trail.length > MAX_TRAIL_LENGTH) body.trail.shift();
+        while (body.trail.length > trailLength) body.trail.shift();
       } else if (body.trail.length) {
         body.trail.length = 0;
       }
@@ -383,6 +385,11 @@ softeningInput.addEventListener("input", () => {
 
 trailsCheckbox.addEventListener("change", () => {
   showTrails = trailsCheckbox.checked;
+});
+
+trailLengthInput.addEventListener("input", () => {
+  trailLength = Number(trailLengthInput.value);
+  trailLengthValue.textContent = trailLength;
 });
 
 diagnosticsCheckbox.addEventListener("change", () => {
