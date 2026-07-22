@@ -63,6 +63,40 @@ export function resetViewport() {
   return createViewport();
 }
 
+const FRAME_PADDING = 0.15;
+const MIN_FRAME_EXTENT = 20;
+
+/**
+ * Pans and zooms to fit every body on screen at once, for jumping back to a
+ * useful view after panning away or losing track of a fast body — the same
+ * problem "keep centered" solves for one body, generalized to all of them.
+ * Bodies with no room to spread out (one body, or a tight cluster) fall back
+ * to MIN_FRAME_EXTENT rather than zooming in on empty space around a point.
+ */
+export function frameBodies(bodies, canvasWidth, canvasHeight) {
+  if (bodies.length === 0) return resetViewport();
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const body of bodies) {
+    minX = Math.min(minX, body.x - body.radius);
+    maxX = Math.max(maxX, body.x + body.radius);
+    minY = Math.min(minY, body.y - body.radius);
+    maxY = Math.max(maxY, body.y + body.radius);
+  }
+
+  const width = Math.max(maxX - minX, MIN_FRAME_EXTENT) * (1 + FRAME_PADDING);
+  const height = Math.max(maxY - minY, MIN_FRAME_EXTENT) * (1 + FRAME_PADDING);
+
+  return {
+    panX: (minX + maxX) / 2,
+    panY: (minY + maxY) / 2,
+    zoom: clamp(Math.min(canvasWidth / width, canvasHeight / height), MIN_ZOOM, MAX_ZOOM),
+  };
+}
+
 /**
  * Distance and midpoint between two touch points, in screen pixels. Pulled
  * out as pure functions so pinch-to-zoom's math (comparing the distance
