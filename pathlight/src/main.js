@@ -4,6 +4,7 @@ import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { generateMaze } from "./maze.js";
+import { compareAlgorithms } from "./compare.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -15,6 +16,8 @@ const runBtn = document.getElementById("run");
 const clearPathBtn = document.getElementById("clear-path");
 const clearWallsBtn = document.getElementById("clear-walls");
 const generateMazeBtn = document.getElementById("generate-maze");
+const compareBtn = document.getElementById("compare");
+const comparisonEl = document.getElementById("comparison");
 const setStartBtn = document.getElementById("set-start");
 const setEndBtn = document.getElementById("set-end");
 const brushWallBtn = document.getElementById("brush-wall");
@@ -123,6 +126,37 @@ function setStatus(text) {
   statusEl.textContent = text;
 }
 
+function renderComparison(results) {
+  const rows = results
+    .map(
+      (r) => `
+        <tr>
+          <th scope="row">${r.label}</th>
+          <td>${r.visitedCount}</td>
+          <td>${r.found ? r.steps : "unreachable"}</td>
+          <td>${r.found ? r.cost : "unreachable"}</td>
+        </tr>`
+    )
+    .join("");
+  comparisonEl.innerHTML = `
+    <table>
+      <caption>Comparison for the current grid</caption>
+      <thead>
+        <tr>
+          <th scope="col">Algorithm</th>
+          <th scope="col">Cells explored</th>
+          <th scope="col">Steps</th>
+          <th scope="col">Cost</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function clearComparison() {
+  comparisonEl.innerHTML = "";
+}
+
 function cellFromEvent(event) {
   const el = event.target.closest("[role='gridcell']");
   if (!el) return null;
@@ -155,6 +189,7 @@ async function run() {
   runBtn.disabled = true;
   visitedSet.clear();
   pathSet.clear();
+  clearComparison();
   renderAll();
   setStatus("Running…");
 
@@ -184,6 +219,17 @@ async function run() {
 
 runBtn.addEventListener("click", run);
 
+compareBtn.addEventListener("click", () => {
+  const start = findNodeOfType(grid, START);
+  const end = findNodeOfType(grid, END);
+  if (!start || !end) {
+    setStatus("Place both a start and an end before comparing.");
+    return;
+  }
+  renderComparison(compareAlgorithms(grid, start, end));
+  setStatus("Compared all algorithms on the current grid.");
+});
+
 clearPathBtn.addEventListener("click", () => {
   visitedSet.clear();
   pathSet.clear();
@@ -197,6 +243,7 @@ clearWallsBtn.addEventListener("click", () => {
   );
   visitedSet.clear();
   pathSet.clear();
+  clearComparison();
   renderAll();
   setStatus("");
 });
@@ -215,6 +262,7 @@ generateMazeBtn.addEventListener("click", () => {
 
   visitedSet.clear();
   pathSet.clear();
+  clearComparison();
   renderAll();
   setStatus("");
 });

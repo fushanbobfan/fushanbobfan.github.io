@@ -116,6 +116,30 @@ input[type="range"] {
   font-size: 0.9rem;
 }
 
+.comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.comparison caption {
+  text-align: left;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.comparison th,
+.comparison td {
+  text-align: left;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid #232a3d;
+}
+
+.comparison thead th {
+  color: var(--muted);
+  font-weight: normal;
+}
+
 .grid {
   display: grid;
   gap: 1px;
