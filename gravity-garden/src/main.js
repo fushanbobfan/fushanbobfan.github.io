@@ -1,4 +1,4 @@
-import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies } from "./physics.js";
+import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies, centerOfMass } from "./physics.js";
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
@@ -50,6 +50,7 @@ const diagnosticsCtx = diagnosticsChart.getContext("2d");
 const minimapCanvas = document.getElementById("minimap");
 const minimapCtx = minimapCanvas.getContext("2d");
 const showMinimapCheckbox = document.getElementById("show-minimap");
+const showCenterOfMassCheckbox = document.getElementById("show-center-of-mass");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
@@ -94,6 +95,7 @@ let trailLength = 400;
 let showDiagnostics = true;
 let showPrediction = false;
 let showMinimap = true;
+let showCenterOfMass = false;
 let predictedPaths = [];
 let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
@@ -216,7 +218,36 @@ function draw() {
     if (body) drawAimLine(body);
   }
 
+  if (showCenterOfMass && bodies.length > 0) drawCenterOfMass();
+
   if (showMinimap) drawMinimap();
+}
+
+// A small crosshair at the system's mass-weighted center — the point every body actually
+// orbits (or drifts around), rather than whichever body looks biggest. Most useful on presets
+// like Binary Star + Planet, where neither star literally orbits the other.
+function drawCenterOfMass() {
+  const com = centerOfMass(bodies);
+  const { sx, sy } = worldToScreen(com.x, com.y);
+  const radius = 8;
+
+  ctx.save();
+  ctx.strokeStyle = "#e8ecf4";
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.85;
+
+  ctx.beginPath();
+  ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(sx - radius, sy);
+  ctx.lineTo(sx + radius, sy);
+  ctx.moveTo(sx, sy - radius);
+  ctx.lineTo(sx, sy + radius);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 // Draws every body at a fixed fit-to-bounds scale (via minimap.js, independent of the main
@@ -438,6 +469,10 @@ predictCheckbox.addEventListener("change", () => {
 showMinimapCheckbox.addEventListener("change", () => {
   showMinimap = showMinimapCheckbox.checked;
   minimapCanvas.hidden = !showMinimap;
+});
+
+showCenterOfMassCheckbox.addEventListener("change", () => {
+  showCenterOfMass = showCenterOfMassCheckbox.checked;
 });
 
 followCheckbox.addEventListener("change", () => {
@@ -977,6 +1012,11 @@ document.addEventListener("keydown", (event) => {
     case "M":
       showMinimapCheckbox.checked = !showMinimapCheckbox.checked;
       showMinimapCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "b":
+    case "B":
+      showCenterOfMassCheckbox.checked = !showCenterOfMassCheckbox.checked;
+      showCenterOfMassCheckbox.dispatchEvent(new Event("change"));
       break;
     case "]":
       selectedBodyId = adjacentBodyId(bodies, selectedBodyId, 1);
