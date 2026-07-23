@@ -29,6 +29,10 @@ Then open the printed URL in a browser.
   current start, end, and any highlighting.
 - **Generate maze** — replace the grid with a freshly generated, always-solvable maze (see
   below), moving the start and end to its two opposite corners.
+- **Compare all algorithms** — run every algorithm against the current grid at once (no
+  animation) and show each one's cells explored, steps, and total cost in a table (see below).
+  Cleared automatically whenever the walls or terrain change, so it never shows numbers from a
+  grid that no longer exists.
 - **Place start&hellip; / Place end&hellip;** — arm placement mode, then click any cell to move
   that marker there. Placing one marker on top of the other isn't prevented — the algorithm
   simply reports the trivial single-cell path.
@@ -82,6 +86,12 @@ All four return both the order cells were explored in (what the animation reveal
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
 itself works.
 
+The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
+by running all four algorithms against whatever grid is actually on screen and reporting their
+real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
+guarantees actually holding (or not) for a specific maze, rather than asking you to take the
+table on faith.
+
 ## Maze generation
 
 [`src/maze.js`](src/maze.js) builds a maze with a randomized depth-first search (the
@@ -130,7 +140,9 @@ Tests use Node's built-in test runner (`node:test`) and check the grid model's i
 (bounds, wall-avoidance, single start/end, independent weight tracking) and each algorithm's
 correctness — shortest path length, routing around walls, reporting unreachable when fully
 walled off, and (for Dijkstra and A*) preferring a longer route over cheap terrain to a shorter
-one through expensive terrain.
+one through expensive terrain. `compare.js` is tested separately: every algorithm agreeing on
+an open grid, all four correctly reporting unreachable together, and Dijkstra/A* finding a
+cheaper cost than BFS/greedy once terrain is weighted.
 
 ## License
 
