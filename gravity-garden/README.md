@@ -34,6 +34,7 @@ Then open the printed URL in a browser.
 - **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
   (see below).
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
+- **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
 - **Click empty space on the canvas** — drop a new body at that point, with zero initial
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
@@ -78,6 +79,7 @@ Then open the printed URL in a browser.
 | `C` | Toggle the conservation chart |
 | `P` | Toggle predicted paths |
 | `M` | Toggle the minimap |
+| `B` | Toggle the center of mass marker |
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
 | `[` / `]` | Select the previous / next body |
 | `Esc` | Deselect the current body |
@@ -218,6 +220,18 @@ body doesn't blow up to fill the whole minimap) — plus an outline of exactly w
 currently shows, a "you are here" box that shrinks as the main view zooms in. Both are DOM-free
 pure functions, tested the same way `viewport.js`'s are, with the actual drawing (two `<canvas>`
 elements' worth of circles and a stroked rectangle) left to `main.js`.
+
+### Center of mass marker
+
+A body that looks like it's orbiting another isn't necessarily orbiting *it* — both are really
+orbiting their shared center of mass, which only coincides with one body's own position when
+it's overwhelmingly heavier than everything else (true enough for "Sun & Planets" to look right
+either way, but not for "Binary Star + Planet," where the two stars visibly orbit a point
+between them). **Show center of mass** draws a crosshair at exactly that point, computed by
+`physics.js`'s existing `centerOfMass` — the same mass-weighted average position already used
+internally, just made visible. It's recomputed and redrawn every frame like the bodies
+themselves, so it stays put through mergers and stays accurate as masses are edited live from
+the inspector panel.
 
 ### Scenario export/import
 
