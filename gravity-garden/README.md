@@ -61,6 +61,11 @@ Then open the printed URL in a browser.
   rather than partially applied.
 - **Copy share link** — copy a URL that reproduces the running simulation to the clipboard.
   Opening it loads the encoded scenario the same way importing a file does (see below).
+- **Download snapshot** — save the current view of the main stage as a PNG, named after the
+  running scenario. Unlike export/import or a share link, this captures a single still moment
+  rather than a resumable simulation — for sharing a look at a tight binary, a mid-collision
+  merge, or a slingshot in progress somewhere a live page or JSON file can't go. Only the main
+  stage is captured, not the minimap or conservation chart.
 - **Save name&hellip; / Save in browser** — save the running simulation under a name, kept in
   this browser (via `localStorage`) rather than downloaded as a file, for a quicker round-trip
   than export/import when you're iterating locally.
