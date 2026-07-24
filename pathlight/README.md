@@ -33,6 +33,8 @@ Then open the printed URL in a browser.
   animation) and show each one's cells explored, steps, and total cost in a table (see below).
   Cleared automatically whenever the walls or terrain change, so it never shows numbers from a
   grid that no longer exists.
+- **Save grid** — download the current walls, weighted terrain, start, and end as a JSON file.
+- **Load grid&hellip;** — restore a grid from a previously saved JSON file (see below).
 - **Place start&hellip; / Place end&hellip;** — arm placement mode, then click any cell to move
   that marker there. Placing one marker on top of the other isn't prevented — the algorithm
   simply reports the trivial single-cell path.
@@ -107,6 +109,17 @@ one of these (clearing existing walls and weighted terrain along with it) and mo
 and end to the two corners farthest apart on the even-cell grid, so the generated maze is always
 solvable end to end.
 
+## Saving and loading grids
+
+[`src/serialize.js`](src/serialize.js) converts a grid to a plain JSON-compatible shape —
+dimensions plus each cell's type and weight — and back, so a maze or hand-drawn layout can be
+downloaded and reopened later instead of being redrawn from scratch every session. Loading
+back in validates the file rather than trusting it: dimensions must match the app's fixed grid
+size, every cell needs a recognized type and a positive, finite weight, and there can be at
+most one start and one end. Anything that fails validation — a hand-edited file, one saved from
+a differently-sized grid, or just corrupted JSON — is rejected with a specific error message
+shown in the status line, rather than loading a partially broken grid.
+
 ## The grid model
 
 [`src/grid.js`](src/grid.js) is a plain 2D array of `{ type, weight }` cells, kept free of any
@@ -142,7 +155,9 @@ correctness — shortest path length, routing around walls, reporting unreachabl
 walled off, and (for Dijkstra and A*) preferring a longer route over cheap terrain to a shorter
 one through expensive terrain. `compare.js` is tested separately: every algorithm agreeing on
 an open grid, all four correctly reporting unreachable together, and Dijkstra/A* finding a
-cheaper cost than BFS/greedy once terrain is weighted.
+cheaper cost than BFS/greedy once terrain is weighted. `serialize.js` is tested for an exact
+round trip through an edited grid, and for rejecting every way a loaded file can be invalid
+(wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
 
 ## License
 

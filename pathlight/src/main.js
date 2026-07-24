@@ -5,6 +5,7 @@ import { astar } from "./algorithms/astar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { generateMaze } from "./maze.js";
 import { compareAlgorithms } from "./compare.js";
+import { serializeGrid, deserializeGrid } from "./serialize.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -18,6 +19,8 @@ const clearWallsBtn = document.getElementById("clear-walls");
 const generateMazeBtn = document.getElementById("generate-maze");
 const compareBtn = document.getElementById("compare");
 const comparisonEl = document.getElementById("comparison");
+const saveGridBtn = document.getElementById("save-grid");
+const loadGridInput = document.getElementById("load-grid");
 const setStartBtn = document.getElementById("set-start");
 const setEndBtn = document.getElementById("set-end");
 const brushWallBtn = document.getElementById("brush-wall");
@@ -265,6 +268,42 @@ generateMazeBtn.addEventListener("click", () => {
   clearComparison();
   renderAll();
   setStatus("");
+});
+
+saveGridBtn.addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(serializeGrid(grid), null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "pathlight-grid.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  setStatus("Saved the current grid.");
+});
+
+loadGridInput.addEventListener("change", () => {
+  const file = loadGridInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const loaded = deserializeGrid(JSON.parse(reader.result), ROWS, COLS);
+      grid = loaded;
+      visitedSet.clear();
+      pathSet.clear();
+      clearComparison();
+      renderAll();
+      setStatus(`Loaded "${file.name}".`);
+    } catch (error) {
+      setStatus(`Couldn't load "${file.name}": ${error.message}`);
+    }
+    loadGridInput.value = "";
+  };
+  reader.onerror = () => {
+    setStatus(`Couldn't read "${file.name}".`);
+    loadGridInput.value = "";
+  };
+  reader.readAsText(file);
 });
 
 setStartBtn.addEventListener("click", () => {
