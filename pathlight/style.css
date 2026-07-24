@@ -94,6 +94,26 @@ button:disabled {
   cursor: default;
 }
 
+.file-label {
+  background: var(--accent);
+  color: #1a1300;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.file-label:hover {
+  filter: brightness(1.1);
+}
+
+input[type="file"] {
+  color: var(--muted);
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+
 button[aria-pressed="true"] {
   outline: 2px solid var(--text);
   outline-offset: 2px;
