@@ -67,6 +67,7 @@ const exportBtn = document.getElementById("export-scenario");
 const importBtn = document.getElementById("import-scenario");
 const importFileInput = document.getElementById("import-scenario-file");
 const copyShareLinkBtn = document.getElementById("copy-share-link");
+const downloadSnapshotBtn = document.getElementById("download-snapshot");
 const scenarioIoStatus = document.getElementById("scenario-io-status");
 const saveNameInput = document.getElementById("save-name");
 const saveScenarioBtn = document.getElementById("save-scenario");
@@ -579,6 +580,18 @@ exportBtn.addEventListener("click", () => {
 
 importBtn.addEventListener("click", () => {
   importFileInput.click();
+});
+
+// A plain PNG of the current view, for sharing a still moment (a tight binary, a mid-collision
+// merge, a slingshot in progress) somewhere a live simulation or a JSON scenario file can't go.
+// Captures only the main stage, not the minimap or diagnostics chart — those are supplementary
+// readouts, not the view being shared.
+downloadSnapshotBtn.addEventListener("click", () => {
+  const link = document.createElement("a");
+  link.href = canvas.toDataURL("image/png");
+  link.download = `gravity-garden-${currentPresetKey}.png`;
+  link.click();
+  scenarioIoStatus.textContent = "Downloaded a snapshot of the current view.";
 });
 
 // Replaces the running simulation with a validated scenario (from an imported file or a
