@@ -3,6 +3,7 @@ import { bfs } from "./algorithms/bfs.js";
 import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
+import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { generateMaze } from "./maze.js";
 import { compareAlgorithms } from "./compare.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
@@ -34,6 +35,7 @@ const ALGORITHMS = {
   dijkstra: { label: "Dijkstra's Algorithm", run: dijkstra },
   astar: { label: "A* Search", run: astar },
   greedy: { label: "Greedy Best-First Search", run: greedyBestFirstSearch },
+  bidirectional: { label: "Bidirectional Search", run: bidirectionalSearch },
 };
 
 let grid = createGrid(ROWS, COLS);
