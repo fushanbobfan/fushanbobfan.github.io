@@ -51,6 +51,7 @@ const minimapCanvas = document.getElementById("minimap");
 const minimapCtx = minimapCanvas.getContext("2d");
 const showMinimapCheckbox = document.getElementById("show-minimap");
 const showCenterOfMassCheckbox = document.getElementById("show-center-of-mass");
+const trackCenterOfMassCheckbox = document.getElementById("track-center-of-mass");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
 const inspectorPanel = document.getElementById("inspector-panel");
@@ -103,6 +104,7 @@ let lastPredictedBodyCount = -1;
 let nextBodyId = 1;
 let selectedBodyId = null;
 let followSelected = false;
+let trackCenterOfMass = false;
 let viewport = createViewport();
 let undoHistory = createHistory(UNDO_HISTORY_SIZE);
 // While set, a mouse or touch drag that started on this body previews a launch velocity
@@ -408,6 +410,9 @@ function tick() {
   if (followSelected && selectedBodyId !== null) {
     const selected = bodies.find((b) => b.id === selectedBodyId);
     if (selected) viewport = { ...viewport, panX: selected.x, panY: selected.y };
+  } else if (trackCenterOfMass && bodies.length > 0) {
+    const com = centerOfMass(bodies);
+    viewport = { ...viewport, panX: com.x, panY: com.y };
   }
 
   updateInspectorPanel();
@@ -476,8 +481,23 @@ showCenterOfMassCheckbox.addEventListener("change", () => {
   showCenterOfMass = showCenterOfMassCheckbox.checked;
 });
 
+// "Keep centered" (follow the selected body) and "Track center of mass" both drive the
+// viewport's pan every tick, so turning one on turns the other off — otherwise whichever ran
+// last in tick() would silently win, and the unchecked box would look on but do nothing.
 followCheckbox.addEventListener("change", () => {
   followSelected = followCheckbox.checked;
+  if (followSelected) {
+    trackCenterOfMass = false;
+    trackCenterOfMassCheckbox.checked = false;
+  }
+});
+
+trackCenterOfMassCheckbox.addEventListener("change", () => {
+  trackCenterOfMass = trackCenterOfMassCheckbox.checked;
+  if (trackCenterOfMass) {
+    followSelected = false;
+    followCheckbox.checked = false;
+  }
 });
 
 deselectBtn.addEventListener("click", () => {
@@ -556,12 +576,14 @@ resetViewBtn.addEventListener("click", () => {
   updateZoomReadout();
 });
 
-// Framing all bodies would otherwise be immediately undone by "keep centered"
-// re-panning to the selected body on the very next tick, so this turns that
-// off first, the same way manualPanBy does for a drag or arrow-key pan.
+// Framing all bodies would otherwise be immediately undone by "keep centered" or "track center
+// of mass" re-panning on the very next tick, so this turns both off first, the same way
+// manualPanBy does for a drag or arrow-key pan.
 frameBodiesBtn.addEventListener("click", () => {
   followSelected = false;
   followCheckbox.checked = false;
+  trackCenterOfMass = false;
+  trackCenterOfMassCheckbox.checked = false;
   viewport = frameBodies(bodies, canvas.width, canvas.height);
   updateZoomReadout();
 });
@@ -761,6 +783,10 @@ function manualPanBy(dxScreen, dyScreen) {
   if (followSelected) {
     followSelected = false;
     followCheckbox.checked = false;
+  }
+  if (trackCenterOfMass) {
+    trackCenterOfMass = false;
+    trackCenterOfMassCheckbox.checked = false;
   }
   viewport = panBy(viewport, dxScreen, dyScreen);
 }
