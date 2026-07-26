@@ -21,6 +21,7 @@
           <option value="dijkstra">Dijkstra's Algorithm</option>
           <option value="astar">A* Search</option>
           <option value="greedy">Greedy Best-First Search</option>
+          <option value="bidirectional">Bidirectional Search</option>
         </select>
       </div>
 
@@ -61,9 +62,9 @@
         Click or drag across empty cells to draw with the active tool (walls, or weighted
         terrain that costs more to cross); click a cell already drawn on to erase it. Use
         <strong>Place start&hellip;</strong> / <strong>Place end&hellip;</strong>, then click a
-        cell, to move either marker. Breadth-First Search treats every step as equally costly,
-        so it ignores weighted terrain entirely — Dijkstra and A* are the ones that route
-        around it. The grid is keyboard-operable too: focus it and use the arrow keys to move,
+        cell, to move either marker. Breadth-First Search and Bidirectional Search treat every
+        step as equally costly, so they ignore weighted terrain entirely — Dijkstra and A* are
+        the ones that route around it. The grid is keyboard-operable too: focus it and use the arrow keys to move,
         <kbd>Enter</kbd> or <kbd>Space</kbd> to draw, erase, or place on the focused cell.
       </p>
 

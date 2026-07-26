@@ -59,6 +59,7 @@ Then open the printed URL in a browser.
 | Dijkstra's Algorithm | Cheapest total cost | Yes |
 | A* Search | Cheapest total cost, usually exploring far fewer cells | Yes |
 | Greedy Best-First Search | None | No |
+| Bidirectional Search | Fewest steps | No — every step costs the same regardless of terrain |
 
 [`src/algorithms/bfs.js`](src/algorithms/bfs.js) explores the grid one ring of distance at a
 time, so the first time it reaches the end is guaranteed to be via the fewest possible steps —
@@ -84,12 +85,23 @@ to route around it usually still finds the shortest path (there's no wrong direc
 lured toward), which is exactly when it shines — visiting a small fraction of the cells
 Dijkstra or even A* would.
 
-All four return both the order cells were explored in (what the animation reveals step by
+[`src/algorithms/bidirectional.js`](src/algorithms/bidirectional.js) runs BFS outward from the
+start and, at the same time, from the end, one full ring of distance at a time, stopping the
+instant a cell discovered by one side turns out to already be discovered by the other. Like
+plain BFS it has no notion of a step costing more than one, so it shares BFS's fewest-steps
+guarantee and its blindness to weighted terrain — but two circles of radius D/2 meeting in the
+middle tend to cover far less area than BFS's single circle of radius D, especially when start
+and end aren't tucked into opposite corners forcing both searches to hug the grid's edges. The
+path itself is assembled from two halves at the meeting cell: the route back to the start via
+the forward search's `cameFrom` chain, followed by the route on to the end via the backward
+search's own chain.
+
+All five return both the order cells were explored in (what the animation reveals step by
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
 itself works.
 
 The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
-by running all four algorithms against whatever grid is actually on screen and reporting their
+by running all five algorithms against whatever grid is actually on screen and reporting their
 real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
 guarantees actually holding (or not) for a specific maze, rather than asking you to take the
 table on faith.
@@ -154,7 +166,7 @@ Tests use Node's built-in test runner (`node:test`) and check the grid model's i
 correctness — shortest path length, routing around walls, reporting unreachable when fully
 walled off, and (for Dijkstra and A*) preferring a longer route over cheap terrain to a shorter
 one through expensive terrain. `compare.js` is tested separately: every algorithm agreeing on
-an open grid, all four correctly reporting unreachable together, and Dijkstra/A* finding a
+an open grid, all five correctly reporting unreachable together, and Dijkstra/A* finding a
 cheaper cost than BFS/greedy once terrain is weighted. `serialize.js` is tested for an exact
 round trip through an edited grid, and for rejecting every way a loaded file can be invalid
 (wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
