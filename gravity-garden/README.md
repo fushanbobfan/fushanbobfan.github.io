@@ -35,6 +35,7 @@ Then open the printed URL in a browser.
   (see below).
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
+- **Track center of mass** — keep the viewport panned to that point every tick (see below).
 - **Click empty space on the canvas** — drop a new body at that point, with zero initial
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
@@ -237,6 +238,16 @@ between them). **Show center of mass** draws a crosshair at exactly that point, 
 internally, just made visible. It's recomputed and redrawn every frame like the bodies
 themselves, so it stays put through mergers and stays accurate as masses are edited live from
 the inspector panel.
+
+**Track center of mass** goes a step further than just marking that point — it re-pans the
+viewport to keep it centered on screen every tick, the same way the inspector panel's **Keep
+centered** follows a single selected body. Useful for a cluster with enough net momentum to
+drift as a whole (an off-center "Random Cluster" roll, say), where marking the center of mass is
+one thing but watching it slide toward the edge of the view is another. The two follow modes
+are mutually exclusive — turning one on turns the other off, the same way manually panning,
+dragging, or **Frame all bodies** already turns off **Keep centered** — since both drive the
+same pan every tick and letting both run would mean whichever ran last in that tick silently
+wins, leaving the other's checkbox checked but doing nothing.
 
 ### Scenario export/import
 
