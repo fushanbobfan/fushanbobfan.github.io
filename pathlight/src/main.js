@@ -5,6 +5,7 @@ import { astar } from "./algorithms/astar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { generateMaze } from "./maze.js";
+import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
 
@@ -18,6 +19,7 @@ const runBtn = document.getElementById("run");
 const clearPathBtn = document.getElementById("clear-path");
 const clearWallsBtn = document.getElementById("clear-walls");
 const generateMazeBtn = document.getElementById("generate-maze");
+const generateTerrainBtn = document.getElementById("generate-terrain");
 const compareBtn = document.getElementById("compare");
 const comparisonEl = document.getElementById("comparison");
 const saveGridBtn = document.getElementById("save-grid");
@@ -264,6 +266,22 @@ generateMazeBtn.addEventListener("click", () => {
   const endCol = 2 * Math.floor((COLS - 1) / 2);
   grid = setNodeType(grid, 0, 0, START);
   grid = setNodeType(grid, endRow, endCol, END);
+
+  visitedSet.clear();
+  pathSet.clear();
+  clearComparison();
+  renderAll();
+  setStatus("");
+});
+
+// Only touches EMPTY cells — same rule the weighted-terrain brush follows — so it layers costly
+// patches onto whatever walls (hand-drawn or from Generate maze) are already on the grid instead
+// of overwriting them, and leaves the start/end markers at their default weight.
+generateTerrainBtn.addEventListener("click", () => {
+  const weights = generateTerrain(ROWS, COLS);
+  grid = grid.map((row, r) =>
+    row.map((cell, c) => (cell.type === EMPTY ? { ...cell, weight: weights[r][c] } : cell))
+  );
 
   visitedSet.clear();
   pathSet.clear();
