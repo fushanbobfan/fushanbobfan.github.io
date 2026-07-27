@@ -106,6 +106,7 @@ focus, so their own native keyboard behavior still works as expected.
 | Binary Star + Planet | Two unequal-mass stars orbiting their common center of mass, with a planet further out. |
 | Figure-Eight Three-Body | The Chenciner–Montgomery choreography: three equal masses chasing each other around a stable figure-eight curve. |
 | Rogue Flyby | A sun and one orbiting planet, plus a fast interloper on a hyperbolic path that gets deflected by a gravitational slingshot. |
+| Sun, Planet & Moon | A hierarchical three-body system: a moon in a tight circular orbit around a planet, which is itself in a wider circular orbit around the sun — the moon's distance is kept safely inside the planet's Hill sphere so it stays bound instead of drifting off under the sun's tidal pull. |
 | Random Cluster | A randomized cluster of bodies with varied mass, useful for watching chaotic multi-body dynamics emerge. |
 
 ## Physics
