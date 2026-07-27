@@ -167,6 +167,53 @@ export const PRESETS = {
     },
   },
 
+  "planet-and-moon": {
+    label: "Sun, Planet & Moon",
+    G: 1,
+    softening: 1,
+    // A hierarchical three-body system: a moon in circular orbit around a planet, which is
+    // itself in circular orbit around the sun. The moon's velocity is its own orbital speed
+    // around the planet added to the planet's orbital speed around the sun, so the moon
+    // travels with the planet through space while also circling it — the same nested-orbit
+    // structure a real moon has, rather than an independent body that merely starts out near
+    // the planet. The moon's distance is kept well inside the planet's Hill sphere (the region
+    // where the planet's own gravity dominates over the sun's tidal pull, roughly
+    // `planetDist * cbrt(planetMass / (3 * sunMass))` ≈ 24 here) — a moon placed outside it
+    // gets pulled away by the sun within a few orbits instead of staying bound to the planet.
+    build() {
+      const G = this.G;
+      const sunMass = 20000;
+      const sun = { mass: sunMass, x: 0, y: 0, vx: 0, vy: 0, radius: 14, color: "#ffd166" };
+
+      const planetMass = 150;
+      const planetDist = 180;
+      const planetSpeed = circularOrbitVelocity(G, sunMass, planetDist);
+      const planet = {
+        mass: planetMass,
+        x: planetDist,
+        y: 0,
+        vx: 0,
+        vy: planetSpeed,
+        radius: 7,
+        color: "#4cc9f0",
+      };
+
+      const moonDist = 8;
+      const moonSpeed = circularOrbitVelocity(G, planetMass, moonDist);
+      const moon = {
+        mass: 2,
+        x: planetDist + moonDist,
+        y: 0,
+        vx: 0,
+        vy: planetSpeed + moonSpeed,
+        radius: 2,
+        color: "#e0e1dd",
+      };
+
+      return [sun, planet, moon];
+    },
+  },
+
   "random-cluster": {
     label: "Random Cluster",
     G: 1,
