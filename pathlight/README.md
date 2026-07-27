@@ -29,6 +29,8 @@ Then open the printed URL in a browser.
   current start, end, and any highlighting.
 - **Generate maze** — replace the grid with a freshly generated, always-solvable maze (see
   below), moving the start and end to its two opposite corners.
+- **Generate terrain** — scatter randomized weighted-terrain patches across every empty cell
+  (see below), leaving existing walls, the start, and the end untouched.
 - **Compare all algorithms** — run every algorithm against the current grid at once (no
   animation) and show each one's cells explored, steps, and total cost in a table (see below).
   Cleared automatically whenever the walls or terrain change, so it never shows numbers from a
@@ -120,6 +122,18 @@ tested deterministically with a seeded generator. **Generate maze** replaces the
 one of these (clearing existing walls and weighted terrain along with it) and moves the start
 and end to the two corners farthest apart on the even-cell grid, so the generated maze is always
 solvable end to end.
+
+## Terrain generation
+
+[`src/terrain.js`](src/terrain.js) scatters a handful of random "seed" points across the grid,
+each assigned its own random cost, then gives every cell the cost of its nearest seed
+(Manhattan distance) — a coarse Voronoi partition that produces natural-looking patches of
+cheap and costly terrain instead of the flat single-value weighted-terrain brush. Like the maze
+generator, its random source is a parameter rather than a direct call to `Math.random`, so it's
+tested deterministically with a seeded generator. **Generate terrain** only touches cells that
+are currently empty, so it layers terrain onto whatever walls are already on the grid — hand-
+drawn or from **Generate maze** — instead of overwriting them, and leaves the start and end at
+their default weight.
 
 ## Saving and loading grids
 
