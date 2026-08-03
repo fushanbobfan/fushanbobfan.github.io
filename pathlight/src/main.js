@@ -8,6 +8,7 @@ import { generateMaze } from "./maze.js";
 import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
+import { buildShareUrl, extractShareFragment, decodeGridFromFragment } from "./shareLink.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -24,6 +25,7 @@ const compareBtn = document.getElementById("compare");
 const comparisonEl = document.getElementById("comparison");
 const saveGridBtn = document.getElementById("save-grid");
 const loadGridInput = document.getElementById("load-grid");
+const copyShareLinkBtn = document.getElementById("copy-share-link");
 const setStartBtn = document.getElementById("set-start");
 const setEndBtn = document.getElementById("set-end");
 const brushWallBtn = document.getElementById("brush-wall");
@@ -326,6 +328,18 @@ loadGridInput.addEventListener("change", () => {
   reader.readAsText(file);
 });
 
+copyShareLinkBtn.addEventListener("click", async () => {
+  const url = buildShareUrl(grid, window.location.href);
+  try {
+    await navigator.clipboard.writeText(url);
+    setStatus("Share link copied to clipboard.");
+  } catch {
+    // Clipboard access can be denied (permissions, insecure context, older browsers); falling
+    // back to showing the link in the status line still lets it be copied by hand.
+    setStatus(`Copy this link to share: ${url}`);
+  }
+});
+
 setStartBtn.addEventListener("click", () => {
   placementMode = placementMode === "start" ? null : "start";
   updatePlacementButtons();
@@ -499,6 +513,23 @@ gridEl.addEventListener("keydown", (event) => {
       break;
   }
 });
+
+// If the page was opened from a share link, load the grid it encodes over the default empty
+// one. A hand-edited or truncated link is rejected outright — same as "Load grid…" — rather
+// than silently falling back to the default grid with no explanation.
+const shareFragment = extractShareFragment(window.location.hash);
+if (shareFragment !== null) {
+  try {
+    grid = decodeGridFromFragment(shareFragment, ROWS, COLS);
+    setStatus("Loaded shared grid.");
+  } catch (error) {
+    setStatus(`Share link failed: ${error.message}`);
+  }
+  // The shared grid has now been applied (or its failure reported); clearing the hash means
+  // refreshing the page afterward keeps whatever the grid has since become instead of
+  // re-applying the same shared snapshot every reload.
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}
 
 buildGridDom();
 renderAll();

@@ -37,6 +37,7 @@ Then open the printed URL in a browser.
   grid that no longer exists.
 - **Save grid** — download the current walls, weighted terrain, start, and end as a JSON file.
 - **Load grid&hellip;** — restore a grid from a previously saved JSON file (see below).
+- **Copy share link** — copy a URL encoding the current grid to the clipboard (see below).
 - **Place start&hellip; / Place end&hellip;** — arm placement mode, then click any cell to move
   that marker there. Placing one marker on top of the other isn't prevented — the algorithm
   simply reports the trivial single-cell path.
@@ -145,6 +146,20 @@ size, every cell needs a recognized type and a positive, finite weight, and ther
 most one start and one end. Anything that fails validation — a hand-edited file, one saved from
 a differently-sized grid, or just corrupted JSON — is rejected with a specific error message
 shown in the status line, rather than loading a partially broken grid.
+
+## Share links
+
+[`src/shareLink.js`](src/shareLink.js) packs a grid into a URL instead of a downloaded file,
+for handing a hand-drawn maze or terrain layout to someone else with a link rather than an
+attachment. It builds on the same `serializeGrid`/`deserializeGrid` pair "Save grid" and "Load
+grid&hellip;" already use — share links only own turning that snapshot into (and back out of) a
+URL-safe string, not the grid format itself — so a share link gets the same size and cell
+validation, and the same descriptive rejection of malformed data, as a hand-edited import file.
+The encoded grid lives in the URL's hash rather than a query parameter, since a hash is never
+sent to the server, keeping the whole exchange client-side. Opening a share link consumes it
+once: the grid loads on startup and the hash is then cleared from the address bar, so refreshing
+the page afterward continues from whatever the grid has since been edited to, instead of
+resetting back to the shared layout.
 
 ## The grid model
 
