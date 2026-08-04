@@ -26,6 +26,7 @@ import {
   frameBodies,
 } from "./viewport.js";
 import { computeMinimapTransform, worldToMinimapPoint, viewportRectOnMinimap } from "./minimap.js";
+import { computeScaleBar } from "./scaleBar.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -51,6 +52,7 @@ const minimapCanvas = document.getElementById("minimap");
 const minimapCtx = minimapCanvas.getContext("2d");
 const showMinimapCheckbox = document.getElementById("show-minimap");
 const showCenterOfMassCheckbox = document.getElementById("show-center-of-mass");
+const showScaleBarCheckbox = document.getElementById("show-scale-bar");
 const trackCenterOfMassCheckbox = document.getElementById("track-center-of-mass");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
@@ -98,6 +100,7 @@ let showDiagnostics = true;
 let showPrediction = false;
 let showMinimap = true;
 let showCenterOfMass = false;
+let showScaleBar = true;
 let predictedPaths = [];
 let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
@@ -223,7 +226,44 @@ function draw() {
 
   if (showCenterOfMass && bodies.length > 0) drawCenterOfMass();
 
+  if (showScaleBar) drawScaleBar();
+
   if (showMinimap) drawMinimap();
+}
+
+// A map-style scale bar in the main canvas's bottom-left corner, showing how many world units a
+// given screen length represents at the current zoom (via scaleBar.js's computeScaleBar) — a
+// visual reference alongside the numeric zoom readout for judging distances at a glance, since
+// "1.0x" alone doesn't say whether a body is one unit or one hundred units away.
+function drawScaleBar() {
+  const { worldLength, pixelLength } = computeScaleBar(viewport.zoom);
+  const margin = 16;
+  const y = canvas.height - margin;
+  const x0 = margin;
+  const x1 = x0 + pixelLength;
+  const tickHalf = 5;
+
+  ctx.save();
+  ctx.strokeStyle = "#e8ecf4";
+  ctx.fillStyle = "#e8ecf4";
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.85;
+
+  ctx.beginPath();
+  ctx.moveTo(x0, y);
+  ctx.lineTo(x1, y);
+  ctx.moveTo(x0, y - tickHalf);
+  ctx.lineTo(x0, y + tickHalf);
+  ctx.moveTo(x1, y - tickHalf);
+  ctx.lineTo(x1, y + tickHalf);
+  ctx.stroke();
+
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText(String(worldLength), (x0 + x1) / 2, y - tickHalf - 2);
+
+  ctx.restore();
 }
 
 // A small crosshair at the system's mass-weighted center — the point every body actually
@@ -479,6 +519,10 @@ showMinimapCheckbox.addEventListener("change", () => {
 
 showCenterOfMassCheckbox.addEventListener("change", () => {
   showCenterOfMass = showCenterOfMassCheckbox.checked;
+});
+
+showScaleBarCheckbox.addEventListener("change", () => {
+  showScaleBar = showScaleBarCheckbox.checked;
 });
 
 // "Keep centered" (follow the selected body) and "Track center of mass" both drive the
@@ -1056,6 +1100,11 @@ document.addEventListener("keydown", (event) => {
     case "B":
       showCenterOfMassCheckbox.checked = !showCenterOfMassCheckbox.checked;
       showCenterOfMassCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "l":
+    case "L":
+      showScaleBarCheckbox.checked = !showScaleBarCheckbox.checked;
+      showScaleBarCheckbox.dispatchEvent(new Event("change"));
       break;
     case "]":
       selectedBodyId = adjacentBodyId(bodies, selectedBodyId, 1);
