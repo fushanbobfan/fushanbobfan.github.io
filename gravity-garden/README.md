@@ -36,6 +36,8 @@ Then open the printed URL in a browser.
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
 - **Track center of mass** — keep the viewport panned to that point every tick (see below).
+- **Show scale bar** — toggle a map-style scale bar in the corner, showing how many world units a
+  given screen length represents at the current zoom (see below).
 - **Click empty space on the canvas** — drop a new body at that point, with zero initial
   velocity. Focus the canvas and press <kbd>Enter</kbd> or <kbd>Space</kbd> to do the same from
   the keyboard, at a random point.
@@ -86,6 +88,7 @@ Then open the printed URL in a browser.
 | `P` | Toggle predicted paths |
 | `M` | Toggle the minimap |
 | `B` | Toggle the center of mass marker |
+| `L` | Toggle the scale bar |
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
 | `[` / `]` | Select the previous / next body |
 | `Esc` | Deselect the current body |
@@ -249,6 +252,20 @@ are mutually exclusive — turning one on turns the other off, the same way manu
 dragging, or **Frame all bodies** already turns off **Keep centered** — since both drive the
 same pan every tick and letting both run would mean whichever ran last in that tick silently
 wins, leaving the other's checkbox checked but doing nothing.
+
+### Scale bar
+
+The numeric zoom readout (`1.0×`, `2.4×`, ...) says how much the view has been scaled, but not
+what that means for any particular distance on screen — is a rogue flyby's closest approach
+really twice as far out as the planet, or does it just look that way at this zoom? **Show scale
+bar** draws a small map-style ruler in the main canvas's bottom-left corner: a line with end
+ticks and a number, the same convention paper and digital maps use for physical distance.
+[`src/scaleBar.js`](src/scaleBar.js)'s `computeScaleBar` picks the bar's length in world units
+from the standard cartographic 1-2-5-10-20-50&hellip; sequence — always a "nice" round number,
+never an arbitrary value like `73.4` — choosing whichever nice length's on-screen size (at the
+current zoom) lands closest to a fixed target width, so the bar redraws at a new round length as
+you zoom in or out rather than growing or shrinking a fixed one off-screen. Like `viewport.js`
+and `minimap.js`, the picking logic has no DOM dependency and is tested on its own.
 
 ### Scenario export/import
 
