@@ -45,6 +45,8 @@ Then open the printed URL in a browser.
   (see below).
 - **Animation delay** — milliseconds paused between each revealed cell; set it to 0 for an
   instant result.
+- **Step through last run** — drag to jump straight to any point in the last run, from nothing
+  revealed to the full path, without waiting for or replaying the animation (see below).
 - **Click or drag across empty cells** — draw with the active tool. Click or drag across cells
   already drawn on — erase back to plain empty. The very first cell touched in a drag decides
   whether the whole drag draws or erases, so dragging back over cells you already toggled
@@ -108,6 +110,22 @@ by running all five algorithms against whatever grid is actually on screen and r
 real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
 guarantees actually holding (or not) for a specific maze, rather than asking you to take the
 table on faith.
+
+## Stepping through a run
+
+An algorithm actually finishes in an instant — **Run**'s animation is a staged reveal of a
+result that already exists, one visited cell (then, once every visited cell is shown, one path
+cell) at a time. [`src/frames.js`](src/frames.js) exposes that same staged reveal as a pure
+function of a single number: given how many cells have been revealed so far, `frameState`
+returns exactly which visited and path cells should be showing.
+
+Once a run finishes, the **Step through last run** slider lets you scrub through that same
+sequence directly — drag it back to see the grid at cell 50 of the search, or straight to the
+end, without waiting for or replaying the animation. It moves on its own during **Run** too,
+doubling as a progress bar for the live animation. Changing anything the highlighting depends
+on — clearing the path, redrawing walls or terrain, generating a new maze, or loading a
+different grid — forgets the last run and disables the slider, since scrubbing through a run
+that no longer matches what's on screen would be misleading.
 
 ## Maze generation
 

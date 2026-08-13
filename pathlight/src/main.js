@@ -9,6 +9,7 @@ import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
 import { buildShareUrl, extractShareFragment, decodeGridFromFragment } from "./shareLink.js";
+import { totalFrames, frameState } from "./frames.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -32,6 +33,8 @@ const brushWallBtn = document.getElementById("brush-wall");
 const brushWeightBtn = document.getElementById("brush-weight");
 const speedInput = document.getElementById("speed");
 const speedValue = document.getElementById("speed-value");
+const scrubInput = document.getElementById("scrub");
+const scrubValue = document.getElementById("scrub-value");
 const statusEl = document.getElementById("status");
 
 const ALGORITHMS = {
@@ -58,6 +61,7 @@ let isDrawing = false;
 let drawValue = null; // for the wall brush: WALL/EMPTY; for the weight brush: a weight number
 let running = false;
 let animationDelayMs = Number(speedInput.value);
+let lastRun = null; // {visitedOrder, path, found} from the most recently completed run, for scrubbing
 
 function key(row, col) {
   return `${row},${col}`;
@@ -185,6 +189,52 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Forgets the last run and disables the scrubber — called any time the grid or highlighting
+// changes in a way that would make scrubbing back through a stale run misleading.
+function resetScrub() {
+  lastRun = null;
+  scrubInput.value = 0;
+  scrubInput.max = 0;
+  scrubInput.disabled = true;
+  scrubValue.textContent = "no run yet";
+}
+
+function clearRunState() {
+  visitedSet.clear();
+  pathSet.clear();
+  resetScrub();
+}
+
+// Sets visitedSet/pathSet to exactly what `frameIndex` steps into `lastRun` should show, then
+// re-renders only the cells whose highlighting actually changed. Used both by the live
+// animation (stepping forward one frame at a time) and by dragging the scrub slider (jumping
+// straight to an arbitrary frame).
+function applyFrame(frameIndex) {
+  const { visited, path } = frameState(lastRun.visitedOrder, lastRun.path, lastRun.found, frameIndex);
+  const nextVisited = new Set(visited.map((n) => key(n.row, n.col)));
+  const nextPath = new Set(path.map((n) => key(n.row, n.col)));
+  const changed = new Set();
+
+  for (const k of visitedSet) if (!nextVisited.has(k)) changed.add(k);
+  for (const k of pathSet) if (!nextPath.has(k)) changed.add(k);
+  for (const k of nextVisited) if (!visitedSet.has(k)) changed.add(k);
+  for (const k of nextPath) if (!pathSet.has(k)) changed.add(k);
+
+  visitedSet.clear();
+  nextVisited.forEach((k) => visitedSet.add(k));
+  pathSet.clear();
+  nextPath.forEach((k) => pathSet.add(k));
+
+  for (const k of changed) {
+    const [row, col] = k.split(",").map(Number);
+    renderCell(row, col);
+  }
+
+  scrubInput.value = frameIndex;
+  const total = totalFrames(lastRun.visitedOrder, lastRun.path, lastRun.found);
+  scrubValue.textContent = `${frameIndex} / ${total}`;
+}
+
 async function run() {
   if (running) return;
   const start = findNodeOfType(grid, START);
@@ -196,27 +246,24 @@ async function run() {
 
   running = true;
   runBtn.disabled = true;
-  visitedSet.clear();
-  pathSet.clear();
+  clearRunState();
   clearComparison();
   renderAll();
   setStatus("Running…");
 
   const algorithm = ALGORITHMS[algorithmSelect.value];
-  const { visitedOrder, path, found } = algorithm.run(grid, start, end);
+  lastRun = algorithm.run(grid, start, end);
+  const { visitedOrder, path, found } = lastRun;
+  scrubInput.max = totalFrames(visitedOrder, path, found);
+  scrubInput.disabled = false;
 
-  for (const node of visitedOrder) {
-    visitedSet.add(key(node.row, node.col));
-    renderCell(node.row, node.col);
+  const total = totalFrames(visitedOrder, path, found);
+  for (let frame = 1; frame <= total; frame++) {
+    applyFrame(frame);
     if (animationDelayMs > 0) await delay(animationDelayMs);
   }
 
   if (found) {
-    for (const node of path) {
-      pathSet.add(key(node.row, node.col));
-      renderCell(node.row, node.col);
-      if (animationDelayMs > 0) await delay(animationDelayMs);
-    }
     setStatus(`Path found: ${path.length - 1} steps, ${visitedOrder.length} cells explored.`);
   } else {
     setStatus(`No path exists. ${visitedOrder.length} cells explored.`);
@@ -225,6 +272,22 @@ async function run() {
   running = false;
   runBtn.disabled = false;
 }
+
+scrubInput.addEventListener("input", () => {
+  if (!lastRun || running) return;
+  applyFrame(Number(scrubInput.value));
+  const { found, path } = lastRun;
+  const atEnd = Number(scrubInput.value) === Number(scrubInput.max);
+  if (atEnd) {
+    setStatus(
+      found
+        ? `Path found: ${path.length - 1} steps, ${lastRun.visitedOrder.length} cells explored.`
+        : `No path exists. ${lastRun.visitedOrder.length} cells explored.`
+    );
+  } else {
+    setStatus("Scrubbing…");
+  }
+});
 
 runBtn.addEventListener("click", run);
 
@@ -240,8 +303,7 @@ compareBtn.addEventListener("click", () => {
 });
 
 clearPathBtn.addEventListener("click", () => {
-  visitedSet.clear();
-  pathSet.clear();
+  clearRunState();
   renderAll();
   setStatus("");
 });
@@ -250,8 +312,7 @@ clearWallsBtn.addEventListener("click", () => {
   grid = grid.map((row) =>
     row.map((cell) => (cell.type === WALL ? { ...cell, type: EMPTY, weight: 1 } : { ...cell, weight: 1 }))
   );
-  visitedSet.clear();
-  pathSet.clear();
+  clearRunState();
   clearComparison();
   renderAll();
   setStatus("");
@@ -269,8 +330,7 @@ generateMazeBtn.addEventListener("click", () => {
   grid = setNodeType(grid, 0, 0, START);
   grid = setNodeType(grid, endRow, endCol, END);
 
-  visitedSet.clear();
-  pathSet.clear();
+  clearRunState();
   clearComparison();
   renderAll();
   setStatus("");
@@ -285,8 +345,7 @@ generateTerrainBtn.addEventListener("click", () => {
     row.map((cell, c) => (cell.type === EMPTY ? { ...cell, weight: weights[r][c] } : cell))
   );
 
-  visitedSet.clear();
-  pathSet.clear();
+  clearRunState();
   clearComparison();
   renderAll();
   setStatus("");
@@ -311,8 +370,7 @@ loadGridInput.addEventListener("change", () => {
     try {
       const loaded = deserializeGrid(JSON.parse(reader.result), ROWS, COLS);
       grid = loaded;
-      visitedSet.clear();
-      pathSet.clear();
+      clearRunState();
       clearComparison();
       renderAll();
       setStatus(`Loaded "${file.name}".`);
