@@ -7,6 +7,7 @@ import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { generateMaze } from "./maze.js";
 import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
+import { compareResultsToCsv } from "./csvExport.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
 import { buildShareUrl, extractShareFragment, decodeGridFromFragment } from "./shareLink.js";
 import { totalFrames, frameState } from "./frames.js";
@@ -24,6 +25,7 @@ const generateMazeBtn = document.getElementById("generate-maze");
 const generateTerrainBtn = document.getElementById("generate-terrain");
 const compareBtn = document.getElementById("compare");
 const comparisonEl = document.getElementById("comparison");
+const downloadComparisonCsvBtn = document.getElementById("download-comparison-csv");
 const saveGridBtn = document.getElementById("save-grid");
 const loadGridInput = document.getElementById("load-grid");
 const copyShareLinkBtn = document.getElementById("copy-share-link");
@@ -62,6 +64,7 @@ let drawValue = null; // for the wall brush: WALL/EMPTY; for the weight brush: a
 let running = false;
 let animationDelayMs = Number(speedInput.value);
 let lastRun = null; // {visitedOrder, path, found} from the most recently completed run, for scrubbing
+let lastComparisonResults = null; // compareAlgorithms' output from the last "Compare all algorithms" click, for CSV download
 
 function key(row, col) {
   return `${row},${col}`;
@@ -168,6 +171,7 @@ function renderComparison(results) {
 
 function clearComparison() {
   comparisonEl.innerHTML = "";
+  lastComparisonResults = null;
 }
 
 function cellFromEvent(event) {
@@ -298,8 +302,24 @@ compareBtn.addEventListener("click", () => {
     setStatus("Place both a start and an end before comparing.");
     return;
   }
-  renderComparison(compareAlgorithms(grid, start, end));
+  lastComparisonResults = compareAlgorithms(grid, start, end);
+  renderComparison(lastComparisonResults);
   setStatus("Compared all algorithms on the current grid.");
+});
+
+downloadComparisonCsvBtn.addEventListener("click", () => {
+  if (!lastComparisonResults) {
+    setStatus("Compare all algorithms before downloading the comparison.");
+    return;
+  }
+  const blob = new Blob([compareResultsToCsv(lastComparisonResults)], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "pathlight-comparison.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+  setStatus("Downloaded the comparison as CSV.");
 });
 
 clearPathBtn.addEventListener("click", () => {

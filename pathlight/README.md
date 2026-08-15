@@ -35,6 +35,9 @@ Then open the printed URL in a browser.
   animation) and show each one's cells explored, steps, and total cost in a table (see below).
   Cleared automatically whenever the walls or terrain change, so it never shows numbers from a
   grid that no longer exists.
+- **Download comparison CSV** — save the current comparison table as a CSV file (see below).
+  Disabled in effect until **Compare all algorithms** has run at least once since the grid last
+  changed — clicking it first instead reports that a comparison is needed.
 - **Save grid** — download the current walls, weighted terrain, start, and end as a JSON file.
 - **Load grid&hellip;** — restore a grid from a previously saved JSON file (see below).
 - **Copy share link** — copy a URL encoding the current grid to the clipboard (see below).
@@ -110,6 +113,15 @@ by running all five algorithms against whatever grid is actually on screen and r
 real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
 guarantees actually holding (or not) for a specific maze, rather than asking you to take the
 table on faith.
+
+**Download comparison CSV** turns that same table into a file, for pulling a maze's numbers
+into a spreadsheet instead of reading them off the page. [`src/csvExport.js`](src/csvExport.js)'s
+`compareResultsToCsv` formats `compareAlgorithms`' results as CSV text — quoting and escaping
+any field that needs it per RFC 4180, though none of the built-in algorithm names actually do —
+kept just as DOM-free as `compare.js` itself, so the formatting is tested without a browser. The
+button downloads whatever the last **Compare all algorithms** run produced; it doesn't re-run
+the comparison itself, and reports that one is needed first if none has run yet since the grid
+last changed.
 
 ## Stepping through a run
 
