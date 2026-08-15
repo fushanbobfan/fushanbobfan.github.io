@@ -27,6 +27,7 @@ import {
 } from "./viewport.js";
 import { computeMinimapTransform, worldToMinimapPoint, viewportRectOnMinimap } from "./minimap.js";
 import { computeScaleBar } from "./scaleBar.js";
+import { computeVelocityArrow } from "./velocityVectors.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -56,6 +57,7 @@ const showScaleBarCheckbox = document.getElementById("show-scale-bar");
 const trackCenterOfMassCheckbox = document.getElementById("track-center-of-mass");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
+const showVelocityVectorsCheckbox = document.getElementById("show-velocity-vectors");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
 const massInput = document.getElementById("mass-input");
@@ -87,6 +89,13 @@ const PREDICTION_STEPS = 150;
 // Recomputing every tick is cheap even for the largest preset, but throttling avoids
 // wasted work if someone clicks a burst of new bodies into the scene in one frame.
 const PREDICTION_RECOMPUTE_INTERVAL = 10;
+// Velocity arrows are scaled by sqrt(speed) * VELOCITY_ARROW_SCALE, then clamped between
+// VELOCITY_ARROW_MIN (so a near-stationary body still shows a visible marker) and
+// VELOCITY_ARROW_MAX (so a rogue flyby's closest-approach speed doesn't dwarf the scene) —
+// tuned against the built-in presets' typical orbital and flyby speeds.
+const VELOCITY_ARROW_SCALE = 10;
+const VELOCITY_ARROW_MIN = 8;
+const VELOCITY_ARROW_MAX = 100;
 
 let currentPresetKey = "sun-and-planets";
 let bodies = [];
@@ -98,6 +107,7 @@ let showTrails = true;
 let trailLength = 400;
 let showDiagnostics = true;
 let showPrediction = false;
+let showVelocityVectors = false;
 let showMinimap = true;
 let showCenterOfMass = false;
 let showScaleBar = true;
@@ -219,6 +229,8 @@ function draw() {
     }
   }
 
+  if (showVelocityVectors) drawVelocityVectors();
+
   if (aimingBodyId !== null && aimPointerWorld) {
     const body = bodies.find((b) => b.id === aimingBodyId);
     if (body) drawAimLine(body);
@@ -318,6 +330,40 @@ function drawMinimap() {
 // A dashed line from the grabbed body to the pointer, with a dot at the pointer end,
 // mirroring the dashed predicted-path styling used elsewhere so it reads as a preview
 // rather than something already part of the simulation.
+// Draws each body's current velocity as a solid arrow from its position, via
+// velocityVectors.js's computeVelocityArrow — sqrt-scaled and clamped so a slow orbiting body
+// and a fast rogue flyby both draw a legible (rather than invisible or scene-dominating)
+// arrow. Colored per body (like trails and predicted paths) rather than a single fixed color,
+// since the arrow's start already pins it to its body but a shared hue still helps pick a
+// specific one out of a cluster.
+function drawVelocityVectors() {
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  for (const body of bodies) {
+    const arrow = computeVelocityArrow(body, VELOCITY_ARROW_SCALE, VELOCITY_ARROW_MIN, VELOCITY_ARROW_MAX);
+    const from = worldToScreen(arrow.x1, arrow.y1);
+    const to = worldToScreen(arrow.x2, arrow.y2);
+    const angle = Math.atan2(to.sy - from.sy, to.sx - from.sx);
+
+    ctx.strokeStyle = body.color;
+    ctx.fillStyle = body.color;
+
+    ctx.beginPath();
+    ctx.moveTo(from.sx, from.sy);
+    ctx.lineTo(to.sx, to.sy);
+    ctx.stroke();
+
+    const headLength = 6;
+    ctx.beginPath();
+    ctx.moveTo(to.sx, to.sy);
+    ctx.lineTo(to.sx - headLength * Math.cos(angle - Math.PI / 6), to.sy - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(to.sx - headLength * Math.cos(angle + Math.PI / 6), to.sy - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawAimLine(body) {
   const from = worldToScreen(body.x, body.y);
   const to = worldToScreen(aimPointerWorld.x, aimPointerWorld.y);
@@ -510,6 +556,10 @@ diagnosticsCheckbox.addEventListener("change", () => {
 predictCheckbox.addEventListener("change", () => {
   showPrediction = predictCheckbox.checked;
   ticksSincePrediction = Infinity;
+});
+
+showVelocityVectorsCheckbox.addEventListener("change", () => {
+  showVelocityVectors = showVelocityVectorsCheckbox.checked;
 });
 
 showMinimapCheckbox.addEventListener("change", () => {
@@ -1090,6 +1140,11 @@ document.addEventListener("keydown", (event) => {
     case "P":
       predictCheckbox.checked = !predictCheckbox.checked;
       predictCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "v":
+    case "V":
+      showVelocityVectorsCheckbox.checked = !showVelocityVectorsCheckbox.checked;
+      showVelocityVectorsCheckbox.dispatchEvent(new Event("change"));
       break;
     case "m":
     case "M":
