@@ -33,6 +33,8 @@ Then open the printed URL in a browser.
 - **Show conservation chart** — toggle a small live chart of energy and momentum drift (see below).
 - **Show predicted paths** — toggle a dashed ghost path per body, forecasting where it's headed
   (see below).
+- **Show velocity vectors** — toggle a solid arrow per body, pointing in its current direction
+  of travel (see below).
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
 - **Track center of mass** — keep the viewport panned to that point every tick (see below).
@@ -86,6 +88,7 @@ Then open the printed URL in a browser.
 | `T` | Toggle trails |
 | `C` | Toggle the conservation chart |
 | `P` | Toggle predicted paths |
+| `V` | Toggle velocity vectors |
 | `M` | Toggle the minimap |
 | `B` | Toggle the center of mass marker |
 | `L` | Toggle the scale bar |
@@ -160,6 +163,17 @@ simulation. The result is drawn as a dashed ghost line ahead of each body — a 
 gravity is about to take it, updated every few ticks (or immediately, if the number of bodies
 changes). The forecast doesn't run collision merging, so a predicted close encounter shows the
 bodies' unmerged paths rather than the merge itself.
+
+### Velocity vectors
+
+Where predicted paths forecast a body's future, **Show velocity vectors** shows its present:
+a solid arrow from each body pointing in its current direction of travel, with an arrowhead at
+the tip. [`src/velocityVectors.js`](src/velocityVectors.js)'s `computeVelocityArrow` scales the
+arrow's length by the square root of the body's speed rather than linearly, then clamps it
+between a minimum and maximum — a near-stationary body in a tight orbit still shows a visible
+marker, and a rogue flyby's closest-approach speed doesn't draw an arrow that dwarfs the rest of
+the scene. Like `viewport.js` and `trajectory.js`, the scaling and clamping math has no DOM
+dependency and is tested on its own; only the actual arrow drawing lives in `main.js`.
 
 ### Inspector panel
 
