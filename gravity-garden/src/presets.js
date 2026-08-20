@@ -214,6 +214,51 @@ export const PRESETS = {
     },
   },
 
+  "trojan-asteroid": {
+    label: "Trojan Asteroid",
+    G: 1,
+    softening: 2,
+    // A small body sitting at the planet's leading Lagrange point (L4), 60 degrees ahead of it
+    // along the same circular orbit — real Trojan asteroids cluster at Jupiter's L4/L5 points
+    // the same way. At L4 the sun, planet, and trojan form an equilateral triangle, so placing
+    // the trojan at the planet's own orbital distance and at the planet's own angular velocity
+    // (same speed, direction rotated 60 degrees) sets up that triangle at t=0. It stays there:
+    // the planet is only about 1/200th the sun's mass here, comfortably under the ~1/25 Routh
+    // stability limit for L4/L5, so the sun's gravity dominates and the planet's own pull just
+    // keeps the trojan librating near L4 instead of pulling it away.
+    build() {
+      const G = this.G;
+      const sunMass = 20000;
+      const sun = { mass: sunMass, x: 0, y: 0, vx: 0, vy: 0, radius: 14, color: "#ffd166" };
+
+      const planetDist = 160;
+      const planetMass = 100;
+      const planetSpeed = circularOrbitVelocity(G, sunMass, planetDist);
+      const planet = {
+        mass: planetMass,
+        x: planetDist,
+        y: 0,
+        vx: 0,
+        vy: planetSpeed,
+        radius: 6,
+        color: "#4cc9f0",
+      };
+
+      const angle = Math.PI / 3;
+      const trojan = {
+        mass: 1,
+        x: planetDist * Math.cos(angle),
+        y: planetDist * Math.sin(angle),
+        vx: -planetSpeed * Math.sin(angle),
+        vy: planetSpeed * Math.cos(angle),
+        radius: 2,
+        color: "#06d6a0",
+      };
+
+      return [sun, planet, trojan];
+    },
+  },
+
   "random-cluster": {
     label: "Random Cluster",
     G: 1,

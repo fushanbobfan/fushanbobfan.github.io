@@ -78,6 +78,42 @@ test('preset "planet-and-moon" keeps the moon bound to the planet over many orbi
   );
 });
 
+test('preset "trojan-asteroid" places the trojan at an equal distance from the sun and the planet', () => {
+  // The L4 Lagrange point forms an equilateral triangle with the sun and the planet, so at
+  // t = 0 the trojan should be exactly as far from the sun as it is from the planet.
+  const [sun, planet, trojan] = PRESETS["trojan-asteroid"].build();
+  const sunDist = Math.hypot(trojan.x - sun.x, trojan.y - sun.y);
+  const planetDist = Math.hypot(trojan.x - planet.x, trojan.y - planet.y);
+  assert.ok(Math.abs(sunDist - planetDist) < 1e-9, `expected an equilateral triangle, got sunDist=${sunDist}, planetDist=${planetDist}`);
+});
+
+test('preset "trojan-asteroid" keeps the trojan librating near the L4 point over many orbits', () => {
+  // Like the planet-and-moon Hill-sphere test, the only way to catch an escaping trojan is to
+  // actually integrate the system forward rather than just inspect the initial conditions.
+  const preset = PRESETS["trojan-asteroid"];
+  const bodies = preset.build();
+  const dt = 0.05;
+  const [sun, planet, trojan] = bodies;
+  const startDist = Math.hypot(trojan.x - sun.x, trojan.y - sun.y);
+
+  let minDist = startDist;
+  let maxDist = startDist;
+  for (let i = 0; i < 40000; i++) {
+    stepSimulation(bodies, dt, preset.G, preset.softening);
+    const dist = Math.hypot(bodies[2].x - bodies[0].x, bodies[2].y - bodies[0].y);
+    minDist = Math.min(minDist, dist);
+    maxDist = Math.max(maxDist, dist);
+  }
+
+  // A librating trojan oscillates in a tight band around the planet's own orbital distance; an
+  // escaping one would drift arbitrarily far. A generous +/-25% band safely separates the two
+  // without the test being sensitive to the exact libration amplitude.
+  assert.ok(
+    minDist > startDist * 0.75 && maxDist < startDist * 1.25,
+    `expected the trojan to stay near ${startDist.toFixed(1)}, got a range of ${minDist.toFixed(1)}-${maxDist.toFixed(1)}`
+  );
+});
+
 test('preset "random-cluster" returns a fresh, independent array each call', () => {
   const first = PRESETS["random-cluster"].build();
   const second = PRESETS["random-cluster"].build();
