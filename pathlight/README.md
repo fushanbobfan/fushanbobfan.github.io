@@ -38,6 +38,8 @@ Then open the printed URL in a browser.
 - **Download comparison CSV** — save the current comparison table as a CSV file (see below).
   Disabled in effect until **Compare all algorithms** has run at least once since the grid last
   changed — clicking it first instead reports that a comparison is needed.
+- **Undo** — reverse the last wall/terrain edit, start/end placement, or **Clear walls &
+  terrain** (see below).
 - **Save grid** — download the current walls, weighted terrain, start, and end as a JSON file.
 - **Load grid&hellip;** — restore a grid from a previously saved JSON file (see below).
 - **Copy share link** — copy a URL encoding the current grid to the clipboard (see below).
@@ -166,6 +168,20 @@ are currently empty, so it layers terrain onto whatever walls are already on the
 drawn or from **Generate maze** — instead of overwriting them, and leaves the start and end at
 their default weight.
 
+## Undo
+
+Drawing a wall in the wrong spot, misplacing the start or end, clearing walls and terrain, or
+generating a new terrain layer is otherwise permanent the instant it happens.
+[`src/history.js`](src/history.js) is a small, DOM-free bounded stack of opaque snapshots —
+pushed before each of those actions, using the same `serializeGrid` saving and loading already
+relies on, so undo needed no grid-format logic of its own. **Undo** pops the most recent
+snapshot and restores it with `deserializeGrid`, the same path a loaded file or share link
+takes. The stack holds the last 20 edits and is cleared whenever the whole grid is replaced from
+an external or generated source — **Generate maze**, **Load grid&hellip;**, or opening a share
+link — since undoing into a grid the current one replaced would restore walls from an unrelated
+layout. A single click or a whole drag stroke across many cells counts as one undo step, not one
+per cell, so reversing a stroke never takes more than one **Undo**.
+
 ## Saving and loading grids
 
 [`src/serialize.js`](src/serialize.js) converts a grid to a plain JSON-compatible shape —
@@ -229,6 +245,9 @@ an open grid, all five correctly reporting unreachable together, and Dijkstra/A*
 cheaper cost than BFS/greedy once terrain is weighted. `serialize.js` is tested for an exact
 round trip through an edited grid, and for rejecting every way a loaded file can be invalid
 (wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
+`history.js` is tested separately: push/pop order (last-in-first-out), popping an empty history,
+discarding the oldest snapshot once the stack's `maxSize` is exceeded, and that `pushHistory`
+doesn't mutate the history passed in.
 
 ## License
 
