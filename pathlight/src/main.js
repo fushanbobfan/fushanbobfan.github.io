@@ -11,10 +11,12 @@ import { compareResultsToCsv } from "./csvExport.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
 import { buildShareUrl, extractShareFragment, decodeGridFromFragment } from "./shareLink.js";
 import { totalFrames, frameState } from "./frames.js";
+import { createHistory, pushHistory, popHistory, canUndo } from "./history.js";
 
 const ROWS = 15;
 const COLS = 30;
 const WEIGHTED_TERRAIN_COST = 5;
+const UNDO_HISTORY_SIZE = 20;
 
 const gridEl = document.getElementById("grid");
 const algorithmSelect = document.getElementById("algorithm");
@@ -33,6 +35,7 @@ const setStartBtn = document.getElementById("set-start");
 const setEndBtn = document.getElementById("set-end");
 const brushWallBtn = document.getElementById("brush-wall");
 const brushWeightBtn = document.getElementById("brush-weight");
+const undoBtn = document.getElementById("undo");
 const speedInput = document.getElementById("speed");
 const speedValue = document.getElementById("speed-value");
 const scrubInput = document.getElementById("scrub");
@@ -65,6 +68,7 @@ let running = false;
 let animationDelayMs = Number(speedInput.value);
 let lastRun = null; // {visitedOrder, path, found} from the most recently completed run, for scrubbing
 let lastComparisonResults = null; // compareAlgorithms' output from the last "Compare all algorithms" click, for CSV download
+let undoHistory = createHistory(UNDO_HISTORY_SIZE);
 
 function key(row, col) {
   return `${row},${col}`;
@@ -209,6 +213,41 @@ function clearRunState() {
   resetScrub();
 }
 
+function updateUndoButton() {
+  undoBtn.disabled = !canUndo(undoHistory);
+}
+
+// Records the current grid (reusing serialize.js's serializeGrid, so undo doesn't need its own
+// notion of what a "state" is) before a discrete, reversible edit — drawing or erasing a wall or
+// weighted-terrain cell, placing the start or end, clearing walls and terrain, or generating
+// terrain. Skipped around actions that replace the grid from an external or generated source
+// (Generate maze, Load grid, a share link), which clear the stack instead via
+// resetUndoHistory: undoing back into a grid the current one replaced would restore walls from
+// an unrelated layout.
+function snapshotForUndo() {
+  undoHistory = pushHistory(undoHistory, serializeGrid(grid));
+  updateUndoButton();
+}
+
+function resetUndoHistory() {
+  undoHistory = createHistory(UNDO_HISTORY_SIZE);
+  updateUndoButton();
+}
+
+function undo() {
+  const { snapshot, history: after } = popHistory(undoHistory);
+  if (!snapshot) return;
+  undoHistory = after;
+  grid = deserializeGrid(snapshot, ROWS, COLS);
+  updateUndoButton();
+  clearRunState();
+  clearComparison();
+  renderAll();
+  setStatus("Undid the last edit.");
+}
+
+undoBtn.addEventListener("click", undo);
+
 // Sets visitedSet/pathSet to exactly what `frameIndex` steps into `lastRun` should show, then
 // re-renders only the cells whose highlighting actually changed. Used both by the live
 // animation (stepping forward one frame at a time) and by dragging the scrub slider (jumping
@@ -329,6 +368,7 @@ clearPathBtn.addEventListener("click", () => {
 });
 
 clearWallsBtn.addEventListener("click", () => {
+  snapshotForUndo();
   grid = grid.map((row) =>
     row.map((cell) => (cell.type === WALL ? { ...cell, type: EMPTY, weight: 1 } : { ...cell, weight: 1 }))
   );
@@ -350,6 +390,7 @@ generateMazeBtn.addEventListener("click", () => {
   grid = setNodeType(grid, 0, 0, START);
   grid = setNodeType(grid, endRow, endCol, END);
 
+  resetUndoHistory();
   clearRunState();
   clearComparison();
   renderAll();
@@ -360,6 +401,7 @@ generateMazeBtn.addEventListener("click", () => {
 // patches onto whatever walls (hand-drawn or from Generate maze) are already on the grid instead
 // of overwriting them, and leaves the start/end markers at their default weight.
 generateTerrainBtn.addEventListener("click", () => {
+  snapshotForUndo();
   const weights = generateTerrain(ROWS, COLS);
   grid = grid.map((row, r) =>
     row.map((cell, c) => (cell.type === EMPTY ? { ...cell, weight: weights[r][c] } : cell))
@@ -390,6 +432,7 @@ loadGridInput.addEventListener("change", () => {
     try {
       const loaded = deserializeGrid(JSON.parse(reader.result), ROWS, COLS);
       grid = loaded;
+      resetUndoHistory();
       clearRunState();
       clearComparison();
       renderAll();
@@ -450,10 +493,12 @@ function beginDraw(row, col) {
   const cell = grid[row][col];
   if (brush === "wall") {
     if (cell.type !== EMPTY && cell.type !== WALL) return false;
+    snapshotForUndo();
     drawValue = cell.type === WALL ? EMPTY : WALL;
     grid = setNodeType(grid, row, col, drawValue);
   } else {
     if (cell.type !== EMPTY) return false;
+    snapshotForUndo();
     drawValue = cell.weight > 1 ? 1 : WEIGHTED_TERRAIN_COST;
     grid = setNodeWeight(grid, row, col, drawValue);
   }
@@ -480,6 +525,7 @@ function continueDraw(row, col) {
 // can be extended by dragging (only true for a fresh wall/terrain stroke, not a placement).
 function activateCell(row, col) {
   if (placementMode) {
+    snapshotForUndo();
     grid = setNodeType(grid, row, col, placementMode === "start" ? START : END);
     placementMode = null;
     updatePlacementButtons();
@@ -599,6 +645,7 @@ const shareFragment = extractShareFragment(window.location.hash);
 if (shareFragment !== null) {
   try {
     grid = decodeGridFromFragment(shareFragment, ROWS, COLS);
+    resetUndoHistory();
     setStatus("Loaded shared grid.");
   } catch (error) {
     setStatus(`Share link failed: ${error.message}`);
