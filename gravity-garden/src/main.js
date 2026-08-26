@@ -81,6 +81,7 @@ const loadScenarioBtn = document.getElementById("load-scenario");
 const deleteScenarioBtn = document.getElementById("delete-scenario");
 const announcer = document.getElementById("sim-announcer");
 const undoBtn = document.getElementById("undo");
+const redoBtn = document.getElementById("redo");
 
 const UNDO_HISTORY_SIZE = 20;
 const PAN_STEP = 40;
@@ -120,6 +121,7 @@ let followSelected = false;
 let trackCenterOfMass = false;
 let viewport = createViewport();
 let undoHistory = createHistory(UNDO_HISTORY_SIZE);
+let redoHistory = createHistory(UNDO_HISTORY_SIZE);
 // While set, a mouse or touch drag that started on this body previews a launch velocity
 // (see the mousedown/touchstart handlers below) instead of panning the view.
 let aimingBodyId = null;
@@ -146,6 +148,16 @@ function updateGravityReadouts() {
   softeningValue.textContent = softening.toFixed(1);
 }
 
+// Clears both the undo and redo stacks — called around actions that replace the whole
+// scenario (loadPreset, applyScenario), since neither undoing nor redoing back into a
+// scenario the current one replaced would make sense.
+function resetUndoRedoHistory() {
+  undoHistory = createHistory(UNDO_HISTORY_SIZE);
+  redoHistory = createHistory(UNDO_HISTORY_SIZE);
+  updateUndoButton();
+  updateRedoButton();
+}
+
 function loadPreset(key) {
   const preset = PRESETS[key];
   currentPresetKey = key;
@@ -157,8 +169,7 @@ function loadPreset(key) {
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
   viewport = resetViewport();
-  undoHistory = createHistory(UNDO_HISTORY_SIZE);
-  updateUndoButton();
+  resetUndoRedoHistory();
   updateGravityReadouts();
 }
 
@@ -601,32 +612,58 @@ deselectBtn.addEventListener("click", () => {
 // Records the current bodies/G/softening (reusing scenario.js's serialization, so undo
 // doesn't need its own notion of what a "state" is) before a discrete, reversible action —
 // adding, removing, launching, or editing a body's mass or color. Skipped around actions that
-// replace the whole scenario (loadPreset, applyScenario), which clear the stack instead:
-// undoing back into a scenario the current one replaced would restore bodies from a different
-// simulation.
+// replace the whole scenario (loadPreset, applyScenario), which clear both stacks instead via
+// resetUndoRedoHistory: undoing back into a scenario the current one replaced would restore
+// bodies from a different simulation. A fresh action also discards any pending redo history —
+// once it diverges from what was undone, redoing back to it would restore a state the action
+// just replaced.
 function snapshotForUndo() {
   undoHistory = pushHistory(undoHistory, serializeScenario({ bodies, G, softening, viewport }));
+  redoHistory = createHistory(UNDO_HISTORY_SIZE);
   updateUndoButton();
+  updateRedoButton();
 }
 
 function updateUndoButton() {
   undoBtn.disabled = !canPop(undoHistory);
 }
 
+function updateRedoButton() {
+  redoBtn.disabled = !canPop(redoHistory);
+}
+
 function undo() {
   const { snapshot, history: after } = popHistory(undoHistory);
   if (!snapshot) return;
   undoHistory = after;
+  redoHistory = pushHistory(redoHistory, serializeScenario({ bodies, G, softening, viewport }));
   const restored = deserializeScenario(snapshot);
   G = restored.G;
   softening = restored.softening;
   bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
   selectedBodyId = null;
   updateUndoButton();
+  updateRedoButton();
+  updateGravityReadouts();
+}
+
+function redo() {
+  const { snapshot, history: after } = popHistory(redoHistory);
+  if (!snapshot) return;
+  redoHistory = after;
+  undoHistory = pushHistory(undoHistory, serializeScenario({ bodies, G, softening, viewport }));
+  const restored = deserializeScenario(snapshot);
+  G = restored.G;
+  softening = restored.softening;
+  bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  selectedBodyId = null;
+  updateUndoButton();
+  updateRedoButton();
   updateGravityReadouts();
 }
 
 undoBtn.addEventListener("click", undo);
+redoBtn.addEventListener("click", redo);
 
 function removeSelectedBody() {
   if (selectedBodyId == null) return;
@@ -721,8 +758,7 @@ function applyScenario(restored) {
   predictedPaths = [];
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
-  undoHistory = createHistory(UNDO_HISTORY_SIZE);
-  updateUndoButton();
+  resetUndoRedoHistory();
   updateZoomReadout();
   updateGravityReadouts();
 }
@@ -1125,6 +1161,10 @@ document.addEventListener("keydown", (event) => {
     case "u":
     case "U":
       undoBtn.click();
+      break;
+    case "y":
+    case "Y":
+      redoBtn.click();
       break;
     case "t":
     case "T":
