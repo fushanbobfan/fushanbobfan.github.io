@@ -25,6 +25,7 @@ Then open the printed URL in a browser.
 - **Scenario** — switch between the built-in presets.
 - **Pause / Reset** — stop the simulation or reload the current scenario's initial conditions.
 - **Undo** — reverse the last add, remove, launch, or mass/color edit (see below).
+- **Redo** — reapply the last action **Undo** reversed (see below).
 - **Speed** — scale the simulation timestep.
 - **Gravitational constant (G) / Softening length** — adjust the simulation's own physics
   constants live, without switching scenarios (see below).
@@ -84,6 +85,7 @@ Then open the printed URL in a browser.
 | `Space` | Play / pause |
 | `R` | Reset the current scenario |
 | `U` | Undo the last add, remove, launch, or mass/color edit |
+| `Y` | Redo the last undone action |
 | `↑` / `↓` | Raise / lower speed |
 | `T` | Toggle trails |
 | `C` | Toggle the conservation chart |
@@ -319,7 +321,7 @@ rather than reaching for `window.localStorage` directly, so it can be tested aga
 in-memory fake instead of a real browser environment. Saves persist only in the browser and
 device they were made in; export a scenario to a file instead to move it elsewhere.
 
-### Undo
+### Undo and redo
 
 Dropping a body in the wrong spot, removing the wrong one, launching it at the wrong speed, or
 editing its mass or color is otherwise permanent the instant it happens. [`src/history.js`](src/history.js)
@@ -327,11 +329,20 @@ is a small, DOM-free bounded stack of opaque snapshots — pushed before each of
 actions, using the same `serializeScenario` that export/import and local saves already rely on,
 so undo needed no scenario-format logic of its own. Undoing pops the most recent snapshot and
 restores it with `deserializeScenario`, the same path a loaded file or share link takes. The
-stack holds the last 20 actions and is cleared whenever the whole scenario changes from under
-it — switching presets, resetting, importing a file, loading a save, or opening a share link —
-since undoing into a scenario the current one replaced would restore bodies from an unrelated
-simulation. Selecting a body, panning, zooming, or adjusting G/softening isn't itself undoable;
-only the five body-mutating actions push a snapshot.
+undo stack holds the last 20 actions and is cleared whenever the whole scenario changes from
+under it — switching presets, resetting, importing a file, loading a save, or opening a share
+link — since undoing into a scenario the current one replaced would restore bodies from an
+unrelated simulation. Selecting a body, panning, zooming, or adjusting G/softening isn't itself
+undoable; only the five body-mutating actions push a snapshot.
+
+Redo reverses an undo the same way undo reverses one of those five actions: `main.js` keeps a
+second `history.js` stack for it, and every undo pushes the state it's about to replace onto
+that redo stack before restoring the earlier snapshot — so redoing steps forward through
+exactly the actions undo just stepped back through. Taking a fresh body-mutating action after
+an undo clears the redo stack rather than leaving it in place, since the action has now
+diverged from the timeline redo would otherwise return to; redoing into it would silently
+discard the new action. Like undo, it's cleared whenever the whole scenario changes from
+under it.
 
 ### Accessibility announcements
 

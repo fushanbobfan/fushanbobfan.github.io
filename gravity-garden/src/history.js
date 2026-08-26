@@ -1,14 +1,15 @@
-// A small bounded undo stack of opaque snapshots, kept DOM-free like the rest of the
+// A small bounded stack of opaque snapshots, kept DOM-free like the rest of the
 // simulation logic. What a "snapshot" contains is the caller's business (main.js uses
 // scenario.js's serializeScenario output); this module only owns the stack discipline —
-// last-in-first-out, capped at maxSize so undo history can't grow without bound over a
-// long session.
+// last-in-first-out, capped at maxSize so history can't grow without bound over a
+// long session. main.js keeps two separate instances of this stack, one for undo and
+// one for redo.
 
 export function createHistory(maxSize) {
   return { stack: [], maxSize };
 }
 
-export function canUndo(history) {
+export function canPop(history) {
   return history.stack.length > 0;
 }
 
