@@ -40,6 +40,7 @@ Then open the printed URL in a browser.
   changed — clicking it first instead reports that a comparison is needed.
 - **Undo** — reverse the last wall/terrain edit, start/end placement, or **Clear walls &
   terrain** (see below).
+- **Redo** — reapply the last edit **Undo** reversed (see below).
 - **Save grid** — download the current walls, weighted terrain, start, and end as a JSON file.
 - **Load grid&hellip;** — restore a grid from a previously saved JSON file (see below).
 - **Copy share link** — copy a URL encoding the current grid to the clipboard (see below).
@@ -168,7 +169,7 @@ are currently empty, so it layers terrain onto whatever walls are already on the
 drawn or from **Generate maze** — instead of overwriting them, and leaves the start and end at
 their default weight.
 
-## Undo
+## Undo and redo
 
 Drawing a wall in the wrong spot, misplacing the start or end, clearing walls and terrain, or
 generating a new terrain layer is otherwise permanent the instant it happens.
@@ -176,11 +177,18 @@ generating a new terrain layer is otherwise permanent the instant it happens.
 pushed before each of those actions, using the same `serializeGrid` saving and loading already
 relies on, so undo needed no grid-format logic of its own. **Undo** pops the most recent
 snapshot and restores it with `deserializeGrid`, the same path a loaded file or share link
-takes. The stack holds the last 20 edits and is cleared whenever the whole grid is replaced from
-an external or generated source — **Generate maze**, **Load grid&hellip;**, or opening a share
-link — since undoing into a grid the current one replaced would restore walls from an unrelated
-layout. A single click or a whole drag stroke across many cells counts as one undo step, not one
-per cell, so reversing a stroke never takes more than one **Undo**.
+takes. The undo stack holds the last 20 edits and is cleared whenever the whole grid is replaced
+from an external or generated source — **Generate maze**, **Load grid&hellip;**, or opening a
+share link — since undoing into a grid the current one replaced would restore walls from an
+unrelated layout. A single click or a whole drag stroke across many cells counts as one undo
+step, not one per cell, so reversing a stroke never takes more than one **Undo**.
+
+**Redo** reverses an **Undo** the same way **Undo** reverses an edit: `main.js` keeps a second
+`history.js` stack for it, and every undo pushes the grid it's about to replace onto that redo
+stack before restoring the earlier snapshot — so redoing steps forward through exactly the
+edits undo just stepped back through. Making a fresh edit after an undo clears the redo stack
+rather than leaving it in place, since the edit has now diverged from the timeline redo would
+otherwise return to; redoing into it would silently discard the new edit.
 
 ## Saving and loading grids
 
