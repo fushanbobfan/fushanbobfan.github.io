@@ -11,7 +11,7 @@ import { compareResultsToCsv } from "./csvExport.js";
 import { serializeGrid, deserializeGrid } from "./serialize.js";
 import { buildShareUrl, extractShareFragment, decodeGridFromFragment } from "./shareLink.js";
 import { totalFrames, frameState } from "./frames.js";
-import { createHistory, pushHistory, popHistory, canUndo } from "./history.js";
+import { createHistory, pushHistory, popHistory, canPop } from "./history.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -214,7 +214,7 @@ function clearRunState() {
 }
 
 function updateUndoButton() {
-  undoBtn.disabled = !canUndo(undoHistory);
+  undoBtn.disabled = !canPop(undoHistory);
 }
 
 // Records the current grid (reusing serialize.js's serializeGrid, so undo doesn't need its own
