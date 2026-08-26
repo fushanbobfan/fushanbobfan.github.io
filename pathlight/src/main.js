@@ -36,6 +36,7 @@ const setEndBtn = document.getElementById("set-end");
 const brushWallBtn = document.getElementById("brush-wall");
 const brushWeightBtn = document.getElementById("brush-weight");
 const undoBtn = document.getElementById("undo");
+const redoBtn = document.getElementById("redo");
 const speedInput = document.getElementById("speed");
 const speedValue = document.getElementById("speed-value");
 const scrubInput = document.getElementById("scrub");
@@ -69,6 +70,7 @@ let animationDelayMs = Number(speedInput.value);
 let lastRun = null; // {visitedOrder, path, found} from the most recently completed run, for scrubbing
 let lastComparisonResults = null; // compareAlgorithms' output from the last "Compare all algorithms" click, for CSV download
 let undoHistory = createHistory(UNDO_HISTORY_SIZE);
+let redoHistory = createHistory(UNDO_HISTORY_SIZE);
 
 function key(row, col) {
   return `${row},${col}`;
@@ -217,36 +219,62 @@ function updateUndoButton() {
   undoBtn.disabled = !canPop(undoHistory);
 }
 
+function updateRedoButton() {
+  redoBtn.disabled = !canPop(redoHistory);
+}
+
 // Records the current grid (reusing serialize.js's serializeGrid, so undo doesn't need its own
 // notion of what a "state" is) before a discrete, reversible edit — drawing or erasing a wall or
 // weighted-terrain cell, placing the start or end, clearing walls and terrain, or generating
 // terrain. Skipped around actions that replace the grid from an external or generated source
 // (Generate maze, Load grid, a share link), which clear the stack instead via
-// resetUndoHistory: undoing back into a grid the current one replaced would restore walls from
-// an unrelated layout.
+// resetHistory: undoing back into a grid the current one replaced would restore walls from
+// an unrelated layout. A fresh edit also discards any pending redo history — once it diverges
+// from what was undone, redoing back to it would restore a layout the edit just replaced.
 function snapshotForUndo() {
   undoHistory = pushHistory(undoHistory, serializeGrid(grid));
+  redoHistory = createHistory(UNDO_HISTORY_SIZE);
   updateUndoButton();
+  updateRedoButton();
 }
 
-function resetUndoHistory() {
+function resetHistory() {
   undoHistory = createHistory(UNDO_HISTORY_SIZE);
+  redoHistory = createHistory(UNDO_HISTORY_SIZE);
   updateUndoButton();
+  updateRedoButton();
 }
 
 function undo() {
   const { snapshot, history: after } = popHistory(undoHistory);
   if (!snapshot) return;
   undoHistory = after;
+  redoHistory = pushHistory(redoHistory, serializeGrid(grid));
   grid = deserializeGrid(snapshot, ROWS, COLS);
   updateUndoButton();
+  updateRedoButton();
   clearRunState();
   clearComparison();
   renderAll();
   setStatus("Undid the last edit.");
 }
 
+function redo() {
+  const { snapshot, history: after } = popHistory(redoHistory);
+  if (!snapshot) return;
+  redoHistory = after;
+  undoHistory = pushHistory(undoHistory, serializeGrid(grid));
+  grid = deserializeGrid(snapshot, ROWS, COLS);
+  updateUndoButton();
+  updateRedoButton();
+  clearRunState();
+  clearComparison();
+  renderAll();
+  setStatus("Redid the last undone edit.");
+}
+
 undoBtn.addEventListener("click", undo);
+redoBtn.addEventListener("click", redo);
 
 // Sets visitedSet/pathSet to exactly what `frameIndex` steps into `lastRun` should show, then
 // re-renders only the cells whose highlighting actually changed. Used both by the live
@@ -390,7 +418,7 @@ generateMazeBtn.addEventListener("click", () => {
   grid = setNodeType(grid, 0, 0, START);
   grid = setNodeType(grid, endRow, endCol, END);
 
-  resetUndoHistory();
+  resetHistory();
   clearRunState();
   clearComparison();
   renderAll();
@@ -432,7 +460,7 @@ loadGridInput.addEventListener("change", () => {
     try {
       const loaded = deserializeGrid(JSON.parse(reader.result), ROWS, COLS);
       grid = loaded;
-      resetUndoHistory();
+      resetHistory();
       clearRunState();
       clearComparison();
       renderAll();
@@ -645,7 +673,7 @@ const shareFragment = extractShareFragment(window.location.hash);
 if (shareFragment !== null) {
   try {
     grid = decodeGridFromFragment(shareFragment, ROWS, COLS);
-    resetUndoHistory();
+    resetHistory();
     setStatus("Loaded shared grid.");
   } catch (error) {
     setStatus(`Share link failed: ${error.message}`);
