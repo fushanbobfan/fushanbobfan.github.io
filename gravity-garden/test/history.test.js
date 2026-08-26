@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHistory, pushHistory, popHistory, canUndo } from "../src/history.js";
+import { createHistory, pushHistory, popHistory, canPop } from "../src/history.js";
 
 test("createHistory starts empty", () => {
   const history = createHistory(5);
-  assert.equal(canUndo(history), false);
+  assert.equal(canPop(history), false);
 });
 
 test("pushHistory then popHistory returns the pushed snapshot", () => {
@@ -12,14 +12,14 @@ test("pushHistory then popHistory returns the pushed snapshot", () => {
   history = pushHistory(history, { value: 1 });
   const { snapshot, history: after } = popHistory(history);
   assert.deepEqual(snapshot, { value: 1 });
-  assert.equal(canUndo(after), false);
+  assert.equal(canPop(after), false);
 });
 
 test("popHistory on an empty history returns a null snapshot and an unchanged history", () => {
   const history = createHistory(5);
   const { snapshot, history: after } = popHistory(history);
   assert.equal(snapshot, null);
-  assert.equal(canUndo(after), false);
+  assert.equal(canPop(after), false);
 });
 
 test("popHistory returns snapshots in last-in-first-out order", () => {
@@ -35,7 +35,7 @@ test("popHistory returns snapshots in last-in-first-out order", () => {
   assert.deepEqual(popped, { value: 2 });
   ({ snapshot: popped, history } = popHistory(history));
   assert.deepEqual(popped, { value: 1 });
-  assert.equal(canUndo(history), false);
+  assert.equal(canPop(history), false);
 });
 
 test("pushHistory discards the oldest snapshot once maxSize is exceeded", () => {
@@ -49,12 +49,12 @@ test("pushHistory discards the oldest snapshot once maxSize is exceeded", () => 
   assert.deepEqual(popped, { value: 3 });
   ({ snapshot: popped, history } = popHistory(history));
   assert.deepEqual(popped, { value: 2 });
-  assert.equal(canUndo(history), false);
+  assert.equal(canPop(history), false);
 });
 
 test("pushHistory does not mutate the history passed in", () => {
   const history = createHistory(5);
   const after = pushHistory(history, { value: 1 });
-  assert.equal(canUndo(history), false);
-  assert.equal(canUndo(after), true);
+  assert.equal(canPop(history), false);
+  assert.equal(canPop(after), true);
 });

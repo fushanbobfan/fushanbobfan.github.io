@@ -4,7 +4,7 @@ import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from 
 import { predictTrajectory } from "./trajectory.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody, parseMassInput } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
-import { createHistory, pushHistory, popHistory, canUndo } from "./history.js";
+import { createHistory, pushHistory, popHistory, canPop } from "./history.js";
 import {
   listSavedScenarioNames,
   saveScenarioToStorage,
@@ -610,7 +610,7 @@ function snapshotForUndo() {
 }
 
 function updateUndoButton() {
-  undoBtn.disabled = !canUndo(undoHistory);
+  undoBtn.disabled = !canPop(undoHistory);
 }
 
 function undo() {
