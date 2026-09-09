@@ -69,6 +69,7 @@ Then open the printed URL in a browser.
 | Breadth-First Search | Fewest steps | No — every step costs the same regardless of terrain |
 | Dijkstra's Algorithm | Cheapest total cost | Yes |
 | A* Search | Cheapest total cost, usually exploring far fewer cells | Yes |
+| Weighted A* Search | Cost within 2x of the cheapest, usually exploring fewer cells than A* | Yes |
 | Greedy Best-First Search | None | No |
 | Bidirectional Search | Fewest steps | No — every step costs the same regardless of terrain |
 
@@ -87,6 +88,16 @@ heuristic that biases exploration toward the end instead of expanding outward ev
 direction — same optimality guarantee as Dijkstra (the heuristic never overestimates the true
 remaining cost, as long as every cell's weight is at least 1), usually for a small fraction of
 the cells visited.
+
+[`src/algorithms/weightedAstar.js`](src/algorithms/weightedAstar.js) is A* with its heuristic
+multiplied by a constant weight greater than 1 (2 by default). Inflating the heuristic makes the
+frontier push harder toward the end, so the search usually expands noticeably fewer cells than
+plain A* — but it can lock onto a route before a cheaper detour turns up, so the path is no
+longer guaranteed shortest, only *bounded*: with weight `w` and an admissible base heuristic,
+the path costs at most `w` times the true optimum. At `w = 1` it is exactly A*; as `w` grows it
+slides toward greedy best-first search. **Compare all algorithms** on a terrain-weighted grid
+usually shows it landing on the same cost as Dijkstra and A* while visiting a fraction of the
+cells.
 
 [`src/algorithms/greedy.js`](src/algorithms/greedy.js) drops A*'s cost-so-far term entirely,
 expanding purely by which frontier cell looks closest to the end — fast, and often good enough,
@@ -107,12 +118,12 @@ path itself is assembled from two halves at the meeting cell: the route back to 
 the forward search's `cameFrom` chain, followed by the route on to the end via the backward
 search's own chain.
 
-All five return both the order cells were explored in (what the animation reveals step by
+All six return both the order cells were explored in (what the animation reveals step by
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
 itself works.
 
 The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
-by running all five algorithms against whatever grid is actually on screen and reporting their
+by running all six algorithms against whatever grid is actually on screen and reporting their
 real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
 guarantees actually holding (or not) for a specific maze, rather than asking you to take the
 table on faith.
@@ -248,9 +259,12 @@ Tests use Node's built-in test runner (`node:test`) and check the grid model's i
 (bounds, wall-avoidance, single start/end, independent weight tracking) and each algorithm's
 correctness — shortest path length, routing around walls, reporting unreachable when fully
 walled off, and (for Dijkstra and A*) preferring a longer route over cheap terrain to a shorter
-one through expensive terrain. `compare.js` is tested separately: every algorithm agreeing on
-an open grid, all five correctly reporting unreachable together, and Dijkstra/A* finding a
-cheaper cost than BFS/greedy once terrain is weighted. `serialize.js` is tested for an exact
+one through expensive terrain. Weighted A* is tested separately: matching A* exactly at weight 1,
+staying orthogonally contiguous, routing around walls, reporting unreachable, keeping its path
+cost within `weight x optimum`, exploring no more cells as the weight rises, determinism, and
+falling back to the default weight for a nonsense value. `compare.js` is tested separately: every
+algorithm agreeing on an open grid, all six correctly reporting unreachable together, and
+Dijkstra/A* finding a cheaper cost than BFS/greedy once terrain is weighted. `serialize.js` is tested for an exact
 round trip through an edited grid, and for rejecting every way a loaded file can be invalid
 (wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
 `history.js` is tested separately: push/pop order (last-in-first-out), popping an empty history,
