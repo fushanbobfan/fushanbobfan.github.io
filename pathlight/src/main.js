@@ -2,6 +2,7 @@ import { createGrid, setNodeType, setNodeWeight, findNodeOfType, EMPTY, WALL, ST
 import { bfs } from "./algorithms/bfs.js";
 import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
+import { weightedAstar } from "./algorithms/weightedAstar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { generateMaze } from "./maze.js";
@@ -47,6 +48,7 @@ const ALGORITHMS = {
   bfs: { label: "Breadth-First Search", run: bfs },
   dijkstra: { label: "Dijkstra's Algorithm", run: dijkstra },
   astar: { label: "A* Search", run: astar },
+  "weighted-astar": { label: "Weighted A* Search", run: weightedAstar },
   greedy: { label: "Greedy Best-First Search", run: greedyBestFirstSearch },
   bidirectional: { label: "Bidirectional Search", run: bidirectionalSearch },
 };
