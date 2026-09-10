@@ -36,6 +36,8 @@ Then open the printed URL in a browser.
   (see below).
 - **Show velocity vectors** — toggle a solid arrow per body, pointing in its current direction
   of travel (see below).
+- **Show acceleration vectors** — toggle a dashed arrow per body, pointing the way gravity is
+  pulling it right now (see below).
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
 - **Track center of mass** — keep the viewport panned to that point every tick (see below).
@@ -91,6 +93,7 @@ Then open the printed URL in a browser.
 | `C` | Toggle the conservation chart |
 | `P` | Toggle predicted paths |
 | `V` | Toggle velocity vectors |
+| `A` | Toggle acceleration vectors |
 | `M` | Toggle the minimap |
 | `B` | Toggle the center of mass marker |
 | `L` | Toggle the scale bar |
@@ -177,6 +180,19 @@ between a minimum and maximum — a near-stationary body in a tight orbit still 
 marker, and a rogue flyby's closest-approach speed doesn't draw an arrow that dwarfs the rest of
 the scene. Like `viewport.js` and `trajectory.js`, the scaling and clamping math has no DOM
 dependency and is tested on its own; only the actual arrow drawing lives in `main.js`.
+
+### Acceleration vectors
+
+**Show acceleration vectors** adds the companion overlay: a dashed arrow from each body pointing
+the way gravity is pulling it *right now* — the net of every other body's attraction, using the
+same forces the integrator applies that frame. Where the velocity arrow shows which way a body
+is moving, this shows which way it's being turned. In a circular orbit the two are
+perpendicular; in a slingshot they swing far out of step, which is the quickest way to see why
+the path bends the way it does. [`src/accelerationVectors.js`](src/accelerationVectors.js)'s
+`computeAccelerationArrow` uses the same square-root length scaling and min/max clamp as the
+velocity arrow, and stays independent of the N-body force code — the caller passes in the
+acceleration components from `computeAccelerations`. The dashed shaft (versus the velocity
+arrow's solid one) keeps the two legible where they overlap.
 
 ### Inspector panel
 
