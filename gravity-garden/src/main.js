@@ -1,4 +1,11 @@
-import { stepSimulation, totalEnergy, totalMomentum, mergeCollidingBodies, centerOfMass } from "./physics.js";
+import {
+  stepSimulation,
+  totalEnergy,
+  totalMomentum,
+  mergeCollidingBodies,
+  centerOfMass,
+  computeAccelerations,
+} from "./physics.js";
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
@@ -28,6 +35,7 @@ import {
 import { computeMinimapTransform, worldToMinimapPoint, viewportRectOnMinimap } from "./minimap.js";
 import { computeScaleBar } from "./scaleBar.js";
 import { computeVelocityArrow } from "./velocityVectors.js";
+import { computeAccelerationArrow } from "./accelerationVectors.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -58,6 +66,7 @@ const trackCenterOfMassCheckbox = document.getElementById("track-center-of-mass"
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
 const showVelocityVectorsCheckbox = document.getElementById("show-velocity-vectors");
+const showAccelerationVectorsCheckbox = document.getElementById("show-acceleration-vectors");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
 const massInput = document.getElementById("mass-input");
@@ -97,6 +106,12 @@ const PREDICTION_RECOMPUTE_INTERVAL = 10;
 const VELOCITY_ARROW_SCALE = 10;
 const VELOCITY_ARROW_MIN = 8;
 const VELOCITY_ARROW_MAX = 100;
+// Acceleration arrows use the same sqrt-scale-then-clamp scheme. Accelerations in the presets
+// run much smaller in raw magnitude than speeds, so the base scale is larger; the min and max
+// match the velocity arrows so the two overlays read as the same kind of mark.
+const ACCEL_ARROW_SCALE = 40;
+const ACCEL_ARROW_MIN = 8;
+const ACCEL_ARROW_MAX = 100;
 
 let currentPresetKey = "sun-and-planets";
 let bodies = [];
@@ -109,6 +124,7 @@ let trailLength = 400;
 let showDiagnostics = true;
 let showPrediction = false;
 let showVelocityVectors = false;
+let showAccelerationVectors = false;
 let showMinimap = true;
 let showCenterOfMass = false;
 let showScaleBar = true;
@@ -239,6 +255,8 @@ function draw() {
       ctx.stroke();
     }
   }
+
+  if (showAccelerationVectors) drawAccelerationVectors();
 
   if (showVelocityVectors) drawVelocityVectors();
 
@@ -371,6 +389,55 @@ function drawVelocityVectors() {
     ctx.lineTo(to.sx - headLength * Math.cos(angle + Math.PI / 6), to.sy - headLength * Math.sin(angle + Math.PI / 6));
     ctx.closePath();
     ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Draws each body's net gravitational acceleration as a dashed arrow from its position, via
+// accelerationVectors.js's computeAccelerationArrow. The accelerations are the same ones the
+// integrator uses this frame (computeAccelerations with the live G and softening). Dashed
+// rather than solid so it reads as a force acting on the body, matching the dashed predicted
+// path and aim line, and so it stays distinct where it overlaps the solid velocity arrow.
+function drawAccelerationVectors() {
+  if (bodies.length === 0) return;
+  const acc = computeAccelerations(bodies, G, softening);
+
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const arrow = computeAccelerationArrow(
+      body,
+      acc[i].ax,
+      acc[i].ay,
+      ACCEL_ARROW_SCALE,
+      ACCEL_ARROW_MIN,
+      ACCEL_ARROW_MAX,
+    );
+    const from = worldToScreen(arrow.x1, arrow.y1);
+    const to = worldToScreen(arrow.x2, arrow.y2);
+    const angle = Math.atan2(to.sy - from.sy, to.sx - from.sx);
+
+    ctx.strokeStyle = body.color;
+    ctx.fillStyle = body.color;
+
+    ctx.beginPath();
+    ctx.moveTo(from.sx, from.sy);
+    ctx.lineTo(to.sx, to.sy);
+    ctx.stroke();
+
+    // Solid arrowhead, even though the shaft is dashed, so the direction still reads cleanly.
+    ctx.save();
+    ctx.setLineDash([]);
+    const headLength = 6;
+    ctx.beginPath();
+    ctx.moveTo(to.sx, to.sy);
+    ctx.lineTo(to.sx - headLength * Math.cos(angle - Math.PI / 6), to.sy - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(to.sx - headLength * Math.cos(angle + Math.PI / 6), to.sy - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -571,6 +638,10 @@ predictCheckbox.addEventListener("change", () => {
 
 showVelocityVectorsCheckbox.addEventListener("change", () => {
   showVelocityVectors = showVelocityVectorsCheckbox.checked;
+});
+
+showAccelerationVectorsCheckbox.addEventListener("change", () => {
+  showAccelerationVectors = showAccelerationVectorsCheckbox.checked;
 });
 
 showMinimapCheckbox.addEventListener("change", () => {
@@ -1185,6 +1256,11 @@ document.addEventListener("keydown", (event) => {
     case "V":
       showVelocityVectorsCheckbox.checked = !showVelocityVectorsCheckbox.checked;
       showVelocityVectorsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "a":
+    case "A":
+      showAccelerationVectorsCheckbox.checked = !showAccelerationVectorsCheckbox.checked;
+      showAccelerationVectorsCheckbox.dispatchEvent(new Event("change"));
       break;
     case "m":
     case "M":
