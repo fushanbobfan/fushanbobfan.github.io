@@ -5,6 +5,7 @@ import { astar } from "./algorithms/astar.js";
 import { weightedAstar } from "./algorithms/weightedAstar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
+import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
 import { generateMaze } from "./maze.js";
 import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
@@ -51,6 +52,7 @@ const ALGORITHMS = {
   "weighted-astar": { label: "Weighted A* Search", run: weightedAstar },
   greedy: { label: "Greedy Best-First Search", run: greedyBestFirstSearch },
   bidirectional: { label: "Bidirectional Search", run: bidirectionalSearch },
+  "bidirectional-dijkstra": { label: "Bidirectional Dijkstra", run: bidirectionalDijkstra },
 };
 
 let grid = createGrid(ROWS, COLS);
