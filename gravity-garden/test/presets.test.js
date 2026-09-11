@@ -114,6 +114,67 @@ test('preset "trojan-asteroid" keeps the trojan librating near the L4 point over
   );
 });
 
+test('preset "eccentric-orbit" is deterministic across repeated builds', () => {
+  const first = PRESETS["eccentric-orbit"].build();
+  const second = PRESETS["eccentric-orbit"].build();
+  assert.deepEqual(first, second);
+});
+
+test('preset "eccentric-orbit" starts the planet at perihelion at the vis-viva speed', () => {
+  const [sun, planet] = PRESETS["eccentric-orbit"].build();
+  const a = 220;
+  const e = 0.6;
+  const perihelion = a * (1 - e);
+  const dist = Math.hypot(planet.x - sun.x, planet.y - sun.y);
+  const speed = Math.hypot(planet.vx, planet.vy);
+  const expectedSpeed = Math.sqrt(PRESETS["eccentric-orbit"].G * sun.mass * (2 / perihelion - 1 / a));
+
+  assert.ok(Math.abs(dist - perihelion) < 1e-9, `expected perihelion distance ${perihelion}, got ${dist}`);
+  assert.ok(Math.abs(speed - expectedSpeed) < 1e-9, `expected vis-viva speed ${expectedSpeed}, got ${speed}`);
+});
+
+test('preset "eccentric-orbit" actually traces an ellipse: distance ranges between perihelion and aphelion, faster near the sun', () => {
+  // Like the planet-and-moon Hill-sphere test, this integrates the system forward rather
+  // than only checking the initial conditions, since the whole point of the preset is what
+  // happens to speed and distance over the course of an orbit.
+  const preset = PRESETS["eccentric-orbit"];
+  const bodies = preset.build();
+  const [sun, planet] = bodies;
+  const a = 220;
+  const e = 0.6;
+  const perihelion = a * (1 - e);
+  const aphelion = a * (1 + e);
+  const dt = 0.05;
+  // Kepler's third law for a central mass this much heavier than the planet: T = 2*pi*sqrt(a^3 / (G*M)).
+  const period = 2 * Math.PI * Math.sqrt(a ** 3 / (preset.G * sun.mass));
+  const steps = Math.ceil((period * 1.1) / dt);
+
+  let minDist = Infinity;
+  let maxDist = -Infinity;
+  let speedAtMinDist = 0;
+  let speedAtMaxDist = 0;
+  for (let i = 0; i < steps; i++) {
+    stepSimulation(bodies, dt, preset.G, preset.softening);
+    const dist = Math.hypot(planet.x - sun.x, planet.y - sun.y);
+    const speed = Math.hypot(planet.vx, planet.vy);
+    if (dist < minDist) {
+      minDist = dist;
+      speedAtMinDist = speed;
+    }
+    if (dist > maxDist) {
+      maxDist = dist;
+      speedAtMaxDist = speed;
+    }
+  }
+
+  assert.ok(Math.abs(minDist - perihelion) < perihelion * 0.01, `expected min distance near ${perihelion}, got ${minDist}`);
+  assert.ok(Math.abs(maxDist - aphelion) < aphelion * 0.01, `expected max distance near ${aphelion}, got ${maxDist}`);
+  assert.ok(
+    speedAtMinDist > speedAtMaxDist,
+    `Kepler's second law: expected the planet to move faster near perihelion (${speedAtMinDist}) than near aphelion (${speedAtMaxDist})`
+  );
+});
+
 test('preset "random-cluster" returns a fresh, independent array each call', () => {
   const first = PRESETS["random-cluster"].build();
   const second = PRESETS["random-cluster"].build();
