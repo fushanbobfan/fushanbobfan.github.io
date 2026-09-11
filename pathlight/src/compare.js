@@ -2,6 +2,7 @@
 // side by side, kept free of any DOM dependency like the individual algorithms themselves.
 
 import { bfs } from "./algorithms/bfs.js";
+import { dfs } from "./algorithms/dfs.js";
 import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
 import { weightedAstar } from "./algorithms/weightedAstar.js";
@@ -11,6 +12,7 @@ import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
 
 const ALGORITHMS = [
   { key: "bfs", label: "Breadth-First Search", run: bfs },
+  { key: "dfs", label: "Depth-First Search", run: dfs },
   { key: "dijkstra", label: "Dijkstra's Algorithm", run: dijkstra },
   { key: "astar", label: "A* Search", run: astar },
   { key: "weighted-astar", label: "Weighted A* Search", run: weightedAstar },

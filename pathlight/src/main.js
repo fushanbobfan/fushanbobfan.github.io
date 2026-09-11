@@ -1,5 +1,6 @@
 import { createGrid, setNodeType, setNodeWeight, findNodeOfType, EMPTY, WALL, START, END } from "./grid.js";
 import { bfs } from "./algorithms/bfs.js";
+import { dfs } from "./algorithms/dfs.js";
 import { dijkstra } from "./algorithms/dijkstra.js";
 import { astar } from "./algorithms/astar.js";
 import { weightedAstar } from "./algorithms/weightedAstar.js";
@@ -47,6 +48,7 @@ const statusEl = document.getElementById("status");
 
 const ALGORITHMS = {
   bfs: { label: "Breadth-First Search", run: bfs },
+  dfs: { label: "Depth-First Search", run: dfs },
   dijkstra: { label: "Dijkstra's Algorithm", run: dijkstra },
   astar: { label: "A* Search", run: astar },
   "weighted-astar": { label: "Weighted A* Search", run: weightedAstar },

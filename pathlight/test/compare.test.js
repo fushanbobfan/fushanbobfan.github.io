@@ -3,23 +3,33 @@ import assert from "node:assert/strict";
 import { createGrid, setNodeWeight } from "../src/grid.js";
 import { compareAlgorithms, pathCost } from "../src/compare.js";
 
-test("compareAlgorithms returns all seven algorithms in a stable order", () => {
+test("compareAlgorithms returns all eight algorithms in a stable order", () => {
   const grid = createGrid(3, 3);
   const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 2, col: 2 });
   assert.deepEqual(
     results.map((r) => r.key),
-    ["bfs", "dijkstra", "astar", "weighted-astar", "greedy", "bidirectional", "bidirectional-dijkstra"]
+    ["bfs", "dfs", "dijkstra", "astar", "weighted-astar", "greedy", "bidirectional", "bidirectional-dijkstra"]
   );
 });
 
-test("every algorithm agrees on step count for an open unweighted grid", () => {
+test("every algorithm but dfs agrees on step count for an open unweighted grid", () => {
   const grid = createGrid(5, 5);
   const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 4, col: 4 });
   for (const result of results) {
+    if (result.key === "dfs") continue;
     assert.equal(result.found, true, `${result.label} should find a path`);
     assert.equal(result.steps, 8, `${result.label} should take the Manhattan-distance 8 steps`);
     assert.equal(result.cost, 8, `${result.label} should pay unit cost per step on an unweighted grid`);
   }
+});
+
+test("dfs still finds a path on an open grid, but offers no shortest-steps guarantee", () => {
+  // 8 is the Manhattan-distance floor no grid path can beat; dfs is free to do worse.
+  const grid = createGrid(5, 5);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 4, col: 4 });
+  const dfsResult = results.find((r) => r.key === "dfs");
+  assert.equal(dfsResult.found, true);
+  assert.ok(dfsResult.steps >= 8);
 });
 
 test("compareAlgorithms reports found: false and null steps/cost for every algorithm when unreachable", () => {
