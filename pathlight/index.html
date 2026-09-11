@@ -18,6 +18,7 @@
         <label for="algorithm">Algorithm</label>
         <select id="algorithm">
           <option value="bfs">Breadth-First Search</option>
+          <option value="dfs">Depth-First Search</option>
           <option value="dijkstra">Dijkstra's Algorithm</option>
           <option value="astar">A* Search</option>
           <option value="weighted-astar">Weighted A* Search</option>
@@ -75,9 +76,9 @@
         Click or drag across empty cells to draw with the active tool (walls, or weighted
         terrain that costs more to cross); click a cell already drawn on to erase it. Use
         <strong>Place start&hellip;</strong> / <strong>Place end&hellip;</strong>, then click a
-        cell, to move either marker. Breadth-First Search and Bidirectional Search treat every
-        step as equally costly, so they ignore weighted terrain entirely — Dijkstra and A* are
-        the ones that route around it. The grid is keyboard-operable too: focus it and use the arrow keys to move,
+        cell, to move either marker. Breadth-First Search, Depth-First Search, and Bidirectional
+        Search treat every step as equally costly, so they ignore weighted terrain entirely —
+        Dijkstra and A* are the ones that route around it. The grid is keyboard-operable too: focus it and use the arrow keys to move,
         <kbd>Enter</kbd> or <kbd>Space</kbd> to draw, erase, or place on the focused cell.
         <strong>Undo</strong> reverses the last wall/terrain edit, start/end placement, or clear
         (see below).
