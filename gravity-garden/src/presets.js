@@ -259,6 +259,42 @@ export const PRESETS = {
     },
   },
 
+  "eccentric-orbit": {
+    label: "Eccentric Orbit",
+    G: 1,
+    softening: 2,
+    // A single planet on a genuinely elliptical orbit, unlike every other orbiting preset
+    // here which starts at a circular (e = 0) speed. It starts at perihelion (closest
+    // approach) moving at the vis-viva speed for that point, v^2 = G*M*(2/r - 1/a) for
+    // semi-major axis `a` — the same equation that gives circularOrbitVelocity when r = a.
+    // Kepler's second law then takes over during playback: the planet visibly speeds up
+    // diving toward the sun and slows down drifting out to aphelion, sweeping out equal
+    // areas in equal times despite never moving at a constant speed the way a circular
+    // orbit does.
+    build() {
+      const G = this.G;
+      const sunMass = 20000;
+      const sun = { mass: sunMass, x: 0, y: 0, vx: 0, vy: 0, radius: 14, color: "#ffd166" };
+
+      const a = 220;
+      const e = 0.6;
+      const perihelion = a * (1 - e);
+      const speed = Math.sqrt(G * sunMass * (2 / perihelion - 1 / a));
+
+      const planet = {
+        mass: 6,
+        x: perihelion,
+        y: 0,
+        vx: 0,
+        vy: speed,
+        radius: 4,
+        color: "#4cc9f0",
+      };
+
+      return [sun, planet];
+    },
+  },
+
   "random-cluster": {
     label: "Random Cluster",
     G: 1,
