@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generateMaze } from "../src/maze.js";
+import { generateMaze, generateMazePrim } from "../src/maze.js";
 
 // A small seeded PRNG (mulberry32) so maze generation tests are deterministic and reproducible
 // across runs, instead of depending on Math.random.
@@ -93,4 +93,67 @@ test("generateMaze never mutates its randomFn's expected call pattern (pure outp
       assert.equal(typeof cell, "boolean");
     }
   }
+});
+
+test("generateMazePrim returns a grid of the requested dimensions", () => {
+  const maze = generateMazePrim(7, 11, mulberry32(1));
+  assert.equal(maze.length, 7);
+  for (const row of maze) assert.equal(row.length, 11);
+});
+
+test("generateMazePrim's start cell (0, 0) is always a passage", () => {
+  const maze = generateMazePrim(9, 9, mulberry32(2));
+  assert.equal(maze[0][0], false);
+});
+
+test("generateMazePrim connects every even-indexed cell to the start — a maze with no isolated rooms", () => {
+  const rows = 9;
+  const cols = 15;
+  const maze = generateMazePrim(rows, cols, mulberry32(3));
+  const reachable = floodFillPassages(maze, 0, 0);
+
+  for (let row = 0; row < rows; row += 2) {
+    for (let col = 0; col < cols; col += 2) {
+      assert.ok(reachable.has(`${row},${col}`), `expected (${row},${col}) to be reachable`);
+    }
+  }
+});
+
+test("generateMazePrim is a perfect maze — exactly one path between any two passages, so exactly one wall is carved per newly-visited cell", () => {
+  // A perfect maze on N even-cell passages has exactly N-1 carved connecting walls (a spanning
+  // tree); more would mean a cycle, fewer would mean a disconnected passage.
+  const rows = 9;
+  const cols = 9;
+  const maze = generateMazePrim(rows, cols, mulberry32(11));
+  let passageCount = 0;
+  let oddWallsCarved = 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const isEvenCell = row % 2 === 0 && col % 2 === 0;
+      if (isEvenCell) {
+        passageCount++;
+      } else if (!maze[row][col]) {
+        oddWallsCarved++;
+      }
+    }
+  }
+  assert.equal(oddWallsCarved, passageCount - 1);
+});
+
+test("generateMazePrim is deterministic for a given random source", () => {
+  const mazeA = generateMazePrim(9, 9, mulberry32(42));
+  const mazeB = generateMazePrim(9, 9, mulberry32(42));
+  assert.deepEqual(mazeA, mazeB);
+});
+
+test("generateMazePrim produces a different maze for a different random source", () => {
+  const mazeA = generateMazePrim(11, 11, mulberry32(1));
+  const mazeB = generateMazePrim(11, 11, mulberry32(2));
+  assert.notDeepEqual(mazeA, mazeB);
+});
+
+test("generateMazePrim produces a different texture than the recursive backtracker for the same seed", () => {
+  const backtracker = generateMaze(11, 11, mulberry32(5));
+  const prim = generateMazePrim(11, 11, mulberry32(5));
+  assert.notDeepEqual(backtracker, prim);
 });
