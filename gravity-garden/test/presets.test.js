@@ -181,3 +181,59 @@ test('preset "random-cluster" returns a fresh, independent array each call', () 
   assert.notEqual(first, second);
   assert.equal(first.length, second.length);
 });
+
+test('preset "pythagorean-three-body" starts all three bodies at rest with masses in a 3:4:5 ratio', () => {
+  const bodies = PRESETS["pythagorean-three-body"].build();
+  assert.equal(bodies.length, 3);
+  for (const body of bodies) {
+    assert.equal(body.vx, 0);
+    assert.equal(body.vy, 0);
+  }
+  const [a, b, c] = bodies;
+  assert.ok(Math.abs(b.mass / a.mass - 4 / 3) < 1e-9, "expected the second body's mass to be 4/3 the first's");
+  assert.ok(Math.abs(c.mass / a.mass - 5 / 3) < 1e-9, "expected the third body's mass to be 5/3 the first's");
+});
+
+test('preset "pythagorean-three-body" is chaotic: a microscopic change to a starting position blows up into a large difference', () => {
+  // The defining property of this classic problem — there's no stable configuration to fall
+  // back to and check against, so the test instead checks for sensitive dependence itself:
+  // integrate the unperturbed and a barely-perturbed copy forward, and confirm they diverge
+  // far more than the tiny initial nudge that separates them.
+  const preset = PRESETS["pythagorean-three-body"];
+  const dt = 0.05;
+  const steps = 50000;
+
+  const base = preset.build();
+  const perturbed = preset.build();
+  const epsilon = 1e-6;
+  perturbed[0].x += epsilon;
+
+  for (let i = 0; i < steps; i++) {
+    stepSimulation(base, dt, preset.G, preset.softening);
+    stepSimulation(perturbed, dt, preset.G, preset.softening);
+  }
+
+  let maxSeparation = 0;
+  for (let i = 0; i < base.length; i++) {
+    maxSeparation = Math.max(maxSeparation, Math.hypot(base[i].x - perturbed[i].x, base[i].y - perturbed[i].y));
+  }
+
+  assert.ok(
+    maxSeparation > epsilon * 1000,
+    `expected a ${epsilon}-sized nudge to blow up over ${steps} steps, but final separation was only ${maxSeparation}`
+  );
+});
+
+test('preset "pythagorean-three-body" stays numerically well-behaved (no NaN/Infinity) through repeated close encounters', () => {
+  const preset = PRESETS["pythagorean-three-body"];
+  const bodies = preset.build();
+  const dt = 0.05;
+
+  for (let i = 0; i < 20000; i++) {
+    stepSimulation(bodies, dt, preset.G, preset.softening);
+    for (const body of bodies) {
+      assert.ok(Number.isFinite(body.x) && Number.isFinite(body.y), `body position went non-finite at step ${i}`);
+      assert.ok(Number.isFinite(body.vx) && Number.isFinite(body.vy), `body velocity went non-finite at step ${i}`);
+    }
+  }
+});

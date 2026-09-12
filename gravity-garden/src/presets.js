@@ -295,6 +295,28 @@ export const PRESETS = {
     },
   },
 
+  "pythagorean-three-body": {
+    label: "Pythagorean Three-Body Problem",
+    G: 1,
+    softening: 2,
+    // Burrau's 1913 test case: three bodies with masses 3, 4, and 5, placed at rest at the
+    // vertices of a 3-4-5 right triangle (scaled up here for a readable canvas size). Unlike
+    // every other multi-body preset here, nothing is tuned into a stable or periodic orbit —
+    // there is no closed-form solution, and the slightest change to the starting conditions
+    // sends the bodies down a completely different path. What happens instead is a chaotic
+    // dance of repeated close encounters, until (in this simulation's simplified, softened
+    // physics) two of the bodies eventually pass close enough to merge.
+    build() {
+      const scale = 150;
+      const massScale = 150;
+      return [
+        { mass: 3 * massScale, x: 1 * scale, y: 3 * scale, vx: 0, vy: 0, radius: 4, color: "#4cc9f0" },
+        { mass: 4 * massScale, x: -2 * scale, y: -1 * scale, vx: 0, vy: 0, radius: 4, color: "#f72585" },
+        { mass: 5 * massScale, x: 1 * scale, y: -1 * scale, vx: 0, vy: 0, radius: 4, color: "#ffd166" },
+      ];
+    },
+  },
+
   "random-cluster": {
     label: "Random Cluster",
     G: 1,
