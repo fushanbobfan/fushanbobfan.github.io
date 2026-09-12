@@ -179,18 +179,28 @@ that no longer matches what's on screen would be misleading.
 
 ## Maze generation
 
-[`src/maze.js`](src/maze.js) builds a maze with a randomized depth-first search (the
-"recursive backtracker"), a standard maze generation algorithm: starting from the top-left
-corner, it repeatedly carves into a random unvisited neighboring passage two cells away,
-backtracking when a cell has none left, until every reachable passage has been visited. Only
-even-indexed rows and columns are ever passages — the odd ones in between start (and, unless a
-carve happens to link through them, stay) walls — so the result is a "perfect" maze: exactly one
-path between any two passages, with no cycles and no isolated, unreachable rooms. The random
-source is a parameter rather than a direct call to `Math.random`, so the algorithm itself can be
-tested deterministically with a seeded generator. **Generate maze** replaces the whole grid with
-one of these (clearing existing walls and weighted terrain along with it) and moves the start
-and end to the two corners farthest apart on the even-cell grid, so the generated maze is always
-solvable end to end.
+[`src/maze.js`](src/maze.js) offers two standard maze generation algorithms, chosen with the
+**Maze algorithm** dropdown next to **Generate maze**. Both only ever carve even-indexed rows
+and columns into passages — the odd ones in between start (and, unless a carve happens to link
+through them, stay) walls — so either produces a "perfect" maze: exactly one path between any
+two passages, with no cycles and no isolated, unreachable rooms. Each takes its random source as
+a parameter rather than calling `Math.random` directly, so it can be tested deterministically
+with a seeded generator.
+
+**Recursive Backtracker** is a randomized depth-first search: starting from the top-left corner,
+it repeatedly carves into a random unvisited neighboring passage two cells away, backtracking
+when a cell has none left, until every reachable passage has been visited. Always extending the
+most recently carved cell gives it long, winding corridors with relatively few branch points.
+
+**Randomized Prim's** instead grows the maze outward evenly: at each step it picks a uniformly
+random edge off the frontier of cells adjacent to the maze so far (rather than always the most
+recent branch) and carves it if it reaches new ground. The result is a visibly different
+texture — many short dead ends branching off a broadly and evenly grown region — while keeping
+the same perfect-maze connectivity guarantee.
+
+**Generate maze** replaces the whole grid with one of these (clearing existing walls and
+weighted terrain along with it) and moves the start and end to the two corners farthest apart on
+the even-cell grid, so the generated maze is always solvable end to end.
 
 ## Terrain generation
 
