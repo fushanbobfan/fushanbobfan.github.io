@@ -7,7 +7,7 @@ import { weightedAstar } from "./algorithms/weightedAstar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
-import { generateMaze } from "./maze.js";
+import { generateMaze, generateMazePrim } from "./maze.js";
 import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
 import { compareResultsToCsv } from "./csvExport.js";
@@ -26,6 +26,7 @@ const algorithmSelect = document.getElementById("algorithm");
 const runBtn = document.getElementById("run");
 const clearPathBtn = document.getElementById("clear-path");
 const clearWallsBtn = document.getElementById("clear-walls");
+const mazeAlgorithmSelect = document.getElementById("maze-algorithm");
 const generateMazeBtn = document.getElementById("generate-maze");
 const generateTerrainBtn = document.getElementById("generate-terrain");
 const compareBtn = document.getElementById("compare");
@@ -55,6 +56,11 @@ const ALGORITHMS = {
   greedy: { label: "Greedy Best-First Search", run: greedyBestFirstSearch },
   bidirectional: { label: "Bidirectional Search", run: bidirectionalSearch },
   "bidirectional-dijkstra": { label: "Bidirectional Dijkstra", run: bidirectionalDijkstra },
+};
+
+const MAZE_ALGORITHMS = {
+  backtracker: generateMaze,
+  prim: generateMazePrim,
 };
 
 let grid = createGrid(ROWS, COLS);
@@ -416,7 +422,8 @@ clearWallsBtn.addEventListener("click", () => {
 // land on the first and last even cells rather than wherever they happened to be before —
 // anywhere else risks landing on a wall the generator just drew.
 generateMazeBtn.addEventListener("click", () => {
-  const wallGrid = generateMaze(ROWS, COLS);
+  const generate = MAZE_ALGORITHMS[mazeAlgorithmSelect.value];
+  const wallGrid = generate(ROWS, COLS);
   grid = wallGrid.map((row) => row.map((isWall) => ({ type: isWall ? WALL : EMPTY, weight: 1 })));
 
   const endRow = 2 * Math.floor((ROWS - 1) / 2);
