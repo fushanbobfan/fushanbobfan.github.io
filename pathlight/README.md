@@ -74,6 +74,7 @@ Then open the printed URL in a browser.
 | Greedy Best-First Search | None | No |
 | Bidirectional Search | Fewest steps | No — every step costs the same regardless of terrain |
 | Bidirectional Dijkstra | Cheapest total cost | Yes |
+| Fringe Search | Cheapest total cost | Yes |
 
 [`src/algorithms/bfs.js`](src/algorithms/bfs.js) explores the grid one ring of distance at a
 time, so the first time it reaches the end is guaranteed to be via the fewest possible steps —
@@ -142,12 +143,25 @@ can beat it, so that cost is provably optimal. On an open grid it settles notice
 cells than one-directional Dijkstra for the same cheapest-cost guarantee — the two half-size
 explored regions again cover less area than one full-size one.
 
-All eight return both the order cells were explored in (what the animation reveals step by
+[`src/algorithms/fringeSearch.js`](src/algorithms/fringeSearch.js) reaches A*'s exact optimality
+guarantee — cheapest total cost, using the same Manhattan-distance heuristic — through a
+different mechanism entirely. Instead of a priority queue that always pops the cheapest frontier
+node next, it keeps an unordered "fringe" list and repeatedly sweeps it at a rising cost
+threshold: whatever is within the current threshold gets expanded, and whatever isn't just stays
+in the list for the next, higher-threshold sweep. That list is the key difference from a naive
+iterative-deepening search: a node already reached keeps its place in it (or is moved, never
+duplicated) as cheaper routes to it turn up, so nothing already settled is ever recomputed from
+scratch the way restarting a fresh depth-first search on every threshold rise would force it to
+be. **Compare all algorithms** typically shows it settling a similar number of cells to A*, since
+both are exploring toward the same optimal cost — the difference is in how each one decides what
+to expand next, not how much ground either one ultimately covers.
+
+All nine return both the order cells were explored in (what the animation reveals step by
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
 itself works.
 
 The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
-by running all eight algorithms against whatever grid is actually on screen and reporting their
+by running all nine algorithms against whatever grid is actually on screen and reporting their
 real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
 guarantees actually holding (or not) for a specific maze, rather than asking you to take the
 table on faith.
@@ -303,9 +317,14 @@ falling back to the default weight for a nonsense value. Bidirectional Dijkstra 
 separately too: routing around walls and expensive terrain, reporting unreachable, matching
 one-directional Dijkstra's exact path cost across a large fuzz set of random weighted grids,
 producing a contiguous start-to-end path, matching BFS's length on an unweighted grid, and
-settling fewer cells than one-directional Dijkstra on an open grid. `compare.js` is tested
+settling fewer cells than one-directional Dijkstra on an open grid. Fringe Search is tested
+separately: routing around walls, reporting unreachable, matching A*'s path length on an
+unweighted open grid, preferring a longer detour over expensive terrain the same way Dijkstra
+does, matching Dijkstra's exact path cost across a large fuzz set of random weighted grids, and
+settling a bounded number of cells on a long mixed-cost corridor rather than the unbounded
+blow-up a naive iterative-deepening search suffers there. `compare.js` is tested
 separately: every algorithm but DFS agreeing on an open grid (DFS still finds *a* path, just not
-necessarily the shortest one), all eight correctly reporting unreachable together, and
+necessarily the shortest one), all nine correctly reporting unreachable together, and
 Dijkstra/A* finding a cheaper cost than BFS/greedy once terrain is weighted.
 `serialize.js` is tested for an exact
 round trip through an edited grid, and for rejecting every way a loaded file can be invalid
