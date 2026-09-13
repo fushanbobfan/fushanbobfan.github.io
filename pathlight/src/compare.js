@@ -9,6 +9,7 @@ import { weightedAstar } from "./algorithms/weightedAstar.js";
 import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
+import { fringeSearch } from "./algorithms/fringeSearch.js";
 
 const ALGORITHMS = [
   { key: "bfs", label: "Breadth-First Search", run: bfs },
@@ -19,6 +20,7 @@ const ALGORITHMS = [
   { key: "greedy", label: "Greedy Best-First Search", run: greedyBestFirstSearch },
   { key: "bidirectional", label: "Bidirectional Search", run: bidirectionalSearch },
   { key: "bidirectional-dijkstra", label: "Bidirectional Dijkstra", run: bidirectionalDijkstra },
+  { key: "fringe", label: "Fringe Search", run: fringeSearch },
 ];
 
 /**
