@@ -10,6 +10,7 @@ import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
 import { fringeSearch } from "./algorithms/fringeSearch.js";
+import { idaStar } from "./algorithms/idaStar.js";
 
 const ALGORITHMS = [
   { key: "bfs", label: "Breadth-First Search", run: bfs },
@@ -21,6 +22,7 @@ const ALGORITHMS = [
   { key: "bidirectional", label: "Bidirectional Search", run: bidirectionalSearch },
   { key: "bidirectional-dijkstra", label: "Bidirectional Dijkstra", run: bidirectionalDijkstra },
   { key: "fringe", label: "Fringe Search", run: fringeSearch },
+  { key: "ida-star", label: "Iterative Deepening A*", run: idaStar },
 ];
 
 /**
@@ -42,16 +44,17 @@ export function pathCost(grid, path) {
  * steps and its total weighted cost. Useful for seeing "fewest steps," "cheapest route," and
  * "fewest cells explored" actually diverge, or agree, on one concrete maze instead of only in
  * the abstract.
- * @returns {{key: string, label: string, visitedCount: number, found: boolean, steps: number|null, cost: number|null}[]}
+ * @returns {{key: string, label: string, visitedCount: number, found: boolean, aborted?: boolean, steps: number|null, cost: number|null}[]}
  */
 export function compareAlgorithms(grid, start, end) {
   return ALGORITHMS.map(({ key, label, run }) => {
-    const { visitedOrder, path, found } = run(grid, start, end);
+    const { visitedOrder, path, found, aborted } = run(grid, start, end);
     return {
       key,
       label,
       visitedCount: visitedOrder.length,
       found,
+      ...(aborted ? { aborted: true } : {}),
       steps: found ? path.length - 1 : null,
       cost: found ? pathCost(grid, path) : null,
     };

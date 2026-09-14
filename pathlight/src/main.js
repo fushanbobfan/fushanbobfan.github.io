@@ -8,6 +8,7 @@ import { greedyBestFirstSearch } from "./algorithms/greedy.js";
 import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
 import { fringeSearch } from "./algorithms/fringeSearch.js";
+import { idaStar } from "./algorithms/idaStar.js";
 import { generateMaze, generateMazePrim } from "./maze.js";
 import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
@@ -58,6 +59,7 @@ const ALGORITHMS = {
   bidirectional: { label: "Bidirectional Search", run: bidirectionalSearch },
   "bidirectional-dijkstra": { label: "Bidirectional Dijkstra", run: bidirectionalDijkstra },
   fringe: { label: "Fringe Search", run: fringeSearch },
+  "ida-star": { label: "Iterative Deepening A*", run: idaStar },
 };
 
 const MAZE_ALGORITHMS = {
@@ -169,8 +171,8 @@ function renderComparison(results) {
         <tr>
           <th scope="row">${r.label}</th>
           <td>${r.visitedCount}</td>
-          <td>${r.found ? r.steps : "unreachable"}</td>
-          <td>${r.found ? r.cost : "unreachable"}</td>
+          <td>${r.found ? r.steps : r.aborted ? "gave up" : "unreachable"}</td>
+          <td>${r.found ? r.cost : r.aborted ? "gave up" : "unreachable"}</td>
         </tr>`
     )
     .join("");
@@ -338,7 +340,22 @@ async function run() {
 
   const algorithm = ALGORITHMS[algorithmSelect.value];
   lastRun = algorithm.run(grid, start, end);
-  const { visitedOrder, path, found } = lastRun;
+  const { visitedOrder, path, found, aborted } = lastRun;
+
+  if (aborted) {
+    // Iterative Deepening A*'s known worst case (see idaStar.js) can visit hundreds of
+    // thousands of cells before giving up - animating that frame by frame would take far
+    // longer than the search itself did, so report the outcome immediately instead.
+    scrubInput.max = 0;
+    scrubInput.disabled = true;
+    setStatus(
+      `Gave up after ${visitedOrder.length.toLocaleString()} cells without finding a path — this algorithm's known worst case on grids with many different terrain costs. Try Fringe Search or A* instead.`,
+    );
+    running = false;
+    runBtn.disabled = false;
+    return;
+  }
+
   scrubInput.max = totalFrames(visitedOrder, path, found);
   scrubInput.disabled = false;
 
