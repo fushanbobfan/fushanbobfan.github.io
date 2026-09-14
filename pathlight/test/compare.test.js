@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { createGrid, setNodeWeight } from "../src/grid.js";
 import { compareAlgorithms, pathCost } from "../src/compare.js";
 
-test("compareAlgorithms returns all nine algorithms in a stable order", () => {
+test("compareAlgorithms returns all ten algorithms in a stable order", () => {
   const grid = createGrid(3, 3);
   const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 2, col: 2 });
   assert.deepEqual(
     results.map((r) => r.key),
-    ["bfs", "dfs", "dijkstra", "astar", "weighted-astar", "greedy", "bidirectional", "bidirectional-dijkstra", "fringe"]
+    ["bfs", "dfs", "dijkstra", "astar", "weighted-astar", "greedy", "bidirectional", "bidirectional-dijkstra", "fringe", "ida-star"]
   );
 });
 

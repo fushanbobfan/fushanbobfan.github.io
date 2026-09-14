@@ -75,6 +75,7 @@ Then open the printed URL in a browser.
 | Bidirectional Search | Fewest steps | No — every step costs the same regardless of terrain |
 | Bidirectional Dijkstra | Cheapest total cost | Yes |
 | Fringe Search | Cheapest total cost | Yes |
+| Iterative Deepening A* | Cheapest total cost | Yes |
 
 [`src/algorithms/bfs.js`](src/algorithms/bfs.js) explores the grid one ring of distance at a
 time, so the first time it reaches the end is guaranteed to be via the fewest possible steps —
@@ -156,12 +157,30 @@ be. **Compare all algorithms** typically shows it settling a similar number of c
 both are exploring toward the same optimal cost — the difference is in how each one decides what
 to expand next, not how much ground either one ultimately covers.
 
-All nine return both the order cells were explored in (what the animation reveals step by
+[`src/algorithms/idaStar.js`](src/algorithms/idaStar.js) is the naive iterative-deepening search
+fringe search's own docs describe above, included so that contrast is something you can actually
+run rather than just read about. It reaches the same optimal-cost guarantee through a depth-first
+search bounded by a rising f-cost threshold, using only as much memory as the current path — no
+open or closed set at all — but nothing it settles on one threshold sweep carries over to the
+next, so it restarts from the root and re-walks whatever it already expanded every time the
+threshold rises. On a grid with many distinct terrain costs that re-walking can blow up badly: a
+generated maze with random per-cell weights was observed driving it well past a million node
+visits (and a Node heap limit) on a grid smaller than this project's own default board. A hard
+cap (`MAX_EXPANSIONS`, 200,000 node visits) stops it well short of that, reporting that it gave up
+rather than hanging or silently claiming no path exists. **Compare all algorithms** typically
+shows it settling far more cells than every other optimal-cost algorithm on anything but a small
+or lightly weighted grid — the point isn't that it's a good choice, it's seeing exactly what a
+persistent fringe (or an open/closed set) buys you by watching a search that has neither.
+
+All ten return both the order cells were explored in (what the animation reveals step by
 step) and the reconstructed path, so the UI doesn't need to know anything about how the search
-itself works.
+itself works — except iterative deepening A*, which can also report that it gave up before
+reaching either one; **Run** shows that outcome immediately instead of animating the hundreds of
+thousands of cells it can visit before doing so, and **Compare all algorithms** shows "gave up" in
+place of a step or cost figure for that row.
 
 The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
-by running all nine algorithms against whatever grid is actually on screen and reporting their
+by running all ten algorithms against whatever grid is actually on screen and reporting their
 real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
 guarantees actually holding (or not) for a specific maze, rather than asking you to take the
 table on faith.
@@ -322,9 +341,14 @@ separately: routing around walls, reporting unreachable, matching A*'s path leng
 unweighted open grid, preferring a longer detour over expensive terrain the same way Dijkstra
 does, matching Dijkstra's exact path cost across a large fuzz set of random weighted grids, and
 settling a bounded number of cells on a long mixed-cost corridor rather than the unbounded
-blow-up a naive iterative-deepening search suffers there. `compare.js` is tested
+blow-up a naive iterative-deepening search suffers there. Iterative Deepening A* is tested
+separately: the same routing, unreachable, and Dijkstra-cost-matching correctness properties as
+Fringe Search, plus two properties specific to giving up — visiting at least as many cells as
+Fringe Search on the same mixed-cost corridor, and aborting within its expansion cap (rather than
+hanging, the way it will if that cap is ever removed) on a full-size weighted maze reused from
+Fringe Search's own bounded-expansion fixture. `compare.js` is tested
 separately: every algorithm but DFS agreeing on an open grid (DFS still finds *a* path, just not
-necessarily the shortest one), all nine correctly reporting unreachable together, and
+necessarily the shortest one), all ten correctly reporting unreachable together, and
 Dijkstra/A* finding a cheaper cost than BFS/greedy once terrain is weighted.
 `serialize.js` is tested for an exact
 round trip through an edited grid, and for rejecting every way a loaded file can be invalid
