@@ -32,7 +32,7 @@ test("dfs still finds a path on an open grid, but offers no shortest-steps guara
   assert.ok(dfsResult.steps >= 8);
 });
 
-test("compareAlgorithms reports found: false and null steps/cost for every algorithm when unreachable", () => {
+test("compareAlgorithms reports found: false and null steps/cost/efficiency for every algorithm when unreachable", () => {
   const grid = createGrid(3, 3);
   grid[0][1] = { type: "wall", weight: 1 };
   grid[1][0] = { type: "wall", weight: 1 };
@@ -42,7 +42,40 @@ test("compareAlgorithms reports found: false and null steps/cost for every algor
     assert.equal(result.found, false, `${result.label} should report unreachable`);
     assert.equal(result.steps, null);
     assert.equal(result.cost, null);
+    assert.equal(result.efficiency, null);
   }
+});
+
+test("compareAlgorithms reports efficiency of 1 when a search couldn't possibly have explored anything off the path", () => {
+  // A 1x4 grid has exactly four cells total, all of them on the only possible route from one
+  // end to the other, so no algorithm has anywhere else to explore — except bidirectional
+  // Dijkstra, covered separately below.
+  const grid = createGrid(1, 4);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 0, col: 3 });
+  for (const result of results) {
+    assert.equal(result.found, true, `${result.label} should find the only possible path`);
+    if (result.key === "bidirectional-dijkstra") continue;
+    assert.equal(result.efficiency, 1, `${result.label} should not report exploring anything off the path`);
+  }
+});
+
+test("compareAlgorithms' efficiency can exceed 1 for bidirectional Dijkstra, whose early stop can settle on a path through a cell it only ever reached by relaxation", () => {
+  // bidirectionalDijkstra.js's termination check can fire as soon as a connecting cell is
+  // relaxed from a neighbor, before that cell is ever popped off either frontier and counted
+  // into visitedOrder — so the reconstructed path can be one cell longer than visitedCount.
+  const grid = createGrid(1, 4);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 0, col: 3 });
+  const result = results.find((r) => r.key === "bidirectional-dijkstra");
+  assert.ok(result.found);
+  assert.ok(result.efficiency > 1, "the connecting cell was relaxed, not settled, so it's absent from visitedCount");
+});
+
+test("compareAlgorithms reports a lower efficiency for a search that explores more of an open grid than its path uses", () => {
+  const grid = createGrid(5, 5);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 4, col: 4 });
+  const bfsResult = results.find((r) => r.key === "bfs");
+  assert.ok(bfsResult.efficiency > 0 && bfsResult.efficiency < 1, "bfs should explore some cells that aren't on its final path");
+  assert.equal(bfsResult.efficiency, bfsResult.steps === null ? null : (bfsResult.steps + 1) / bfsResult.visitedCount);
 });
 
 test("dijkstra and astar find a cheaper path cost than bfs and greedy when terrain is weighted", () => {
