@@ -41,10 +41,10 @@ export function pathCost(grid, path) {
 /**
  * Runs every supported algorithm from `start` to `end` over the same `grid` and reports each
  * one's result stats — how many cells it explored, and (if it found one) the path's length in
- * steps and its total weighted cost. Useful for seeing "fewest steps," "cheapest route," and
- * "fewest cells explored" actually diverge, or agree, on one concrete maze instead of only in
- * the abstract.
- * @returns {{key: string, label: string, visitedCount: number, found: boolean, aborted?: boolean, steps: number|null, cost: number|null}[]}
+ * steps, its total weighted cost, and its efficiency. Useful for seeing "fewest steps,"
+ * "cheapest route," and "fewest cells explored" actually diverge, or agree, on one concrete
+ * maze instead of only in the abstract.
+ * @returns {{key: string, label: string, visitedCount: number, found: boolean, aborted?: boolean, steps: number|null, cost: number|null, efficiency: number|null}[]}
  */
 export function compareAlgorithms(grid, start, end) {
   return ALGORITHMS.map(({ key, label, run }) => {
@@ -57,6 +57,11 @@ export function compareAlgorithms(grid, start, end) {
       ...(aborted ? { aborted: true } : {}),
       steps: found ? path.length - 1 : null,
       cost: found ? pathCost(grid, path) : null,
+      // What fraction of the cells this search touched actually ended up on the final path —
+      // 1 means nothing was explored in vain, and a low ratio means most of the search's work
+      // was cells the path never uses. Every path cell was, by construction, visited at some
+      // point during the search, so this never exceeds 1.
+      efficiency: found ? path.length / visitedOrder.length : null,
     };
   });
 }
