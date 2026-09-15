@@ -36,6 +36,7 @@ import { computeMinimapTransform, worldToMinimapPoint, viewportRectOnMinimap } f
 import { computeScaleBar } from "./scaleBar.js";
 import { computeVelocityArrow } from "./velocityVectors.js";
 import { computeAccelerationArrow } from "./accelerationVectors.js";
+import { formatMassLabel, massLabelPosition } from "./massLabels.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -67,6 +68,7 @@ const diagnosticsReadout = document.getElementById("diagnostics-readout");
 const predictCheckbox = document.getElementById("predict");
 const showVelocityVectorsCheckbox = document.getElementById("show-velocity-vectors");
 const showAccelerationVectorsCheckbox = document.getElementById("show-acceleration-vectors");
+const showMassLabelsCheckbox = document.getElementById("show-mass-labels");
 const inspectorPanel = document.getElementById("inspector-panel");
 const inspectorReadout = document.getElementById("inspector-readout");
 const massInput = document.getElementById("mass-input");
@@ -125,6 +127,7 @@ let showDiagnostics = true;
 let showPrediction = false;
 let showVelocityVectors = false;
 let showAccelerationVectors = false;
+let showMassLabels = false;
 let showMinimap = true;
 let showCenterOfMass = false;
 let showScaleBar = true;
@@ -259,6 +262,8 @@ function draw() {
   if (showAccelerationVectors) drawAccelerationVectors();
 
   if (showVelocityVectors) drawVelocityVectors();
+
+  if (showMassLabels) drawMassLabels();
 
   if (aimingBodyId !== null && aimPointerWorld) {
     const body = bodies.find((b) => b.id === aimingBodyId);
@@ -438,6 +443,26 @@ function drawAccelerationVectors() {
     ctx.closePath();
     ctx.fill();
     ctx.restore();
+  }
+  ctx.restore();
+}
+
+// Draws each body's mass as a small text label just below it, via massLabels.js's
+// formatMassLabel/massLabelPosition — a way to read every body's mass at a glance without
+// selecting each one in turn to open the inspector panel. Abbreviated ("20k" rather than
+// "20000") and anchored below the body so it stays legible in a dense cluster.
+function drawMassLabels() {
+  ctx.save();
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#e8ecf4";
+  ctx.globalAlpha = 0.85;
+  for (const body of bodies) {
+    const { sx, sy } = worldToScreen(body.x, body.y);
+    const screenRadius = body.radius * viewport.zoom;
+    const pos = massLabelPosition(sx, sy, screenRadius);
+    ctx.fillText(formatMassLabel(body.mass), pos.x, pos.y);
   }
   ctx.restore();
 }
@@ -642,6 +667,10 @@ showVelocityVectorsCheckbox.addEventListener("change", () => {
 
 showAccelerationVectorsCheckbox.addEventListener("change", () => {
   showAccelerationVectors = showAccelerationVectorsCheckbox.checked;
+});
+
+showMassLabelsCheckbox.addEventListener("change", () => {
+  showMassLabels = showMassLabelsCheckbox.checked;
 });
 
 showMinimapCheckbox.addEventListener("change", () => {
@@ -1276,6 +1305,11 @@ document.addEventListener("keydown", (event) => {
     case "L":
       showScaleBarCheckbox.checked = !showScaleBarCheckbox.checked;
       showScaleBarCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "n":
+    case "N":
+      showMassLabelsCheckbox.checked = !showMassLabelsCheckbox.checked;
+      showMassLabelsCheckbox.dispatchEvent(new Event("change"));
       break;
     case "]":
       selectedBodyId = adjacentBodyId(bodies, selectedBodyId, 1);
