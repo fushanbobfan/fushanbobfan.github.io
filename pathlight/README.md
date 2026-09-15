@@ -32,9 +32,9 @@ Then open the printed URL in a browser.
 - **Generate terrain** — scatter randomized weighted-terrain patches across every empty cell
   (see below), leaving existing walls, the start, and the end untouched.
 - **Compare all algorithms** — run every algorithm against the current grid at once (no
-  animation) and show each one's cells explored, steps, and total cost in a table (see below).
-  Cleared automatically whenever the walls or terrain change, so it never shows numbers from a
-  grid that no longer exists.
+  animation) and show each one's cells explored, steps, total cost, and efficiency in a table
+  (see below). Cleared automatically whenever the walls or terrain change, so it never shows
+  numbers from a grid that no longer exists.
 - **Download comparison CSV** — save the current comparison table as a CSV file (see below).
   Disabled in effect until **Compare all algorithms** has run at least once since the grid last
   changed — clicking it first instead reports that a comparison is needed.
@@ -181,9 +181,22 @@ place of a step or cost figure for that row.
 
 The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
 by running all ten algorithms against whatever grid is actually on screen and reporting their
-real cells-explored, step, and cost numbers side by side — **Compare all algorithms** shows the
-guarantees actually holding (or not) for a specific maze, rather than asking you to take the
-table on faith.
+real cells-explored, step, cost, and efficiency numbers side by side — **Compare all
+algorithms** shows the guarantees actually holding (or not) for a specific maze, rather than
+asking you to take the table on faith.
+
+**Efficiency** is the reconstructed path's length divided by how many cells the search
+explored — 100% means nothing was explored in vain, and a low percentage means most of the
+search's work never ended up on the final route. BFS and Dijkstra, which expand outward evenly
+in every direction until they happen to reach the end, typically land far below 100% on an open
+grid; A*, greedy, fringe search, and iterative deepening A*, which push directly toward the end,
+often land at or near 100% when nothing forces a detour. It's computed from numbers `compare.js`
+already has (`path.length / visitedOrder.length`) rather than anything new the algorithms need
+to report, with one exception: bidirectional Dijkstra's early-stopping rule (see
+[`src/algorithms/bidirectionalDijkstra.js`](src/algorithms/bidirectionalDijkstra.js)) can settle
+on a path through a cell it only ever reached by relaxation from a neighbor, never formally
+popped off either frontier and counted into its cells-explored total — so its efficiency can
+read *above* 100%, which is correct rather than a rounding artifact.
 
 **Download comparison CSV** turns that same table into a file, for pulling a maze's numbers
 into a spreadsheet instead of reading them off the page. [`src/csvExport.js`](src/csvExport.js)'s
@@ -348,8 +361,11 @@ Fringe Search on the same mixed-cost corridor, and aborting within its expansion
 hanging, the way it will if that cap is ever removed) on a full-size weighted maze reused from
 Fringe Search's own bounded-expansion fixture. `compare.js` is tested
 separately: every algorithm but DFS agreeing on an open grid (DFS still finds *a* path, just not
-necessarily the shortest one), all ten correctly reporting unreachable together, and
-Dijkstra/A* finding a cheaper cost than BFS/greedy once terrain is weighted.
+necessarily the shortest one), all ten correctly reporting unreachable (with a null efficiency)
+together, Dijkstra/A* finding a cheaper cost than BFS/greedy once terrain is weighted, every
+algorithm but bidirectional Dijkstra reporting exactly 100% efficiency on a grid too small to
+explore off its only possible path, and bidirectional Dijkstra's efficiency exceeding 100% on
+that same grid for the reason described above.
 `serialize.js` is tested for an exact
 round trip through an edited grid, and for rejecting every way a loaded file can be invalid
 (wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
