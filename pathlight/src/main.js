@@ -173,6 +173,7 @@ function renderComparison(results) {
           <td>${r.visitedCount}</td>
           <td>${r.found ? r.steps : r.aborted ? "gave up" : "unreachable"}</td>
           <td>${r.found ? r.cost : r.aborted ? "gave up" : "unreachable"}</td>
+          <td>${r.found ? `${(r.efficiency * 100).toFixed(1)}%` : r.aborted ? "gave up" : "unreachable"}</td>
         </tr>`
     )
     .join("");
@@ -185,6 +186,7 @@ function renderComparison(results) {
           <th scope="col">Cells explored</th>
           <th scope="col">Steps</th>
           <th scope="col">Cost</th>
+          <th scope="col">Efficiency</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
