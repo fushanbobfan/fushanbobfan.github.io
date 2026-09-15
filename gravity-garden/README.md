@@ -38,6 +38,8 @@ Then open the printed URL in a browser.
   of travel (see below).
 - **Show acceleration vectors** — toggle a dashed arrow per body, pointing the way gravity is
   pulling it right now (see below).
+- **Show mass labels** — toggle a small text label under each body showing its mass, abbreviated
+  for large values (see below).
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
 - **Track center of mass** — keep the viewport panned to that point every tick (see below).
@@ -94,6 +96,7 @@ Then open the printed URL in a browser.
 | `P` | Toggle predicted paths |
 | `V` | Toggle velocity vectors |
 | `A` | Toggle acceleration vectors |
+| `N` | Toggle mass labels |
 | `M` | Toggle the minimap |
 | `B` | Toggle the center of mass marker |
 | `L` | Toggle the scale bar |
@@ -195,6 +198,18 @@ the path bends the way it does. [`src/accelerationVectors.js`](src/accelerationV
 velocity arrow, and stays independent of the N-body force code — the caller passes in the
 acceleration components from `computeAccelerations`. The dashed shaft (versus the velocity
 arrow's solid one) keeps the two legible where they overlap.
+
+### Mass labels
+
+**Show mass labels** draws each body's mass as a small text label just below it, so every mass is
+readable at a glance without selecting bodies one at a time in the inspector. Masses in this
+simulation range from single digits up into the tens of thousands (a preset's sun), so
+[`src/massLabels.js`](src/massLabels.js)'s `formatMassLabel` abbreviates anything 1000 or over
+with a `k` suffix (`20000` reads as `20k`) rather than spelling out every digit, and rounds to at
+most one decimal place either way. `massLabelPosition` anchors the text below the body's drawn
+screen radius plus a small fixed gap, so the label clears the disc even for the smallest bodies
+rather than overlapping it. Both functions are DOM-free and tested on their own, like
+`scaleBar.js` and `velocityVectors.js`; only the actual text drawing lives in `main.js`.
 
 ### Inspector panel
 
