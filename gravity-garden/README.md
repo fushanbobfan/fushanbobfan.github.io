@@ -317,6 +317,15 @@ current zoom) lands closest to a fixed target width, so the bar redraws at a new
 you zoom in or out rather than growing or shrinking a fixed one off-screen. Like `viewport.js`
 and `minimap.js`, the picking logic has no DOM dependency and is tested on its own.
 
+### Elapsed time
+
+Alongside the running body count and total energy, the stats readout shows how much simulated
+time has passed as `m:ss` (or `h:mm:ss` past an hour) — the running sum of the physics
+timesteps actually applied, via [`src/elapsedTime.js`](src/elapsedTime.js)'s `formatElapsedTime`.
+Pausing stops it, and scrubbing **Speed** changes how fast it advances, since it counts
+simulated time rather than however long the tab has been open. Switching presets, hitting
+**Reset**, or loading a scenario all start it back at `0:00`.
+
 ### Scenario export/import
 
 A scenario built up interactively — dropping bodies, nudging the view, letting a cluster
