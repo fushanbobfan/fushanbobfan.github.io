@@ -244,6 +244,15 @@ recent branch) and carves it if it reaches new ground. The result is a visibly d
 texture — many short dead ends branching off a broadly and evenly grown region — while keeping
 the same perfect-maze connectivity guarantee.
 
+**Randomized Kruskal's** takes a third approach: every even cell starts as its own disjoint
+passage, and the walls between adjacent even cells are considered in random order, carving (and
+merging the two cells' sets, via a union-find) whenever they don't already belong to the same
+one. Unlike the other two, growth isn't anchored to a single starting cell or frontier — many
+separate passages merge into one maze at once, giving a texture with shorter, more evenly
+scattered dead ends than either. Considering a connected graph's edges in any order this way
+always yields a spanning tree, so it's still a "perfect" maze with the same connectivity
+guarantee.
+
 **Generate maze** replaces the whole grid with one of these (clearing existing walls and
 weighted terrain along with it) and moves the start and end to the two corners farthest apart on
 the even-cell grid, so the generated maze is always solvable end to end.
