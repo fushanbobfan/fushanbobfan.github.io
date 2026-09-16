@@ -9,7 +9,7 @@ import { bidirectionalSearch } from "./algorithms/bidirectional.js";
 import { bidirectionalDijkstra } from "./algorithms/bidirectionalDijkstra.js";
 import { fringeSearch } from "./algorithms/fringeSearch.js";
 import { idaStar } from "./algorithms/idaStar.js";
-import { generateMaze, generateMazePrim } from "./maze.js";
+import { generateMaze, generateMazePrim, generateMazeKruskal } from "./maze.js";
 import { generateTerrain } from "./terrain.js";
 import { compareAlgorithms } from "./compare.js";
 import { compareResultsToCsv } from "./csvExport.js";
@@ -65,6 +65,7 @@ const ALGORITHMS = {
 const MAZE_ALGORITHMS = {
   backtracker: generateMaze,
   prim: generateMazePrim,
+  kruskal: generateMazeKruskal,
 };
 
 let grid = createGrid(ROWS, COLS);
