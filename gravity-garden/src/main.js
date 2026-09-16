@@ -37,6 +37,7 @@ import { computeScaleBar } from "./scaleBar.js";
 import { computeVelocityArrow } from "./velocityVectors.js";
 import { computeAccelerationArrow } from "./accelerationVectors.js";
 import { formatMassLabel, massLabelPosition } from "./massLabels.js";
+import { formatElapsedTime } from "./elapsedTime.js";
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
@@ -131,6 +132,10 @@ let showMassLabels = false;
 let showMinimap = true;
 let showCenterOfMass = false;
 let showScaleBar = true;
+// Simulated seconds actually applied so far (the running sum of each tick's dt while playing),
+// not wall-clock time — pausing or scrubbing speed leaves this readout faithful to the
+// simulation rather than to how long the browser tab has been open.
+let elapsedSimTime = 0;
 let predictedPaths = [];
 let ticksSincePrediction = Infinity;
 let lastPredictedBodyCount = -1;
@@ -187,6 +192,7 @@ function loadPreset(key) {
   predictedPaths = [];
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
+  elapsedSimTime = 0;
   viewport = resetViewport();
   resetUndoRedoHistory();
   updateGravityReadouts();
@@ -555,6 +561,7 @@ function updateInspectorPanel() {
 function tick() {
   if (running) {
     const dt = BASE_DT * speed;
+    elapsedSimTime += dt;
     stepSimulation(bodies, dt, G, softening);
     const countBeforeMerge = bodies.length;
     bodies = mergeCollidingBodies(bodies);
@@ -608,7 +615,9 @@ function tick() {
   draw();
   if (showDiagnostics) drawDiagnostics();
   statsEl.textContent =
-    `bodies: ${bodies.length}\n` + `energy: ${totalEnergy(bodies, G, softening).toFixed(1)}`;
+    `bodies: ${bodies.length}\n` +
+    `energy: ${totalEnergy(bodies, G, softening).toFixed(1)}\n` +
+    `elapsed: ${formatElapsedTime(elapsedSimTime)}`;
 
   requestAnimationFrame(tick);
 }
@@ -858,6 +867,7 @@ function applyScenario(restored) {
   predictedPaths = [];
   lastPredictedBodyCount = -1;
   selectedBodyId = null;
+  elapsedSimTime = 0;
   resetUndoRedoHistory();
   updateZoomReadout();
   updateGravityReadouts();
