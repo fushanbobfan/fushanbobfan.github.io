@@ -9,6 +9,7 @@ import {
 import { PRESETS, listPresetNames } from "./presets.js";
 import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
 import { predictTrajectory } from "./trajectory.js";
+import { pickPrimaryPair, lagrangePoints } from "./lagrange.js";
 import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody, parseMassInput } from "./inspector.js";
 import { serializeScenario, deserializeScenario } from "./scenario.js";
 import { createHistory, pushHistory, popHistory, canPop } from "./history.js";
@@ -63,6 +64,7 @@ const minimapCanvas = document.getElementById("minimap");
 const minimapCtx = minimapCanvas.getContext("2d");
 const showMinimapCheckbox = document.getElementById("show-minimap");
 const showCenterOfMassCheckbox = document.getElementById("show-center-of-mass");
+const showLagrangePointsCheckbox = document.getElementById("show-lagrange-points");
 const showScaleBarCheckbox = document.getElementById("show-scale-bar");
 const trackCenterOfMassCheckbox = document.getElementById("track-center-of-mass");
 const diagnosticsReadout = document.getElementById("diagnostics-readout");
@@ -131,6 +133,7 @@ let showAccelerationVectors = false;
 let showMassLabels = false;
 let showMinimap = true;
 let showCenterOfMass = false;
+let showLagrangePoints = false;
 let showScaleBar = true;
 // Simulated seconds actually applied so far (the running sum of each tick's dt while playing),
 // not wall-clock time — pausing or scrubbing speed leaves this readout faithful to the
@@ -278,6 +281,8 @@ function draw() {
 
   if (showCenterOfMass && bodies.length > 0) drawCenterOfMass();
 
+  if (showLagrangePoints) drawLagrangePoints();
+
   if (showScaleBar) drawScaleBar();
 
   if (showMinimap) drawMinimap();
@@ -341,6 +346,41 @@ function drawCenterOfMass() {
   ctx.moveTo(sx, sy - radius);
   ctx.lineTo(sx, sy + radius);
   ctx.stroke();
+
+  ctx.restore();
+}
+
+// Small labelled diamonds at the five Lagrange points of the two heaviest bodies (via
+// lagrange.js), recomputed from their current positions every frame so the markers ride along
+// with the pair as it orbits. Most telling on Trojan Asteroid, where the asteroid visibly
+// librates around L4, and on Binary Star + Planet, where L1 sits between the two stars.
+function drawLagrangePoints() {
+  const pair = pickPrimaryPair(bodies);
+  if (!pair) return;
+  const points = lagrangePoints(pair[0], pair[1]);
+  if (!points) return;
+
+  ctx.save();
+  ctx.strokeStyle = "#b8c1d9";
+  ctx.fillStyle = "#b8c1d9";
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.85;
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  const size = 5;
+  for (const [name, point] of Object.entries(points)) {
+    const { sx, sy } = worldToScreen(point.x, point.y);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - size);
+    ctx.lineTo(sx + size, sy);
+    ctx.lineTo(sx, sy + size);
+    ctx.lineTo(sx - size, sy);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fillText(name, sx + size + 3, sy);
+  }
 
   ctx.restore();
 }
@@ -689,6 +729,10 @@ showMinimapCheckbox.addEventListener("change", () => {
 
 showCenterOfMassCheckbox.addEventListener("change", () => {
   showCenterOfMass = showCenterOfMassCheckbox.checked;
+});
+
+showLagrangePointsCheckbox.addEventListener("change", () => {
+  showLagrangePoints = showLagrangePointsCheckbox.checked;
 });
 
 showScaleBarCheckbox.addEventListener("change", () => {
@@ -1315,6 +1359,11 @@ document.addEventListener("keydown", (event) => {
     case "L":
       showScaleBarCheckbox.checked = !showScaleBarCheckbox.checked;
       showScaleBarCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "g":
+    case "G":
+      showLagrangePointsCheckbox.checked = !showLagrangePointsCheckbox.checked;
+      showLagrangePointsCheckbox.dispatchEvent(new Event("change"));
       break;
     case "n":
     case "N":
