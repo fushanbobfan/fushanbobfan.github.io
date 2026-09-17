@@ -26,6 +26,16 @@ test('separation pushes away from a close neighbour and ignores distant ones', (
   assert.deepEqual(separation(b, [b, far], params), { x: 0, y: 0 });
 });
 
+test('coincident boids are pushed apart in different directions', () => {
+  const a = { id: 0, x: 5, y: 5, vel: { x: 0, y: 0 } };
+  const b = { id: 1, x: 5, y: 5, vel: { x: 0, y: 0 } };
+  const fa = separation(a, [a, b], params);
+  const fb = separation(b, [a, b], params);
+  assert.ok(length(fa) > 0 && length(fb) > 0);
+  const dot = fa.x * fb.x + fa.y * fb.y;
+  assert.ok(dot < 0.9 * length(fa) * length(fb), 'directions differ');
+});
+
 test('separation weights nearer neighbours more heavily', () => {
   const b = boid(0, 0);
   const close = separation(b, [boid(3, 0), boid(0, -12)], { ...params, maxForce: 100, maxSpeed: 1 });

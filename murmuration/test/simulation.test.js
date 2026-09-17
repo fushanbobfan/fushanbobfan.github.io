@@ -30,6 +30,16 @@ test('the same seed reproduces the same flock and trajectory', () => {
   assert.equal(a.tick, 30);
 });
 
+test('boids get unique ids that reset restores', () => {
+  const sim = make();
+  const ids = sim.boids.map((b) => b.id);
+  assert.equal(new Set(ids).size, ids.length);
+  sim.setCount(60);
+  assert.equal(new Set(sim.boids.map((b) => b.id)).size, 60);
+  sim.reset();
+  assert.deepEqual(sim.boids.map((b) => b.id), Array.from({ length: 60 }, (_, i) => i));
+});
+
 test('setCount grows and shrinks without disturbing survivors', () => {
   const sim = make();
   const first = { ...sim.boids[0] };

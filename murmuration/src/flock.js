@@ -3,7 +3,7 @@
 // acceleration — desired velocity minus current velocity, capped at
 // `maxForce` — so the caller can weight and sum them.
 
-import { add, sub, scale, length, setMagnitude, limit, vec } from './vec.js';
+import { add, sub, scale, length, setMagnitude, limit, vec, fromAngle } from './vec.js';
 
 export const DEFAULT_PARAMS = Object.freeze({
   perception: 50,        // neighbours within this radius influence a boid
@@ -20,6 +20,15 @@ function steerTowards(desired, velocity, maxSpeed, maxForce) {
   return limit(sub(setMagnitude(desired, maxSpeed), velocity), maxForce);
 }
 
+// Two boids sitting on exactly the same point have no direction to push
+// along, so each picks one from its id. The golden angle spreads ids around
+// the circle, so any two ids give clearly different directions.
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
+function coincidentPush(boid) {
+  return fromAngle((boid.id ?? 0) * GOLDEN_ANGLE);
+}
+
 // Push away from neighbours that are closer than `separationRadius`, with
 // nearer neighbours pushing harder (inverse-distance weighting).
 export function separation(boid, neighbours, params) {
@@ -29,8 +38,9 @@ export function separation(boid, neighbours, params) {
     if (other === boid) continue;
     const away = sub(boid, other);
     const d = length(away);
-    if (d === 0 || d >= params.separationRadius) continue;
-    sum = add(sum, scale(away, 1 / (d * d)));
+    if (d >= params.separationRadius) continue;
+    if (d === 0) sum = add(sum, coincidentPush(boid));
+    else sum = add(sum, scale(away, 1 / (d * d)));
     count++;
   }
   if (count === 0) return vec();

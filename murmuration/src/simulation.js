@@ -24,6 +24,7 @@ export class Simulation {
     this.boids = [];
     this.hash = new SpatialHash(this.params.perception);
     this.tick = 0;
+    this.nextId = 0;
     this.setCount(count);
   }
 
@@ -47,6 +48,7 @@ export class Simulation {
   spawnBoid() {
     const speed = randomRange(this.rng, this.params.maxSpeed * 0.5, this.params.maxSpeed);
     return {
+      id: this.nextId++,
       x: randomRange(this.rng, 0, this.width),
       y: randomRange(this.rng, 0, this.height),
       vel: fromAngle(randomRange(this.rng, 0, Math.PI * 2), speed),
@@ -67,6 +69,7 @@ export class Simulation {
     const n = this.boids.length;
     this.boids = [];
     this.tick = 0;
+    this.nextId = 0;
     this.setCount(n);
   }
 
