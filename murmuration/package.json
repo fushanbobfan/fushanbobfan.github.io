@@ -1,0 +1,24 @@
+{
+  "name": "murmuration",
+  "version": "0.1.0",
+  "description": "An interactive flocking simulation: watch hundreds of boids swirl, split and regroup as you tune the rules that steer them.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "boids",
+    "flocking",
+    "simulation",
+    "creative-coding",
+    "canvas",
+    "visualization"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/murmuration.git"
+  },
+  "private": false
+}
