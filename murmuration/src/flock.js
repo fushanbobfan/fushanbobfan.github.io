@@ -86,6 +86,10 @@ export function flee(boid, point, radius, params) {
 }
 
 // Soft walls: within `margin` of an edge, steer back towards the interior.
+// The turn is allowed several times the usual maxForce so a wall wins
+// against cohesion pulling the flock outward.
+export const EDGE_FORCE_MULTIPLIER = 3;
+
 export function avoidEdges(boid, width, height, margin, params) {
   let desired = null;
   if (boid.x < margin) desired = vec(params.maxSpeed, boid.vel.y);
@@ -93,5 +97,5 @@ export function avoidEdges(boid, width, height, margin, params) {
   if (boid.y < margin) desired = vec(desired ? desired.x : boid.vel.x, params.maxSpeed);
   else if (boid.y > height - margin) desired = vec(desired ? desired.x : boid.vel.x, -params.maxSpeed);
   if (!desired) return vec();
-  return steerTowards(desired, boid.vel, params.maxSpeed, params.maxForce);
+  return steerTowards(desired, boid.vel, params.maxSpeed, params.maxForce * EDGE_FORCE_MULTIPLIER);
 }
