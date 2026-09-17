@@ -177,7 +177,9 @@ canvas {
     grid-template-columns: 1fr;
   }
 
+  /* On phones the flock is the point of the page, so it comes first. */
   .stage {
+    order: -1;
     min-height: 320px;
     height: 60vh;
   }
