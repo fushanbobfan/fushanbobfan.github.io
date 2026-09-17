@@ -112,3 +112,26 @@ test("lagrangePoints returns null for coincident or massless bodies", () => {
   assert.equal(lagrangePoints({ mass: 0, x: 0, y: 0 }, { mass: 0, x: 1, y: 0 }), null);
   assert.equal(lagrangePoints({ mass: 5, x: 0, y: 0 }, { mass: 0, x: 1, y: 0 }), null);
 });
+
+test("the Trojan Asteroid preset's asteroid starts on L4 and librates around it", async () => {
+  const { PRESETS } = await import("../src/presets.js");
+  const { stepSimulation } = await import("../src/physics.js");
+  const preset = PRESETS["trojan-asteroid"];
+  const bodies = preset.build();
+  const [sun, planet, trojan] = bodies;
+  const separation = Math.hypot(planet.x - sun.x, planet.y - sun.y);
+
+  const start = lagrangePoints(sun, planet);
+  assert.ok(close(Math.hypot(trojan.x - start.L4.x, trojan.y - start.L4.y), 0, 1e-6));
+
+  // Follow the live L4 as the planet orbits: a trojan that stayed put in space would fall a
+  // full separation behind within a fraction of an orbit, so tracking the moving point is the
+  // real test of libration.
+  let maxDrift = 0;
+  for (let i = 0; i < 20000; i++) {
+    stepSimulation(bodies, 0.05, preset.G, preset.softening);
+    const live = lagrangePoints(sun, planet);
+    maxDrift = Math.max(maxDrift, Math.hypot(trojan.x - live.L4.x, trojan.y - live.L4.y));
+  }
+  assert.ok(maxDrift < separation * 0.25, `trojan wandered ${maxDrift.toFixed(1)} from L4`);
+});
