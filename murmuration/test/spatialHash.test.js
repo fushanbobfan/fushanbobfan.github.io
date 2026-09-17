@@ -34,7 +34,7 @@ test('negative coordinates hash correctly', () => {
   const hash = new SpatialHash(8);
   const items = [{ x: -1, y: -1 }, { x: -9, y: -9 }, { x: 1, y: 1 }];
   hash.build(items);
-  assert.deepEqual(new Set(hash.query(-2, -2, 3)), new Set([items[0], items[2]]));
+  assert.deepEqual(new Set(hash.query(-2, -2, 5)), new Set([items[0], items[2]]));
 });
 
 test('matches brute force on a random cloud across cell sizes', () => {
