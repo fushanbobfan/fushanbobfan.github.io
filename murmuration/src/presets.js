@@ -12,12 +12,12 @@ export const PRESETS = Object.freeze({
   school: {
     label: 'Fish school',
     description: 'Strong alignment and cohesion: one tight body that turns as a whole.',
-    params: { separation: 1.2, alignment: 1.8, cohesion: 1.4, perception: 70, separationRadius: 18, maxSpeed: 2.6 },
+    params: { separation: 1.6, alignment: 1.8, cohesion: 1.2, perception: 70, separationRadius: 20, maxSpeed: 2.6 },
   },
   swarm: {
     label: 'Swarm',
     description: 'Cohesion with little alignment: a buzzing cloud that never settles.',
-    params: { separation: 1.0, alignment: 0.1, cohesion: 1.6, perception: 60, separationRadius: 15, maxSpeed: 3.5, maxForce: 0.15 },
+    params: { separation: 1.8, alignment: 0.1, cohesion: 1.5, perception: 60, separationRadius: 20, maxSpeed: 3.5, maxForce: 0.15 },
   },
   scatter: {
     label: 'Scatter',

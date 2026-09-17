@@ -31,3 +31,15 @@ test('preset values are physically sane', () => {
     for (const w of ['separation', 'alignment', 'cohesion']) assert.ok(p[w] >= 0, `${name}.${w}`);
   }
 });
+
+test('no preset lets boids pile up on the same spot', async () => {
+  const { Simulation, EDGE_MODES } = await import('../src/simulation.js');
+  for (const name of Object.keys(PRESETS)) {
+    for (const edgeMode of EDGE_MODES) {
+      const sim = new Simulation({ width: 800, height: 600, count: 200, seed: 5, params: presetParams(name), edgeMode });
+      for (let i = 0; i < 600; i++) sim.step();
+      const cells = new Set(sim.boids.map((b) => `${Math.round(b.x)},${Math.round(b.y)}`));
+      assert.ok(cells.size >= 190, `${name}/${edgeMode}: only ${cells.size} distinct positions`);
+    }
+  }
+});
