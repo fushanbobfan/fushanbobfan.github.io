@@ -43,6 +43,8 @@ Then open the printed URL in a browser.
 - **Show minimap** — toggle a small overview of the whole system in the corner (see below).
 - **Show center of mass** — toggle a crosshair at the system's mass-weighted center (see below).
 - **Track center of mass** — keep the viewport panned to that point every tick (see below).
+- **Show Lagrange points** — toggle labelled markers at the five Lagrange points of the two
+  heaviest bodies (see below).
 - **Show scale bar** — toggle a map-style scale bar in the corner, showing how many world units a
   given screen length represents at the current zoom (see below).
 - **Click empty space on the canvas** — drop a new body at that point, with zero initial
@@ -98,6 +100,7 @@ Then open the printed URL in a browser.
 | `A` | Toggle acceleration vectors |
 | `N` | Toggle mass labels |
 | `M` | Toggle the minimap |
+| `G` | Toggle Lagrange points |
 | `B` | Toggle the center of mass marker |
 | `L` | Toggle the scale bar |
 | `Enter` / `Space` (canvas focused) | Drop a new body at a random point |
@@ -302,6 +305,27 @@ are mutually exclusive — turning one on turns the other off, the same way manu
 dragging, or **Frame all bodies** already turns off **Keep centered** — since both drive the
 same pan every tick and letting both run would mean whichever ran last in that tick silently
 wins, leaving the other's checkbox checked but doing nothing.
+
+### Lagrange points
+
+**Show Lagrange points** marks the five spots where a light third body can hold its position
+relative to the two heaviest bodies as they orbit each other: L1 between them, L2 just beyond
+the lighter one, L3 on the far side of the heavier one, and L4/L5 at the two points that make
+an equilateral triangle with the pair. [`src/lagrange.js`](src/lagrange.js) computes them in
+the circular restricted three-body model — the three collinear points are the roots of the
+rotating-frame force balance along the pair's axis, found by bisection on the three intervals
+where a root is guaranteed, and the triangular points come straight from the geometry — then
+maps them back into world coordinates around the pair's barycenter. The markers are
+recomputed from the bodies' current positions every frame, so they sweep around with the pair
+as it orbits.
+
+They are exact for a circular orbit and approximate for an eccentric one (where the true
+points are not stationary in any simple frame, and the markers instead breathe in and out with
+the separation). "Trojan Asteroid" is the preset they were made for: the asteroid starts on L4
+and visibly librates around the marker instead of drifting off, which the test suite checks by
+integrating the preset forward and following the moving L4. "Binary Star + Planet" shows L1
+sitting between the two stars rather than near either one. With only one massive body on
+screen, or none, nothing is drawn.
 
 ### Scale bar
 
