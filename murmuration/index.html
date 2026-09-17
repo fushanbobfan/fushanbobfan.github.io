@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Murmuration</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Murmuration</h1>
+    <p class="subtitle">Three local rules, one emergent flock. Move your cursor over the canvas to scatter it.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Flock controls">
+      <div class="control-row">
+        <label for="preset">Preset</label>
+        <select id="preset"></select>
+        <p id="preset-description" class="hint"></p>
+      </div>
+
+      <div class="control-row">
+        <label for="count">Boids <output id="count-value" for="count">200</output></label>
+        <input id="count" type="range" min="10" max="1000" step="10" value="200" />
+      </div>
+
+      <div class="control-row">
+        <label for="separation">Separation <output id="separation-value" for="separation">1.5</output></label>
+        <input id="separation" type="range" min="0" max="3" step="0.1" value="1.5" />
+      </div>
+
+      <div class="control-row">
+        <label for="alignment">Alignment <output id="alignment-value" for="alignment">1.0</output></label>
+        <input id="alignment" type="range" min="0" max="3" step="0.1" value="1" />
+      </div>
+
+      <div class="control-row">
+        <label for="cohesion">Cohesion <output id="cohesion-value" for="cohesion">1.0</output></label>
+        <input id="cohesion" type="range" min="0" max="3" step="0.1" value="1" />
+      </div>
+
+      <div class="control-row">
+        <label for="perception">Perception radius <output id="perception-value" for="perception">50</output></label>
+        <input id="perception" type="range" min="10" max="150" step="5" value="50" />
+      </div>
+
+      <div class="control-row">
+        <label for="max-speed">Max speed <output id="max-speed-value" for="max-speed">3.0</output></label>
+        <input id="max-speed" type="range" min="0.5" max="8" step="0.1" value="3" />
+      </div>
+
+      <div class="control-row">
+        <label for="edge-mode">Edges</label>
+        <select id="edge-mode">
+          <option value="avoid">Steer away from walls</option>
+          <option value="wrap">Wrap around</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label for="colour-mode">Colour by</label>
+        <select id="colour-mode">
+          <option value="heading">Heading</option>
+          <option value="speed">Speed</option>
+          <option value="plain">Nothing</option>
+        </select>
+      </div>
+
+      <div class="control-row checkbox-row">
+        <input id="trails" type="checkbox" />
+        <label for="trails">Leave trails</label>
+      </div>
+
+      <div class="control-row button-row">
+        <button id="pause" type="button" aria-pressed="false">Pause</button>
+        <button id="reset" type="button">Reset flock</button>
+      </div>
+
+      <p class="hint">
+        Keyboard: <kbd>Space</kbd> pause, <kbd>R</kbd> reset, <kbd>T</kbd> trails.
+      </p>
+    </section>
+
+    <section class="stage" aria-label="Flock canvas">
+      <canvas id="flock" role="img" aria-label="Animated flock of boids"></canvas>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
