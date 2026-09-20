@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Simulation, EDGE_MODES } from '../src/simulation.js';
+import { Simulation, EDGE_MODES, DEFAULT_OBSTACLE_RADIUS, MIN_OBSTACLE_RADIUS } from '../src/simulation.js';
 import { length } from '../src/vec.js';
 
 const make = (opts = {}) => new Simulation({ width: 400, height: 300, count: 50, seed: 7, ...opts });
@@ -156,4 +156,66 @@ test('cohesion pulls a scattered flock closer together over time', () => {
   const before = spread();
   for (let i = 0; i < 150; i++) sim.step();
   assert.ok(spread() < before, `spread did not shrink: ${before} -> ${spread()}`);
+});
+
+test('obstacles can be added, removed by point and cleared', () => {
+  const sim = make();
+  const o = sim.addObstacle(100, 100, 20);
+  assert.deepEqual(o, { x: 100, y: 100, r: 20 });
+  assert.equal(sim.addObstacle(50, 50, 1).r, MIN_OBSTACLE_RADIUS, 'radius has a floor');
+  assert.equal(sim.addObstacle(200, 200).r, DEFAULT_OBSTACLE_RADIUS);
+  assert.equal(sim.obstacles.length, 3);
+  assert.equal(sim.removeObstacleAt(115, 100), true, 'inside the first obstacle');
+  assert.equal(sim.removeObstacleAt(300, 10), false, 'empty space');
+  assert.equal(sim.obstacles.length, 2);
+  sim.clearObstacles();
+  assert.equal(sim.obstacles.length, 0);
+});
+
+test('obstacles survive reset and rescale with the world', () => {
+  const sim = make();
+  sim.addObstacle(200, 150, 20);
+  sim.reset();
+  assert.equal(sim.obstacles.length, 1);
+  sim.resize(800, 600);
+  assert.deepEqual(sim.obstacles[0], { x: 400, y: 300, r: 40 });
+});
+
+test('no boid ends a frame inside an obstacle', () => {
+  const sim = make({ count: 300, params: { cohesion: 3, separation: 0 } });
+  const obstacles = [sim.addObstacle(200, 150, 40), sim.addObstacle(80, 80, 25), sim.addObstacle(320, 220, 30)];
+  for (let i = 0; i < 400; i++) {
+    sim.step();
+    for (const b of sim.boids) {
+      for (const o of obstacles) {
+        assert.ok(Math.hypot(b.x - o.x, b.y - o.y) >= o.r - 1e-9, `boid inside obstacle at tick ${sim.tick}`);
+      }
+    }
+  }
+});
+
+test('collideObstacles puts an intruding boid on the rim and reflects it', () => {
+  const sim = make({ count: 0 });
+  sim.addObstacle(100, 100, 30);
+  const b = { id: 0, x: 110, y: 100, vel: { x: -2, y: 1 } };
+  sim.collideObstacles(b);
+  assert.ok(Math.abs(Math.hypot(b.x - 100, b.y - 100) - 30) < 1e-9);
+  assert.ok(b.vel.x > 0, 'inward x component reflected');
+  assert.equal(b.vel.y, 1, 'tangential component untouched');
+});
+
+test('the flock actually steers around an obstacle in its path', () => {
+  // A tight stream heading straight at a wall: without avoidance most of it
+  // would hit; with it, hardly any boid should need the hard collision guard.
+  const sim = make({ count: 0, params: { cohesion: 0, alignment: 0, separation: 0 } });
+  sim.setEdgeMode('wrap');
+  const wall = sim.addObstacle(250, 150, 30);
+  for (let i = 0; i < 40; i++) sim.boids.push({ id: i, x: 20 + (i % 5) * 4, y: 140 + (i % 8) * 3, vel: { x: 3, y: 0 } });
+  let contacts = 0;
+  for (let t = 0; t < 120; t++) {
+    sim.step();
+    for (const b of sim.boids) if (Math.hypot(b.x - wall.x, b.y - wall.y) < wall.r + 0.5) contacts++;
+  }
+  assert.ok(contacts <= 4, `expected the stream to part around the wall, got ${contacts} rim contacts`);
+  assert.ok(sim.boids.every((b) => b.x > wall.x), 'the stream made it past the wall');
 });

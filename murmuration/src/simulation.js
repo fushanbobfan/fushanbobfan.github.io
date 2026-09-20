@@ -3,13 +3,15 @@
 // tested headlessly.
 
 import { SpatialHash } from './spatialHash.js';
-import { DEFAULT_PARAMS, flockingForce, flee, avoidEdges } from './flock.js';
+import { DEFAULT_PARAMS, flockingForce, flee, avoidEdges, avoidObstacles } from './flock.js';
 import { add, limit, fromAngle } from './vec.js';
 import { createRng, randomRange } from './rng.js';
 
 export const EDGE_MODES = Object.freeze(['avoid', 'wrap']);
 export const EDGE_MARGIN = 40;
 export const THREAT_RADIUS = 120;
+export const DEFAULT_OBSTACLE_RADIUS = 28;
+export const MIN_OBSTACLE_RADIUS = 6;
 
 export class Simulation {
   constructor({ width, height, count = 200, seed = 1, params = {}, edgeMode = 'avoid' } = {}) {
@@ -19,6 +21,7 @@ export class Simulation {
     this.params = { ...DEFAULT_PARAMS, ...params };
     this.edgeMode = edgeMode;
     this.threat = null;
+    this.obstacles = [];
     this.seed = seed;
     this.rng = createRng(seed);
     this.boids = [];
@@ -43,6 +46,31 @@ export class Simulation {
   // Set or clear the point the flock flees from (screen-space coordinates).
   setThreat(point) {
     this.threat = point ? { x: point.x, y: point.y } : null;
+  }
+
+  // Circular obstacles the flock steers around. They survive reset and
+  // rescale with the world, like walls painted onto the canvas.
+  addObstacle(x, y, r = DEFAULT_OBSTACLE_RADIUS) {
+    const radius = Math.max(MIN_OBSTACLE_RADIUS, r);
+    const obstacle = { x, y, r: radius };
+    this.obstacles.push(obstacle);
+    return obstacle;
+  }
+
+  // Remove the obstacle under a point, if any; returns whether one was removed.
+  removeObstacleAt(x, y) {
+    for (let i = this.obstacles.length - 1; i >= 0; i--) {
+      const o = this.obstacles[i];
+      if (Math.hypot(o.x - x, o.y - y) <= o.r) {
+        this.obstacles.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  clearObstacles() {
+    this.obstacles = [];
   }
 
   spawnBoid() {
@@ -81,6 +109,11 @@ export class Simulation {
       b.x *= sx;
       b.y *= sy;
     }
+    for (const o of this.obstacles) {
+      o.x *= sx;
+      o.y *= sy;
+      o.r *= Math.min(sx, sy);
+    }
     this.width = width;
     this.height = height;
   }
@@ -92,6 +125,25 @@ export class Simulation {
     else if (b.x > this.width) { b.x = 2 * this.width - b.x; b.vel.x = -Math.abs(b.vel.x); }
     if (b.y < 0) { b.y = -b.y; b.vel.y = Math.abs(b.vel.y); }
     else if (b.y > this.height) { b.y = 2 * this.height - b.y; b.vel.y = -Math.abs(b.vel.y); }
+  }
+
+  // Last resort for obstacles: a boid that still ends up inside one is put
+  // back on the rim with the inward part of its velocity reflected.
+  collideObstacles(b) {
+    for (const o of this.obstacles) {
+      const dx = b.x - o.x;
+      const dy = b.y - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d >= o.r) continue;
+      const nx = d === 0 ? 1 : dx / d;
+      const ny = d === 0 ? 0 : dy / d;
+      b.x = o.x + nx * o.r;
+      b.y = o.y + ny * o.r;
+      const inward = b.vel.x * nx + b.vel.y * ny;
+      if (inward < 0) {
+        b.vel = { x: b.vel.x - 2 * inward * nx, y: b.vel.y - 2 * inward * ny };
+      }
+    }
   }
 
   wrap(b) {
@@ -113,6 +165,7 @@ export class Simulation {
       const neighbours = this.hash.query(b.x, b.y, params.perception);
       let acc = flockingForce(b, neighbours, params);
       if (this.threat) acc = add(acc, flee(b, this.threat, THREAT_RADIUS, params));
+      if (this.obstacles.length) acc = add(acc, avoidObstacles(b, this.obstacles, params));
       if (this.edgeMode === 'avoid') {
         acc = add(acc, avoidEdges(b, this.width, this.height, EDGE_MARGIN, params));
       }
@@ -125,6 +178,7 @@ export class Simulation {
       b.y += b.vel.y;
       if (this.edgeMode === 'wrap') this.wrap(b);
       else this.bounce(b);
+      if (this.obstacles.length) this.collideObstacles(b);
     }
     this.tick++;
   }

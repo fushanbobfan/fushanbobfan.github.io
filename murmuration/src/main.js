@@ -34,6 +34,12 @@ const colourSelect = $('colour-mode');
 const trailsBox = $('trails');
 const pauseButton = $('pause');
 const resetButton = $('reset');
+const cursorSelect = $('cursor-mode');
+const obstacleSizeSlider = $('obstacle-size');
+const obstacleSizeOutput = $('obstacle-size-value');
+const clearObstaclesButton = $('clear-obstacles');
+
+const CURSOR_MODES = ['threat', 'place', 'remove'];
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -41,6 +47,7 @@ let sim;
 let paused = false;
 let trails = false;
 let colourMode = 'heading';
+let cursorMode = 'threat';
 let lastFrameTime = performance.now();
 let fps = 0;
 
@@ -93,9 +100,18 @@ function setTrails(next) {
   trailsBox.checked = next;
 }
 
+function setCursorMode(next) {
+  cursorMode = next;
+  cursorSelect.value = next;
+  // The threat follows the pointer; the obstacle tools only act on clicks.
+  if (next !== 'threat') sim.setThreat(null);
+  canvas.style.cursor = next === 'threat' ? 'crosshair' : next === 'place' ? 'copy' : 'not-allowed';
+}
+
 function updateStatus() {
   const mode = paused ? 'paused' : `${fps.toFixed(0)} fps`;
-  status.textContent = `${sim.boids.length} boids · ${mode}`;
+  const obstacles = sim.obstacles.length ? ` · ${sim.obstacles.length} obstacle${sim.obstacles.length === 1 ? '' : 's'}` : '';
+  status.textContent = `${sim.boids.length} boids${obstacles} · ${mode}`;
 }
 
 function frame(now) {
@@ -137,9 +153,21 @@ function bindControls() {
     const rect = canvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
-  canvas.addEventListener('pointermove', (event) => sim.setThreat(pointerPosition(event)));
-  canvas.addEventListener('pointerdown', (event) => sim.setThreat(pointerPosition(event)));
+  canvas.addEventListener('pointermove', (event) => {
+    if (cursorMode === 'threat') sim.setThreat(pointerPosition(event));
+  });
+  canvas.addEventListener('pointerdown', (event) => {
+    const p = pointerPosition(event);
+    if (cursorMode === 'threat') sim.setThreat(p);
+    else if (cursorMode === 'place') sim.addObstacle(p.x, p.y, Number(obstacleSizeSlider.value));
+    else sim.removeObstacleAt(p.x, p.y);
+    updateStatus();
+  });
   canvas.addEventListener('pointerleave', () => sim.setThreat(null));
+
+  cursorSelect.addEventListener('change', () => setCursorMode(cursorSelect.value));
+  obstacleSizeSlider.addEventListener('input', () => { obstacleSizeOutput.value = obstacleSizeSlider.value; });
+  clearObstaclesButton.addEventListener('click', () => { sim.clearObstacles(); updateStatus(); });
 
   window.addEventListener('keydown', (event) => {
     const tag = event.target.tagName;
@@ -147,6 +175,10 @@ function bindControls() {
     if (event.code === 'Space') { event.preventDefault(); setPaused(!paused); updateStatus(); }
     else if (event.key === 'r' || event.key === 'R') { sim.reset(Date.now() >>> 0); updateStatus(); }
     else if (event.key === 't' || event.key === 'T') setTrails(!trails);
+    else if (event.key === 'o' || event.key === 'O') {
+      setCursorMode(CURSOR_MODES[(CURSOR_MODES.indexOf(cursorMode) + 1) % CURSOR_MODES.length]);
+    }
+    else if (event.key === 'x' || event.key === 'X') { sim.clearObstacles(); updateStatus(); }
   });
 
   window.addEventListener('resize', fitCanvas);

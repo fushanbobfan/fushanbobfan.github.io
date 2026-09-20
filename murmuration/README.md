@@ -42,11 +42,15 @@ Then open the printed URL in a browser.
   streak.
 - **Pause / Reset flock** — freeze the simulation, or start over from a fresh random layout
   with the current settings.
-- **Cursor** — moving or pressing over the canvas places a threat the flock flees from. The
-  dashed ring shows its reach; leaving the canvas removes it.
+- **Cursor** — what the pointer does over the canvas. *Threat the flock flees* (the default)
+  places a threat wherever the pointer is; the dashed ring shows its reach and leaving the
+  canvas removes it. *Place an obstacle* drops a disc of the chosen **Obstacle size** on each
+  click, and *Remove an obstacle* deletes the disc under the click. Obstacles stay put across
+  resets and rescale with the canvas; **Clear obstacles** removes them all.
 
 Keyboard shortcuts (when no control is focused): **Space** pauses, **R** resets, **T**
-toggles trails. If your system asks for reduced motion the page opens paused.
+toggles trails, **O** cycles the cursor mode, **X** clears obstacles. If your system asks for
+reduced motion the page opens paused.
 
 ## How it works
 
@@ -60,10 +64,20 @@ steering forces, following Craig Reynolds' original 1987 rules:
 - **Cohesion** steers toward the neighbours' centre of mass.
 
 Each force is a *desired velocity minus current velocity*, capped at a small maximum so a
-boid can only turn so sharply per frame. The weighted sum (plus edge avoidance and any
-threat) is added to the velocity, the velocity is clamped to the maximum speed, and the boid
-moves. Forces are computed for every boid before any of them moves, so the result does not
-depend on storage order.
+boid can only turn so sharply per frame. The weighted sum (plus edge avoidance, obstacle
+avoidance and any threat) is added to the velocity, the velocity is clamped to the maximum
+speed, and the boid moves. Forces are computed for every boid before any of them moves, so
+the result does not depend on storage order.
+
+Obstacle avoidance follows Reynolds' *unaligned collision avoidance*: each boid looks ahead
+along its velocity (25 frames' worth, so faster boids react sooner) and, if a disc plus a
+small clearance margin crosses that path, steers sideways away from the disc's centre. The
+turn is stronger the closer the disc and the more squarely the boid would hit it, and only
+the strongest obstacle counts so two discs flanking a gap do not cancel out. A boid heading
+dead-centre picks a side from its id, so a stream splits around a disc instead of piling up
+on one side. Anything already inside the clearance zone is pushed straight out, and as a
+last resort a boid that still ends a frame inside a disc is placed back on its rim with the
+inward part of its velocity reflected.
 
 Neighbour lookups go through a uniform spatial hash whose cell size equals the perception
 radius, so each query touches at most nine cells instead of the whole flock. That keeps
@@ -90,8 +104,8 @@ so no browser is needed.
 index.html          page shell and controls
 style.css           layout and theme
 src/main.js         wires the controls to the simulation and runs the frame loop
-src/simulation.js   the flock: spawning, stepping, edge modes, the cursor threat
-src/flock.js        separation, alignment, cohesion, flee and edge-avoidance forces
+src/simulation.js   the flock: spawning, stepping, edge modes, the cursor threat, obstacles
+src/flock.js        separation, alignment, cohesion, flee, edge and obstacle avoidance forces
 src/spatialHash.js  uniform grid for radius queries
 src/render.js       canvas drawing and colour helpers
 src/presets.js      named parameter sets

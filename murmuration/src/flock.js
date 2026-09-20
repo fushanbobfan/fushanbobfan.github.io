@@ -109,3 +109,64 @@ export function avoidEdges(boid, width, height, margin, params) {
   if (!desired) return vec();
   return steerTowards(desired, boid.vel, params.maxSpeed, params.maxForce * EDGE_FORCE_MULTIPLIER);
 }
+
+// Obstacle avoidance, after Reynolds' "unaligned collision avoidance": look
+// ahead along the velocity, and if a circular obstacle intersects that path,
+// steer sideways away from its centre. The look-ahead grows with speed so a
+// fast boid starts turning earlier. A boid that is already inside the
+// obstacle's clearance zone is pushed straight out instead.
+export const OBSTACLE_LOOKAHEAD_FRAMES = 25;
+export const OBSTACLE_CLEARANCE = 12;
+export const OBSTACLE_FORCE_MULTIPLIER = 4;
+
+export function avoidObstacle(boid, obstacle, params) {
+  const toCentre = sub(obstacle, boid);
+  const dist = length(toCentre);
+  const clearance = obstacle.r + OBSTACLE_CLEARANCE;
+  const maxForce = params.maxForce * OBSTACLE_FORCE_MULTIPLIER;
+
+  if (dist < clearance) {
+    // Inside the zone: leave along the radial direction, hardest at the centre.
+    const out = dist === 0 ? fromAngle((boid.id ?? 0) * GOLDEN_ANGLE) : scale(toCentre, -1);
+    const urgency = 1 - dist / clearance;
+    return scale(steerTowards(out, boid.vel, params.maxSpeed, maxForce), 0.5 + 0.5 * urgency);
+  }
+
+  const speed = length(boid.vel);
+  if (speed === 0) return vec();
+  const forward = scale(boid.vel, 1 / speed);
+  const along = toCentre.x * forward.x + toCentre.y * forward.y;
+  const lookahead = speed * OBSTACLE_LOOKAHEAD_FRAMES;
+  // Behind us, or too far ahead to matter yet.
+  if (along <= 0 || along - clearance > lookahead) return vec();
+
+  // Signed lateral offset of the centre from the path (positive = left).
+  const side = toCentre.x * -forward.y + toCentre.y * forward.x;
+  if (Math.abs(side) >= clearance) return vec();
+
+  // Turn away from the side the centre is on; a dead-centre hit picks a side
+  // from the id so the flock does not all break the same way.
+  const dir = side === 0 ? ((boid.id ?? 0) % 2 === 0 ? 1 : -1) : -Math.sign(side);
+  const lateral = vec(-forward.y * dir, forward.x * dir);
+  // Steer harder the nearer the obstacle and the more squarely we would hit it.
+  const nearness = 1 - Math.max(0, along - clearance) / lookahead;
+  const squareness = 1 - Math.abs(side) / clearance;
+  const desired = add(scale(forward, 0.5), scale(lateral, 0.5 + squareness));
+  return scale(steerTowards(desired, boid.vel, params.maxSpeed, maxForce), 0.3 + 0.7 * nearness);
+}
+
+// Combined force from every obstacle; only the strongest one counts so two
+// obstacles on either side of a gap do not cancel each other out.
+export function avoidObstacles(boid, obstacles, params) {
+  let best = vec();
+  let bestLen = 0;
+  for (const o of obstacles) {
+    const f = avoidObstacle(boid, o, params);
+    const l = length(f);
+    if (l > bestLen) {
+      best = f;
+      bestLen = l;
+    }
+  }
+  return best;
+}
