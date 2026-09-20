@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Murmuration</h1>
-    <p class="subtitle">Three local rules, one emergent flock. Move your cursor over the canvas to scatter it.</p>
+    <p class="subtitle">Three local rules, one emergent flock. Move your cursor over the canvas to scatter it, or drop obstacles for it to stream around.</p>
   </header>
 
   <main>
@@ -72,13 +72,32 @@
         <label for="trails">Leave trails</label>
       </div>
 
+      <div class="control-row">
+        <label for="cursor-mode">Cursor</label>
+        <select id="cursor-mode">
+          <option value="threat">Threat the flock flees</option>
+          <option value="place">Place an obstacle</option>
+          <option value="remove">Remove an obstacle</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label for="obstacle-size">Obstacle size <output id="obstacle-size-value" for="obstacle-size">28</output></label>
+        <input id="obstacle-size" type="range" min="6" max="80" step="2" value="28" />
+      </div>
+
+      <div class="control-row button-row">
+        <button id="clear-obstacles" type="button">Clear obstacles</button>
+      </div>
+
       <div class="control-row button-row">
         <button id="pause" type="button" aria-pressed="false">Pause</button>
         <button id="reset" type="button">Reset flock</button>
       </div>
 
       <p class="hint">
-        Keyboard: <kbd>Space</kbd> pause, <kbd>R</kbd> reset, <kbd>T</kbd> trails.
+        Keyboard: <kbd>Space</kbd> pause, <kbd>R</kbd> reset, <kbd>T</kbd> trails,
+        <kbd>O</kbd> cycle the cursor mode, <kbd>X</kbd> clear obstacles.
       </p>
     </section>
 
