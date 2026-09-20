@@ -54,3 +54,17 @@ test('drawFrame draws the threat marker only when a threat is set', () => {
   drawFrame(ctx, sim);
   assert.equal(ctx.calls.filter(([m]) => m === 'arc').length, 2);
 });
+
+test('drawFrame draws two discs per obstacle beneath the boids', () => {
+  const sim = new Simulation({ width: 200, height: 100, count: 2, seed: 3 });
+  sim.addObstacle(50, 50, 20);
+  sim.addObstacle(120, 60, 10);
+  const ctx = fakeContext();
+  drawFrame(ctx, sim);
+  const arcs = ctx.calls.filter(([m]) => m === 'arc');
+  assert.equal(arcs.length, 4);
+  assert.deepEqual(arcs[1].slice(1, 4), [50, 50, 20]);
+  const firstArc = ctx.calls.findIndex(([m]) => m === 'arc');
+  const firstBoid = ctx.calls.findIndex(([m]) => m === 'closePath');
+  assert.ok(firstArc < firstBoid, 'obstacles are drawn before boids');
+});

@@ -3,6 +3,7 @@
 
 import { heading, length } from './vec.js';
 import { THREAT_RADIUS } from './simulation.js';
+import { OBSTACLE_CLEARANCE } from './flock.js';
 
 export const COLOUR_MODES = Object.freeze(['heading', 'speed', 'plain']);
 
@@ -40,6 +41,27 @@ export function drawBoid(ctx, boid, size, colour) {
   ctx.restore();
 }
 
+// Obstacles are drawn as solid discs with a faint halo showing the clearance
+// zone the boids start reacting to.
+export function drawObstacles(ctx, obstacles, clearance) {
+  if (!obstacles.length) return;
+  ctx.save();
+  for (const o of obstacles) {
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, o.r + clearance, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(120, 140, 190, 0.08)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a3452';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160, 180, 230, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function drawThreat(ctx, threat) {
   if (!threat) return;
   ctx.save();
@@ -70,6 +92,7 @@ export function drawFrame(ctx, sim, { boidSize = 6, trails = false, colourMode =
     ctx.fillRect(0, 0, width, height);
   }
   ctx.restore();
+  drawObstacles(ctx, sim.obstacles, OBSTACLE_CLEARANCE);
   for (const b of sim.boids) {
     drawBoid(ctx, b, boidSize, boidColour(b, colourMode, sim.params.maxSpeed));
   }
