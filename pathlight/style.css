@@ -189,6 +189,21 @@ input[type="range"] {
   z-index: 1;
 }
 
+.cell.flow {
+  /* --flow runs 0 at the end to 1 at the farthest reachable cell: warm near, cool far. */
+  background: hsl(calc(50deg + var(--flow, 0) * 200deg) 55% 38%);
+  color: rgba(255, 255, 255, 0.85);
+  display: grid;
+  place-items: center;
+  font-size: clamp(0.45rem, 1.4vw, 0.85rem);
+  line-height: 1;
+  user-select: none;
+}
+
+.cell.flow-unreachable {
+  background: repeating-linear-gradient(45deg, var(--panel) 0 3px, var(--wall) 3px 4px);
+}
+
 .cell.wall {
   background: var(--wall);
 }

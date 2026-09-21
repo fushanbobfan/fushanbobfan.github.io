@@ -38,6 +38,10 @@ Then open the printed URL in a browser.
 - **Download comparison CSV** — save the current comparison table as a CSV file (see below).
   Disabled in effect until **Compare all algorithms** has run at least once since the grid last
   changed — clicking it first instead reports that a comparison is needed.
+- **Show flow field** — overlay every cell with an arrow pointing one step along its cheapest
+  route to the end, tinted from warm (close) to cool (far) by that cost, with cells that cannot
+  reach the end hatched (see below). Stays on while you draw, so each wall or patch of terrain
+  visibly bends the arrows around it.
 - **Undo** — reverse the last wall/terrain edit, start/end placement, or **Clear walls &
   terrain** (see below).
 - **Redo** — reapply the last edit **Undo** reversed (see below).
@@ -301,6 +305,28 @@ most one start and one end. Anything that fails validation — a hand-edited fil
 a differently-sized grid, or just corrupted JSON — is rejected with a specific error message
 shown in the status line, rather than loading a partially broken grid.
 
+## Flow field
+
+Every search here answers the question for one start: "how do I get from *here* to the end?"
+[`src/flowField.js`](src/flowField.js) answers it for every cell at once. `computeFlowField`
+runs Dijkstra backwards from the end over the whole grid, using the same orthogonal `neighbors`
+and the same rule that entering a cell costs that cell's weight, and records for each cell its
+cheapest cost-to-go and the neighbor to step to next. Following the arrows from any cell walks
+exactly the route a forward Dijkstra from that cell would find, at exactly the same cost — the
+tests check this against `dijkstra` from every cell of a walled, weighted grid. It is the classic
+structure for steering many agents toward one goal without a search per agent, and it is also a
+direct picture of the "true remaining cost" that A*'s heuristic is only estimating: where the
+arrows bend around a wall or a patch of terrain is where Manhattan distance is most wrong.
+
+**Show flow field** draws the arrow into each cell, tints the cell by its cost relative to the
+farthest reachable one, and hatches cells the end can't be reached from; each cell's label
+gains its cost and direction so the field reads through a screen reader too. The field is cached
+against the current grid object — every edit already replaces the grid rather than mutating it —
+and recomputed on the next render after a change, so a single wall stroke redraws the whole
+overlay rather than just the edited cell. Path and visited highlighting from a run sit on top of
+the tint but keep their arrows, so you can compare what an algorithm actually explored with
+where the field would have sent it.
+
 ## Share links
 
 [`src/shareLink.js`](src/shareLink.js) packs a grid into a URL instead of a downloaded file,
@@ -380,7 +406,12 @@ round trip through an edited grid, and for rejecting every way a loaded file can
 (wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
 `history.js` is tested separately: push/pop order (last-in-first-out), popping an empty history,
 discarding the oldest snapshot once the stack's `maxSize` is exceeded, and that `pushHistory`
-doesn't mutate the history passed in.
+doesn't mutate the history passed in. `flowField.js` is tested for zero cost at the end,
+Manhattan-distance costs on an open unit grid, every arrow pointing to an orthogonal neighbor
+with strictly lower cost by exactly that neighbor's weight, walls and sealed-off regions being
+unreachable with no arrow, following the arrows from every cell of a walled and weighted grid
+reproducing forward Dijkstra's cost, arrows detouring around expensive terrain, and `followFlow`
+terminating on a looping field.
 
 ## License
 
