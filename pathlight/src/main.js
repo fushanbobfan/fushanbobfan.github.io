@@ -17,6 +17,7 @@ import { serializeGrid, deserializeGrid } from "./serialize.js";
 import { buildShareUrl, extractShareFragment, decodeGridFromFragment } from "./shareLink.js";
 import { totalFrames, frameState } from "./frames.js";
 import { createHistory, pushHistory, popHistory, canPop } from "./history.js";
+import { computeFlowField, arrowBetween } from "./flowField.js";
 
 const ROWS = 15;
 const COLS = 30;
@@ -32,6 +33,7 @@ const mazeAlgorithmSelect = document.getElementById("maze-algorithm");
 const generateMazeBtn = document.getElementById("generate-maze");
 const generateTerrainBtn = document.getElementById("generate-terrain");
 const compareBtn = document.getElementById("compare");
+const flowFieldBtn = document.getElementById("flow-field");
 const comparisonEl = document.getElementById("comparison");
 const downloadComparisonCsvBtn = document.getElementById("download-comparison-csv");
 const saveGridBtn = document.getElementById("save-grid");
@@ -106,6 +108,46 @@ function cellLabel(cell) {
   }
 }
 
+// The flow field overlay (see flowField.js) is recomputed lazily from the current grid: every
+// edit replaces `grid` with a new array, so identity is a sufficient cache key.
+let flowFieldOn = false;
+let flowCache = { grid: null, field: null };
+
+function currentFlowField() {
+  if (flowCache.grid !== grid) {
+    flowCache = { grid, field: computeFlowField(grid, findNodeOfType(grid, END)) };
+  }
+  return flowCache.field;
+}
+
+const FLOW_DIRECTION_NAMES = { "↑": "up", "↓": "down", "←": "left", "→": "right" };
+
+// Applies or clears the arrow, tint and label suffix for one cell. Returns the text to append
+// to the cell's aria-label so the field is readable without sight.
+function renderFlowOverlay(row, col, cell, el) {
+  if (!flowFieldOn || cell.type === WALL || cell.type === END) {
+    el.textContent = "";
+    el.classList.remove("flow", "flow-unreachable");
+    el.style.removeProperty("--flow");
+    return "";
+  }
+  const field = currentFlowField();
+  const cost = field.cost[row][col];
+  if (!Number.isFinite(cost)) {
+    el.textContent = "";
+    el.classList.remove("flow");
+    el.classList.add("flow-unreachable");
+    el.style.removeProperty("--flow");
+    return ", cannot reach the end";
+  }
+  const arrow = arrowBetween({ row, col }, field.next[row][col]);
+  el.textContent = arrow;
+  el.classList.add("flow");
+  el.classList.remove("flow-unreachable");
+  el.style.setProperty("--flow", field.maxCost > 0 ? String(cost / field.maxCost) : "0");
+  return `, cost to end ${cost}, next step ${FLOW_DIRECTION_NAMES[arrow]}`;
+}
+
 function cellClassName(row, col, cell) {
   let className = `cell ${cell.type}`;
   if (cell.type === EMPTY) {
@@ -147,7 +189,15 @@ function renderCell(row, col) {
   const cell = grid[row][col];
   const el = cellEls[row][col];
   el.className = cellClassName(row, col, cell);
-  el.setAttribute("aria-label", `Row ${row + 1}, column ${col + 1}: ${cellLabel(cell)}`);
+  const flowLabel = renderFlowOverlay(row, col, cell, el);
+  el.setAttribute("aria-label", `Row ${row + 1}, column ${col + 1}: ${cellLabel(cell)}${flowLabel}`);
+}
+
+// A single-cell edit moves every arrow downstream of it, so with the overlay on the whole grid
+// re-renders rather than just the edited cell.
+function renderAfterEdit(row, col) {
+  if (flowFieldOn) renderAll();
+  else renderCell(row, col);
 }
 
 function renderAll() {
@@ -423,6 +473,23 @@ downloadComparisonCsvBtn.addEventListener("click", () => {
   setStatus("Downloaded the comparison as CSV.");
 });
 
+flowFieldBtn.addEventListener("click", () => {
+  flowFieldOn = !flowFieldOn;
+  flowFieldBtn.setAttribute("aria-pressed", String(flowFieldOn));
+  flowFieldBtn.textContent = flowFieldOn ? "Hide flow field" : "Show flow field";
+  renderAll();
+  if (flowFieldOn) {
+    const { maxCost } = currentFlowField();
+    setStatus(
+      maxCost > 0
+        ? `Flow field on: every arrow points one step along the cheapest route to the end; the farthest reachable cell costs ${maxCost}.`
+        : "Flow field on: no cell can reach the end from here."
+    );
+  } else {
+    setStatus("");
+  }
+});
+
 clearPathBtn.addEventListener("click", () => {
   clearRunState();
   renderAll();
@@ -565,7 +632,7 @@ function beginDraw(row, col) {
     drawValue = cell.weight > 1 ? 1 : WEIGHTED_TERRAIN_COST;
     grid = setNodeWeight(grid, row, col, drawValue);
   }
-  renderCell(row, col);
+  renderAfterEdit(row, col);
   return true;
 }
 
@@ -580,7 +647,7 @@ function continueDraw(row, col) {
     if (cell.weight === drawValue) return;
     grid = setNodeWeight(grid, row, col, drawValue);
   }
-  renderCell(row, col);
+  renderAfterEdit(row, col);
 }
 
 // Shared by a mouse click and a keyboard Enter/Space: places the start/end if placement mode
