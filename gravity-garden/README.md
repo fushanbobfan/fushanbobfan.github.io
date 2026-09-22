@@ -3,6 +3,8 @@
 An interactive playground for Newtonian gravity, built with plain HTML5 canvas and
 vanilla JavaScript — no build step, no dependencies.
 
+**Live demo:** https://fushanbobfan.github.io/gravity-garden/
+
 Watch planets orbit a sun, two stars circle a shared center of mass, three equal
 masses trace a stable figure-eight, or a random cluster of bodies pull each other
 into loose clumps and slingshots.
