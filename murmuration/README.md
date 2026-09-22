@@ -3,6 +3,8 @@
 An interactive flocking simulation in the browser, built with plain HTML and vanilla
 JavaScript — no build step, no dependencies.
 
+**Live demo:** https://fushanbobfan.github.io/murmuration/
+
 Hundreds of boids follow three local rules — keep apart, line up, stay together — and a
 flock emerges. Tune the rules live and watch it tighten into a school, scatter into a swarm,
 or ripple away from your cursor.
