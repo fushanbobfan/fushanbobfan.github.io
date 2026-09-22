@@ -70,7 +70,7 @@ export function flowAxisMax(vmax) {
 }
 
 /** Axis mapping for the flow–density chart. */
-export function chartScales(width, height, vmax, padding = { left: 34, right: 10, top: 8, bottom: 22 }) {
+export function chartScales(width, height, vmax, padding = { left: 44, right: 12, top: 10, bottom: 22 }) {
   const innerW = Math.max(1, width - padding.left - padding.right);
   const innerH = Math.max(1, height - padding.top - padding.bottom);
   const flowMax = flowAxisMax(vmax);
@@ -267,10 +267,10 @@ export function drawDiagram(ctx, width, height, { points, vmax, slow, live, swee
   }
 
   ctx.fillStyle = '#9aa5c0';
-  ctx.textAlign = 'left';
-  ctx.fillText('density (cars per cell)', padding.left, padding.top + 6);
+  ctx.textAlign = 'right';
+  ctx.fillText('density (cars per cell)', x(1), padding.top + 6);
   ctx.save();
-  ctx.translate(10, height / 2);
+  ctx.translate(12, height / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'center';
   ctx.fillText('flow (cars per step)', 0, 0);

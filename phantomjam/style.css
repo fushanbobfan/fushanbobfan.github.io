@@ -88,6 +88,7 @@ canvas {
 
 #ring {
   aspect-ratio: 1 / 1;
+  align-self: start;
   cursor: crosshair;
   touch-action: manipulation;
 }
@@ -253,5 +254,9 @@ kbd {
   #spacetime {
     aspect-ratio: 2 / 1;
     height: auto;
+  }
+
+  canvas.chart {
+    aspect-ratio: 2 / 1;
   }
 }
