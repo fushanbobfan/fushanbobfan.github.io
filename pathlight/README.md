@@ -3,6 +3,8 @@
 An interactive pathfinding visualizer for grid search algorithms, built with plain HTML and
 vanilla JavaScript — no build step, no dependencies.
 
+**Live demo:** https://fushanbobfan.github.io/pathlight/
+
 Draw walls, place a start and an end, and watch a search algorithm explore the grid one cell
 at a time before tracing the path it found.
 
