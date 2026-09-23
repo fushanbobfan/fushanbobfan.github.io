@@ -74,7 +74,7 @@ function repaint() {
 function drawPen() {
   penCtx.clearRect(0, 0, state.size, state.size);
   const total = state.points.length / 2;
-  if (!total || state.drawnTo >= total - 1) return;
+  if (!total || finished() || state.drawnTo >= total - 1) return;
   const i = state.drawnTo;
   const [x, y] = state.fit.toScreen(state.points[2 * i], state.points[2 * i + 1]);
   penCtx.fillStyle = '#e0a458';
@@ -111,6 +111,7 @@ function updateStatus() {
   $('status').textContent =
     `${label} · t = ${state.elapsed.toFixed(1)} s of ${state.plan.duration.toFixed(0)} s (${pct}%) · swing at ${Math.round(reach * 100)}%`;
   $('pause').textContent = state.paused ? 'Resume' : 'Pause';
+  $('pause').disabled = finished();
 }
 
 // ---------- design changes ----------
@@ -143,10 +144,7 @@ function finish() {
 }
 
 function togglePause() {
-  if (finished()) {
-    replay();
-    return;
-  }
+  if (finished()) return;
   state.paused = !state.paused;
   updateStatus();
 }
