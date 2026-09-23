@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nearestFraction, dominantFrequency, axisRatio, formatRatio } from '../src/ratio.js';
+import { nearestFraction, dominantFrequency, axisRatio, formatRatio, retuneToRatio } from '../src/ratio.js';
 import { normalizeDesign } from '../src/harmonograph.js';
 import { findPreset } from '../src/presets.js';
 
@@ -58,4 +58,23 @@ test('formatRatio marks exact ratios and flat detuning', () => {
   const flat = normalizeDesign({ pendulums: [{ axis: 'x', freq: 1.998 }, { axis: 'y', freq: 1 }] });
   assert.equal(formatRatio(axisRatio(flat)), 'x : y ≈ 2:1 (−0.10%)');
   assert.match(formatRatio(null), /horizontal and a vertical/);
+});
+
+test('retuneToRatio snaps the horizontal swing and can detune it again', () => {
+  const design = findPreset('lissajous-3-2').design;
+  const snapped = retuneToRatio(design, 3, 2);
+  assert.equal(formatRatio(axisRatio(snapped)), 'x : y ≈ 3:2 (exact)');
+  const detuned = retuneToRatio(design, 4, 3, 0.002);
+  const info = axisRatio(detuned);
+  assert.equal(`${info.p}:${info.q}`, '4:3');
+  assert.ok(Math.abs(info.detune - 0.002) < 1e-9);
+  assert.equal(detuned.pendulums[1].freq, design.pendulums[1].freq);
+});
+
+test('retuneToRatio leaves designs it cannot retune unchanged', () => {
+  const onlyRotary = normalizeDesign({ pendulums: [{ axis: 'rotary', freq: 1 }, { axis: 'y', freq: 2 }] });
+  assert.equal(retuneToRatio(onlyRotary, 3, 2), onlyRotary);
+  const noY = normalizeDesign({ pendulums: [{ axis: 'x', freq: 1 }] });
+  assert.equal(retuneToRatio(noY, 3, 2), noY);
+  assert.equal(retuneToRatio(findPreset('butterfly').design, 0, 2), findPreset('butterfly').design);
 });

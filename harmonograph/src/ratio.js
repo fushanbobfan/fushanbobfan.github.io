@@ -1,3 +1,5 @@
+import { normalizeDesign } from './harmonograph.js';
+
 // Frequency ratios between the horizontal and vertical motion. The figure a
 // harmonograph draws is governed by how close that ratio is to a simple
 // fraction p:q and by how far it is detuned from it.
@@ -55,4 +57,21 @@ export function formatRatio(info) {
   const sign = pct >= 0 ? '+' : '−';
   const off = Math.abs(pct) < 0.005 ? 'exact' : `${sign}${Math.abs(pct).toFixed(2)}%`;
   return `x : y ≈ ${info.p}:${info.q} (${off})`;
+}
+
+// Retune the dominant horizontal swing so x:y equals p:q times (1 + detune).
+// Returns a new design; the vertical motion is left untouched.
+export function retuneToRatio(design, p, q, detune = 0) {
+  const fy = dominantFrequency(design, 'y');
+  const fx = dominantFrequency(design, 'x');
+  if (fy === null || fx === null || !(p > 0) || !(q > 0)) return design;
+  const target = fy * (p / q) * (1 + detune);
+  let done = false;
+  const pendulums = design.pendulums.map((pend) => {
+    // Rotary swings drive both axes, so only a pure horizontal one is moved.
+    if (done || pend.axis !== 'x' || pend.freq !== fx) return pend;
+    done = true;
+    return { ...pend, freq: target };
+  });
+  return done ? normalizeDesign({ pendulums }) : design;
 }
