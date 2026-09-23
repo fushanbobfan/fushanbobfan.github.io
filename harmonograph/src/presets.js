@@ -12,10 +12,10 @@ const RAW = [
     name: 'Spiral rose',
     description: 'Two near-unison swings a quarter turn apart wind into a tightening spiral.',
     pendulums: [
-      { axis: 'x', amp: 0.5, freq: 2, phase: HALF_PI, damp: 0.012 },
-      { axis: 'x', amp: 0.2, freq: 6.01, phase: 0, damp: 0.02 },
-      { axis: 'y', amp: 0.5, freq: 2.005, phase: 0, damp: 0.012 },
-      { axis: 'y', amp: 0.2, freq: 5.99, phase: HALF_PI, damp: 0.02 },
+      { axis: 'x', amp: 0.6, freq: 2, phase: HALF_PI, damp: 0.03 },
+      { axis: 'x', amp: 0.1, freq: 6.01, phase: 0, damp: 0.05 },
+      { axis: 'y', amp: 0.6, freq: 2.006, phase: 0, damp: 0.03 },
+      { axis: 'y', amp: 0.1, freq: 5.99, phase: HALF_PI, damp: 0.05 },
     ],
   },
   {
@@ -23,8 +23,8 @@ const RAW = [
     name: 'Lissajous 3:2',
     description: 'A classic 3:2 knot that drifts because the ratio is not quite exact.',
     pendulums: [
-      { axis: 'x', amp: 0.6, freq: 3.003, phase: HALF_PI, damp: 0.008 },
-      { axis: 'y', amp: 0.6, freq: 2, phase: 0, damp: 0.008 },
+      { axis: 'x', amp: 0.6, freq: 3.003, phase: HALF_PI, damp: 0.02 },
+      { axis: 'y', amp: 0.6, freq: 2, phase: 0, damp: 0.02 },
     ],
   },
   {
@@ -32,9 +32,9 @@ const RAW = [
     name: 'Butterfly',
     description: 'A 1:2 figure-eight with a faster third swing layered on the horizontal.',
     pendulums: [
-      { axis: 'x', amp: 0.55, freq: 1, phase: 0, damp: 0.006 },
-      { axis: 'x', amp: 0.15, freq: 4.003, phase: 0.6, damp: 0.02 },
-      { axis: 'y', amp: 0.55, freq: 2.002, phase: HALF_PI, damp: 0.006 },
+      { axis: 'x', amp: 0.55, freq: 1, phase: 0, damp: 0.02 },
+      { axis: 'x', amp: 0.15, freq: 4.003, phase: 0.6, damp: 0.04 },
+      { axis: 'y', amp: 0.55, freq: 2.002, phase: HALF_PI, damp: 0.02 },
     ],
   },
   {
@@ -42,9 +42,9 @@ const RAW = [
     name: 'Rotary bloom',
     description: 'A rotary table under a single swinging pen produces nested loops like a spirograph.',
     pendulums: [
-      { axis: 'rotary', amp: 0.45, freq: 0.5, phase: 0, damp: 0.01 },
-      { axis: 'x', amp: 0.4, freq: 3.001, phase: 0, damp: 0.008 },
-      { axis: 'y', amp: 0.4, freq: 3, phase: HALF_PI, damp: 0.008 },
+      { axis: 'rotary', amp: 0.45, freq: 0.5, phase: 0, damp: 0.02 },
+      { axis: 'x', amp: 0.4, freq: 3.001, phase: 0, damp: 0.025 },
+      { axis: 'y', amp: 0.4, freq: 3, phase: HALF_PI, damp: 0.025 },
     ],
   },
   {
@@ -52,8 +52,8 @@ const RAW = [
     name: 'Woven ribbon',
     description: 'A 4:5 ratio weaves a dense ribbon that fades inward.',
     pendulums: [
-      { axis: 'x', amp: 0.6, freq: 4, phase: 0.3, damp: 0.01 },
-      { axis: 'y', amp: 0.6, freq: 5.004, phase: 0, damp: 0.01 },
+      { axis: 'x', amp: 0.6, freq: 4, phase: 0.3, damp: 0.025 },
+      { axis: 'y', amp: 0.6, freq: 5.004, phase: 0, damp: 0.025 },
     ],
   },
   {
@@ -101,7 +101,7 @@ export function randomDesign(seed) {
       amp: 0.25 + rand() * 0.3,
       freq: pick(BASE_FREQS) + detune(),
       phase: (rand() * 2 - 1) * Math.PI,
-      damp: 0.004 + rand() * 0.016,
+      damp: 0.012 + rand() * 0.024,
     });
   };
   addAxis('x');
@@ -114,7 +114,7 @@ export function randomDesign(seed) {
       amp: 0.1 + rand() * 0.25,
       freq: 0.25 + rand() * 1.25,
       phase: 0,
-      damp: 0.004 + rand() * 0.016,
+      damp: 0.012 + rand() * 0.024,
     });
   }
   return normalizeDesign({ pendulums });
