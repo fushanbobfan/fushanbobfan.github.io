@@ -9,6 +9,7 @@ function mockContext() {
     calls,
     set strokeStyle(v) { calls.push(['strokeStyle', v]); },
     set lineWidth(v) { calls.push(['lineWidth', v]); },
+    set globalAlpha(v) { calls.push(['globalAlpha', v]); },
     set lineJoin(v) {},
     set lineCap(v) {},
     beginPath() { calls.push(['beginPath']); },
@@ -58,6 +59,8 @@ test('drawRange strokes a continuous polyline in screen coordinates', () => {
   assert.deepEqual(moves, [['moveTo', 0, 100], ['lineTo', 50, 50], ['lineTo', 100, 0]]);
   assert.deepEqual(ctx.calls[0], ['lineWidth', 2]);
   assert.equal(ctx.calls.filter((c) => c[0] === 'stroke').length, 1);
+  assert.deepEqual(ctx.calls[1], ['globalAlpha', PALETTES.ink.alpha]);
+  assert.deepEqual(ctx.calls.at(-1), ['globalAlpha', 1]);
 });
 
 test('toSvg produces a self-contained document with paper and paths', () => {
@@ -65,7 +68,7 @@ test('toSvg produces a self-contained document with paper and paths', () => {
   const svg = toSvg(pts, unitFit, { width: 100, height: 100, palette: PALETTES.sepia, lineWidth: 1.5 });
   assert.match(svg, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" width="100" height="100"/);
   assert.match(svg, /fill="#f2e6cf"/);
-  assert.match(svg, /stroke-width="1.5"/);
+  assert.match(svg, /stroke-width="1.5" stroke-opacity="0.75"/);
   assert.match(svg, /<path d="M0.00 50.00L50.00 0.00L100.00 50.00" stroke="#6b3d1f"\/>/);
   assert.ok(svg.endsWith('</svg>'));
 });

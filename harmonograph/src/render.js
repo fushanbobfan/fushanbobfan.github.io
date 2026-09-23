@@ -1,11 +1,11 @@
 // Drawing helpers shared by the live canvas and the SVG export.
 
 export const PALETTES = {
-  ink: { label: 'Ink', paper: '#f4efe4', mode: 'solid', color: '#1d2a44' },
-  sepia: { label: 'Sepia', paper: '#f2e6cf', mode: 'solid', color: '#6b3d1f' },
-  night: { label: 'Night', paper: '#0d1220', mode: 'spectrum', hue: [190, 320] },
-  ember: { label: 'Ember', paper: '#150b09', mode: 'spectrum', hue: [10, 60] },
-  spectrum: { label: 'Spectrum', paper: '#fbfaf7', mode: 'spectrum', hue: [0, 300] },
+  ink: { label: 'Ink', paper: '#f4efe4', mode: 'solid', color: '#1d2a44', alpha: 0.7 },
+  sepia: { label: 'Sepia', paper: '#f2e6cf', mode: 'solid', color: '#6b3d1f', alpha: 0.75 },
+  night: { label: 'Night', paper: '#0d1220', mode: 'spectrum', hue: [190, 320], alpha: 0.8 },
+  ember: { label: 'Ember', paper: '#150b09', mode: 'spectrum', hue: [10, 60], alpha: 0.8 },
+  spectrum: { label: 'Spectrum', paper: '#fbfaf7', mode: 'spectrum', hue: [0, 300], alpha: 0.8 },
 };
 
 // Colour of the pen at progress u ∈ [0, 1] along the drawing.
@@ -50,6 +50,7 @@ export function drawRange(ctx, points, from, to, fit, palette, lineWidth = 1) {
   const total = points.length / 2;
   const last = Math.min(to, total - 1);
   ctx.lineWidth = lineWidth;
+  ctx.globalAlpha = palette.alpha ?? 1;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   for (const run of colorRuns(from, last, total, palette)) {
@@ -63,6 +64,7 @@ export function drawRange(ctx, points, from, to, fit, palette, lineWidth = 1) {
     }
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 }
 
 // Build a standalone SVG document of the whole drawing.
@@ -79,7 +81,7 @@ export function toSvg(points, fit, { width, height, palette, lineWidth = 1 }) {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="100%" height="100%" fill="${palette.paper}"/>`,
-    `<g fill="none" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round">`,
+    `<g fill="none" stroke-width="${lineWidth}" stroke-opacity="${palette.alpha ?? 1}" stroke-linecap="round" stroke-linejoin="round">`,
     ...paths,
     '</g>',
     '</svg>',
