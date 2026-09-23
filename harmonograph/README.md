@@ -34,6 +34,13 @@ Lissajous figure. Nudge one frequency a few thousandths off that ratio and the
 figure slowly rotates; add damping and it winds inward as it turns. That
 combination is what gives harmonograph drawings their woven look.
 
+The ratio panel reads the strongest horizontal and vertical swings (a rotary
+pendulum counts on both), finds the closest fraction with denominator at most
+12 by continued fractions, and reports how far the actual ratio is detuned
+from it. Choosing a target ratio rewrites the strongest horizontal swing's
+frequency to exactly that multiple of the vertical one, shifted by the detune
+slider.
+
 A drawing runs until its reach falls to 3% of the start, capped at three
 minutes for undamped designs. The curve is sampled about 60 times per cycle of
 the fastest pendulum.
@@ -47,6 +54,7 @@ the fastest pendulum.
 | Paper and ink | Ink, Sepia, Night, Ember or Spectrum; spectrum palettes shift hue along the drawing |
 | Line width | Pen width in CSS pixels |
 | Drawing speed | 1× to 64× real time |
+| Frequency ratio | Live `x : y ≈ p:q (±detune)` readout; pick a target ratio and detune to retune the horizontal swing |
 | Pendulums | Up to six, each with swing direction, amplitude, frequency, phase and damping |
 | Pause / Replay / Finish | Control the pen; Finish draws the rest at once |
 | Save PNG / Save SVG | Export the drawing; the SVG holds the full curve at 1000×1000 |
@@ -73,6 +81,7 @@ src/harmonograph.js     pendulum model, envelope, settle time, sampling, fitting
 src/presets.js          named presets and the seeded random generator
 src/playback.js         drawing length, sample rate, time-to-point mapping
 src/render.js           palettes, colour runs, canvas drawing, SVG output
+src/ratio.js            x:y ratio readout, best fractions and retuning
 src/share.js            URL hash encoding and decoding
 src/main.js             DOM wiring
 test/                   node:test suites for every module except main.js
