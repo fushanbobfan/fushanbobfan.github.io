@@ -258,6 +258,7 @@ function initControls() {
   for (const preset of PRESETS) presetSelect.append(new Option(preset.name, preset.id));
   presetSelect.addEventListener('change', () => {
     const preset = findPreset(presetSelect.value);
+    $('seed').textContent = '';
     if (preset) setDesign(preset.design, { presetId: preset.id });
   });
 
