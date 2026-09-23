@@ -1,0 +1,26 @@
+{
+  "name": "harmonograph",
+  "version": "0.1.0",
+  "description": "A browser harmonograph: damped pendulums steer a pen across the page and trace slowly decaying Lissajous figures you can tune, replay, share and export.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "harmonograph",
+    "lissajous",
+    "pendulum",
+    "generative-art",
+    "creative-coding",
+    "canvas",
+    "svg"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/harmonograph.git"
+  },
+  "private": false
+}
