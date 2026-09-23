@@ -3,6 +3,7 @@ import { PRESETS, findPreset, randomDesign } from './presets.js';
 import { PALETTES, drawRange, toSvg } from './render.js';
 import { SPEEDS, planDrawing, pointIndexAt, formatSpeed } from './playback.js';
 import { encodeDesign, decodeDesign } from './share.js';
+import { axisRatio, formatRatio, retuneToRatio } from './ratio.js';
 
 const $ = (id) => document.getElementById(id);
 const paper = $('paper');
@@ -53,6 +54,7 @@ function rebuild({ restart = true } = {}) {
   state.points = sampleCurve(state.design, state.plan);
   state.fit = fitTransform(bounds(state.points), state.size, state.size, state.size * 0.06);
   if (restart) state.elapsed = 0;
+  $('ratio-readout').textContent = formatRatio(axisRatio(state.design));
   repaint();
 }
 
@@ -119,6 +121,7 @@ function updateStatus() {
 function setDesign(design, { presetId = null } = {}) {
   state.design = normalizeDesign(design);
   $('preset').value = presetId ?? '';
+  $('ratio-target').value = '';
   const preset = presetId ? findPreset(presetId) : null;
   $('preset-description').textContent = preset ? preset.description : 'Custom design.';
   renderPendulumList();
@@ -213,6 +216,29 @@ $('add-pendulum').addEventListener('click', () => {
   const axis = state.design.pendulums.filter((p) => p.axis === 'x').length <= state.design.pendulums.filter((p) => p.axis === 'y').length ? 'x' : 'y';
   setDesign({ pendulums: [...state.design.pendulums, { axis, amp: 0.2, freq: 3.002, phase: 0, damp: 0.01 }] });
 });
+
+// ---------- ratio ----------
+
+function formatDetune(pct) {
+  return `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(2)}%`;
+}
+
+function applyRatio() {
+  const target = $('ratio-target').value;
+  const pct = Number($('detune').value);
+  $('detune-value').textContent = formatDetune(pct);
+  if (!target) return;
+  const [p, q] = target.split(':').map(Number);
+  state.design = retuneToRatio(state.design, p, q, pct / 100);
+  $('preset').value = '';
+  $('preset-description').textContent = 'Custom design.';
+  renderPendulumList();
+  writeHash();
+  rebuild({ restart: false });
+}
+
+$('ratio-target').addEventListener('change', applyRatio);
+$('detune').addEventListener('input', applyRatio);
 
 // ---------- export ----------
 
