@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PALETTES, colorAt, isDark, colorRuns, drawRange, toSvg } from '../src/render.js';
+import { PALETTES, colorAt, isDark, colorRuns, drawRange, toSvg, drawThumbnail } from '../src/render.js';
+import { PRESETS } from '../src/presets.js';
 import { fitTransform } from '../src/harmonograph.js';
 
 function mockContext() {
@@ -16,6 +17,8 @@ function mockContext() {
     moveTo(x, y) { calls.push(['moveTo', x, y]); },
     lineTo(x, y) { calls.push(['lineTo', x, y]); },
     stroke() { calls.push(['stroke']); },
+    set fillStyle(v) { calls.push(['fillStyle', v]); },
+    fillRect(...a) { calls.push(['fillRect', ...a]); },
   };
 }
 
@@ -71,4 +74,16 @@ test('toSvg produces a self-contained document with paper and paths', () => {
   assert.match(svg, /stroke-width="1.5" stroke-opacity="0.75"/);
   assert.match(svg, /<path d="M0.00 50.00L50.00 0.00L100.00 50.00" stroke="#6b3d1f"\/>/);
   assert.ok(svg.endsWith('</svg>'));
+});
+
+test('drawThumbnail fills the paper and keeps a bounded number of points inside the box', () => {
+  for (const preset of PRESETS) {
+    const ctx = mockContext();
+    const count = drawThumbnail(ctx, preset.design, 96, PALETTES.night, 2000);
+    assert.ok(count <= 2002, `${preset.id}: ${count}`);
+    assert.deepEqual(ctx.calls.slice(0, 2), [['fillStyle', PALETTES.night.paper], ['fillRect', 0, 0, 96, 96]]);
+    for (const [op, x, y] of ctx.calls.filter((c) => c[0] === 'lineTo')) {
+      assert.ok(x >= -1e-9 && x <= 96 + 1e-9 && y >= -1e-9 && y <= 96 + 1e-9, `${preset.id} ${op}`);
+    }
+  }
 });

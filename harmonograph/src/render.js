@@ -1,5 +1,8 @@
 // Drawing helpers shared by the live canvas and the SVG export.
 
+import { sampleCurve, bounds, fitTransform } from './harmonograph.js';
+import { planDrawing } from './playback.js';
+
 export const PALETTES = {
   ink: { label: 'Ink', paper: '#f4efe4', mode: 'solid', color: '#1d2a44', alpha: 0.7 },
   sepia: { label: 'Sepia', paper: '#f2e6cf', mode: 'solid', color: '#6b3d1f', alpha: 0.75 },
@@ -86,4 +89,17 @@ export function toSvg(points, fit, { width, height, palette, lineWidth = 1 }) {
     '</g>',
     '</svg>',
   ].join('\n');
+}
+
+// Paint a small preview of a whole design, sampled coarsely enough to stay
+// cheap when a gallery shows many of them.
+export function drawThumbnail(ctx, design, size, palette, maxPoints = 3000) {
+  const plan = planDrawing(design);
+  const samplesPerSecond = Math.min(plan.samplesPerSecond, maxPoints / plan.duration);
+  const points = sampleCurve(design, { duration: plan.duration, samplesPerSecond });
+  const fit = fitTransform(bounds(points), size, size, size * 0.08);
+  ctx.fillStyle = palette.paper;
+  ctx.fillRect(0, 0, size, size);
+  drawRange(ctx, points, 0, points.length / 2 - 1, fit, palette, 0.5);
+  return points.length / 2;
 }
