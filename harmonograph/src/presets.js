@@ -8,9 +8,9 @@ const HALF_PI = Math.PI / 2;
 
 const RAW = [
   {
-    id: 'spiral-rose',
-    name: 'Spiral rose',
-    description: 'Two near-unison swings a quarter turn apart wind into a tightening spiral.',
+    id: 'spiral-square',
+    name: 'Spiral square',
+    description: 'Near-unison swings a quarter turn apart, with a faint third harmonic, wind a slowly turning square inward.',
     pendulums: [
       { axis: 'x', amp: 0.6, freq: 2, phase: HALF_PI, damp: 0.03 },
       { axis: 'x', amp: 0.1, freq: 6.01, phase: 0, damp: 0.05 },
