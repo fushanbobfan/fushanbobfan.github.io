@@ -216,6 +216,67 @@ input[type="range"] {
   padding: 0.15rem 0.5rem;
 }
 
+.gallery {
+  margin-top: 1rem;
+}
+
+.gallery-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.gallery-head h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: normal;
+  font-size: 1.2rem;
+}
+
+.gallery-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.6rem;
+}
+
+.gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.gallery-load {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem;
+}
+
+.gallery-load canvas {
+  width: 96px;
+  height: 96px;
+  border-radius: 4px;
+}
+
+.gallery-name {
+  font-size: 0.8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-remove {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  color: var(--muted);
+}
+
 kbd {
   font-family: ui-monospace, Consolas, monospace;
   border: 1px solid var(--panel-border);

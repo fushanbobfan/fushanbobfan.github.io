@@ -27,6 +27,16 @@
           <button id="finish" type="button">Finish</button>
         </div>
       </div>
+
+      <section class="gallery" aria-labelledby="gallery-title">
+        <div class="gallery-head">
+          <h2 id="gallery-title">Gallery</h2>
+          <button id="save-gallery" type="button">Save to gallery</button>
+          <span id="gallery-note" class="hint" aria-live="polite"></span>
+        </div>
+        <p id="gallery-empty" class="hint">Designs you save stay in this browser. Nothing saved yet.</p>
+        <ul id="gallery-list" class="gallery-list"></ul>
+      </section>
     </section>
 
     <section class="controls" aria-label="Drawing controls">
@@ -133,6 +143,16 @@
         <input data-field="damp" type="range" min="0" max="0.2" step="0.001" />
       </label>
     </div>
+  </template>
+
+  <template id="gallery-template">
+    <li class="gallery-item">
+      <button type="button" class="gallery-load" data-action="load">
+        <canvas width="96" height="96" aria-hidden="true"></canvas>
+        <span class="gallery-name"></span>
+      </button>
+      <button type="button" class="gallery-remove" data-action="remove">Delete</button>
+    </li>
   </template>
 
   <script type="module" src="src/main.js"></script>

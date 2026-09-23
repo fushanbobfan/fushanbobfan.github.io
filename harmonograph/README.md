@@ -59,10 +59,20 @@ the fastest pendulum.
 | Pause / Replay / Finish | Control the pen; Finish draws the rest at once |
 | Save PNG / Save SVG | Export the drawing; the SVG holds the full curve at 1000×1000 |
 | Copy link | The URL hash stores the design, e.g. `#x:0.6,3.003,1.571,0.02;y:0.6,2,0,0.02` |
+| Save to gallery | Keep the design and palette in this browser; click a thumbnail to load it again |
 
 Keyboard: <kbd>Space</kbd> pause, <kbd>R</kbd> replay, <kbd>F</kbd> finish,
 <kbd>N</kbd> surprise me. With `prefers-reduced-motion`, drawings appear
 finished instead of animating.
+
+## Gallery
+
+Saved designs live in `localStorage` under `harmonograph.gallery`, newest
+first, up to 24 entries. Only the encoded design, palette and name are stored;
+thumbnails are redrawn from the design on load. Saving an identical design and
+palette again moves it to the front instead of adding a copy. If the browser
+refuses local storage (a private window, a full quota), the gallery still works
+for the current visit and says so.
 
 ## Presets
 
@@ -80,9 +90,10 @@ index.html, style.css   page and styles
 src/harmonograph.js     pendulum model, envelope, settle time, sampling, fitting
 src/presets.js          named presets and the seeded random generator
 src/playback.js         drawing length, sample rate, time-to-point mapping
-src/render.js           palettes, colour runs, canvas drawing, SVG output
+src/render.js           palettes, colour runs, canvas drawing, thumbnails, SVG output
 src/ratio.js            x:y ratio readout, best fractions and retuning
 src/share.js            URL hash encoding and decoding
+src/gallery.js          saved designs in localStorage
 src/main.js             DOM wiring
 test/                   node:test suites for every module except main.js
 ```

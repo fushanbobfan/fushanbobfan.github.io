@@ -1,9 +1,10 @@
 import { normalizeDesign, normalizePendulum, sampleCurve, bounds, fitTransform, envelope } from './harmonograph.js';
 import { PRESETS, findPreset, randomDesign } from './presets.js';
-import { PALETTES, drawRange, toSvg } from './render.js';
+import { PALETTES, drawRange, toSvg, drawThumbnail } from './render.js';
 import { SPEEDS, planDrawing, pointIndexAt, formatSpeed } from './playback.js';
 import { encodeDesign, decodeDesign } from './share.js';
 import { axisRatio, formatRatio, retuneToRatio } from './ratio.js';
+import { createGallery } from './gallery.js';
 
 const $ = (id) => document.getElementById(id);
 const paper = $('paper');
@@ -240,6 +241,82 @@ function applyRatio() {
 $('ratio-target').addEventListener('change', applyRatio);
 $('detune').addEventListener('input', applyRatio);
 
+// ---------- gallery ----------
+
+function safeLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+const gallery = createGallery(safeLocalStorage());
+
+function defaultName() {
+  const preset = findPreset($('preset').value);
+  if (preset) return preset.name;
+  const info = axisRatio(state.design);
+  return info ? `Custom ${info.p}:${info.q}` : 'Custom';
+}
+
+function renderGallery() {
+  const list = $('gallery-list');
+  const template = $('gallery-template');
+  const entries = gallery.list();
+  const dpr = window.devicePixelRatio || 1;
+  list.replaceChildren();
+  $('gallery-empty').hidden = entries.length > 0;
+  for (const entry of entries) {
+    const node = template.content.firstElementChild.cloneNode(true);
+    node.dataset.id = entry.id;
+    node.querySelector('.gallery-name').textContent = entry.name;
+    node.querySelector('.gallery-load').setAttribute('aria-label', `Load ${entry.name}`);
+    node.querySelector('.gallery-remove').setAttribute('aria-label', `Delete ${entry.name}`);
+    const canvas = node.querySelector('canvas');
+    canvas.width = Math.round(96 * dpr);
+    canvas.height = Math.round(96 * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawThumbnail(ctx, gallery.design(entry.id), 96, PALETTES[entry.paletteId] ?? PALETTES.ink);
+    list.append(node);
+  }
+}
+
+function note(text) {
+  $('gallery-note').textContent = text;
+  clearTimeout(note.timer);
+  note.timer = setTimeout(() => { $('gallery-note').textContent = ''; }, 2500);
+}
+
+$('save-gallery').addEventListener('click', () => {
+  const { entry, persisted } = gallery.save(state.design, { paletteId: state.paletteId, name: defaultName() });
+  renderGallery();
+  note(persisted ? `Saved “${entry.name}”.` : 'Saved for this visit only; this browser is not keeping local data.');
+});
+
+$('gallery-list').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-action]');
+  const item = event.target.closest('.gallery-item');
+  if (!button || !item) return;
+  const entry = gallery.list().find((e) => e.id === item.dataset.id);
+  if (!entry) return;
+  if (button.dataset.action === 'remove') {
+    gallery.remove(entry.id);
+    renderGallery();
+    note(`Deleted “${entry.name}”.`);
+    $('save-gallery').focus();
+    return;
+  }
+  if (PALETTES[entry.paletteId]) {
+    state.paletteId = entry.paletteId;
+    $('palette').value = entry.paletteId;
+  }
+  const design = gallery.design(entry.id);
+  const match = PRESETS.find((p) => encodeDesign(p.design) === encodeDesign(design));
+  setDesign(design, { presetId: match?.id ?? null });
+});
+
 // ---------- export ----------
 
 function download(name, href) {
@@ -343,6 +420,7 @@ function loadFromHash() {
 }
 
 initControls();
+renderGallery();
 state.size = Math.max(1, Math.round(paper.getBoundingClientRect().width));
 if (!loadFromHash()) setDesign(PRESETS[0].design, { presetId: PRESETS[0].id });
 requestAnimationFrame(frame);
