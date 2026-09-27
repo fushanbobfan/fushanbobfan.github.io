@@ -5,7 +5,7 @@
 import {
   vec, add, rotate, segment, arc, polygon, fromAngle, scale,
 } from './geometry.js';
-import { spectrumSamples, whiteShare } from './spectrum.js';
+import { spectrumSamples, whiteWeights } from './spectrum.js';
 
 let nextId = 1;
 export const newId = () => `e${nextId++}`;
@@ -131,9 +131,9 @@ export function raysOf(el) {
     return paths.map((p) => ({ ...p, wavelength: el.wavelength, intensity: 1, share: 1 }));
   }
   const wavelengths = spectrumSamples(el.samples);
-  const share = whiteShare(wavelengths);
-  return paths.flatMap((p) => wavelengths.map((wavelength) => ({
-    ...p, wavelength, intensity: 1, share,
+  const shares = whiteWeights(wavelengths);
+  return paths.flatMap((p) => wavelengths.map((wavelength, i) => ({
+    ...p, wavelength, intensity: 1, share: shares[i],
   })));
 }
 

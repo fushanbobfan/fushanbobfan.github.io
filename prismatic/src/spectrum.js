@@ -44,16 +44,23 @@ export function spectrumSamples(count) {
   return Array.from({ length: n }, (_, i) => Math.round(WHITE_BAND.min + width * (i + 0.5)));
 }
 
-// Common weight for a set of wavelengths so that, drawn on top of each other
-// additively, their brightest colour channel just reaches full scale.
-export function whiteShare(wavelengths) {
-  const sum = [0, 0, 0];
-  for (const wl of wavelengths) {
-    const rgb = wavelengthToRGB(wl);
-    for (let c = 0; c < 3; c++) sum[c] += rgb[c];
+// Per-wavelength weights for a set of samples so that, drawn on top of each
+// other additively, they add up to a neutral white: each weight is nudged
+// until the red, green and blue sums agree, then all are scaled so the sums
+// reach full scale.
+export function whiteWeights(wavelengths) {
+  const rgbs = wavelengths.map(wavelengthToRGB);
+  const w = rgbs.map(() => 1);
+  const sums = () => [0, 1, 2].map((c) => rgbs.reduce((t, rgb, i) => t + w[i] * rgb[c], 0));
+  for (let iter = 0; iter < 200; iter++) {
+    const t = sums();
+    rgbs.forEach((rgb, i) => {
+      const total = rgb[0] + rgb[1] + rgb[2];
+      if (total > 0) w[i] *= total / (rgb[0] * t[0] + rgb[1] * t[1] + rgb[2] * t[2]);
+    });
   }
-  const peak = Math.max(...sum);
-  return peak > 0 ? 1 / peak : 1;
+  const peak = Math.max(...sums());
+  return peak > 0 ? w.map((x) => x / peak) : w;
 }
 
 export function wavelengthToCss(nm, alpha = 1) {

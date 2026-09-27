@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  wavelengthToRGB, wavelengthToCss, spectrumSamples, whiteShare,
+  wavelengthToRGB, wavelengthToCss, spectrumSamples, whiteWeights,
 } from '../src/spectrum.js';
 
 test('spectrum colours run from violet through green to red and fade outside the visible range', () => {
@@ -25,11 +25,15 @@ test('white light is sampled evenly across the visible band', () => {
   assert.deepEqual(spectrumSamples(0), [550]);
 });
 
-test('white share brings the summed colour to full scale in its strongest channel', () => {
-  const wls = spectrumSamples(12);
-  const share = whiteShare(wls);
-  const sum = [0, 0, 0];
-  for (const wl of wls) wavelengthToRGB(wl).forEach((c, i) => { sum[i] += c * share; });
-  assert.ok(Math.abs(Math.max(...sum) - 1) < 1e-12);
-  assert.ok(Math.min(...sum) > 0.5, `summed white is too tinted: ${sum}`);
+test('white weights add up to a neutral white at full scale', () => {
+  for (const n of [5, 12, 30]) {
+    const wls = spectrumSamples(n);
+    const w = whiteWeights(wls);
+    assert.equal(w.length, n);
+    assert.ok(w.every((x) => x > 0));
+    const sum = [0, 0, 0];
+    wls.forEach((wl, i) => wavelengthToRGB(wl).forEach((c, k) => { sum[k] += c * w[i]; }));
+    assert.ok(Math.abs(Math.max(...sum) - 1) < 1e-9);
+    assert.ok(Math.min(...sum) > 0.97, `${n} samples sum to ${sum}`);
+  }
 });
