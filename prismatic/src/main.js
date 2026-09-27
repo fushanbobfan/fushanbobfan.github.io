@@ -1,9 +1,13 @@
 import { vec } from './geometry.js';
 import { makeElement, SOURCE_KINDS } from './elements.js';
-import { MATERIALS, refractiveIndex } from './optics.js';
+import {
+  MATERIALS, LINES, refractiveIndex, abbeNumber,
+} from './optics.js';
 import { trace } from './tracer.js';
 import { elementAt, onHandle } from './picking.js';
-import { PARAMS, LABELS, applyParam, hasMaterial } from './params.js';
+import {
+  LABELS, LIGHTS, applyParam, hasMaterial, visibleParams,
+} from './params.js';
 import { drawGrid, drawRays, drawElement, drawSelection } from './render.js';
 import { wavelengthToCss } from './spectrum.js';
 
@@ -30,11 +34,14 @@ const state = {
 function defaultBench(w, h) {
   const cx = w / 2;
   const cy = h / 2;
+  const px = cx + 0.02 * w;
+  const py = cy + 0.16 * h;
   return [
     makeElement('beam', cx - 0.4 * w, cy - 0.18 * h, 0, { width: 70, count: 9 }),
     makeElement('convexLens', cx - 0.12 * w, cy - 0.18 * h),
-    makeElement('laser', cx - 0.4 * w, cy + 0.22 * h, -0.12, { wavelength: 635 }),
-    makeElement('prism', cx + 0.02 * w, cy + 0.16 * h, 0, { side: 150 }),
+    makeElement('prism', px, py, 0, { side: 150, material: 'sf10' }),
+    // White light onto the prism's left face near minimum deviation.
+    makeElement('laser', px - 250, py + 111, -0.56, { light: 'white' }),
     makeElement('curvedMirror', cx + 0.4 * w, cy - 0.1 * h, Math.PI, { radius: 360, aperture: 110 }),
   ];
 }
@@ -119,6 +126,32 @@ function rangeControl(el, spec, value, onInput) {
   return wrap;
 }
 
+function selectControl(id, text, options, value, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'param';
+  const label = document.createElement('label');
+  label.htmlFor = id;
+  label.textContent = text;
+  const select = document.createElement('select');
+  select.id = id;
+  for (const [key, name] of options) {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = name;
+    select.append(option);
+  }
+  select.value = value;
+  select.addEventListener('change', () => onChange(select.value));
+  wrap.append(label, select);
+  return wrap;
+}
+
+function glassSummary(material) {
+  const n = (wl) => refractiveIndex(material, wl).toFixed(3);
+  return `n = ${n(LINES.d)} at ${LINES.d} nm, ${n(450)} at 450 nm and ${n(650)} at 650 nm. `
+    + `Abbe number ${abbeNumber(material).toFixed(1)}: the lower it is, the more the glass spreads colours.`;
+}
+
 function buildInspector() {
   const el = selectedElement();
   inspectorBody.replaceChildren();
@@ -139,7 +172,16 @@ function buildInspector() {
     state.dirty = true;
   }));
 
-  for (const spec of PARAMS[el.kind]) {
+  if (SOURCE_KINDS.has(el.kind)) {
+    inspectorBody.append(selectControl('param-light', 'Light', Object.entries(LIGHTS), el.light, (v) => {
+      applyParam(el, 'light', v);
+      state.dirty = true;
+      buildInspector();
+      document.getElementById('param-light').focus();
+    }));
+  }
+
+  for (const spec of visibleParams(el)) {
     const control = rangeControl(el, spec, el[spec.key], (v) => {
       applyParam(el, spec.key, v);
       state.dirty = true;
@@ -153,29 +195,18 @@ function buildInspector() {
     }
     inspectorBody.append(control);
   }
-  if (el.wavelength) updateSwatch(el);
+  if (el.light !== 'white' && el.wavelength) updateSwatch(el);
 
   if (hasMaterial(el)) {
-    const wrap = document.createElement('div');
-    wrap.className = 'param';
-    const label = document.createElement('label');
-    label.htmlFor = 'param-material';
-    label.textContent = 'Glass';
-    const select = document.createElement('select');
-    select.id = 'param-material';
-    for (const [key, m] of Object.entries(MATERIALS)) {
-      const option = document.createElement('option');
-      option.value = key;
-      option.textContent = `${m.name}, n = ${refractiveIndex(m, 589.3).toFixed(3)}`;
-      select.append(option);
-    }
-    select.value = el.material;
-    select.addEventListener('change', () => {
-      applyParam(el, 'material', select.value);
+    const options = Object.entries(MATERIALS).map(([key, m]) => [key, m.name]);
+    const summary = document.createElement('p');
+    summary.className = 'hint';
+    summary.textContent = glassSummary(MATERIALS[el.material]);
+    inspectorBody.append(selectControl('param-material', 'Glass', options, el.material, (v) => {
+      applyParam(el, 'material', v);
+      summary.textContent = glassSummary(MATERIALS[el.material]);
       state.dirty = true;
-    });
-    wrap.append(label, select);
-    inspectorBody.append(wrap);
+    }), summary);
   }
 
   const buttons = document.createElement('div');
