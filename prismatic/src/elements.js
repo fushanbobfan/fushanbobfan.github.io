@@ -154,3 +154,32 @@ export function raysOf(el) {
       return [];
   }
 }
+
+function samplePiece(p, step = 4) {
+  if (p.type === 'segment') return [p.a, p.b];
+  const n = Math.max(2, Math.ceil((p.r * p.span) / step));
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const a = p.a0 + (p.span * i) / n;
+    pts.push(vec(p.c.x + p.r * Math.cos(a), p.c.y + p.r * Math.sin(a)));
+  }
+  return pts;
+}
+
+// Boundary of an element as one polyline, joining its pieces end to end. For
+// closed shapes the last point meets the first.
+export function outlineOf(el) {
+  const chains = piecesOf(el).map((p) => samplePiece(p));
+  if (!chains.length) return [];
+  const near = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
+  const path = chains.shift();
+  while (chains.length) {
+    const tail = path[path.length - 1];
+    let i = chains.findIndex((c) => near(c[0], tail) || near(c[c.length - 1], tail));
+    if (i < 0) i = 0;
+    const next = chains.splice(i, 1)[0];
+    if (!near(next[0], tail) && near(next[next.length - 1], tail)) next.reverse();
+    path.push(...next.slice(near(next[0], tail) ? 1 : 0));
+  }
+  return path;
+}

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { vec, hitPiece, normalAt, add, scale, dot, sub } from '../src/geometry.js';
-import { makeElement, piecesOf, raysOf, prismPoints } from '../src/elements.js';
+import {
+  makeElement, piecesOf, raysOf, prismPoints, outlineOf,
+} from '../src/elements.js';
 
 const close = (a, b, tol = 1e-6) => assert.ok(Math.abs(a - b) < tol, `${a} vs ${b}`);
 
@@ -117,4 +119,19 @@ test('sources emit the requested rays', () => {
 
 test('unknown kinds are rejected', () => {
   assert.throws(() => makeElement('wormhole', 0, 0));
+});
+
+test('outlines join every piece into one closed loop', () => {
+  for (const kind of ['prism', 'block', 'convexLens', 'concaveLens', 'ball']) {
+    const path = outlineOf(makeElement(kind, 40, 60, 0.3));
+    const first = path[0];
+    const last = path[path.length - 1];
+    assert.ok(Math.hypot(first.x - last.x, first.y - last.y) < 1e-6, kind);
+    for (let i = 1; i < path.length; i++) {
+      const gap = Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+      assert.ok(gap < 400, `${kind} jumps ${gap}`);
+    }
+  }
+  assert.equal(outlineOf(makeElement('laser', 0, 0)).length, 0);
+  assert.equal(outlineOf(makeElement('mirror', 0, 0)).length, 2);
 });
