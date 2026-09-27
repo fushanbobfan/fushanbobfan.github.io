@@ -34,6 +34,28 @@ export function wavelengthToRGB(nm) {
   return [r * f, g * f, b * f];
 }
 
+// Wavelengths standing in for white light: the centres of `count` equal bands
+// across the part of the spectrum the colour map shows at full strength.
+export const WHITE_BAND = { min: 400, max: 700 };
+
+export function spectrumSamples(count) {
+  const n = Math.max(1, Math.round(count));
+  const width = (WHITE_BAND.max - WHITE_BAND.min) / n;
+  return Array.from({ length: n }, (_, i) => Math.round(WHITE_BAND.min + width * (i + 0.5)));
+}
+
+// Common weight for a set of wavelengths so that, drawn on top of each other
+// additively, their brightest colour channel just reaches full scale.
+export function whiteShare(wavelengths) {
+  const sum = [0, 0, 0];
+  for (const wl of wavelengths) {
+    const rgb = wavelengthToRGB(wl);
+    for (let c = 0; c < 3; c++) sum[c] += rgb[c];
+  }
+  const peak = Math.max(...sum);
+  return peak > 0 ? 1 / peak : 1;
+}
+
 export function wavelengthToCss(nm, alpha = 1) {
   const [r, g, b] = wavelengthToRGB(nm).map((c) => Math.round(255 * c));
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
