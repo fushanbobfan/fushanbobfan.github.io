@@ -47,3 +47,12 @@ export function fresnel(cosi, n1, n2) {
 export function criticalAngle(n1, n2) {
   return n1 > n2 ? Math.asin(n2 / n1) : null;
 }
+
+// Fraunhofer lines used to quote dispersion: helium d, hydrogen F and C.
+export const LINES = { d: 587.6, F: 486.1, C: 656.3 };
+
+// Abbe number V = (n_d - 1) / (n_F - n_C). Low V means strong dispersion.
+export function abbeNumber(material) {
+  const n = (wl) => refractiveIndex(material, wl);
+  return (n(LINES.d) - 1) / (n(LINES.F) - n(LINES.C));
+}

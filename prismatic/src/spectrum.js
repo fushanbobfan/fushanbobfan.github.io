@@ -34,6 +34,35 @@ export function wavelengthToRGB(nm) {
   return [r * f, g * f, b * f];
 }
 
+// Wavelengths standing in for white light: the centres of `count` equal bands
+// across the part of the spectrum the colour map shows at full strength.
+export const WHITE_BAND = { min: 400, max: 700 };
+
+export function spectrumSamples(count) {
+  const n = Math.max(1, Math.round(count));
+  const width = (WHITE_BAND.max - WHITE_BAND.min) / n;
+  return Array.from({ length: n }, (_, i) => Math.round(WHITE_BAND.min + width * (i + 0.5)));
+}
+
+// Per-wavelength weights for a set of samples so that, drawn on top of each
+// other additively, they add up to a neutral white: each weight is nudged
+// until the red, green and blue sums agree, then all are scaled so the sums
+// reach full scale.
+export function whiteWeights(wavelengths) {
+  const rgbs = wavelengths.map(wavelengthToRGB);
+  const w = rgbs.map(() => 1);
+  const sums = () => [0, 1, 2].map((c) => rgbs.reduce((t, rgb, i) => t + w[i] * rgb[c], 0));
+  for (let iter = 0; iter < 200; iter++) {
+    const t = sums();
+    rgbs.forEach((rgb, i) => {
+      const total = rgb[0] + rgb[1] + rgb[2];
+      if (total > 0) w[i] *= total / (rgb[0] * t[0] + rgb[1] * t[1] + rgb[2] * t[2]);
+    });
+  }
+  const peak = Math.max(...sums());
+  return peak > 0 ? w.map((x) => x / peak) : w;
+}
+
 export function wavelengthToCss(nm, alpha = 1) {
   const [r, g, b] = wavelengthToRGB(nm).map((c) => Math.round(255 * c));
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;

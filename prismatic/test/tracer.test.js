@@ -117,3 +117,41 @@ test('two facing mirrors are cut off by the depth and segment limits', () => {
   assert.equal(capped.segments.length, 10);
   assert.equal(capped.stats.truncated, true);
 });
+
+test('a prism spreads white light: violet leaves bent further than red', () => {
+  // Aimed at the middle of the left face near minimum deviation for SF10.
+  const beam = makeElement('laser', -221, 74, -0.54, { light: 'white', samples: 7 });
+  const prism = makeElement('prism', 0, 0, 0, { material: 'sf10', side: 200 });
+  const { segments } = trace([beam, prism]);
+  const out = escaped(segments).filter((s) => s.intensity > 0.5 && s.x1 > 0);
+  const byWavelength = new Map(out.map((s) => [s.wavelength, s]));
+  assert.equal(byWavelength.size, 7);
+  const angle = (s) => Math.atan2(dir(s).y, dir(s).x);
+  const wls = [...byWavelength.keys()].sort((a, b) => a - b);
+  for (let i = 1; i < wls.length; i++) {
+    assert.ok(angle(byWavelength.get(wls[i])) < angle(byWavelength.get(wls[i - 1])),
+      `${wls[i]} nm should be deviated less than ${wls[i - 1]} nm`);
+  }
+  for (const s of out) assert.ok(s.share < 1);
+});
+
+test('a glass ball sends white light back towards the source, red at a wider angle than violet', () => {
+  const ball = makeElement('ball', 0, 0, 0, { radius: 100 });
+  const sun = makeElement('laser', -400, -86, 0, { light: 'white', samples: 5 });
+  const { segments } = trace([sun, ball], { minIntensity: 1e-4 });
+  const returning = escaped(segments).filter((s) => s.x2 < s.x1 && s.x1 > -101 && s.x1 < 0);
+  const angles = new Map();
+  for (const s of returning) {
+    const d = dir(s);
+    const dev = (Math.acos(-d.x) * 180) / Math.PI;
+    if (!angles.has(s.wavelength) || s.intensity > angles.get(s.wavelength).intensity) {
+      angles.set(s.wavelength, { dev, intensity: s.intensity });
+    }
+  }
+  assert.equal(angles.size, 5);
+  const wls = [...angles.keys()].sort((a, b) => a - b);
+  for (const wl of wls) assert.ok(angles.get(wl).dev > 10 && angles.get(wl).dev < 60);
+  // Glass is denser for violet, so violet comes back closer to the source
+  // direction than red, as in the primary rainbow.
+  for (let i = 1; i < wls.length; i++) assert.ok(angles.get(wls[i]).dev > angles.get(wls[i - 1]).dev);
+});

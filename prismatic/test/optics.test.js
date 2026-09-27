@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { vec, fromAngle } from '../src/geometry.js';
 import {
-  MATERIALS, refractiveIndex, reflect, refract, fresnel, criticalAngle,
+  MATERIALS, refractiveIndex, reflect, refract, fresnel, criticalAngle, abbeNumber,
 } from '../src/optics.js';
 
 const close = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) < tol, `${a} vs ${b}`);
@@ -64,4 +64,12 @@ test('refraction is reversible', () => {
   const back = refract(vec(-t.x, -t.y), vec(0, -1), 1.52, 1);
   close(back.x, -d.x, 1e-12);
   close(back.y, -d.y, 1e-12);
+});
+
+test('Abbe numbers from the Cauchy fits land near the catalogue values', () => {
+  // Catalogue values: N-BK7 64.17, SF10 28.41.
+  assert.ok(Math.abs(abbeNumber(MATERIALS.bk7) - 64.17) < 1);
+  assert.ok(Math.abs(abbeNumber(MATERIALS.sf10) - 28.41) < 2);
+  const sorted = Object.values(MATERIALS).map(abbeNumber);
+  assert.ok(sorted.every((v, i) => i === 0 || v < sorted[i - 1]), 'materials listed from least to most dispersive');
 });

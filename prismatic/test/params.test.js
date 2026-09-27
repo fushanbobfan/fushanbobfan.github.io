@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeElement, DEFAULTS } from '../src/elements.js';
-import { PARAMS, LABELS, applyParam, hasMaterial } from '../src/params.js';
+import {
+  PARAMS, LABELS, applyParam, hasMaterial, visibleParams,
+} from '../src/params.js';
 
 test('every element kind has a label and editable parameters that exist on it', () => {
   for (const kind of Object.keys(DEFAULTS)) {
@@ -46,4 +48,19 @@ test('a curved surface keeps its radius larger than its half-height', () => {
   assert.ok(lens.radius > lens.aperture);
   applyParam(lens, 'radius', 60);
   assert.ok(lens.radius > lens.aperture);
+});
+
+test('sources switch between one wavelength and white light, showing the matching controls', () => {
+  const beam = makeElement('beam', 0, 0);
+  const keys = () => visibleParams(beam).map((p) => p.key);
+  assert.ok(keys().includes('wavelength') && !keys().includes('samples'));
+  applyParam(beam, 'light', 'white');
+  assert.equal(beam.light, 'white');
+  assert.ok(!keys().includes('wavelength') && keys().includes('samples'));
+  applyParam(beam, 'light', 'ultraviolet');
+  assert.equal(beam.light, 'white');
+  const prism = makeElement('prism', 0, 0);
+  applyParam(prism, 'light', 'white');
+  assert.equal(prism.light, undefined);
+  assert.deepEqual(visibleParams(prism), PARAMS.prism);
 });

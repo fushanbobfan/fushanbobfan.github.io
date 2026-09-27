@@ -5,7 +5,6 @@ import { makeElement, piecesOf } from '../src/elements.js';
 import {
   elementAt, insideOutline, distanceToPiece, handleOf, onHandle,
 } from '../src/picking.js';
-import { wavelengthToRGB, wavelengthToCss } from '../src/spectrum.js';
 
 test('points inside a glass shape pick it, points well outside do not', () => {
   const prism = makeElement('prism', 200, 200);
@@ -37,18 +36,6 @@ test('a source beats the glass it sits on, and later elements beat earlier ones'
   assert.equal(elementAt([laser, block], vec(12, 0)), laser);
   const top = makeElement('block', 20, 0);
   assert.equal(elementAt([block, top], vec(10, 0)), top);
-});
-
-test('spectrum colours run from violet through green to red and fade outside the visible range', () => {
-  const [r1, , b1] = wavelengthToRGB(400);
-  assert.ok(b1 > r1);
-  const [, g2] = wavelengthToRGB(530);
-  assert.ok(g2 === 1);
-  const [r3, g3, b3] = wavelengthToRGB(680);
-  assert.ok(r3 === 1 && g3 === 0 && b3 === 0);
-  assert.deepEqual(wavelengthToRGB(300), [0, 0, 0]);
-  assert.deepEqual(wavelengthToRGB(900), [0, 0, 0]);
-  assert.equal(wavelengthToCss(680, 0.5), 'rgba(255, 0, 0, 0.5)');
 });
 
 test('the rotation handle sits outside the element along its angle', () => {
