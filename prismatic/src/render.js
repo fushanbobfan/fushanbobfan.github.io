@@ -64,7 +64,7 @@ function tracePath(ctx, pts) {
 }
 
 function drawSource(ctx, el) {
-  const colour = wavelengthToCss(el.wavelength);
+  const colour = el.light === 'white' ? '#f2f2f2' : wavelengthToCss(el.wavelength);
   ctx.save();
   ctx.translate(el.x, el.y);
   ctx.rotate(el.angle);
