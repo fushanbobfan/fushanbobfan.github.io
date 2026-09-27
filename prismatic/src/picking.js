@@ -58,3 +58,30 @@ export function elementAt(elements, p) {
   const source = order.find((el) => SOURCE_KINDS.has(el.kind) && hitsElement(el, p));
   return source || order.find((el) => hitsElement(el, p)) || null;
 }
+
+// Distance from an element's centre to its rotation handle, along its angle.
+export function handleReach(el) {
+  switch (el.kind) {
+    case 'prism':
+      return el.side * Math.sin((el.apex * Math.PI) / 360) + 22;
+    case 'block':
+      return el.width / 2 + 22;
+    case 'ball':
+      return el.radius + 22;
+    case 'beam':
+    case 'laser':
+    case 'point':
+      return 40;
+    default:
+      return 34;
+  }
+}
+
+export function handleOf(el) {
+  const r = handleReach(el);
+  return vec(el.x + Math.cos(el.angle) * r, el.y + Math.sin(el.angle) * r);
+}
+
+export function onHandle(el, p, tolerance = 9) {
+  return length(sub(p, handleOf(el))) <= tolerance;
+}

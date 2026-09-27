@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { vec } from '../src/geometry.js';
 import { makeElement, piecesOf } from '../src/elements.js';
-import { elementAt, insideOutline, distanceToPiece } from '../src/picking.js';
+import {
+  elementAt, insideOutline, distanceToPiece, handleOf, onHandle,
+} from '../src/picking.js';
 import { wavelengthToRGB, wavelengthToCss } from '../src/spectrum.js';
 
 test('points inside a glass shape pick it, points well outside do not', () => {
@@ -47,4 +49,17 @@ test('spectrum colours run from violet through green to red and fade outside the
   assert.deepEqual(wavelengthToRGB(300), [0, 0, 0]);
   assert.deepEqual(wavelengthToRGB(900), [0, 0, 0]);
   assert.equal(wavelengthToCss(680, 0.5), 'rgba(255, 0, 0, 0.5)');
+});
+
+test('the rotation handle sits outside the element along its angle', () => {
+  for (const kind of ['prism', 'block', 'convexLens', 'ball', 'mirror', 'laser']) {
+    const el = makeElement(kind, 100, 100, 0.8);
+    const h = handleOf(el);
+    const dx = h.x - 100;
+    const dy = h.y - 100;
+    assert.ok(Math.abs(Math.atan2(dy, dx) - 0.8) < 1e-9, kind);
+    assert.ok(onHandle(el, vec(h.x + 3, h.y - 3)));
+    assert.ok(!onHandle(el, vec(100, 100)));
+    if (kind !== 'laser') assert.ok(!insideOutline(h, piecesOf(el)), kind);
+  }
 });
