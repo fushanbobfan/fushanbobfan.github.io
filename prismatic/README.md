@@ -2,7 +2,8 @@
 
 A two-dimensional optics bench in the browser. Place light sources, prisms,
 lenses and mirrors, then watch rays refract, reflect and split at every
-surface they meet.
+surface they meet. Switch a source to white light and glass spreads it into
+a spectrum.
 
 **Live demo:** https://fushanbobfan.github.io/prismatic/
 
@@ -23,6 +24,10 @@ Run the tests with `npm test` (Node 20 or newer).
 
 ## Things to try
 
+- The bench opens on **white light through a dense flint prism**. Turn the
+  prism slowly: the spectrum swings one way, stops, and swings back. The
+  turning point is minimum deviation. Change the glass to fused silica and the
+  fan closes up.
 - Swing the **laser** round until it meets a prism face at a steep angle from
   inside. Past the critical angle the transmitted ray vanishes and all the
   light reflects.
@@ -34,9 +39,9 @@ Run the tests with `npm test` (Node 20 or newer).
 - Point the beam at the **curved mirror** and find its focus half a radius in
   front of it. Widen the beam and the edge rays miss that point: spherical
   aberration.
-- Drop a **glass ball** into the beam. Rays that reflect once inside it come
-  back out at a steep angle towards the source, the geometry behind the
-  rainbow.
+- Drop a **glass ball** into a white beam. Rays that reflect once inside it
+  come back out towards the source, red at a wider angle than violet: the
+  geometry of a rainbow, with glass in place of water.
 - Turn off *Show faint reflections* to hide the weak Fresnel reflections and
   see only the main paths.
 
@@ -66,6 +71,17 @@ drawn 40 000 segments.
 two-term formula n(λ) = A + B / λ², with λ in micrometres. The coefficients
 are the standard textbook values for fused silica, BK7 crown, BaF10 barium
 flint and SF10 dense flint.
+
+**Dispersion.** Each glass also shows its Abbe number,
+V = (n_d − 1) / (n_F − n_C), from the helium d line (587.6 nm) and the
+hydrogen F (486.1 nm) and C (656.3 nm) lines. Crown glass has a high V and
+barely separates colours; dense flint has a low V and fans them widely.
+
+**White light.** A white source sends one ray per sampled wavelength (12 by
+default, evenly spread from 400 to 700 nm) along every path. Each wavelength
+is drawn with a weight chosen so that, where the colours overlap, red, green
+and blue add up to a neutral white; once glass separates them each colour
+shows on its own.
 
 **Colour.** Each ray is drawn in the approximate colour of its wavelength and
 added onto the canvas, so overlapping rays brighten each other.
