@@ -54,7 +54,7 @@ export function trace(elements, options = {}) {
     const end = add(ray.o, scale(ray.d, t));
     segments.push({
       x1: ray.o.x, y1: ray.o.y, x2: end.x, y2: end.y,
-      intensity: ray.intensity, wavelength: ray.wavelength, source: ray.source,
+      intensity: ray.intensity, share: ray.share, wavelength: ray.wavelength, source: ray.source,
       fate: hit ? hit.piece.role : 'escape',
     });
     if (!hit) {
@@ -80,7 +80,7 @@ export function trace(elements, options = {}) {
       }
       stack.push({
         o: add(end, scale(d, NUDGE)), d, intensity,
-        wavelength: ray.wavelength, depth: ray.depth + 1, source: ray.source,
+        wavelength: ray.wavelength, share: ray.share, depth: ray.depth + 1, source: ray.source,
       });
     };
 

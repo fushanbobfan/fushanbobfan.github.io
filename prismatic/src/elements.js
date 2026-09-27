@@ -5,6 +5,7 @@
 import {
   vec, add, rotate, segment, arc, polygon, fromAngle, scale,
 } from './geometry.js';
+import { spectrumSamples, whiteShare } from './spectrum.js';
 
 let nextId = 1;
 export const newId = () => `e${nextId++}`;
@@ -18,9 +19,9 @@ export const DEFAULTS = {
   mirror: { length: 160 },
   curvedMirror: { radius: 400, aperture: 90 },
   blocker: { length: 160 },
-  laser: { wavelength: 532 },
-  beam: { width: 80, count: 9, wavelength: 532 },
-  point: { count: 24, spread: 360, wavelength: 532 },
+  laser: { light: 'mono', wavelength: 532, samples: 12 },
+  beam: { width: 80, count: 9, light: 'mono', wavelength: 532, samples: 12 },
+  point: { count: 24, spread: 360, light: 'mono', wavelength: 532, samples: 12 },
 };
 
 export const SOURCE_KINDS = new Set(['laser', 'beam', 'point']);
@@ -121,20 +122,34 @@ export function piecesOf(el) {
   return pieces.map((p) => ({ ...p, role, element: el }));
 }
 
-// Rays emitted by a source: origin, unit direction, wavelength and intensity.
+// Rays emitted by a source: origin, unit direction, wavelength, intensity and
+// the share of the source's brightness each ray is drawn with. A white source
+// sends one ray per sampled wavelength along every path.
 export function raysOf(el) {
-  const base = { wavelength: el.wavelength, intensity: 1 };
+  const paths = pathsOf(el);
+  if (el.light !== 'white') {
+    return paths.map((p) => ({ ...p, wavelength: el.wavelength, intensity: 1, share: 1 }));
+  }
+  const wavelengths = spectrumSamples(el.samples);
+  const share = whiteShare(wavelengths);
+  return paths.flatMap((p) => wavelengths.map((wavelength) => ({
+    ...p, wavelength, intensity: 1, share,
+  })));
+}
+
+// Starting points and directions of a source's rays.
+function pathsOf(el) {
   const dir = fromAngle(el.angle);
   switch (el.kind) {
     case 'laser':
-      return [{ ...base, o: vec(el.x, el.y), d: dir }];
+      return [{ o: vec(el.x, el.y), d: dir }];
     case 'beam': {
       const across = rotate(dir, Math.PI / 2);
       const n = Math.max(1, Math.round(el.count));
       const rays = [];
       for (let i = 0; i < n; i++) {
         const f = n === 1 ? 0 : i / (n - 1) - 0.5;
-        rays.push({ ...base, o: add(vec(el.x, el.y), scale(across, f * el.width)), d: dir });
+        rays.push({ o: add(vec(el.x, el.y), scale(across, f * el.width)), d: dir });
       }
       return rays;
     }
@@ -146,7 +161,7 @@ export function raysOf(el) {
       for (let i = 0; i < n; i++) {
         const f = full ? i / n : n === 1 ? 0.5 : i / (n - 1);
         const a = el.angle - spread / 2 + f * spread;
-        rays.push({ ...base, o: vec(el.x, el.y), d: fromAngle(a) });
+        rays.push({ o: vec(el.x, el.y), d: fromAngle(a) });
       }
       return rays;
     }

@@ -33,7 +33,7 @@ export function drawRays(ctx, segments, { gain = 1, floor = 0 } = {}) {
   const LEVELS = 24;
   const buckets = new Map();
   for (const s of segments) {
-    const a = Math.min(1, s.intensity * gain);
+    const a = Math.min(1, s.intensity * (s.share ?? 1) * gain);
     if (a < floor) continue;
     const level = Math.max(1, Math.round(a * LEVELS));
     const key = `${s.wavelength}|${level}`;
