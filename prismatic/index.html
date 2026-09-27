@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prismatic</title>
+  <meta name="description" content="A 2D optics bench in the browser: trace light through prisms, lenses and mirrors." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%230c0d12' d='M0 0h16v16H0z'/%3E%3Cpath fill='none' stroke='%23cfd8ff' d='M8 2 14 13H2z'/%3E%3Cpath stroke='%23fff' d='M0 9 6 8'/%3E%3Cpath stroke='%23ff4d4d' d='M10 9 16 11'/%3E%3Cpath stroke='%2366ff66' d='M10 9 16 12.5'/%3E%3Cpath stroke='%235a7bff' d='M10 9 16 14'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Prismatic</h1>
+    <p class="subtitle">An optics bench on a table top. Shine light through prisms, lenses and mirrors and watch every surface bend, split and reflect it.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Optics bench">
+      <div class="toolbar" role="toolbar" aria-label="Add to the bench">
+        <span class="toolbar-label">Light</span>
+        <button type="button" data-add="laser">Laser</button>
+        <button type="button" data-add="beam">Beam</button>
+        <button type="button" data-add="point">Point</button>
+        <span class="toolbar-label">Glass</span>
+        <button type="button" data-add="prism">Prism</button>
+        <button type="button" data-add="block">Block</button>
+        <button type="button" data-add="convexLens">Convex lens</button>
+        <button type="button" data-add="concaveLens">Concave lens</button>
+        <button type="button" data-add="ball">Ball</button>
+        <span class="toolbar-label">Other</span>
+        <button type="button" data-add="mirror">Mirror</button>
+        <button type="button" data-add="curvedMirror">Curved mirror</button>
+        <button type="button" data-add="blocker">Blocker</button>
+      </div>
+      <div class="bench-wrap">
+        <canvas id="bench" tabindex="0" role="application" aria-roledescription="optics bench" aria-label="Optics bench. Click an element to select it, drag to move it, drag its round handle to turn it."></canvas>
+      </div>
+      <div class="stage-bar">
+        <p id="status" class="status" aria-live="polite"></p>
+        <div class="buttons">
+          <button id="clear" type="button">Clear bench</button>
+        </div>
+      </div>
+      <p class="hint">Drag an element to move it and its round handle to turn it (hold Shift to snap to 15°). With the bench focused: arrow keys move, <kbd>[</kbd> and <kbd>]</kbd> turn, <kbd>.</kbd> selects the next element and <kbd>Delete</kbd> removes it.</p>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <fieldset id="inspector">
+        <legend id="inspector-title">Nothing selected</legend>
+        <div id="inspector-body">
+          <p class="hint">Select an element on the bench to edit it.</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Display</legend>
+        <label for="gain">Ray brightness</label>
+        <p class="readout"><output id="gain-value" for="gain">—</output></p>
+        <input id="gain" type="range" min="0.2" max="4" step="0.05" value="1" />
+        <label class="check"><input id="show-faint" type="checkbox" checked /> Show faint reflections</label>
+        <label class="check"><input id="show-grid" type="checkbox" checked /> Show grid</label>
+      </fieldset>
+    </section>
+  </main>
+
+  <footer>
+    <p>Rays split at every glass surface by the Fresnel equations; total internal reflection happens by itself past the critical angle. Glasses follow Cauchy's dispersion formula.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
