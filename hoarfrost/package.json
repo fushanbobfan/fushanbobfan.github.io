@@ -1,0 +1,26 @@
+{
+  "name": "hoarfrost",
+  "version": "0.1.0",
+  "description": "Grow snow crystals in the browser with Reiter's hexagonal cellular model.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "snowflake",
+    "snow-crystal",
+    "cellular-automaton",
+    "hexagonal-grid",
+    "diffusion",
+    "simulation",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/hoarfrost.git"
+  },
+  "private": false
+}
