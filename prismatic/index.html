@@ -38,6 +38,7 @@
       <div class="stage-bar">
         <p id="status" class="status" aria-live="polite"></p>
         <div class="buttons">
+          <button id="copy-link" type="button">Copy link</button>
           <button id="clear" type="button">Clear bench</button>
         </div>
       </div>
@@ -45,6 +46,13 @@
     </section>
 
     <section class="controls" aria-label="Controls">
+      <fieldset>
+        <legend>Scenes</legend>
+        <label for="scene">Load a scene</label>
+        <select id="scene"></select>
+        <p id="scene-note" class="hint" aria-live="polite"></p>
+      </fieldset>
+
       <fieldset id="inspector">
         <legend id="inspector-title">Nothing selected</legend>
         <div id="inspector-body">

@@ -10,6 +10,8 @@ import {
 } from './params.js';
 import { drawGrid, drawRays, drawElement, drawSelection } from './render.js';
 import { wavelengthToCss } from './spectrum.js';
+import { SCENES, buildScene } from './scenes.js';
+import { encodeBench, decodeBench } from './share.js';
 
 const canvas = document.getElementById('bench');
 const ctx = canvas.getContext('2d');
@@ -20,6 +22,9 @@ const gainInput = document.getElementById('gain');
 const gainValue = document.getElementById('gain-value');
 const showFaint = document.getElementById('show-faint');
 const showGrid = document.getElementById('show-grid');
+const sceneSelect = document.getElementById('scene');
+const sceneNote = document.getElementById('scene-note');
+const copyLink = document.getElementById('copy-link');
 
 const state = {
   elements: [],
@@ -30,21 +35,6 @@ const state = {
   width: 0,
   height: 0,
 };
-
-function defaultBench(w, h) {
-  const cx = w / 2;
-  const cy = h / 2;
-  const px = cx + 0.02 * w;
-  const py = cy + 0.16 * h;
-  return [
-    makeElement('beam', cx - 0.4 * w, cy - 0.18 * h, 0, { width: 70, count: 9 }),
-    makeElement('convexLens', cx - 0.12 * w, cy - 0.18 * h),
-    makeElement('prism', px, py, 0, { side: 150, material: 'sf10' }),
-    // White light onto the prism's left face near minimum deviation.
-    makeElement('laser', px - 250, py + 111, -0.56, { light: 'white' }),
-    makeElement('curvedMirror', cx + 0.4 * w, cy - 0.1 * h, Math.PI, { radius: 360, aperture: 110 }),
-  ];
-}
 
 function selectedElement() {
   return state.elements.find((el) => el.id === state.selected) || null;
@@ -90,7 +80,7 @@ function updateStatus() {
     statusEl.textContent = 'Add a light source to start tracing.';
     return;
   }
-  const parts = [`${stats.launched} rays from ${sources} source${sources === 1 ? '' : 's'}`, `${segments.length} path segments`];
+  const parts = [`${stats.launched} ray${stats.launched === 1 ? '' : 's'} from ${sources} source${sources === 1 ? '' : 's'}`, `${segments.length} path segments`];
   if (stats.truncated) parts.push('segment limit reached');
   statusEl.textContent = parts.join(' · ');
 }
@@ -357,9 +347,59 @@ gainInput.addEventListener('input', () => {
 });
 gainValue.textContent = `${Number(gainInput.value).toFixed(2)}×`;
 
+// Scenes and share links ---------------------------------------------------
+
+function loadScene(id) {
+  const scene = SCENES.find((s) => s.id === id);
+  state.elements = buildScene(id, state.width, state.height);
+  state.dirty = true;
+  sceneSelect.value = id;
+  sceneNote.textContent = scene.note;
+  select(null);
+}
+
+for (const scene of SCENES) {
+  const option = document.createElement('option');
+  option.value = scene.id;
+  option.textContent = scene.name;
+  sceneSelect.append(option);
+}
+sceneSelect.addEventListener('change', () => loadScene(sceneSelect.value));
+
+copyLink.addEventListener('click', async () => {
+  const url = new URL(window.location.href);
+  url.hash = `b=${encodeBench(state.elements)}`;
+  window.history.replaceState(null, '', url);
+  try {
+    await navigator.clipboard.writeText(url.href);
+    statusEl.textContent = 'Link to this bench copied to the clipboard.';
+  } catch {
+    statusEl.textContent = 'The address bar now holds a link to this bench.';
+  }
+});
+
+function benchFromHash() {
+  const match = window.location.hash.match(/^#b=(.+)$/);
+  return match ? decodeBench(match[1]) : null;
+}
+
+window.addEventListener('hashchange', () => {
+  const shared = benchFromHash();
+  if (!shared) return;
+  state.elements = shared;
+  state.dirty = true;
+  select(null);
+});
+
 window.addEventListener('resize', resize);
 resize();
-state.elements = defaultBench(state.width, state.height);
-state.dirty = true;
-buildInspector();
+const shared = benchFromHash();
+if (shared) {
+  state.elements = shared;
+  state.dirty = true;
+  sceneNote.textContent = 'Opened from a shared link.';
+  buildInspector();
+} else {
+  loadScene('tour');
+}
 requestAnimationFrame(frame);
