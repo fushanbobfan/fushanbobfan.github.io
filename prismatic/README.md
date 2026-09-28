@@ -24,8 +24,8 @@ Run the tests with `npm test` (Node 20 or newer).
 
 ## Things to try
 
-- The bench opens on **white light through a dense flint prism**. Turn the
-  prism slowly: the spectrum swings one way, stops, and swings back. The
+- The bench opens on the **bench tour**, with white light through a dense
+  flint prism. Turn the prism slowly: the spectrum swings one way, stops, and swings back. The
   turning point is minimum deviation. Change the glass to fused silica and the
   fan closes up.
 - Swing the **laser** round until it meets a prism face at a steep angle from
@@ -44,6 +44,31 @@ Run the tests with `npm test` (Node 20 or newer).
   geometry of a rainbow, with glass in place of water.
 - Turn off *Show faint reflections* to hide the weak Fresnel reflections and
   see only the main paths.
+
+## Scenes and links
+
+The *Scenes* panel loads ready-made benches:
+
+| Scene | What it shows |
+| --- | --- |
+| Bench tour | a lens focusing a beam, a curved mirror, and white light split by a flint prism |
+| Newton's prism | a narrow white beam through dense flint near minimum deviation |
+| Rainbow in a glass ball | light reflected once inside a ball comes back out, red wider than violet |
+| Prism periscope | two right-angle prisms turn a laser twice by total internal reflection |
+| Light pipe | a laser trapped along a glass rod, the principle of an optical fibre |
+| Lenses and aberration | edge rays of a wide beam focus closer than central ones; a concave lens spreads a beam |
+| Mirror caustic | parallel light on a deep curved mirror crowds onto a bright cusped curve |
+| Whispering gallery | a lamp near the rim of a ball: rays past the critical angle circle the rim for good |
+
+The whispering gallery works because a circle keeps the angle of incidence
+fixed: a ray from a lamp at distance *d* from the centre, leaving at angle φ to
+the radius, meets every surface at asin(*d* sin φ / *R*). If that is past the
+critical angle the first time, it is every time.
+
+Scenes are laid out for a 900 × 600 bench and shrink on smaller screens.
+**Copy link** puts the current bench in the address bar and on the clipboard;
+opening the link restores it. Links hold each element's kind, position, angle
+and parameters, and every value is range-checked when the link is opened.
 
 ## How it works
 
@@ -112,8 +137,10 @@ src/tracer.js     ray tracing through the bench
 src/picking.js    pointer hit-testing and rotation handles
 src/params.js     editable parameters and their ranges
 src/spectrum.js   wavelength to display colour
+src/scenes.js     ready-made benches
+src/share.js      bench layouts to and from link strings
 src/render.js     canvas drawing
-src/main.js       interaction and inspector
+src/main.js       interaction, inspector, scenes and links
 test/             node:test suites
 ```
 
