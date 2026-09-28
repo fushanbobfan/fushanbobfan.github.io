@@ -74,7 +74,7 @@ test('in the whispering gallery a fixed share of the light stays trapped in the 
   const n = 1.72;
   const phis = Array.from({ length: lamp.count }, (_, i) => (2 * Math.PI * i) / lamp.count);
   const trapped = phis.filter((phi) => Math.abs(d * Math.sin(phi)) / ball.radius > 1 / n + 0.02).length;
-  assert.ok(trapped > 10);
+  assert.ok(trapped > lamp.count / 4, `${trapped} trapped`);
   assert.ok(stats.lost > 0.8 * trapped, `lost ${stats.lost} of ${trapped} trapped rays`);
   const inside = segments.filter((s) => s.fate === 'glass' && s.intensity > 0.9);
   for (const s of inside) {
