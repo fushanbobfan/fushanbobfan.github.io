@@ -1,9 +1,11 @@
 import { makeGrid } from './hexgrid.js';
-import { createModel, step, EDGE_MARGIN } from './reiter.js';
+import { createModel, EDGE_MARGIN } from './reiter.js';
+import { createSchedule, advance } from './schedule.js';
 import { buildPixelMap } from './layout.js';
 import { cellColors, MODES } from './palette.js';
 import {
-  SPECS, DEFAULTS, normalize, encodeParams, decodeParams, sliderRange, toSlider, fromSlider,
+  SPECS, DEFAULTS, AT_SPEC, STAGE_DEFAULTS, normalize, normalizeStage, encodeParams, decodeParams,
+  decodeStage, sliderRange, toSlider, fromSlider,
 } from './params.js';
 import { PRESETS, findPreset } from './presets.js';
 
@@ -16,12 +18,17 @@ const playBtn = document.getElementById('play');
 const presetSelect = document.getElementById('preset');
 const presetNote = document.getElementById('preset-note');
 const slidersEl = document.getElementById('sliders');
+const stageOn = document.getElementById('stage-on');
+const stageSlidersEl = document.getElementById('stage-sliders');
 const modeSelect = document.getElementById('mode');
 const speedInput = document.getElementById('speed');
 const speedValue = document.getElementById('speed-value');
 
 const state = {
   params: { ...DEFAULTS },
+  stage: null,
+  stageDraft: { ...STAGE_DEFAULTS },
+  schedule: null,
   grid: null,
   model: null,
   colors: null,
@@ -30,6 +37,7 @@ const state = {
   running: true,
   dirty: true,
   inputs: {},
+  stageInputs: {},
 };
 
 // Set-up -------------------------------------------------------------------
@@ -42,6 +50,7 @@ function restart() {
     state.pixels = null;
   }
   state.model = createModel(state.grid, params);
+  state.schedule = createSchedule(state.stage, state.stage?.at);
   state.dirty = true;
   resize();
 }
@@ -78,13 +87,15 @@ function draw() {
 }
 
 function updateStatus() {
-  const { model } = state;
+  const { model, schedule } = state;
   const reach = Math.round((100 * model.extent) / (model.grid.radius - EDGE_MARGIN));
   const parts = [
     `step ${model.step.toLocaleString()}`,
     `${model.iceCount.toLocaleString()} ice cells`,
     `${reach}% of the way to the edge`,
   ];
+  if (schedule.switchedAt >= 0) parts.push(`second stage since step ${schedule.switchedAt.toLocaleString()}`);
+  else if (schedule.second) parts.push(`second stage at ${Math.round(schedule.at * 100)}%`);
   if (model.done) parts.push('finished');
   else if (!state.running) parts.push('paused');
   statusEl.textContent = parts.join(' · ');
@@ -93,7 +104,7 @@ function updateStatus() {
 function frame() {
   const { model } = state;
   if (state.running && !model.done) {
-    step(model, Number(speedInput.value));
+    advance(model, state.schedule, Number(speedInput.value));
     state.dirty = true;
   }
   if (state.dirty) {
@@ -113,54 +124,103 @@ function setRunning(on) {
   state.dirty = true;
 }
 
+function stepOnce() {
+  setRunning(false);
+  advance(state.model, state.schedule, 1);
+  state.dirty = true;
+}
+
+const percent = (v) => `${Math.round(v * 100)}%`;
+const atValue = (v) => normalizeStage({ at: v }).at;
+const sameStage = (a, b) => JSON.stringify(normalizeStage(a)) === JSON.stringify(normalizeStage(b));
+
 function syncInputs() {
   for (const [name, { input, out }] of Object.entries(state.inputs)) {
     input.value = toSlider(name, state.params[name]);
     out.textContent = String(state.params[name]);
   }
+  const stage = state.stage || state.stageDraft;
+  stageOn.checked = Boolean(state.stage);
+  for (const [name, { input, out }] of Object.entries(state.stageInputs)) {
+    input.value = name === 'at' ? stage.at : toSlider(name, stage[name]);
+    out.textContent = name === 'at' ? percent(stage.at) : String(stage[name]);
+    input.disabled = !state.stage;
+  }
 }
 
 function showPreset() {
   const preset = PRESETS.find((p) => Object.keys(p.params)
-    .every((k) => p.params[k] === state.params[k]));
+    .every((k) => p.params[k] === state.params[k]) && sameStage(p.stage, state.stage));
   presetSelect.value = preset ? preset.id : 'custom';
   presetNote.textContent = preset ? preset.note : 'Your own settings.';
 }
 
-function applyParams(params) {
+function applyParams(params, stage = state.stage) {
   state.params = normalize(params);
+  state.stage = normalizeStage(stage);
+  if (state.stage) state.stageDraft = state.stage;
   syncInputs();
   showPreset();
   restart();
   setRunning(true);
 }
 
+function makeSlider(container, id, text, range, onInput, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'param';
+  const head = document.createElement('div');
+  head.className = 'param-head';
+  const label = document.createElement('label');
+  label.htmlFor = id;
+  label.textContent = text;
+  const out = document.createElement('output');
+  out.htmlFor = id;
+  head.append(label, out);
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.id = id;
+  Object.assign(input, range);
+  input.addEventListener('input', () => {
+    out.textContent = onInput(input.value);
+  });
+  input.addEventListener('change', () => onChange(input.value));
+  wrap.append(head, input);
+  container.append(wrap);
+  return { input, out };
+}
+
 function buildSliders() {
   for (const [name, spec] of Object.entries(SPECS)) {
-    const wrap = document.createElement('div');
-    wrap.className = 'param';
-    const head = document.createElement('div');
-    head.className = 'param-head';
-    const label = document.createElement('label');
-    label.htmlFor = `param-${name}`;
-    label.textContent = spec.label;
-    const out = document.createElement('output');
-    out.htmlFor = label.htmlFor;
-    head.append(label, out);
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.id = label.htmlFor;
-    Object.assign(input, sliderRange(name));
-    input.addEventListener('input', () => {
-      out.textContent = String(fromSlider(name, input.value));
-    });
-    input.addEventListener('change', () => {
-      applyParams({ ...state.params, [name]: fromSlider(name, input.value) });
-    });
-    wrap.append(head, input);
-    slidersEl.append(wrap);
-    state.inputs[name] = { input, out };
+    state.inputs[name] = makeSlider(
+      slidersEl,
+      `param-${name}`,
+      spec.label,
+      sliderRange(name),
+      (v) => String(fromSlider(name, v)),
+      (v) => applyParams({ ...state.params, [name]: fromSlider(name, v) }),
+    );
   }
+  for (const name of ['beta', 'gamma']) {
+    state.stageInputs[name] = makeSlider(
+      stageSlidersEl,
+      `stage-${name}`,
+      `Then ${SPECS[name].label.charAt(0).toLowerCase()}${SPECS[name].label.slice(1)}`,
+      sliderRange(name),
+      (v) => String(fromSlider(name, v)),
+      (v) => applyParams(state.params, { ...state.stage, [name]: fromSlider(name, v) }),
+    );
+  }
+  state.stageInputs.at = makeSlider(
+    stageSlidersEl,
+    'stage-at',
+    AT_SPEC.label,
+    { min: AT_SPEC.min, max: AT_SPEC.max, step: AT_SPEC.step },
+    (v) => percent(atValue(v)),
+    (v) => applyParams(state.params, { ...state.stage, at: atValue(v) }),
+  );
+  stageOn.addEventListener('change', () => {
+    applyParams(state.params, stageOn.checked ? state.stageDraft : null);
+  });
 }
 
 function buildSelects() {
@@ -170,7 +230,7 @@ function buildSelects() {
   presetSelect.append(new Option('Custom', 'custom'));
   presetSelect.addEventListener('change', () => {
     const preset = findPreset(presetSelect.value);
-    if (preset) applyParams({ ...state.params, ...preset.params });
+    if (preset) applyParams({ ...state.params, ...preset.params }, preset.stage || null);
   });
   for (const [id, name] of Object.entries(MODES)) modeSelect.append(new Option(name, id));
   modeSelect.addEventListener('change', () => {
@@ -179,11 +239,7 @@ function buildSelects() {
 }
 
 playBtn.addEventListener('click', () => setRunning(!state.running));
-document.getElementById('step').addEventListener('click', () => {
-  setRunning(false);
-  step(state.model, 1);
-  state.dirty = true;
-});
+document.getElementById('step').addEventListener('click', stepOnce);
 document.getElementById('restart').addEventListener('click', () => {
   restart();
   setRunning(true);
@@ -196,7 +252,7 @@ speedValue.textContent = speedInput.value;
 
 document.getElementById('copy-link').addEventListener('click', async () => {
   const url = new URL(window.location.href);
-  url.hash = encodeParams(state.params);
+  url.hash = encodeParams(state.params, state.stage);
   window.history.replaceState(null, '', url);
   try {
     await navigator.clipboard.writeText(url.href);
@@ -209,7 +265,8 @@ document.getElementById('copy-link').addEventListener('click', async () => {
 document.getElementById('save').addEventListener('click', () => {
   const link = document.createElement('a');
   const { alpha, beta, gamma } = state.params;
-  link.download = `hoarfrost-a${alpha}-b${beta}-g${gamma}-step${state.model.step}.png`;
+  const second = state.stage ? `-then-b${state.stage.beta}-g${state.stage.gamma}` : '';
+  link.download = `hoarfrost-a${alpha}-b${beta}-g${gamma}${second}-step${state.model.step}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
 });
@@ -219,9 +276,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) {
     setRunning(!state.running);
   } else if (e.key === 'n' || e.key === 'N') {
-    setRunning(false);
-    step(state.model, 1);
-    state.dirty = true;
+    stepOnce();
   } else if (e.key === 'r' || e.key === 'R') {
     restart();
     setRunning(true);
@@ -231,15 +286,16 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-window.addEventListener('resize', () => {
-  resize();
-});
-window.addEventListener('hashchange', () => {
+function loadFromHash() {
   const shared = decodeParams(window.location.hash);
-  if (shared) applyParams(shared);
-});
+  if (shared) applyParams(shared, decodeStage(window.location.hash));
+  return Boolean(shared);
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('hashchange', loadFromHash);
 
 buildSliders();
 buildSelects();
-applyParams(decodeParams(window.location.hash) || { ...DEFAULTS, ...PRESETS[0].params });
+if (!loadFromHash()) applyParams({ ...DEFAULTS, ...PRESETS[0].params }, null);
 requestAnimationFrame(frame);
