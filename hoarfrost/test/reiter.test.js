@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeGrid, rotate, reflect } from '../src/hexgrid.js';
-import { createModel, step, totalWater, EDGE_MARGIN } from '../src/reiter.js';
+import {
+  createModel, step, setParams, totalWater, EDGE_MARGIN,
+} from '../src/reiter.js';
 
 test('the model starts as one ice cell in background vapour', () => {
   const g = makeGrid(10);
@@ -99,4 +101,23 @@ test('denser background vapour grows a fuller crystal', () => {
   const sparse = fill(0.35);
   const dense = fill(0.9);
   assert.ok(dense > 1.5 * sparse, `${sparse} vs ${dense}`);
+});
+
+test('new parameters take effect from the next step and the ring follows the new beta', () => {
+  const g = makeGrid(20);
+  const a = step(createModel(g, { beta: 0.4, gamma: 0.001 }), 30);
+  const b = step(createModel(g, { beta: 0.4, gamma: 0.001 }), 30);
+  setParams(b, { beta: 0.6 });
+  assert.equal(b.params.gamma, 0.001);
+  step(a, 1);
+  step(b, 1);
+  const ring = g.index(g.radius, 0);
+  assert.equal(a.s[ring], 0.4);
+  assert.equal(b.s[ring], 0.6);
+  let same = true;
+  for (let c = 0; c < g.count; c++) if (!g.boundary[c] && a.s[c] !== b.s[c]) same = false;
+  assert.ok(same, 'interior should only feel the change one step later');
+  step(a, 1);
+  step(b, 1);
+  assert.ok(b.s[g.index(g.radius - 1, 0)] > a.s[g.index(g.radius - 1, 0)]);
 });

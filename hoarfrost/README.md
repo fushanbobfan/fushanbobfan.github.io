@@ -41,8 +41,15 @@ Run the tests with `npm test` (Node 20 or newer).
   arithmetic.
 - *Ice thickness* shows how much water each ice cell has gathered since it
   froze. The oldest ice, along the middle of each arm, is the thickest.
-- **Copy link** saves the current settings in the address; **Save PNG** keeps
-  the picture.
+- Load **Plate with stellar arms**. It grows as a plate until it is 30% of the
+  way out, then the air changes and six arms break out of the corners. The
+  corners stick furthest into the fresh vapour, so they are where the arms
+  start.
+- Load **Fern sealed in a plate** and look at it in *Growth rings*: the dark
+  fern that grew first is still there inside the pale plate that filled in
+  around it.
+- **Copy link** saves the current settings, second stage included, in the
+  address; **Save PNG** keeps the picture.
 
 ## How it works
 
@@ -74,6 +81,14 @@ vapour the edge picks up regardless of diffusion: as it grows, the edge
 advances more evenly and the crystal fills in from dendrite towards plate. The
 presets were chosen by sweeping β and γ with α = 1.
 
+**Two stages.** A real snowflake falls through air whose temperature and
+humidity change, and its shape records the journey. The *Second stage* panel
+gives the crystal one such change: once the ice has grown the chosen share of
+the way to the edge, β and γ switch to a second pair of values and growth
+carries on from the crystal as it is. The switch always falls on the same
+step, however many steps are drawn per frame, so a link reproduces the same
+crystal.
+
 **Symmetry.** The model has no randomness and every rule treats the six
 directions alike, so the crystal keeps the twelve symmetries of the hexagon
 (six rotations, six reflections). The tests check this cell by cell.
@@ -84,8 +99,8 @@ is a lookup from cell colours to pixels.
 
 **Limits.** This is a two-dimensional, phenomenological model. β, γ and α
 are dimensionless and do not map onto a particular temperature or
-supersaturation, and real snowflakes owe much of their variety to changing
-conditions during their fall, which a fixed β and γ do not capture.
+supersaturation. A single switch between two sets of conditions is a coarse
+stand-in for the continuously changing air a real snowflake falls through.
 
 ## Controls
 
@@ -94,6 +109,7 @@ conditions during their fall, which a fixed β and γ do not capture.
 | Start from | load a named crystal |
 | Diffusion α, background vapour β, vapour added γ | model parameters; changes restart the crystal |
 | Grid radius | cells from the centre to the edge of the grid (40–240) |
+| Second stage | switch to a second β and γ at 10–90% of the way to the edge |
 | Colour by | growth rings, ice thickness or the vapour field |
 | Steps per frame | how fast the crystal grows on screen |
 | <kbd>Space</kbd> / <kbd>N</kbd> / <kbd>R</kbd> | pause and resume / one step / restart |
@@ -110,6 +126,7 @@ src/reiter.js     the growth model
 src/layout.js     hexagon geometry and the pixel-to-cell map
 src/palette.js    colour modes
 src/params.js     parameter ranges, slider scales and link format
+src/schedule.js   two-stage growth
 src/presets.js    named crystals
 src/main.js       animation, controls and export
 test/             node:test suites

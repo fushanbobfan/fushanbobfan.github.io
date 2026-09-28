@@ -147,6 +147,17 @@ fieldset > label:first-of-type {
   margin-top: 0.6rem;
 }
 
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+input[type="range"]:disabled {
+  opacity: 0.4;
+}
+
 .param-head {
   display: flex;
   justify-content: space-between;

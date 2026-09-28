@@ -73,10 +73,11 @@ function refresh(model) {
 }
 
 export function step(model, times = 1) {
-  const { grid, params, s, u, next, receptive } = model;
+  const { grid, s, u, next, receptive } = model;
   const { count, neighbors, boundary } = grid;
-  const half = params.alpha / 2;
   for (let t = 0; t < times && !model.done; t++) {
+    const { params } = model;
+    const half = params.alpha / 2;
     for (let c = 0; c < count; c++) u[c] = receptive[c] ? 0 : s[c];
     for (let c = 0; c < count; c++) {
       if (boundary[c]) {
@@ -92,6 +93,13 @@ export function step(model, times = 1) {
     model.step++;
     refresh(model);
   }
+  return model;
+}
+
+// Change parameters part-way through growth. The outer ring takes the new
+// beta on the next step.
+export function setParams(model, params) {
+  model.params = { ...model.params, ...params };
   return model;
 }
 

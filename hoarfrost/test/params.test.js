@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SPECS, DEFAULTS, clampParam, normalize, encodeParams, decodeParams,
-  sliderRange, toSlider, fromSlider,
+  sliderRange, toSlider, fromSlider, normalizeStage, decodeStage, STAGE_DEFAULTS,
 } from '../src/params.js';
 
 test('defaults lie inside their ranges', () => {
@@ -64,4 +64,18 @@ test('linear sliders pass values straight through', () => {
   assert.equal(toSlider('beta', 0.4), 0.4);
   assert.equal(fromSlider('beta', '0.4'), 0.4);
   assert.equal(fromSlider('radius', '123'), 120);
+});
+
+test('a second stage travels in the link and is range-checked on the way back', () => {
+  const p = { alpha: 1, beta: 0.4, gamma: 0.3, radius: 150 };
+  const stage = { beta: 0.5, gamma: 0.003, at: 0.3 };
+  const text = encodeParams(p, stage);
+  assert.equal(text, 'a=1&b=0.4&g=0.3&n=150&b2=0.5&g2=0.003&at=0.3');
+  assert.deepEqual(decodeParams(text), p);
+  assert.deepEqual(decodeStage(`#${text}`), stage);
+  assert.equal(decodeStage('#a=1&b=0.4'), null);
+  assert.deepEqual(decodeStage('#g2=5&at=0.01'), { beta: STAGE_DEFAULTS.beta, gamma: 0.4, at: 0.1 });
+  assert.deepEqual(decodeStage('#b2=x&at=junk'), { ...STAGE_DEFAULTS, beta: DEFAULTS.beta });
+  assert.equal(normalizeStage(null), null);
+  assert.equal(encodeParams(p), 'a=1&b=0.4&g=0.3&n=150');
 });
