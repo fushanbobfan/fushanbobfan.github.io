@@ -83,7 +83,7 @@ export const SCENES = [
     note: 'A lamp near the rim of a flint glass ball. Rays that meet the surface past the critical angle meet every later surface at the same angle, so they circle the rim and never get out.',
     build: () => [
       makeElement('ball', 0, 0, 0, { radius: 200, material: 'sf10' }),
-      makeElement('point', 0, -150, 0, { count: 72, spread: 360, wavelength: 600 }),
+      makeElement('point', 0, -150, 0, { count: 24, spread: 360, wavelength: 600 }),
     ],
   },
 ];
