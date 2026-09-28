@@ -1,5 +1,6 @@
 // Model parameters: their ranges, clamping, slider scales, and a compact form
-// for share links (#a=1&b=0.4&g=0.001&n=150).
+// for share links (#a=1&b=0.4&g=0.001&n=150). A second growth stage adds
+// its own beta and gamma and the switch point (&b2=0.4&g2=0.3&at=0.5).
 
 const fixed = (digits) => (v) => Number(v.toFixed(digits));
 
@@ -23,6 +24,12 @@ export const SPECS = {
 export const DEFAULTS = {
   alpha: 1, beta: 0.4, gamma: 0.0001, radius: 150,
 };
+
+export const AT_SPEC = {
+  key: 'at', label: 'Switch at', min: 0.1, max: 0.9, step: 0.05, round: (v) => Number(v.toFixed(2)),
+};
+
+export const STAGE_DEFAULTS = { beta: 0.4, gamma: 0.3, at: 0.5 };
 
 const LOG_STEPS = 1000;
 
@@ -62,9 +69,34 @@ export function normalize(params = {}) {
   return out;
 }
 
-export function encodeParams(params) {
+// A second stage changes beta and gamma; alpha and the grid stay put.
+export function normalizeStage(stage) {
+  if (!stage) return null;
+  const at = Number(stage.at);
+  return {
+    beta: 'beta' in stage ? clampParam('beta', stage.beta) : STAGE_DEFAULTS.beta,
+    gamma: 'gamma' in stage ? clampParam('gamma', stage.gamma) : STAGE_DEFAULTS.gamma,
+    at: Number.isFinite(at) ? AT_SPEC.round(Math.min(AT_SPEC.max, Math.max(AT_SPEC.min, at))) : STAGE_DEFAULTS.at,
+  };
+}
+
+export function encodeParams(params, stage = null) {
   const p = normalize(params);
-  return Object.entries(SPECS).map(([name, spec]) => `${spec.key}=${p[name]}`).join('&');
+  const parts = Object.entries(SPECS).map(([name, spec]) => `${spec.key}=${p[name]}`);
+  const st = normalizeStage(stage);
+  if (st) parts.push(`b2=${st.beta}`, `g2=${st.gamma}`, `at=${st.at}`);
+  return parts.join('&');
+}
+
+// The second stage in a link, or null if the link has none.
+export function decodeStage(text) {
+  const search = new URLSearchParams(String(text || '').replace(/^[#?]/, ''));
+  if (!search.has('b2') && !search.has('g2')) return null;
+  const stage = {};
+  if (search.has('b2')) stage.beta = search.get('b2');
+  if (search.has('g2')) stage.gamma = search.get('g2');
+  if (search.has('at')) stage.at = search.get('at');
+  return normalizeStage(stage);
 }
 
 // Read parameters from a hash or query string. Unknown or broken entries
