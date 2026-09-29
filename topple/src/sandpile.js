@@ -1,16 +1,21 @@
 // Abelian sandpile on a width x height square grid with an open boundary:
 // a cell holding four or more grains topples, sending one grain to each of
 // its four neighbours, and grains pushed past the edge leave the system.
+// An optional mask switches cells off; they act like the edge, so the pile
+// can live on a disc, a ring or any other region of the grid.
 
 export const THRESHOLD = 4;
 
-export function createPile(width, height) {
+export function createPile(width, height, mask = null) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
     throw new RangeError('grid size must be positive integers');
   }
+  if (mask && mask.length !== width * height) throw new RangeError('mask does not match the grid');
   return {
     width,
     height,
+    // 1 for cells that hold sand, 0 for cells that behave like the edge.
+    active: mask ? Uint8Array.from(mask, (v) => (v ? 1 : 0)) : new Uint8Array(width * height).fill(1),
     cells: new Uint32Array(width * height),
     // How many times each cell has toppled since the last clear.
     odometer: new Float64Array(width * height),
@@ -37,7 +42,17 @@ function enqueue(pile, i) {
   pile.pending += 1;
 }
 
+// Grains dropped on a switched-off cell fall straight into the sink.
 export function addGrains(pile, i, n = 1) {
+  if (!pile.active[i]) {
+    pile.lost += n;
+    return;
+  }
+  pile.cells[i] += n;
+  if (pile.cells[i] >= THRESHOLD) enqueue(pile, i);
+}
+
+function push(pile, i, n) {
   pile.cells[i] += n;
   if (pile.cells[i] >= THRESHOLD) enqueue(pile, i);
 }
@@ -59,7 +74,9 @@ export function totalGrains(pile) {
 // for the first time in generation `gen` is stamped and counted. Returns a
 // record of what happened in this call.
 export function relax(pile, budget = Infinity, touched = null) {
-  const { width, height, cells, queue, queued } = pile;
+  const {
+    width, height, cells, queue, queued, active,
+  } = pile;
   let topplings = 0;
   let lost = 0;
   while (pile.pending > 0 && topplings < budget) {
@@ -79,10 +96,10 @@ export function relax(pile, budget = Infinity, touched = null) {
     }
     const x = i % width;
     const y = (i - x) / width;
-    if (x > 0) addGrains(pile, i - 1, fires); else lost += fires;
-    if (x < width - 1) addGrains(pile, i + 1, fires); else lost += fires;
-    if (y > 0) addGrains(pile, i - width, fires); else lost += fires;
-    if (y < height - 1) addGrains(pile, i + width, fires); else lost += fires;
+    if (x > 0 && active[i - 1]) push(pile, i - 1, fires); else lost += fires;
+    if (x < width - 1 && active[i + 1]) push(pile, i + 1, fires); else lost += fires;
+    if (y > 0 && active[i - width]) push(pile, i - width, fires); else lost += fires;
+    if (y < height - 1 && active[i + width]) push(pile, i + width, fires); else lost += fires;
   }
   pile.lost += lost;
   return { topplings, lost, stable: pile.pending === 0 };
@@ -102,10 +119,17 @@ export function clear(pile) {
   pile.lost = 0;
 }
 
-// Replace the whole configuration, queueing every unstable cell.
+export function activeCount(pile) {
+  let n = 0;
+  for (let i = 0; i < pile.active.length; i++) n += pile.active[i];
+  return n;
+}
+
+// Replace the whole configuration, queueing every unstable cell. Values on
+// switched-off cells are discarded rather than counted as lost.
 export function setCells(pile, values) {
   clear(pile);
-  for (let i = 0; i < values.length; i++) addGrains(pile, i, values[i]);
+  for (let i = 0; i < values.length; i++) if (pile.active[i]) push(pile, i, values[i]);
 }
 
 // Synchronous alternative to relax for tall piles: scan the whole grid up to
@@ -114,7 +138,9 @@ export function setCells(pile, values) {
 // better than the queue does. The queue is rebuilt afterwards so relax and
 // isStable stay correct.
 export function sweep(pile, maxPasses = Infinity) {
-  const { width, height, cells, odometer } = pile;
+  const {
+    width, height, cells, odometer, active,
+  } = pile;
   pile.queued.fill(0);
   pile.head = 0;
   pile.tail = 0;
@@ -134,10 +160,10 @@ export function sweep(pile, maxPasses = Infinity) {
         cells[i] = h & 3;
         odometer[i] += fires;
         topplings += fires;
-        if (x > 0) cells[i - 1] += fires; else lost += fires;
-        if (x < width - 1) cells[i + 1] += fires; else lost += fires;
-        if (y > 0) cells[i - width] += fires; else lost += fires;
-        if (y < height - 1) cells[i + width] += fires; else lost += fires;
+        if (x > 0 && active[i - 1]) cells[i - 1] += fires; else lost += fires;
+        if (x < width - 1 && active[i + 1]) cells[i + 1] += fires; else lost += fires;
+        if (y > 0 && active[i - width]) cells[i - width] += fires; else lost += fires;
+        if (y < height - 1 && active[i + width]) cells[i + width] += fires; else lost += fires;
         unstable = true;
       }
     }

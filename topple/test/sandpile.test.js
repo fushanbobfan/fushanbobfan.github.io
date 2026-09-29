@@ -179,3 +179,41 @@ test('clearing resets the odometer', () => {
   setCells(pile, new Uint32Array(9));
   assert.ok(pile.odometer.every((v) => v === 0));
 });
+
+test('switched-off cells act as the edge', () => {
+  // A 3x3 grid with only the centre and its right neighbour switched on.
+  const mask = [0, 0, 0, 0, 1, 1, 0, 0, 0];
+  const pile = createPile(3, 3, mask);
+  addGrains(pile, 4, 4);
+  const r = stabilize(pile);
+  assert.equal(r.topplings, 1);
+  assert.equal(r.lost, 3);
+  assert.deepEqual([...pile.cells], [0, 0, 0, 0, 0, 1, 0, 0, 0]);
+  addGrains(pile, 0, 5);
+  assert.equal(pile.cells[0], 0);
+  assert.equal(pile.lost, 8);
+});
+
+test('masked piles conserve grains and agree between queue and sweep', () => {
+  const n = 25;
+  const mask = new Uint8Array(n * n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) mask[y * n + x] = (x - 12) ** 2 + (y - 12) ** 2 <= 144 ? 1 : 0;
+  const a = createPile(n, n, mask);
+  const b = createPile(n, n, mask);
+  addGrains(a, index(a, 12, 12), 3000);
+  addGrains(b, index(b, 12, 12), 3000);
+  stabilize(a);
+  sweep(b);
+  assert.deepEqual([...a.cells], [...b.cells]);
+  assert.equal(a.lost, b.lost);
+  assert.equal(totalGrains(a) + a.lost, 3000);
+  for (let i = 0; i < n * n; i++) if (!mask[i]) assert.equal(a.cells[i], 0);
+});
+
+test('setCells ignores values on switched-off cells', () => {
+  const pile = createPile(2, 1, [1, 0]);
+  setCells(pile, [2, 9]);
+  assert.deepEqual([...pile.cells], [2, 0]);
+  assert.equal(pile.lost, 0);
+  assert.throws(() => createPile(2, 2, [1, 1]), RangeError);
+});
