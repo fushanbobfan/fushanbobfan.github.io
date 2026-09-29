@@ -16,20 +16,24 @@ test('numbers are clamped and rounded, choices fall back to the default', () => 
   assert.equal(clampParam('size', 'abc'), DEFAULTS.size);
   assert.equal(clampParam('mode', 'volcano'), 'tower');
   assert.equal(clampParam('palette', 'tide'), 'tide');
+  assert.equal(clampParam('view', 'heat'), 'grains');
 });
 
 test('settings survive a link round trip', () => {
   const p = {
-    mode: 'rain', power: 12, size: 64, palette: 'ember', seed: 77,
+    mode: 'rain', power: 12, size: 64, palette: 'ember', seed: 77, view: 'topplings',
   };
   const text = encodeParams(p);
-  assert.equal(text, 'm=rain&p=12&s=64&c=ember&r=77');
+  assert.equal(text, 'm=rain&p=12&s=64&c=ember&r=77&v=topplings');
   assert.deepEqual(decodeParams(`#${text}`), p);
 });
 
 test('partial links fill in defaults and foreign links give null', () => {
   assert.deepEqual(decodeParams('#m=identity&s=9999'), { ...DEFAULTS, mode: 'identity', size: 256 });
   assert.equal(decodeParams('#foo=1'), null);
+  assert.deepEqual(decodeParams('#m=rain&p=12&s=64&c=ember&r=77'), {
+    mode: 'rain', power: 12, size: 64, palette: 'ember', seed: 77, view: 'grains',
+  });
   assert.equal(decodeParams(''), null);
   assert.deepEqual(normalize({}), DEFAULTS);
 });
