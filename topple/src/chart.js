@@ -18,12 +18,12 @@ export function makeScale(points, w, h, pad) {
   return { x0, x1, y0, y1, px, py };
 }
 
-const PAD = { left: 52, right: 14, top: 14, bottom: 40 };
+const PAD = { left: 64, right: 16, top: 16, bottom: 64 };
 
 export function drawChart(ctx, points, fit, colors) {
   const { width: w, height: h } = ctx.canvas;
   ctx.clearRect(0, 0, w, h);
-  ctx.font = '20px system-ui, sans-serif';
+  ctx.font = '22px system-ui, sans-serif';
   ctx.fillStyle = colors.muted;
   if (points.length === 0) {
     ctx.textAlign = 'center';
@@ -38,7 +38,7 @@ export function drawChart(ctx, points, fit, colors) {
   for (let d = s.x0; d <= s.x1; d++) {
     const x = s.px(10 ** d);
     ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, h - PAD.bottom); ctx.stroke();
-    ctx.fillText(`10${superscript(d)}`, x, h - PAD.bottom + 6);
+    ctx.fillText(`10${superscript(d)}`, x, h - PAD.bottom + 8);
   }
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
@@ -50,7 +50,7 @@ export function drawChart(ctx, points, fit, colors) {
   }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText('avalanche size (topplings)', (PAD.left + w - PAD.right) / 2, h - 2);
+  ctx.fillText('avalanche size (topplings)', (PAD.left + w - PAD.right) / 2, h - 4);
 
   if (fit) {
     const a = 10 ** s.x0;
