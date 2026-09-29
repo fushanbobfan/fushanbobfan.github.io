@@ -48,6 +48,12 @@ recipe `e = settle(2m − settle(2m))`, where `m` is three grains on every
 cell, and shows both settling stages. Adding `e` to any recurrent pile leaves
 it unchanged.
 
+**Regions.** Rain and Identity can run on a square, a disc, a diamond or a
+ring cut out of the grid. Cells outside the region behave exactly like the
+edge: grains sent there are gone. Each region has its own sandpile group, and
+the identities are strikingly different: the disc's is dominated by broad
+flat bands, the ring's by lacy triangles around the hole.
+
 Click or drag on the grid to drop extra grains in any experiment.
 
 ## Two views
@@ -70,6 +76,7 @@ second settling stage.
 | Experiment | Tower, Rain or Identity |
 | Tower height | 2^6 to 2^17 grains on the centre cell |
 | Grid side | 16 to 256 cells for Rain and Identity |
+| Region | Square, disc, diamond or ring for Rain and Identity |
 | New seed | Reshuffles where rain lands; the seed goes into share links |
 | Speed | Sweep passes (Tower, Identity) or dropped grains (Rain) per frame |
 | Show | Grains per cell or times toppled |
@@ -94,13 +101,17 @@ restarts.
   fell off, using a seeded random site picker so runs replay.
 - `src/stats.js` bins avalanche sizes logarithmically, turns counts into a
   density per unit size and fits a least-squares line in log-log space.
+- `src/shapes.js` builds the region masks; `src/sandpile.js` treats a
+  switched-off neighbour like the edge.
 - `src/group.js` adds piles, computes the identity and checks recurrence with
   Dhar's burning test: add one grain per edge to the sink and see whether
-  every cell topples exactly once.
+  every cell topples exactly once. All of it works on any region, and the
+  tests check the identity on each one.
 
 ## Limits
 
-- The boundary is always open (grains fall off all four edges).
+- The boundary is always open: grains leave through the grid edge and
+  through any switched-off cell. There is no closed or periodic option.
 - Towers above 2^17 grains are left out because they take too long to settle
   in a browser frame budget.
 - The fitted slope is for exploration, not a measurement of the critical
