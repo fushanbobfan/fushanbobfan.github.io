@@ -118,8 +118,10 @@ function advance(units) {
       record(state.hist, r.size);
       state.dropped += 1;
       state.topplings += r.size;
-      state.lastSize = r.size;
-      if (r.size > 0) state.flashGen = state.tracker.gen;
+      if (r.size > 0) {
+        state.lastSize = r.size;
+        state.flashGen = state.tracker.gen;
+      }
     }
     state.chartDirty = true;
     return;
@@ -206,7 +208,7 @@ function updateStatus() {
   const settled = isStable(pile);
   let text;
   if (state.phase === 'rain') {
-    text = `${fmt(state.dropped)} grains dropped · last avalanche ${fmt(state.lastSize)} · ${density} grains per cell · ${fmt(pile.lost)} fell off`;
+    text = `${fmt(state.dropped)} grains dropped · latest avalanche ${fmt(state.lastSize)} topplings · ${density} grains per cell · ${fmt(pile.lost)} fell off`;
   } else if (state.phase === 'collapse') {
     text = `${settled ? 'Settled' : 'Toppling'}: ${fmt(2 ** state.params.power)} grains on a ${pile.width}×${pile.width} grid · ${fmt(state.topplings)} topplings`;
   } else if (state.phase === 'double') {
