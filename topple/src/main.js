@@ -1,6 +1,7 @@
 import {
-  createPile, index, addGrains, relax, sweep, isStable, setCells, totalGrains, THRESHOLD,
+  createPile, index, addGrains, relax, sweep, isStable, setCells, totalGrains, activeCount, THRESHOLD,
 } from './sandpile.js';
+import { SHAPES, makeMask, activeCells } from './shapes.js';
 import { createTracker, dropGrain, siteRandom } from './avalanche.js';
 import { createHistogram, record, reset as resetHistogram, densities, fitSlope } from './stats.js';
 import { drawChart } from './chart.js';
@@ -18,6 +19,7 @@ const playBtn = document.getElementById('play');
 const modeSelect = document.getElementById('mode');
 const modeNote = document.getElementById('mode-note');
 const paletteSelect = document.getElementById('palette');
+const shapeSelect = document.getElementById('shape');
 const viewSelect = document.getElementById('view');
 const viewNote = document.getElementById('view-note');
 const legendEl = document.getElementById('legend');
@@ -40,6 +42,7 @@ const rows = {
   power: document.getElementById('power-row'),
   size: document.getElementById('size-row'),
   seed: document.getElementById('seed-row'),
+  shape: document.getElementById('shape-row'),
 };
 
 const NOTES = {
@@ -53,6 +56,8 @@ const state = {
   pile: null,
   tracker: null,
   rand: null,
+  sites: null,
+  live: 0,
   hist: createHistogram(5),
   words: paletteWords(DEFAULTS.palette),
   ramp: rampWords(DEFAULTS.palette),
@@ -78,7 +83,11 @@ function sideFor(params) {
 function restart() {
   const { params } = state;
   const side = sideFor(params);
-  state.pile = createPile(side, side);
+  // Towers never reach the edge, so the region only matters for the others.
+  const mask = params.mode === 'tower' || params.shape === 'square' ? null : makeMask(params.shape, side);
+  state.pile = createPile(side, side, mask);
+  state.sites = mask ? activeCells(mask) : null;
+  state.live = activeCount(state.pile);
   state.tracker = createTracker(state.pile);
   state.rand = siteRandom(params.seed);
   resetHistogram(state.hist);
@@ -120,7 +129,8 @@ function advance(units) {
   if (state.phase === 'rain') {
     if (!isStable(pile)) state.topplings += relax(pile).topplings;
     for (let k = 0; k < units; k++) {
-      const r = dropGrain(pile, state.rand(pile.cells.length), state.tracker);
+      const site = state.sites ? state.sites[state.rand(state.sites.length)] : state.rand(pile.cells.length);
+      const r = dropGrain(pile, site, state.tracker);
       record(state.hist, r.size);
       state.dropped += 1;
       state.topplings += r.size;
@@ -177,23 +187,27 @@ function draw() {
 
 // Each cell on a log scale from never toppled to the busiest cell.
 function drawOdometer(out) {
-  const { odometer } = state.pile;
+  const { odometer, active } = state.pile;
   const { ramp } = state;
   let max = 0;
   for (let i = 0; i < odometer.length; i++) if (odometer[i] > max) max = odometer[i];
   state.odoMax = max;
-  for (let i = 0; i < odometer.length; i++) out[i] = ramp[logStep(odometer[i], max, ramp.length)];
+  for (let i = 0; i < odometer.length; i++) {
+    out[i] = active[i] ? ramp[logStep(odometer[i], max, ramp.length)] : 0;
+  }
 }
 
 function drawGrains(out) {
   const { pile, words, tracker } = state;
-  const { cells } = pile;
+  const { cells, active } = pile;
   // Light up only the most recent avalanche: at hundreds of drops per frame,
   // lighting every toppled cell would wash out the whole grid.
   const flash = state.phase === 'rain' && state.flashGen > 0 ? state.flashGen : -1;
   for (let i = 0; i < cells.length; i++) {
     const h = cells[i];
-    if (h >= THRESHOLD) out[i] = words[4];
+    // Switched-off cells stay transparent and show the page background.
+    if (!active[i]) out[i] = 0;
+    else if (h >= THRESHOLD) out[i] = words[4];
     else if (tracker.mark[i] === flash) out[i] = words[4];
     else out[i] = words[h];
   }
@@ -229,7 +243,7 @@ function drawAvalanches() {
 function updateStatus() {
   const { pile } = state;
   const grains = totalGrains(pile);
-  const density = (grains / pile.cells.length).toFixed(3);
+  const density = (grains / Math.max(1, state.live)).toFixed(3);
   const settled = isStable(pile);
   let text;
   if (state.phase === 'rain') {
@@ -239,7 +253,9 @@ function updateStatus() {
   } else if (state.phase === 'double') {
     text = `Settling six grains per cell · ${fmt(state.topplings)} topplings`;
   } else {
-    text = `${settled ? 'Identity' : 'Settling the difference'} of the ${pile.width}×${pile.width} sandpile group · ${fmt(state.topplings)} topplings`;
+    const { shape } = state.params;
+    const where = shape === 'square' ? `${pile.width}×${pile.width}` : `${SHAPES[shape].toLowerCase()} (side ${pile.width})`;
+    text = `${settled ? 'Identity' : 'Settling the difference'} of the ${where} sandpile group · ${fmt(state.topplings)} topplings`;
   }
   if (state.params.view === 'topplings') text += ` · busiest cell toppled ${fmt(state.odoMax)} times`;
   statusEl.textContent = text;
@@ -274,6 +290,7 @@ function syncControls() {
   const { params } = state;
   modeSelect.value = params.mode;
   paletteSelect.value = params.palette;
+  shapeSelect.value = params.shape;
   viewSelect.value = params.view;
   inputs.power.value = params.power;
   inputs.size.value = params.size;
@@ -284,6 +301,7 @@ function syncControls() {
   rows.power.hidden = params.mode !== 'tower';
   rows.size.hidden = params.mode === 'tower';
   rows.seed.hidden = params.mode !== 'rain';
+  rows.shape.hidden = params.mode === 'tower';
   avalancheBox.hidden = params.mode !== 'rain';
   modeNote.textContent = NOTES[params.mode];
   drawLegend();
@@ -333,10 +351,12 @@ function setRunning(on) {
 for (const [key, label] of Object.entries(MODES)) modeSelect.add(new Option(label, key));
 for (const [key, p] of Object.entries(PALETTES)) paletteSelect.add(new Option(p.label, key));
 for (const [key, label] of Object.entries(VIEWS)) viewSelect.add(new Option(label, key));
+for (const [key, label] of Object.entries(SHAPES)) shapeSelect.add(new Option(label, key));
 
 modeSelect.addEventListener('change', () => { setParam('mode', modeSelect.value); restart(); });
 inputs.power.addEventListener('input', () => { setParam('power', inputs.power.value); restart(); });
 inputs.size.addEventListener('input', () => { setParam('size', inputs.size.value); restart(); });
+shapeSelect.addEventListener('change', () => { setParam('shape', shapeSelect.value); restart(); });
 inputs.speed.addEventListener('input', () => { outputs.speed.textContent = speedLabel(); });
 document.getElementById('reseed').addEventListener('click', () => {
   setParam('seed', 1 + Math.floor(Math.random() * SPECS.seed.max));
@@ -378,7 +398,8 @@ document.getElementById('save').addEventListener('click', () => {
   octx.imageSmoothingEnabled = false;
   octx.drawImage(state.offscreen, 0, 0, out.width, out.height);
   const a = document.createElement('a');
-  a.download = `topple-${state.params.mode}-${side}.png`;
+  const region = state.params.mode === 'tower' ? '' : `-${state.params.shape}`;
+  a.download = `topple-${state.params.mode}${region}-${side}.png`;
   a.href = out.toDataURL('image/png');
   a.click();
 });
