@@ -6,16 +6,22 @@ export const MODES = {
   identity: 'Identity',
 };
 
+export const VIEWS = {
+  grains: 'Grains per cell',
+  topplings: 'Times toppled',
+};
+
 export const SPECS = {
   mode: { key: 'm', values: Object.keys(MODES) },
   power: { key: 'p', min: 6, max: 17, step: 1 },
   size: { key: 's', min: 16, max: 256, step: 1 },
   palette: { key: 'c', values: ['dune', 'tide', 'ember', 'paper'] },
   seed: { key: 'r', min: 1, max: 999999, step: 1 },
+  view: { key: 'v', values: Object.keys(VIEWS) },
 };
 
 export const DEFAULTS = {
-  mode: 'tower', power: 14, size: 128, palette: 'dune', seed: 1,
+  mode: 'tower', power: 14, size: 128, palette: 'dune', seed: 1, view: 'grains',
 };
 
 export function clampParam(name, value) {

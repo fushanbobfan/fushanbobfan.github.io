@@ -4,9 +4,11 @@ import {
 import { createTracker, dropGrain, siteRandom } from './avalanche.js';
 import { createHistogram, record, reset as resetHistogram, densities, fitSlope } from './stats.js';
 import { drawChart } from './chart.js';
-import { PALETTES, paletteWords } from './palette.js';
 import {
-  MODES, SPECS, DEFAULTS, clampParam, encodeParams, decodeParams, towerSide,
+  PALETTES, paletteWords, rampWords, logStep,
+} from './palette.js';
+import {
+  MODES, VIEWS, SPECS, DEFAULTS, clampParam, encodeParams, decodeParams, towerSide,
 } from './params.js';
 
 const canvas = document.getElementById('pile');
@@ -16,6 +18,8 @@ const playBtn = document.getElementById('play');
 const modeSelect = document.getElementById('mode');
 const modeNote = document.getElementById('mode-note');
 const paletteSelect = document.getElementById('palette');
+const viewSelect = document.getElementById('view');
+const viewNote = document.getElementById('view-note');
 const legendEl = document.getElementById('legend');
 const chart = document.getElementById('chart');
 const chartCtx = chart.getContext('2d');
@@ -51,6 +55,8 @@ const state = {
   rand: null,
   hist: createHistogram(5),
   words: paletteWords(DEFAULTS.palette),
+  ramp: rampWords(DEFAULTS.palette),
+  odoMax: 0,
   running: true,
   stepOnce: false,
   phase: '',
@@ -163,8 +169,24 @@ function viewBox() {
 }
 
 function draw() {
-  const { pile, image, words, tracker } = state;
-  const out = new Uint32Array(image.data.buffer);
+  const out = new Uint32Array(state.image.data.buffer);
+  if (state.params.view === 'topplings') drawOdometer(out);
+  else drawGrains(out);
+  present();
+}
+
+// Each cell on a log scale from never toppled to the busiest cell.
+function drawOdometer(out) {
+  const { odometer } = state.pile;
+  const { ramp } = state;
+  let max = 0;
+  for (let i = 0; i < odometer.length; i++) if (odometer[i] > max) max = odometer[i];
+  state.odoMax = max;
+  for (let i = 0; i < odometer.length; i++) out[i] = ramp[logStep(odometer[i], max, ramp.length)];
+}
+
+function drawGrains(out) {
+  const { pile, words, tracker } = state;
   const { cells } = pile;
   // Light up only the most recent avalanche: at hundreds of drops per frame,
   // lighting every toppled cell would wash out the whole grid.
@@ -175,7 +197,10 @@ function draw() {
     else if (tracker.mark[i] === flash) out[i] = words[4];
     else out[i] = words[h];
   }
-  state.offscreen.getContext('2d').putImageData(image, 0, 0);
+}
+
+function present() {
+  state.offscreen.getContext('2d').putImageData(state.image, 0, 0);
   ctx.fillStyle = cssVar('--bg');
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
@@ -216,6 +241,7 @@ function updateStatus() {
   } else {
     text = `${settled ? 'Identity' : 'Settling the difference'} of the ${pile.width}×${pile.width} sandpile group · ${fmt(state.topplings)} topplings`;
   }
+  if (state.params.view === 'topplings') text += ` · busiest cell toppled ${fmt(state.odoMax)} times`;
   statusEl.textContent = text;
 }
 
@@ -248,6 +274,7 @@ function syncControls() {
   const { params } = state;
   modeSelect.value = params.mode;
   paletteSelect.value = params.palette;
+  viewSelect.value = params.view;
   inputs.power.value = params.power;
   inputs.size.value = params.size;
   outputs.power.textContent = `2^${params.power} = ${fmt(2 ** params.power)} grains`;
@@ -267,17 +294,30 @@ function speedLabel() {
   return state.params.mode === 'rain' ? `${fmt(n)} grains per frame` : `${fmt(n)} passes per frame`;
 }
 
+const VIEW_NOTES = {
+  grains: '',
+  topplings: 'Brightness follows the logarithm of how many times each cell has toppled since the experiment started. In Identity it counts the second settling stage only.',
+};
+
 function drawLegend() {
   const p = PALETTES[state.params.palette];
+  viewNote.textContent = VIEW_NOTES[state.params.view];
+  viewNote.hidden = !VIEW_NOTES[state.params.view];
+  if (state.params.view === 'topplings') {
+    legendEl.replaceChildren(legendItem(p.colors[0], 'never toppled'), legendItem(p.colors[3], 'toppled most'));
+    return;
+  }
   const names = ['empty', '1 grain', '2 grains', '3 grains', state.params.mode === 'rain' ? 'latest avalanche' : 'toppling'];
-  legendEl.replaceChildren(...[...p.colors, p.hot].map((c, i) => {
-    const li = document.createElement('li');
-    const sw = document.createElement('span');
-    sw.className = 'swatch';
-    sw.style.background = c;
-    li.append(sw, names[i]);
-    return li;
-  }));
+  legendEl.replaceChildren(...[...p.colors, p.hot].map((c, i) => legendItem(c, names[i])));
+}
+
+function legendItem(color, text) {
+  const li = document.createElement('li');
+  const sw = document.createElement('span');
+  sw.className = 'swatch';
+  sw.style.background = color;
+  li.append(sw, text);
+  return li;
 }
 
 function setParam(name, value) {
@@ -292,6 +332,7 @@ function setRunning(on) {
 
 for (const [key, label] of Object.entries(MODES)) modeSelect.add(new Option(label, key));
 for (const [key, p] of Object.entries(PALETTES)) paletteSelect.add(new Option(p.label, key));
+for (const [key, label] of Object.entries(VIEWS)) viewSelect.add(new Option(label, key));
 
 modeSelect.addEventListener('change', () => { setParam('mode', modeSelect.value); restart(); });
 inputs.power.addEventListener('input', () => { setParam('power', inputs.power.value); restart(); });
@@ -304,6 +345,11 @@ document.getElementById('reseed').addEventListener('click', () => {
 paletteSelect.addEventListener('change', () => {
   setParam('palette', paletteSelect.value);
   state.words = paletteWords(state.params.palette);
+  state.ramp = rampWords(state.params.palette);
+  drawLegend();
+});
+viewSelect.addEventListener('change', () => {
+  setParam('view', viewSelect.value);
   drawLegend();
 });
 playBtn.addEventListener('click', () => setRunning(!state.running));
@@ -370,5 +416,6 @@ window.addEventListener('keydown', (e) => {
 const fromLink = decodeParams(location.hash);
 if (fromLink) state.params = fromLink;
 state.words = paletteWords(state.params.palette);
+state.ramp = rampWords(state.params.palette);
 restart();
 requestAnimationFrame(frame);

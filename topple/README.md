@@ -50,6 +50,19 @@ it unchanged.
 
 Click or drag on the grid to drop extra grains in any experiment.
 
+## Two views
+
+**Grains per cell** colours each cell by its height, 0 to 3, and marks cells
+that are still unstable (or, in Rain, the latest avalanche).
+
+**Times toppled** colours each cell by its *odometer*: how many times it has
+fired since the experiment started, on a logarithmic scale up to the busiest
+cell. The odometer is the smooth potential hidden under the patterned pile:
+at every cell, the grains that arrived minus four times the cell's own
+topplings plus its neighbours' topplings give exactly the final height. In
+Rain it maps where avalanches pass most often; in Identity it covers the
+second settling stage.
+
 ## Controls
 
 | Control | What it does |
@@ -59,6 +72,7 @@ Click or drag on the grid to drop extra grains in any experiment.
 | Grid side | 16 to 256 cells for Rain and Identity |
 | New seed | Reshuffles where rain lands; the seed goes into share links |
 | Speed | Sweep passes (Tower, Identity) or dropped grains (Rain) per frame |
+| Show | Grains per cell or times toppled |
 | Colours | Four palettes; heights 0–3 always run dark to light or light to dark |
 | Copy link | Puts the current settings in the address bar and clipboard |
 | Save PNG | Saves the grid, scaled up with crisp cells |
@@ -73,6 +87,8 @@ restarts.
   scanning pass that fires each unstable cell `floor(h / 4)` times at once;
   by the Abelian property both reach the same stable pile, and the tests
   check that they agree, including when either is paused part-way.
+- Both relaxations keep a per-cell odometer; a test checks that it solves
+  the discrete Poisson equation `final = start − Δ odometer` cell by cell.
 - `src/avalanche.js` drops a grain, settles the pile and records the number
   of topplings, the number of distinct cells that toppled and the grains that
   fell off, using a seeded random site picker so runs replay.

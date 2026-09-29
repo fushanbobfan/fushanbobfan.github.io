@@ -12,6 +12,8 @@ export function createPile(width, height) {
     width,
     height,
     cells: new Uint32Array(width * height),
+    // How many times each cell has toppled since the last clear.
+    odometer: new Float64Array(width * height),
     // Work queue of cells that may be unstable, with a membership flag so a
     // cell is never queued twice.
     queue: new Int32Array(width * height),
@@ -69,6 +71,7 @@ export function relax(pile, budget = Infinity, touched = null) {
     if (h < THRESHOLD) continue;
     const fires = Math.floor(h / THRESHOLD);
     cells[i] = h - fires * THRESHOLD;
+    pile.odometer[i] += fires;
     topplings += fires;
     if (touched && touched.mark[i] !== touched.gen) {
       touched.mark[i] = touched.gen;
@@ -91,6 +94,7 @@ export function stabilize(pile) {
 
 export function clear(pile) {
   pile.cells.fill(0);
+  pile.odometer.fill(0);
   pile.queued.fill(0);
   pile.head = 0;
   pile.tail = 0;
@@ -110,7 +114,7 @@ export function setCells(pile, values) {
 // better than the queue does. The queue is rebuilt afterwards so relax and
 // isStable stay correct.
 export function sweep(pile, maxPasses = Infinity) {
-  const { width, height, cells } = pile;
+  const { width, height, cells, odometer } = pile;
   pile.queued.fill(0);
   pile.head = 0;
   pile.tail = 0;
@@ -128,6 +132,7 @@ export function sweep(pile, maxPasses = Infinity) {
         if (h < THRESHOLD) continue;
         const fires = h >>> 2;
         cells[i] = h & 3;
+        odometer[i] += fires;
         topplings += fires;
         if (x > 0) cells[i - 1] += fires; else lost += fires;
         if (x < width - 1) cells[i + 1] += fires; else lost += fires;
