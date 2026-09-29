@@ -53,7 +53,9 @@ export function totalGrains(pile) {
 // Topple queued cells until the pile is stable or `budget` topplings have
 // been done. A cell with h grains fires floor(h / 4) times at once, which
 // gives the same final state (the Abelian property) far faster for tall
-// piles. Returns a record of what happened in this call.
+// piles. If `touched` ({ mark, gen, count }) is given, each cell that fires
+// for the first time in generation `gen` is stamped and counted. Returns a
+// record of what happened in this call.
 export function relax(pile, budget = Infinity, touched = null) {
   const { width, height, cells, queue, queued } = pile;
   let topplings = 0;
@@ -68,7 +70,10 @@ export function relax(pile, budget = Infinity, touched = null) {
     const fires = Math.floor(h / THRESHOLD);
     cells[i] = h - fires * THRESHOLD;
     topplings += fires;
-    if (touched) touched[i] = 1;
+    if (touched && touched.mark[i] !== touched.gen) {
+      touched.mark[i] = touched.gen;
+      touched.count += 1;
+    }
     const x = i % width;
     const y = (i - x) / width;
     if (x > 0) addGrains(pile, i - 1, fires); else lost += fires;
