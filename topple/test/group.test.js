@@ -50,3 +50,25 @@ test('sink edges count the missing neighbours', () => {
   eq(sinkEdges(3, 2), [2, 1, 2, 2, 1, 2]);
   eq(sinkEdges(1, 1), [4]);
 });
+
+test('on a disc, a diamond and a ring the identity is recurrent, idempotent and neutral', async () => {
+  const { makeMask } = await import('../src/shapes.js');
+  for (const shape of ['disc', 'diamond', 'ring']) {
+    const side = 27;
+    const mask = makeMask(shape, side);
+    const e = identity(side, side, mask);
+    for (let i = 0; i < mask.length; i++) if (!mask[i]) assert.equal(e[i], 0, shape);
+    assert.ok(isRecurrent(side, side, e, mask), shape);
+    eq(add(side, side, e, e, mask), e);
+    const full = mask.map((v) => (v ? 3 : 0));
+    eq(add(side, side, full, e, mask), full);
+  }
+});
+
+test('sink edges on a mask count switched-off neighbours', () => {
+  // Plus shape inside a 3x3 grid.
+  const mask = [0, 1, 0, 1, 1, 1, 0, 1, 0];
+  eq(sinkEdges(3, 3, mask), [0, 3, 0, 3, 0, 3, 0, 3, 0]);
+  assert.equal(isRecurrent(3, 3, [0, 3, 0, 3, 3, 3, 0, 3, 0], mask), true);
+  assert.equal(isRecurrent(3, 3, [1, 3, 0, 3, 3, 3, 0, 3, 0], mask), false);
+});
