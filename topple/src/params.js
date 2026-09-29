@@ -18,10 +18,11 @@ export const SPECS = {
   palette: { key: 'c', values: ['dune', 'tide', 'ember', 'paper'] },
   seed: { key: 'r', min: 1, max: 999999, step: 1 },
   view: { key: 'v', values: Object.keys(VIEWS) },
+  shape: { key: 'g', values: ['square', 'disc', 'diamond', 'ring'] },
 };
 
 export const DEFAULTS = {
-  mode: 'tower', power: 14, size: 128, palette: 'dune', seed: 1, view: 'grains',
+  mode: 'tower', power: 14, size: 128, palette: 'dune', seed: 1, view: 'grains', shape: 'square',
 };
 
 export function clampParam(name, value) {
