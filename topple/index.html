@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Topple</title>
+  <meta name="description" content="An Abelian sandpile in the browser: drop grains, watch avalanches, and see self-organized criticality and the sandpile identity." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect width='4' height='4' fill='%231b1410'/%3E%3Crect x='1' y='0' width='2' height='4' fill='%23d98e3f'/%3E%3Crect x='0' y='1' width='4' height='2' fill='%23d98e3f'/%3E%3Crect x='1' y='1' width='2' height='2' fill='%23f6dcaa'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Topple</h1>
+    <p class="subtitle">A sandpile on a square grid. A cell holding four grains topples and passes one to each neighbour, which may topple in turn; grains that reach the edge fall away. Pour a tower, let it rain, or find the pile that changes nothing.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Sandpile">
+      <div class="canvas-wrap">
+        <canvas id="pile" role="img" aria-label="Sandpile grid, coloured by the number of grains in each cell"></canvas>
+      </div>
+      <div class="stage-bar">
+        <p id="status" class="status" aria-live="polite"></p>
+        <div class="buttons">
+          <button id="play" type="button" aria-pressed="true">Pause</button>
+          <button id="step" type="button">Step</button>
+          <button id="restart" type="button">Restart</button>
+        </div>
+      </div>
+      <ul class="legend" id="legend" aria-label="Colour key"></ul>
+      <p class="hint">Click or drag on the grid to drop grains. Keys: <kbd>Space</kbd> pauses and resumes, <kbd>N</kbd> steps, <kbd>R</kbd> restarts.</p>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <fieldset>
+        <legend>Scene</legend>
+        <label for="mode">Experiment</label>
+        <select id="mode"></select>
+        <p id="mode-note" class="hint" aria-live="polite"></p>
+
+        <div class="param" id="power-row">
+          <div class="param-head"><label for="power">Tower height</label><output id="power-value" for="power"></output></div>
+          <input id="power" type="range" min="6" max="17" step="1" />
+        </div>
+        <div class="param" id="size-row">
+          <div class="param-head"><label for="size">Grid side</label><output id="size-value" for="size"></output></div>
+          <input id="size" type="range" min="16" max="256" step="1" />
+        </div>
+        <div class="param" id="seed-row">
+          <div class="param-head"><label for="seed">Rain seed</label><output id="seed-value" for="seed"></output></div>
+          <div class="buttons"><button id="reseed" type="button">New seed</button></div>
+        </div>
+        <div class="param">
+          <div class="param-head"><label for="speed">Speed</label><output id="speed-value" for="speed"></output></div>
+          <input id="speed" type="range" min="1" max="12" step="1" value="6" />
+        </div>
+      </fieldset>
+
+      <fieldset id="avalanche-box">
+        <legend>Avalanches</legend>
+        <canvas id="chart" width="560" height="360" role="img" aria-label="Avalanche size distribution on log-log axes"></canvas>
+        <p id="chart-note" class="readout" aria-live="polite"></p>
+        <p class="hint">Each dropped grain sets off an avalanche: the number of topplings it causes. Once the pile has filled up, sizes follow a power law, a straight line on these axes. Nothing was tuned to make that happen.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>View</legend>
+        <label for="palette">Colours</label>
+        <select id="palette"></select>
+      </fieldset>
+
+      <fieldset>
+        <legend>Keep it</legend>
+        <div class="buttons">
+          <button id="copy-link" type="button">Copy link</button>
+          <button id="save" type="button">Save PNG</button>
+        </div>
+      </fieldset>
+    </section>
+  </main>
+
+  <footer>
+    <p>After P. Bak, C. Tang and K. Wiesenfeld, “Self-organized criticality: An explanation of the 1/f noise”, <cite>Physical Review Letters</cite> 59 (1987), and D. Dhar, “Self-organized critical state of sandpile automaton models”, <cite>Physical Review Letters</cite> 64 (1990).</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

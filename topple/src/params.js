@@ -51,9 +51,10 @@ export function decodeParams(text) {
   return seen ? normalize(raw) : null;
 }
 
-// A tower of n grains settles into a disc holding about 2.125 grains per
-// cell. Leave a margin so no grain reaches the edge, and keep the side odd
-// so the tower sits on a single centre cell.
+// A tower of n grains settles into a rough disc averaging a little over two
+// grains per cell; measured radii stay inside sqrt(n / (2.125 pi)) for every
+// tower the page offers. Leave a margin so no grain reaches the edge, and
+// keep the side odd so the tower sits on a single centre cell.
 export function towerSide(grains) {
   const r = Math.sqrt(grains / (Math.PI * 2.125));
   const side = 2 * Math.ceil(r * 1.08) + 5;
