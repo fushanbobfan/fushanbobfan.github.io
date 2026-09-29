@@ -41,3 +41,27 @@ export function contrast(a, b) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
+
+// A 256-step ramp through a palette's four height colours, for continuous
+// quantities such as the odometer.
+export function rampWords(name, steps = 256) {
+  const p = PALETTES[name] || PALETTES[DEFAULT_PALETTE];
+  const stops = p.colors.map(hexToRgb);
+  const out = new Uint32Array(steps);
+  for (let k = 0; k < steps; k++) {
+    const t = (k / (steps - 1)) * (stops.length - 1);
+    const j = Math.min(stops.length - 2, Math.floor(t));
+    const f = t - j;
+    const rgb = stops[j].map((v, c) => Math.round(v + (stops[j + 1][c] - v) * f));
+    out[k] = packRgba(rgb);
+  }
+  return out;
+}
+
+// Ramp index for a count on a logarithmic scale: 0 stays at the first step,
+// the maximum reaches the last, and one toppling is already visible.
+export function logStep(value, max, steps = 256) {
+  if (value <= 0 || max <= 0) return 0;
+  const t = Math.log1p(value) / Math.log1p(max);
+  return Math.min(steps - 1, Math.max(1, Math.round(t * (steps - 1))));
+}
