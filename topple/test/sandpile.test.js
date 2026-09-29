@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createPile, index, addGrains, stabilize, relax, totalGrains, isStable, setCells, THRESHOLD,
+  createPile, index, addGrains, stabilize, relax, sweep, totalGrains, isStable, setCells, THRESHOLD,
 } from '../src/sandpile.js';
 
 function allBelow(pile) {
@@ -99,4 +99,42 @@ test('setCells replaces the configuration and queues unstable cells', () => {
 test('bad sizes are rejected', () => {
   assert.throws(() => createPile(0, 4), RangeError);
   assert.throws(() => createPile(3.5, 4), RangeError);
+});
+
+test('sweeping reaches the same stable pile as the queue, in pieces or at once', () => {
+  const a = createPile(45, 45);
+  const b = createPile(45, 45);
+  addGrains(a, index(a, 22, 22), 4000);
+  addGrains(b, index(b, 22, 22), 4000);
+  addGrains(a, index(a, 3, 40), 77);
+  addGrains(b, index(b, 3, 40), 77);
+  const ra = stabilize(a);
+  let rounds = 0;
+  let passes = 0;
+  let topplings = 0;
+  for (;;) {
+    const r = sweep(b, 25);
+    rounds += 1;
+    passes += r.passes;
+    topplings += r.topplings;
+    assert.equal(isStable(b), r.stable);
+    if (r.stable) break;
+  }
+  assert.ok(rounds > 1);
+  assert.deepEqual([...b.cells], [...a.cells]);
+  assert.equal(b.lost, a.lost);
+  assert.equal(topplings, ra.topplings);
+  assert.ok(passes < ra.topplings);
+});
+
+test('after a partial sweep the queue can finish the job', () => {
+  const a = createPile(31, 31);
+  const b = createPile(31, 31);
+  addGrains(a, index(a, 15, 15), 1500);
+  addGrains(b, index(b, 15, 15), 1500);
+  stabilize(a);
+  sweep(b, 3);
+  assert.equal(isStable(b), false);
+  stabilize(b);
+  assert.deepEqual([...b.cells], [...a.cells]);
 });

@@ -103,3 +103,41 @@ export function setCells(pile, values) {
   clear(pile);
   for (let i = 0; i < values.length; i++) addGrains(pile, i, values[i]);
 }
+
+// Synchronous alternative to relax for tall piles: scan the whole grid up to
+// `maxPasses` times, firing every unstable cell floor(h / 4) times on each
+// visit. Scanning batches the enormous heights near a dropped tower far
+// better than the queue does. The queue is rebuilt afterwards so relax and
+// isStable stay correct.
+export function sweep(pile, maxPasses = Infinity) {
+  const { width, height, cells } = pile;
+  pile.queued.fill(0);
+  pile.head = 0;
+  pile.tail = 0;
+  pile.pending = 0;
+  let topplings = 0;
+  let lost = 0;
+  let passes = 0;
+  let unstable = true;
+  while (unstable && passes < maxPasses) {
+    unstable = false;
+    passes += 1;
+    for (let y = 0, i = 0; y < height; y++) {
+      for (let x = 0; x < width; x++, i++) {
+        const h = cells[i];
+        if (h < THRESHOLD) continue;
+        const fires = h >>> 2;
+        cells[i] = h & 3;
+        topplings += fires;
+        if (x > 0) cells[i - 1] += fires; else lost += fires;
+        if (x < width - 1) cells[i + 1] += fires; else lost += fires;
+        if (y > 0) cells[i - width] += fires; else lost += fires;
+        if (y < height - 1) cells[i + width] += fires; else lost += fires;
+        unstable = true;
+      }
+    }
+  }
+  pile.lost += lost;
+  for (let i = 0; i < cells.length; i++) if (cells[i] >= THRESHOLD) enqueue(pile, i);
+  return { topplings, lost, passes, stable: pile.pending === 0 };
+}
