@@ -56,7 +56,7 @@ const state = {
   phase: '',
   dropped: 0,
   topplings: 0,
-  frameGen: 0,
+  flashGen: 0,
   lastSize: 0,
   image: null,
   offscreen: document.createElement('canvas'),
@@ -79,6 +79,7 @@ function restart() {
   state.dropped = 0;
   state.topplings = 0;
   state.lastSize = 0;
+  state.flashGen = 0;
   state.chartDirty = true;
   state.offscreen.width = side;
   state.offscreen.height = side;
@@ -110,7 +111,6 @@ function clampSpeed(v) {
 
 function advance(units) {
   const { pile } = state;
-  state.frameGen = state.tracker.gen;
   if (state.phase === 'rain') {
     if (!isStable(pile)) state.topplings += relax(pile).topplings;
     for (let k = 0; k < units; k++) {
@@ -119,6 +119,7 @@ function advance(units) {
       state.dropped += 1;
       state.topplings += r.size;
       state.lastSize = r.size;
+      if (r.size > 0) state.flashGen = state.tracker.gen;
     }
     state.chartDirty = true;
     return;
@@ -163,11 +164,13 @@ function draw() {
   const { pile, image, words, tracker } = state;
   const out = new Uint32Array(image.data.buffer);
   const { cells } = pile;
-  const flash = state.phase === 'rain';
+  // Light up only the most recent avalanche: at hundreds of drops per frame,
+  // lighting every toppled cell would wash out the whole grid.
+  const flash = state.phase === 'rain' && state.flashGen > 0 ? state.flashGen : -1;
   for (let i = 0; i < cells.length; i++) {
     const h = cells[i];
     if (h >= THRESHOLD) out[i] = words[4];
-    else if (flash && tracker.mark[i] > state.frameGen) out[i] = words[4];
+    else if (tracker.mark[i] === flash) out[i] = words[4];
     else out[i] = words[h];
   }
   state.offscreen.getContext('2d').putImageData(image, 0, 0);
@@ -264,7 +267,7 @@ function speedLabel() {
 
 function drawLegend() {
   const p = PALETTES[state.params.palette];
-  const names = ['empty', '1 grain', '2 grains', '3 grains', state.params.mode === 'rain' ? 'toppled just now' : 'toppling'];
+  const names = ['empty', '1 grain', '2 grains', '3 grains', state.params.mode === 'rain' ? 'latest avalanche' : 'toppling'];
   legendEl.replaceChildren(...[...p.colors, p.hot].map((c, i) => {
     const li = document.createElement('li');
     const sw = document.createElement('span');
