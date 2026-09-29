@@ -1,0 +1,100 @@
+// Abelian sandpile on a width x height square grid with an open boundary:
+// a cell holding four or more grains topples, sending one grain to each of
+// its four neighbours, and grains pushed past the edge leave the system.
+
+export const THRESHOLD = 4;
+
+export function createPile(width, height) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+    throw new RangeError('grid size must be positive integers');
+  }
+  return {
+    width,
+    height,
+    cells: new Uint32Array(width * height),
+    // Work queue of cells that may be unstable, with a membership flag so a
+    // cell is never queued twice.
+    queue: new Int32Array(width * height),
+    queued: new Uint8Array(width * height),
+    head: 0,
+    tail: 0,
+    pending: 0,
+    lost: 0,
+  };
+}
+
+export function index(pile, x, y) {
+  return y * pile.width + x;
+}
+
+function enqueue(pile, i) {
+  if (pile.queued[i]) return;
+  pile.queued[i] = 1;
+  pile.queue[pile.tail] = i;
+  pile.tail = (pile.tail + 1) % pile.queue.length;
+  pile.pending += 1;
+}
+
+export function addGrains(pile, i, n = 1) {
+  pile.cells[i] += n;
+  if (pile.cells[i] >= THRESHOLD) enqueue(pile, i);
+}
+
+export function isStable(pile) {
+  return pile.pending === 0;
+}
+
+export function totalGrains(pile) {
+  let sum = 0;
+  for (let i = 0; i < pile.cells.length; i++) sum += pile.cells[i];
+  return sum;
+}
+
+// Topple queued cells until the pile is stable or `budget` topplings have
+// been done. A cell with h grains fires floor(h / 4) times at once, which
+// gives the same final state (the Abelian property) far faster for tall
+// piles. Returns a record of what happened in this call.
+export function relax(pile, budget = Infinity, touched = null) {
+  const { width, height, cells, queue, queued } = pile;
+  let topplings = 0;
+  let lost = 0;
+  while (pile.pending > 0 && topplings < budget) {
+    const i = queue[pile.head];
+    pile.head = (pile.head + 1) % queue.length;
+    pile.pending -= 1;
+    queued[i] = 0;
+    const h = cells[i];
+    if (h < THRESHOLD) continue;
+    const fires = Math.floor(h / THRESHOLD);
+    cells[i] = h - fires * THRESHOLD;
+    topplings += fires;
+    if (touched) touched[i] = 1;
+    const x = i % width;
+    const y = (i - x) / width;
+    if (x > 0) addGrains(pile, i - 1, fires); else lost += fires;
+    if (x < width - 1) addGrains(pile, i + 1, fires); else lost += fires;
+    if (y > 0) addGrains(pile, i - width, fires); else lost += fires;
+    if (y < height - 1) addGrains(pile, i + width, fires); else lost += fires;
+  }
+  pile.lost += lost;
+  return { topplings, lost, stable: pile.pending === 0 };
+}
+
+export function stabilize(pile) {
+  return relax(pile, Infinity);
+}
+
+export function clear(pile) {
+  pile.cells.fill(0);
+  pile.queued.fill(0);
+  pile.head = 0;
+  pile.tail = 0;
+  pile.pending = 0;
+  pile.lost = 0;
+}
+
+// Replace the whole configuration, queueing every unstable cell.
+export function setCells(pile, values) {
+  clear(pile);
+  for (let i = 0; i < values.length; i++) addGrains(pile, i, values[i]);
+}
