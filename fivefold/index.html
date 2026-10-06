@@ -24,7 +24,7 @@
           <button id="finer" type="button" aria-label="One generation finer">Finer +</button>
         </div>
       </div>
-      <p class="hint">Keyboard: with the tiling focused, <kbd>+</kbd> and <kbd>−</kbd> step the generation, <kbd>T</kbd> switches between kites and darts and rhombi, <kbd>S</kbd> switches between sun and star, <kbd>C</kbd> cycles the colouring, and <kbd>O</kbd> outlines tiles one more generation back.</p>
+      <p class="hint">Keyboard: with the tiling focused, <kbd>+</kbd> and <kbd>−</kbd> step the generation, <kbd>T</kbd> switches between kites and darts and rhombi, <kbd>S</kbd> switches between sun and star, <kbd>C</kbd> cycles the colouring, <kbd>O</kbd> outlines tiles one more generation back, and <kbd>A</kbd> shows or hides the matching arcs.</p>
     </section>
 
     <section class="controls" aria-label="Controls">
@@ -69,6 +69,8 @@
         <label class="row">Line weight <output id="weight-out" for="weight"></output>
           <input id="weight" type="range" min="0" max="3" step="0.25" />
         </label>
+        <label class="check"><input id="arcs" type="checkbox" /> Matching arcs</label>
+        <p id="arcs-note" class="note"></p>
       </fieldset>
 
       <fieldset>

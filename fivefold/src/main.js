@@ -1,7 +1,8 @@
 import { PHI, SEEDS, SYSTEMS, assemble, edgeLength, grow, seedsFor } from './tiling.js';
 import { cull, fitView, nearView } from './view.js';
 import { COLOURINGS, PALETTES } from './palettes.js';
-import { drawOutlines, drawTiling, outlineWidth, svgDocument } from './render.js';
+import { arcWidth, drawArcs, drawOutlines, drawTiling, outlineWidth, svgDocument } from './render.js';
+import { arcsFor, hasArcs } from './arcs.js';
 import { halfCounts, patchRatio, summarise } from './stats.js';
 import { MAX_GENERATIONS, MAX_OVERLAY, decode, encode, normalise } from './share.js';
 
@@ -54,6 +55,12 @@ function syncControls() {
   );
   $('weight').value = String(state.weight);
   $('weight-out').textContent = state.weight === 0 ? 'none' : `${state.weight}×`;
+  const arcsAllowed = hasArcs(system);
+  $('arcs').checked = state.arcs && arcsAllowed;
+  $('arcs').disabled = !arcsAllowed;
+  $('arcs-note').textContent = arcsAllowed
+    ? 'Two arcs on every tile. In a correct tiling each colour joins up across every edge.'
+    : 'Matching arcs are drawn for kites and darts.';
   $('overlay').max = String(MAX_OVERLAY);
   $('overlay').value = String(state.overlay);
   $('overlay-out').textContent = overlayLabel();
@@ -73,7 +80,13 @@ function build(width, height) {
     halves: cull(patch.halves, view, (h) => [h.a, h.b, h.c]),
   };
   const turn = shown.tiles.length ? shown.tiles[0].axis % 36 : 0;
-  return { view, shown, turn, outlines: outlines(view) };
+  let arcs = null;
+  const edge = edgeLength(state.generations);
+  // Below a few pixels per tile the arcs would only blur the colours.
+  if (state.arcs && hasArcs(systemOf(state.seed)) && edge * view.scale >= 6) {
+    arcs = { list: arcsFor(tris.filter(nearView(view, 0)), edge), width: arcWidth(view, edge) };
+  }
+  return { view, shown, turn, outlines: outlines(view), arcs };
 }
 
 function overlayGeneration() {
@@ -119,9 +132,10 @@ function render() {
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
   }
-  const { view, shown, turn, outlines: over } = build(width, height);
+  const { view, shown, turn, outlines: over, arcs } = build(width, height);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawTiling(ctx, shown, view, drawOptions(turn));
+  if (arcs) drawArcs(ctx, arcs.list, view, PALETTES[state.palette].arcs, arcs.width);
   if (over) drawOutlines(ctx, over.polygons, view, PALETTES[state.palette].overlay, over.width);
   report(shown);
 }
@@ -198,6 +212,7 @@ $('zoom').addEventListener('input', (e) => update({ zoom: Number(e.target.value)
 $('colouring').addEventListener('change', (e) => update({ colouring: e.target.value }));
 $('palette').addEventListener('change', (e) => update({ palette: e.target.value }));
 $('weight').addEventListener('input', (e) => update({ weight: Number(e.target.value) }));
+$('arcs').addEventListener('change', (e) => update({ arcs: e.target.checked }));
 $('overlay').addEventListener('input', (e) => update({ overlay: Number(e.target.value) }));
 
 canvas.addEventListener('keydown', (e) => {
@@ -207,6 +222,7 @@ canvas.addEventListener('keydown', (e) => {
   else if (key === '-' || key === '_') update({ generations: state.generations - 1 });
   else if (key === 't') switchSystem(systemOf(state.seed) === 'p2' ? 'p3' : 'p2');
   else if (key === 's') cycleSeed();
+  else if (key === 'a') update({ arcs: !state.arcs });
   else if (key === 'o') update({ overlay: (state.overlay + 1) % (MAX_OVERLAY + 1) });
   else if (key === 'c') {
     const keys = Object.keys(COLOURINGS);
@@ -259,23 +275,25 @@ function download(blob, name) {
 
 $('save-png').addEventListener('click', () => {
   const [w, h] = printSize();
-  const { view, shown, turn, outlines: over } = build(w, h);
+  const { view, shown, turn, outlines: over, arcs } = build(w, h);
   const out = document.createElement('canvas');
   out.width = w;
   out.height = h;
   const octx = out.getContext('2d');
   drawTiling(octx, shown, view, drawOptions(turn));
+  if (arcs) drawArcs(octx, arcs.list, view, PALETTES[state.palette].arcs, arcs.width);
   if (over) drawOutlines(octx, over.polygons, view, PALETTES[state.palette].overlay, over.width);
   out.toBlob((blob) => blob && download(blob, fileName('png')), 'image/png');
 });
 
 $('save-svg').addEventListener('click', () => {
   const [w, h] = printSize();
-  const { view, shown, turn, outlines: over } = build(w, h);
+  const { view, shown, turn, outlines: over, arcs } = build(w, h);
   const svg = svgDocument(shown, view, {
     ...drawOptions(turn),
     title: `Penrose tiling, ${SEEDS[state.seed].name.toLowerCase()} seed`,
     overlay: over,
+    arcs,
   });
   download(new Blob([svg], { type: 'image/svg+xml' }), fileName('svg'));
 });
