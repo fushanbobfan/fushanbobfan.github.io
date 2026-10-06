@@ -51,6 +51,12 @@ which is the self-similarity that makes the pattern unable to repeat.
 Small tiles that an outline runs through are made of two halves cut from
 neighbouring larger tiles.
 
+**Follow the arcs.** With kites and darts, tick *Matching arcs*. Every
+kite and dart carries two arcs, one of each colour, cutting its edges in
+the golden ratio. Wherever two tiles meet, the arcs on both sides meet
+too, so each colour runs on unbroken across the whole patch, closing into
+rings around suns and stars and winding into longer curves between them.
+
 **Print it.** *Save PNG* and *Save SVG* render the current view at the
 print size you choose; the SVG has one path per colour, ready for a
 plotter or a laser cutter.
@@ -66,11 +72,13 @@ plotter or a laser cutter.
 | Zoom | Magnifies about the centre, up to 8×. Only tiles near the view are grown, so zooming in keeps deep generations quick. |
 | Colouring | By tile, by the direction each tile points, or outlines only. |
 | Outline tiles | Draws the tiles from 1–3 generations back over the current ones. |
+| Matching arcs | Kites and darts only: two arcs per tile that join into continuous curves. |
 | Palette, line weight | Four palettes; outlines thin out with the tiles and disappear when tiles are a few pixels across. |
 
 Keyboard, with the tiling focused: <kbd>+</kbd> and <kbd>−</kbd> step the
 generation, <kbd>T</kbd> switches tile set, <kbd>S</kbd> switches seed,
-<kbd>C</kbd> cycles the colouring and <kbd>O</kbd> steps the outlines.
+<kbd>C</kbd> cycles the colouring, <kbd>O</kbd> steps the outlines and
+<kbd>A</kbd> shows or hides the matching arcs.
 
 *Copy link* puts every setting in the address, so the same tiling opens
 for anyone who follows it.
@@ -100,6 +108,15 @@ Whole tiles are put back together by matching each half to the half that
 shares its seam (the axis for kites and darts, the base for rhombi).
 Halves whose partner would lie outside the seed's outline are drawn as
 halves; in *Fill the frame* they are always outside the canvas.
+
+### Matching arcs
+
+With the long edge of a tile as 1, the first colour is an arc of radius
+1/φ around the kite's tip and one of radius 1/φ² around the dart's tip;
+the second is an arc of radius 1/φ² around the kite's tail and 1/φ³
+around the dart's dent. `src/arcs.js` builds them per half tile, and the
+tests grow a patch and check that every arc end inside it meets exactly
+one other arc end of the same colour.
 
 ## Accessibility
 
