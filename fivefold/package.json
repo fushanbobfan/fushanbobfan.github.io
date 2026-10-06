@@ -1,0 +1,25 @@
+{
+  "name": "fivefold",
+  "version": "0.1.0",
+  "description": "Penrose tilings in the browser: grow kites and darts or rhombi by repeated substitution and see the golden ratio appear in the tile counts.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "penrose",
+    "tiling",
+    "aperiodic",
+    "quasicrystal",
+    "creative-coding",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/fivefold.git"
+  },
+  "private": false
+}
