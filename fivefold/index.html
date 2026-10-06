@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fivefold</title>
+  <meta name="description" content="Penrose tilings in the browser: grow kites and darts or rhombi by repeated substitution and see the golden ratio appear in the tile counts." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2310161f'/%3E%3Cpath d='M8 2 L13.7 6.2 L8 14 Z' fill='%232f4f74'/%3E%3Cpath d='M8 2 L2.3 6.2 L8 14 Z' fill='%23d8a63f'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Fivefold</h1>
+    <p class="subtitle">Penrose tilings, grown by hand. Start from a sun or a star, cut every tile into smaller kites and darts or rhombi, and repeat. The pattern covers the plane without ever repeating, and the ratio of the two tiles closes in on the golden ratio.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Tiling">
+      <canvas id="plane" role="img" tabindex="0" aria-describedby="status"></canvas>
+      <div class="stage-bar">
+        <p id="status" class="status" aria-live="polite"></p>
+        <div class="buttons">
+          <button id="coarser" type="button" aria-label="One generation coarser">− Coarser</button>
+          <button id="finer" type="button" aria-label="One generation finer">Finer +</button>
+        </div>
+      </div>
+      <p class="hint">Keyboard: with the tiling focused, <kbd>+</kbd> and <kbd>−</kbd> step the generation, <kbd>T</kbd> switches between kites and darts and rhombi, <kbd>S</kbd> switches between sun and star, and <kbd>C</kbd> cycles the colouring.</p>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <fieldset>
+        <legend>Tiles</legend>
+        <div class="choice" role="radiogroup" aria-label="Tile set">
+          <label><input type="radio" name="system" value="p2" checked /> Kites and darts</label>
+          <label><input type="radio" name="system" value="p3" /> Rhombi</label>
+        </div>
+        <label class="row">Seed
+          <select id="seed"></select>
+        </label>
+        <p id="seed-note" class="note"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Growth</legend>
+        <label class="row">Generation <output id="generations-out" for="generations"></output>
+          <input id="generations" type="range" min="0" max="11" step="1" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>View</legend>
+        <div class="choice" role="radiogroup" aria-label="View">
+          <label><input type="radio" name="fit" value="fill" checked /> Fill the frame</label>
+          <label><input type="radio" name="fit" value="patch" /> Whole patch</label>
+        </div>
+        <label class="row">Zoom <output id="zoom-out" for="zoom"></output>
+          <input id="zoom" type="range" min="1" max="8" step="0.25" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Colour</legend>
+        <label class="row">Colouring
+          <select id="colouring"></select>
+        </label>
+        <label class="row">Palette
+          <select id="palette"></select>
+        </label>
+        <label class="row">Line weight <output id="weight-out" for="weight"></output>
+          <input id="weight" type="range" min="0" max="3" step="0.25" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Counts</legend>
+        <dl id="counts" class="counts"></dl>
+      </fieldset>
+
+      <fieldset>
+        <legend>Keep it</legend>
+        <div class="buttons wrap">
+          <button id="copy-link" type="button">Copy link</button>
+          <button id="save-png" type="button">Save PNG</button>
+          <button id="save-svg" type="button">Save SVG</button>
+        </div>
+        <label class="row">Print size
+          <select id="print-size">
+            <option value="1600">1600 px</option>
+            <option value="2400" selected>2400 px</option>
+            <option value="4000">4000 px</option>
+          </select>
+        </label>
+      </fieldset>
+    </section>
+  </main>
+
+  <footer>
+    <p>Tiles are grown by Robinson triangle substitution: each tile is two mirror-image triangles, and each triangle is cut into smaller ones scaled down by the golden ratio. <a href="https://github.com/fushanbobfan/fivefold">Source on GitHub</a>.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
