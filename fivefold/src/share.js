@@ -13,7 +13,11 @@ export const DEFAULTS = {
   colouring: 'kind',
   palette: 'slate',
   weight: 1,
+  overlay: 0,
 };
+
+// Outlines can show tiles up to this many generations coarser.
+export const MAX_OVERLAY = 3;
 
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
@@ -32,10 +36,11 @@ export function normalise(state) {
     colouring: pick(s.colouring, Object.keys(COLOURINGS), DEFAULTS.colouring),
     palette: pick(s.palette, Object.keys(PALETTES), DEFAULTS.palette),
     weight: clamp(number(s.weight, DEFAULTS.weight), 0, 3),
+    overlay: Math.round(clamp(number(s.overlay, DEFAULTS.overlay), 0, MAX_OVERLAY)),
   };
 }
 
-const KEYS = { seed: 's', generations: 'g', fit: 'f', zoom: 'z', colouring: 'c', palette: 'p', weight: 'w' };
+const KEYS = { seed: 's', generations: 'g', fit: 'f', zoom: 'z', colouring: 'c', palette: 'p', weight: 'w', overlay: 'o' };
 
 export function encode(state) {
   const s = normalise(state);

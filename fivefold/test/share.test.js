@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, MAX_GENERATIONS, decode, encode, normalise } from '../src/share.js';
+import { DEFAULTS, MAX_GENERATIONS, MAX_OVERLAY, decode, encode, normalise } from '../src/share.js';
 
 test('the defaults encode to an empty hash and decode back', () => {
   assert.equal(encode(DEFAULTS), '');
@@ -8,7 +8,7 @@ test('the defaults encode to an empty hash and decode back', () => {
 });
 
 test('settings survive a round trip through the link', () => {
-  const s = { seed: 'p3-star', generations: 8, fit: 'patch', zoom: 2.5, colouring: 'direction', palette: 'garden', weight: 0 };
+  const s = { seed: 'p3-star', generations: 8, fit: 'patch', zoom: 2.5, colouring: 'direction', palette: 'garden', weight: 0, overlay: 2 };
   assert.deepEqual(decode(`#${encode(s)}`), s);
 });
 
@@ -26,4 +26,11 @@ test('broken or hostile values fall back or get clamped', () => {
 test('generations are whole numbers', () => {
   assert.equal(normalise({ generations: 4.6 }).generations, 5);
   assert.equal(normalise({ generations: -2 }).generations, 0);
+});
+
+test('the outline depth is a whole number of generations within range', () => {
+  assert.equal(decode('#o=9').overlay, MAX_OVERLAY);
+  assert.equal(decode('#o=1.4').overlay, 1);
+  assert.equal(decode('#o=x').overlay, 0);
+  assert.equal(encode({ overlay: 1 }), 'o=1');
 });
