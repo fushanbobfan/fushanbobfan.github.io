@@ -8,7 +8,7 @@ test('the defaults encode to an empty hash and decode back', () => {
 });
 
 test('settings survive a round trip through the link', () => {
-  const s = { seed: 'p3-star', generations: 8, fit: 'patch', zoom: 2.5, colouring: 'direction', palette: 'garden', weight: 0, overlay: 2 };
+  const s = { seed: 'p3-star', generations: 8, fit: 'patch', zoom: 2.5, colouring: 'direction', palette: 'garden', weight: 0, overlay: 2, arcs: true };
   assert.deepEqual(decode(`#${encode(s)}`), s);
 });
 
@@ -33,4 +33,11 @@ test('the outline depth is a whole number of generations within range', () => {
   assert.equal(decode('#o=1.4').overlay, 1);
   assert.equal(decode('#o=x').overlay, 0);
   assert.equal(encode({ overlay: 1 }), 'o=1');
+});
+
+test('arcs are switched on only by an explicit 1', () => {
+  assert.equal(encode({ arcs: true }), 'a=1');
+  assert.equal(decode('#a=1').arcs, true);
+  assert.equal(decode('#a=yes').arcs, false);
+  assert.equal(decode('#a=0').arcs, false);
 });
