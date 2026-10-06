@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { SEEDS, assemble, grow } from '../src/tiling.js';
 import { PALETTES } from '../src/palettes.js';
 import { fitView } from '../src/view.js';
-import { RUN, drawTiling, lineWidth, svgDocument } from '../src/render.js';
+import { RUN, drawOutlines, drawTiling, lineWidth, outlineWidth, svgDocument } from '../src/render.js';
 
 function patch(id, g) {
   const tris = grow(id, g);
@@ -86,4 +86,37 @@ test('tiles too small for outlines are drawn without strokes', () => {
   drawTiling(ctx, p, view, { palette: PALETTES.slate, edge: Math.pow(1.618034, -6) });
   assert.equal(ctx.calls.filter(([n]) => n === 'stroke').length, 0);
   assert.ok(!svgDocument(p, view, { palette: PALETTES.slate, edge: Math.pow(1.618034, -6) }).includes('stroke='));
+});
+
+test('larger tiles are outlined without fills, in runs', () => {
+  const coarse = patch('p3-sun', 2);
+  const view = fitView(SEEDS['p3-sun'].build(), 400, 400, { fit: 'patch' });
+  const ctx = recorder();
+  const polys = coarse.tiles.map((t) => t.points);
+  drawOutlines(ctx, polys, view, '#ff0000', 2);
+  assert.equal(ctx.calls.filter(([n]) => n === 'fill').length, 0);
+  assert.equal(ctx.calls.filter(([n]) => n === 'stroke').length, Math.ceil(polys.length / RUN));
+  assert.equal(ctx.calls.filter(([n]) => n === 'closePath').length, polys.length);
+  assert.ok(ctx.calls.some(([n, v]) => n === '=strokeStyle' && v === '#ff0000'));
+  const quiet = recorder();
+  drawOutlines(quiet, [], view, '#ff0000', 2);
+  assert.equal(quiet.calls.length, 0);
+});
+
+test('SVG export adds the outlines as one unfilled path on top', () => {
+  const fine = patch('p2-sun', 4);
+  const coarse = patch('p2-sun', 2);
+  const view = fitView(SEEDS['p2-sun'].build(), 300, 300, { fit: 'patch' });
+  const svg = svgDocument(fine, view, {
+    palette: PALETTES.slate,
+    overlay: { polygons: coarse.tiles.map((t) => t.points), width: 2 },
+  });
+  const paths = svg.match(/<path [^>]*>/g);
+  assert.match(paths.at(-1), new RegExp(`fill="none" stroke="${PALETTES.slate.overlay}"`));
+  assert.equal((paths.at(-1).match(/Z/g) || []).length, coarse.tiles.length);
+});
+
+test('outline width stays between one and four pixels', () => {
+  assert.equal(outlineWidth({ scale: 10 }, 0.01), 1);
+  assert.equal(outlineWidth({ scale: 1000 }, 1), 4);
 });
