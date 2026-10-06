@@ -24,7 +24,7 @@
           <button id="finer" type="button" aria-label="One generation finer">Finer +</button>
         </div>
       </div>
-      <p class="hint">Keyboard: with the tiling focused, <kbd>+</kbd> and <kbd>−</kbd> step the generation, <kbd>T</kbd> switches between kites and darts and rhombi, <kbd>S</kbd> switches between sun and star, and <kbd>C</kbd> cycles the colouring.</p>
+      <p class="hint">Keyboard: with the tiling focused, <kbd>+</kbd> and <kbd>−</kbd> step the generation, <kbd>T</kbd> switches between kites and darts and rhombi, <kbd>S</kbd> switches between sun and star, <kbd>C</kbd> cycles the colouring, and <kbd>O</kbd> outlines tiles one more generation back.</p>
     </section>
 
     <section class="controls" aria-label="Controls">
@@ -69,6 +69,14 @@
         <label class="row">Line weight <output id="weight-out" for="weight"></output>
           <input id="weight" type="range" min="0" max="3" step="0.25" />
         </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Larger tiles</legend>
+        <label class="row">Outline tiles <output id="overlay-out" for="overlay"></output>
+          <input id="overlay" type="range" min="0" max="3" step="1" />
+        </label>
+        <p class="note">Draws the tiles from that many generations back over the current ones. Each larger tile is cut into the small tiles inside it; a small tile that straddles an outline is made of two halves cut from neighbouring larger tiles.</p>
       </fieldset>
 
       <fieldset>

@@ -1,9 +1,9 @@
 import { PHI, SEEDS, SYSTEMS, assemble, edgeLength, grow, seedsFor } from './tiling.js';
 import { cull, fitView, nearView } from './view.js';
 import { COLOURINGS, PALETTES } from './palettes.js';
-import { drawTiling, svgDocument } from './render.js';
+import { drawOutlines, drawTiling, outlineWidth, svgDocument } from './render.js';
 import { halfCounts, patchRatio, summarise } from './stats.js';
-import { MAX_GENERATIONS, decode, encode, normalise } from './share.js';
+import { MAX_GENERATIONS, MAX_OVERLAY, decode, encode, normalise } from './share.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('plane');
@@ -54,6 +54,9 @@ function syncControls() {
   );
   $('weight').value = String(state.weight);
   $('weight-out').textContent = state.weight === 0 ? 'none' : `${state.weight}×`;
+  $('overlay').max = String(MAX_OVERLAY);
+  $('overlay').value = String(state.overlay);
+  $('overlay-out').textContent = overlayLabel();
   $('coarser').disabled = state.generations <= 0;
   $('finer').disabled = state.generations >= MAX_GENERATIONS;
 }
@@ -70,7 +73,30 @@ function build(width, height) {
     halves: cull(patch.halves, view, (h) => [h.a, h.b, h.c]),
   };
   const turn = shown.tiles.length ? shown.tiles[0].axis % 36 : 0;
-  return { view, shown, turn };
+  return { view, shown, turn, outlines: outlines(view) };
+}
+
+function overlayGeneration() {
+  return state.overlay > 0 ? Math.max(0, state.generations - state.overlay) : null;
+}
+
+function overlayLabel() {
+  const g = overlayGeneration();
+  if (g === null) return 'off';
+  return `${state.overlay} back (generation ${g})`;
+}
+
+// Whole tiles and halves of the coarser generation, as polygons.
+function outlines(view) {
+  const g = overlayGeneration();
+  if (g === null || g === state.generations) return null;
+  const tris = grow(state.seed, g, nearView(view, 2 * edgeLength(g)));
+  const patch = assemble(tris, systemOf(state.seed));
+  const polygons = [
+    ...cull(patch.tiles, view).map((t) => t.points),
+    ...cull(patch.halves, view, (h) => [h.a, h.b, h.c]).map((h) => [h.a, h.b, h.c]),
+  ];
+  return { polygons, width: outlineWidth(view, edgeLength(g)) };
 }
 
 function drawOptions(turn) {
@@ -93,9 +119,10 @@ function render() {
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
   }
-  const { view, shown, turn } = build(width, height);
+  const { view, shown, turn, outlines: over } = build(width, height);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawTiling(ctx, shown, view, drawOptions(turn));
+  if (over) drawOutlines(ctx, over.polygons, view, PALETTES[state.palette].overlay, over.width);
   report(shown);
 }
 
@@ -171,6 +198,7 @@ $('zoom').addEventListener('input', (e) => update({ zoom: Number(e.target.value)
 $('colouring').addEventListener('change', (e) => update({ colouring: e.target.value }));
 $('palette').addEventListener('change', (e) => update({ palette: e.target.value }));
 $('weight').addEventListener('input', (e) => update({ weight: Number(e.target.value) }));
+$('overlay').addEventListener('input', (e) => update({ overlay: Number(e.target.value) }));
 
 canvas.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -179,6 +207,7 @@ canvas.addEventListener('keydown', (e) => {
   else if (key === '-' || key === '_') update({ generations: state.generations - 1 });
   else if (key === 't') switchSystem(systemOf(state.seed) === 'p2' ? 'p3' : 'p2');
   else if (key === 's') cycleSeed();
+  else if (key === 'o') update({ overlay: (state.overlay + 1) % (MAX_OVERLAY + 1) });
   else if (key === 'c') {
     const keys = Object.keys(COLOURINGS);
     update({ colouring: keys[(keys.indexOf(state.colouring) + 1) % keys.length] });
@@ -230,18 +259,24 @@ function download(blob, name) {
 
 $('save-png').addEventListener('click', () => {
   const [w, h] = printSize();
-  const { view, shown, turn } = build(w, h);
+  const { view, shown, turn, outlines: over } = build(w, h);
   const out = document.createElement('canvas');
   out.width = w;
   out.height = h;
-  drawTiling(out.getContext('2d'), shown, view, drawOptions(turn));
+  const octx = out.getContext('2d');
+  drawTiling(octx, shown, view, drawOptions(turn));
+  if (over) drawOutlines(octx, over.polygons, view, PALETTES[state.palette].overlay, over.width);
   out.toBlob((blob) => blob && download(blob, fileName('png')), 'image/png');
 });
 
 $('save-svg').addEventListener('click', () => {
   const [w, h] = printSize();
-  const { view, shown, turn } = build(w, h);
-  const svg = svgDocument(shown, view, { ...drawOptions(turn), title: `Penrose tiling, ${SEEDS[state.seed].name.toLowerCase()} seed` });
+  const { view, shown, turn, outlines: over } = build(w, h);
+  const svg = svgDocument(shown, view, {
+    ...drawOptions(turn),
+    title: `Penrose tiling, ${SEEDS[state.seed].name.toLowerCase()} seed`,
+    overlay: over,
+  });
   download(new Blob([svg], { type: 'image/svg+xml' }), fileName('svg'));
 });
 
