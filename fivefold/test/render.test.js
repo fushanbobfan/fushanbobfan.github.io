@@ -120,3 +120,33 @@ test('outline width stays between one and four pixels', () => {
   assert.equal(outlineWidth({ scale: 10 }, 0.01), 1);
   assert.equal(outlineWidth({ scale: 1000 }, 1), 4);
 });
+
+test('arcs are stroked per colour, starting where each arc begins', async () => {
+  const { arcsFor } = await import('../src/arcs.js');
+  const { drawArcs, arcPath } = await import('../src/render.js');
+  const tris = grow('p2-sun', 2);
+  const arcs = arcsFor(tris, Math.pow(1.6180339887, -2));
+  const view = fitView(SEEDS['p2-sun'].build(), 400, 400, { fit: 'patch' });
+  const ctx = recorder();
+  drawArcs(ctx, arcs, view, ['#111111', '#222222'], 2);
+  const arcCalls = ctx.calls.filter(([n]) => n === 'arc');
+  assert.equal(arcCalls.length, arcs.length);
+  assert.equal(ctx.calls.filter(([n]) => n === 'stroke').length, 2);
+  // The canvas arc ends where the world arc ends, after flipping y.
+  const [, [x, y, r, , end]] = arcCalls[0];
+  const first = arcs.filter((a) => a.colour === 0)[0];
+  const e = first.start + first.sweep;
+  const [ex, ey] = [first.centre[0] + first.radius * Math.cos(e), first.centre[1] + first.radius * Math.sin(e)];
+  assert.ok(Math.abs(x + r * Math.cos(end) - (view.cx + view.scale * ex)) < 1e-6);
+  assert.ok(Math.abs(y + r * Math.sin(end) - (view.cy - view.scale * ey)) < 1e-6);
+  assert.equal((arcPath(arcs, view).match(/A/g) || []).length, arcs.length);
+});
+
+test('SVG export draws the arcs in the two arc colours', async () => {
+  const { arcsFor } = await import('../src/arcs.js');
+  const p = patch('p2-star', 3);
+  const view = fitView(SEEDS['p2-star'].build(), 300, 300, { fit: 'patch' });
+  const list = arcsFor(grow('p2-star', 3), Math.pow(1.6180339887, -3));
+  const svg = svgDocument(p, view, { palette: PALETTES.garden, arcs: { list, width: 1.5 } });
+  for (const c of PALETTES.garden.arcs) assert.ok(svg.includes(`stroke="${c}" stroke-width="1.5"`));
+});
