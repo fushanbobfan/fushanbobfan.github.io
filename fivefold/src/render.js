@@ -52,10 +52,39 @@ export function drawTiling(ctx, patch, view, opts) {
 
 export const RUN = 128;
 
+// Outlines of larger tiles drawn over the small ones, unfilled. Width is in
+// canvas pixels.
+export function drawOutlines(ctx, polygons, view, colour, width) {
+  if (!polygons.length || width <= 0) return;
+  const { cx, cy, scale } = view;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = width;
+  ctx.strokeStyle = colour;
+  for (let start = 0; start < polygons.length; start += RUN) {
+    ctx.beginPath();
+    const end = Math.min(polygons.length, start + RUN);
+    for (let j = start; j < end; j++) {
+      const pts = polygons[j];
+      ctx.moveTo(cx + scale * pts[0][0], cy - scale * pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(cx + scale * pts[i][0], cy - scale * pts[i][1]);
+      ctx.closePath();
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Outline width for tiles of edge length `edge`: bolder than the tile
+// edges beneath, and never thinner than a pixel.
+export function outlineWidth(view, edge) {
+  return Math.max(1, Math.min(4, edge * view.scale * 0.03));
+}
+
 const fmt = (x) => (Math.round(x * 100) / 100).toString();
 
 export function svgDocument({ tiles, halves = [] }, view, opts) {
-  const { palette, colouring = 'kind', edge = 1, weight = 1, turn = 0, title = 'Penrose tiling' } = opts;
+  const { palette, colouring = 'kind', edge = 1, weight = 1, turn = 0, title = 'Penrose tiling', overlay = null } = opts;
   const w = view.width;
   const h = view.height;
   const path = (pts) =>
@@ -81,6 +110,11 @@ export function svgDocument({ tiles, halves = [] }, view, opts) {
     `  <title>${title}</title>`,
     `  <rect width="${w}" height="${h}" fill="${palette.background}"/>`,
     body,
+    ...(overlay && overlay.polygons.length
+      ? [
+          `  <path fill="none" stroke="${palette.overlay}" stroke-width="${fmt(overlay.width)}" stroke-linejoin="round" d="${overlay.polygons.map(path).join('')}"/>`,
+        ]
+      : []),
     '</svg>',
     '',
   ].join('\n');

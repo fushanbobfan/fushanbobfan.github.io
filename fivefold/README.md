@@ -44,6 +44,13 @@ degrees apart. Colouring by direction shows the fivefold symmetry of the
 sun and star seeds, and how each direction is spread evenly over the
 plane.
 
+**See the larger tiles.** Turn up *Outline tiles* to draw the tiles from
+one, two or three generations back over the current ones. Each outline is
+a tile of the coarser tiling, cut exactly into the small tiles inside it,
+which is the self-similarity that makes the pattern unable to repeat.
+Small tiles that an outline runs through are made of two halves cut from
+neighbouring larger tiles.
+
 **Print it.** *Save PNG* and *Save SVG* render the current view at the
 print size you choose; the SVG has one path per colour, ready for a
 plotter or a laser cutter.
@@ -58,11 +65,12 @@ plotter or a laser cutter.
 | View | *Fill the frame* zooms in until the patch covers the canvas; *Whole patch* shows its outline. |
 | Zoom | Magnifies about the centre, up to 8×. Only tiles near the view are grown, so zooming in keeps deep generations quick. |
 | Colouring | By tile, by the direction each tile points, or outlines only. |
+| Outline tiles | Draws the tiles from 1–3 generations back over the current ones. |
 | Palette, line weight | Four palettes; outlines thin out with the tiles and disappear when tiles are a few pixels across. |
 
 Keyboard, with the tiling focused: <kbd>+</kbd> and <kbd>−</kbd> step the
-generation, <kbd>T</kbd> switches tile set, <kbd>S</kbd> switches seed and
-<kbd>C</kbd> cycles the colouring.
+generation, <kbd>T</kbd> switches tile set, <kbd>S</kbd> switches seed,
+<kbd>C</kbd> cycles the colouring and <kbd>O</kbd> steps the outlines.
 
 *Copy link* puts every setting in the address, so the same tiling opens
 for anyone who follows it.

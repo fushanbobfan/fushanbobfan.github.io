@@ -8,7 +8,7 @@ test('every palette colours every tile kind and all ten directions', () => {
   for (const [id, p] of Object.entries(PALETTES)) {
     for (const kind of ['kite', 'dart', 'thick', 'thin']) assert.match(p.tiles[kind], HEX, `${id}.${kind}`);
     assert.equal(p.ramp.length, 10, id);
-    for (const c of [p.background, p.line, ...p.ramp]) assert.match(c, HEX, id);
+    for (const c of [p.background, p.line, p.overlay, ...p.ramp]) assert.match(c, HEX, id);
   }
 });
 

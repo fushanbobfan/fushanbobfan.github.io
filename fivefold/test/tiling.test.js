@@ -162,3 +162,15 @@ test('seeds are listed per system', () => {
   );
   assert.throws(() => grow('nope', 1));
 });
+
+test('every corner of a coarser generation is a corner of the finer one', () => {
+  const key = (p) => `${Math.round(p[0] * 1e6)},${Math.round(p[1] * 1e6)}`;
+  for (const id of Object.keys(SEEDS)) {
+    const fine = new Set(grow(id, 5).flatMap((t) => [t.a, t.b, t.c].map(key)));
+    for (let k = 1; k <= 3; k++) {
+      for (const t of grow(id, 5 - k)) {
+        for (const p of [t.a, t.b, t.c]) assert.ok(fine.has(key(p)), `${id}: corner ${p} lost after ${k} steps`);
+      }
+    }
+  }
+});
