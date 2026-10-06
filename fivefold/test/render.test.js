@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { SEEDS, assemble, grow } from '../src/tiling.js';
 import { PALETTES } from '../src/palettes.js';
 import { fitView } from '../src/view.js';
-import { drawTiling, lineWidth, svgDocument } from '../src/render.js';
+import { RUN, drawTiling, lineWidth, svgDocument } from '../src/render.js';
 
 function patch(id, g) {
   const tris = grow(id, g);
@@ -28,13 +28,15 @@ function recorder() {
   return ctx;
 }
 
-test('the canvas gets one batched path per fill, with every tile traced', () => {
+test('tiles are drawn in short runs per fill, with every tile traced', () => {
   const p = patch('p2-sun', 3);
   const view = fitView(SEEDS['p2-sun'].build(), 400, 300, { fit: 'patch' });
   const ctx = recorder();
   drawTiling(ctx, p, view, { palette: PALETTES.slate });
   const fills = ctx.calls.filter(([n]) => n === 'fill').length;
-  assert.equal(fills, 2);
+  const kites = p.tiles.filter((t) => t.kind === 'kite').length + p.halves.filter((h) => h.kind === 'kite').length;
+  const darts = p.tiles.length + p.halves.length - kites;
+  assert.equal(fills, Math.ceil(kites / RUN) + Math.ceil(darts / RUN));
   assert.equal(ctx.calls.filter(([n]) => n === 'stroke').length, fills);
   const closes = ctx.calls.filter(([n]) => n === 'closePath').length;
   assert.equal(closes, p.tiles.length + p.halves.length);
