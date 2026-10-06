@@ -3,9 +3,11 @@
 import { toScreen } from './view.js';
 import { tileFill } from './palettes.js';
 
+// Lines thin out with the tiles and vanish once tiles are only a few
+// pixels across, where outlines would bury the colours.
 export function lineWidth(view, edge, weight) {
-  // Thin enough to keep small tiles readable, never below a hairline.
-  return Math.max(0.35, Math.min(3, edge * view.scale * 0.04 * weight));
+  const w = edge * view.scale * 0.04 * weight;
+  return w < 0.15 ? 0 : Math.min(3, w);
 }
 
 // Tiles are batched by fill. Very long paths are slow to fill and stroke,
@@ -27,7 +29,8 @@ export function drawTiling(ctx, patch, view, opts) {
   ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, view.width, view.height);
   ctx.lineJoin = 'bevel';
-  ctx.lineWidth = lineWidth(view, edge, weight);
+  const width = lineWidth(view, edge, weight);
+  ctx.lineWidth = width || 1;
   ctx.strokeStyle = palette.line;
   const { cx, cy, scale } = view;
   for (const [fill, polygons] of groupByFill(patch, colouring, palette, turn)) {
@@ -42,7 +45,7 @@ export function drawTiling(ctx, patch, view, opts) {
         ctx.closePath();
       }
       ctx.fill();
-      if (weight > 0) ctx.stroke();
+      if (width > 0) ctx.stroke();
     }
   }
 }
@@ -65,9 +68,10 @@ export function svgDocument({ tiles, halves = [] }, view, opts) {
   const groups = new Map(
     [...groupByFill({ tiles, halves }, colouring, palette, turn)].map(([fill, polys]) => [fill, polys.map(path)]),
   );
+  const width = lineWidth(view, edge, weight);
   const stroke =
-    weight > 0
-      ? ` stroke="${palette.line}" stroke-width="${fmt(lineWidth(view, edge, weight))}" stroke-linejoin="bevel"`
+    width > 0
+      ? ` stroke="${palette.line}" stroke-width="${fmt(width)}" stroke-linejoin="bevel"`
       : '';
   const body = [...groups.entries()]
     .map(([fill, ds]) => `  <path fill="${fill}"${stroke} d="${ds.join('')}"/>`)

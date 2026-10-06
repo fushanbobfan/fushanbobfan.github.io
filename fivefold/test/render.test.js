@@ -74,6 +74,16 @@ test('direction colouring uses up to ten fills', () => {
 test('line width scales with the tile size within limits', () => {
   const view = { scale: 1000 };
   assert.equal(lineWidth(view, 1, 1), 3);
-  assert.equal(lineWidth(view, 0.001, 1), 0.35);
-  assert.ok(lineWidth(view, 0.05, 1) > 0.35 && lineWidth(view, 0.05, 1) < 3);
+  assert.equal(lineWidth(view, 0.001, 1), 0);
+  assert.equal(lineWidth(view, 0.05, 0), 0);
+  assert.ok(lineWidth(view, 0.05, 1) > 0.15 && lineWidth(view, 0.05, 1) < 3);
+});
+
+test('tiles too small for outlines are drawn without strokes', () => {
+  const p = patch('p2-sun', 6);
+  const view = fitView(SEEDS['p2-sun'].build(), 60, 60, { fit: 'patch' });
+  const ctx = recorder();
+  drawTiling(ctx, p, view, { palette: PALETTES.slate, edge: Math.pow(1.618034, -6) });
+  assert.equal(ctx.calls.filter(([n]) => n === 'stroke').length, 0);
+  assert.ok(!svgDocument(p, view, { palette: PALETTES.slate, edge: Math.pow(1.618034, -6) }).includes('stroke='));
 });
