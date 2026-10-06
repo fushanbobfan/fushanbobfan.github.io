@@ -14,6 +14,7 @@ export const DEFAULTS = {
   palette: 'slate',
   weight: 1,
   overlay: 0,
+  arcs: false,
 };
 
 // Outlines can show tiles up to this many generations coarser.
@@ -37,16 +38,18 @@ export function normalise(state) {
     palette: pick(s.palette, Object.keys(PALETTES), DEFAULTS.palette),
     weight: clamp(number(s.weight, DEFAULTS.weight), 0, 3),
     overlay: Math.round(clamp(number(s.overlay, DEFAULTS.overlay), 0, MAX_OVERLAY)),
+    arcs: s.arcs === true || s.arcs === '1',
   };
 }
 
-const KEYS = { seed: 's', generations: 'g', fit: 'f', zoom: 'z', colouring: 'c', palette: 'p', weight: 'w', overlay: 'o' };
+const KEYS = { seed: 's', generations: 'g', fit: 'f', zoom: 'z', colouring: 'c', palette: 'p', weight: 'w', overlay: 'o', arcs: 'a' };
 
 export function encode(state) {
   const s = normalise(state);
   const params = new URLSearchParams();
   for (const [name, key] of Object.entries(KEYS)) {
-    if (s[name] !== DEFAULTS[name]) params.set(key, String(s[name]));
+    if (s[name] === DEFAULTS[name]) continue;
+    params.set(key, typeof s[name] === 'boolean' ? (s[name] ? '1' : '0') : String(s[name]));
   }
   return params.toString();
 }

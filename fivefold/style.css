@@ -208,6 +208,13 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .counts {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -84,7 +84,16 @@ export function outlineWidth(view, edge) {
 const fmt = (x) => (Math.round(x * 100) / 100).toString();
 
 export function svgDocument({ tiles, halves = [] }, view, opts) {
-  const { palette, colouring = 'kind', edge = 1, weight = 1, turn = 0, title = 'Penrose tiling', overlay = null } = opts;
+  const {
+    palette,
+    colouring = 'kind',
+    edge = 1,
+    weight = 1,
+    turn = 0,
+    title = 'Penrose tiling',
+    overlay = null,
+    arcs = null,
+  } = opts;
   const w = view.width;
   const h = view.height;
   const path = (pts) =>
@@ -110,6 +119,15 @@ export function svgDocument({ tiles, halves = [] }, view, opts) {
     `  <title>${title}</title>`,
     `  <rect width="${w}" height="${h}" fill="${palette.background}"/>`,
     body,
+    ...(arcs && arcs.list.length
+      ? palette.arcs.map(
+          (colour, c) =>
+            `  <path fill="none" stroke="${colour}" stroke-width="${fmt(arcs.width)}" d="${arcPath(
+              arcs.list.filter((a) => a.colour === c),
+              view,
+            )}"/>`,
+        )
+      : []),
     ...(overlay && overlay.polygons.length
       ? [
           `  <path fill="none" stroke="${palette.overlay}" stroke-width="${fmt(overlay.width)}" stroke-linejoin="round" d="${overlay.polygons.map(path).join('')}"/>`,
@@ -118,4 +136,47 @@ export function svgDocument({ tiles, halves = [] }, view, opts) {
     '</svg>',
     '',
   ].join('\n');
+}
+
+// Matching arcs, batched by colour. World angles run anticlockwise; the
+// canvas flips y, so angles and the direction of travel both flip.
+export function drawArcs(ctx, arcs, view, colours, width) {
+  if (!arcs.length || width <= 0) return;
+  const { cx, cy, scale } = view;
+  ctx.save();
+  ctx.lineWidth = width;
+  ctx.lineCap = 'butt';
+  colours.forEach((colour, c) => {
+    const mine = arcs.filter((a) => a.colour === c);
+    ctx.strokeStyle = colour;
+    for (let start = 0; start < mine.length; start += RUN) {
+      ctx.beginPath();
+      for (const a of mine.slice(start, start + RUN)) {
+        const x = cx + scale * a.centre[0];
+        const y = cy - scale * a.centre[1];
+        const r = scale * a.radius;
+        ctx.moveTo(x + r * Math.cos(-a.start), y + r * Math.sin(-a.start));
+        ctx.arc(x, y, r, -a.start, -(a.start + a.sweep), a.sweep > 0);
+      }
+      ctx.stroke();
+    }
+  });
+  ctx.restore();
+}
+
+export function arcWidth(view, edge) {
+  return Math.max(0.75, Math.min(5, edge * view.scale * 0.06));
+}
+
+// SVG path data for arcs of one colour.
+export function arcPath(arcs, view) {
+  return arcs
+    .map((a) => {
+      const [x0, y0] = toScreen(view, [a.centre[0] + a.radius * Math.cos(a.start), a.centre[1] + a.radius * Math.sin(a.start)]);
+      const end = a.start + a.sweep;
+      const [x1, y1] = toScreen(view, [a.centre[0] + a.radius * Math.cos(end), a.centre[1] + a.radius * Math.sin(end)]);
+      const r = fmt(a.radius * view.scale);
+      return `M${fmt(x0)} ${fmt(y0)}A${r} ${r} 0 0 ${a.sweep > 0 ? 0 : 1} ${fmt(x1)} ${fmt(y1)}`;
+    })
+    .join('');
 }
