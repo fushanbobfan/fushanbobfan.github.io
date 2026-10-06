@@ -8,31 +8,36 @@ export function lineWidth(view, edge, weight) {
   return Math.max(0.35, Math.min(3, edge * view.scale * 0.04 * weight));
 }
 
-export function drawTiling(ctx, { tiles, halves = [] }, view, opts) {
+// Tiles are batched into one path per fill, so a frame costs a handful of
+// fill and stroke calls however many tiles it holds.
+function groupByFill({ tiles, halves = [] }, colouring, palette, turn) {
+  const groups = new Map();
+  const add = (fill, pts) => {
+    if (!groups.has(fill)) groups.set(fill, []);
+    groups.get(fill).push(pts);
+  };
+  for (const t of tiles) add(tileFill(t, colouring, palette, turn), t.points);
+  const halfColouring = colouring === 'direction' ? 'kind' : colouring;
+  for (const h of halves) add(tileFill({ kind: h.kind, axis: 0 }, halfColouring, palette), [h.a, h.b, h.c]);
+  return groups;
+}
+
+export function drawTiling(ctx, patch, view, opts) {
   const { palette, colouring = 'kind', edge = 1, weight = 1, turn = 0 } = opts;
   ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, view.width, view.height);
   ctx.lineJoin = 'round';
   ctx.lineWidth = lineWidth(view, edge, weight);
   ctx.strokeStyle = palette.line;
-  const trace = (pts) => {
+  const { cx, cy, scale } = view;
+  for (const [fill, polygons] of groupByFill(patch, colouring, palette, turn)) {
     ctx.beginPath();
-    pts.forEach((p, i) => {
-      const [x, y] = toScreen(view, p);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.closePath();
-  };
-  for (const tile of tiles) {
-    trace(tile.points);
-    ctx.fillStyle = tileFill(tile, colouring, palette, turn);
-    ctx.fill();
-    if (weight > 0) ctx.stroke();
-  }
-  for (const half of halves) {
-    trace([half.a, half.b, half.c]);
-    ctx.fillStyle = tileFill({ kind: half.kind, axis: 0 }, colouring === 'direction' ? 'kind' : colouring, palette);
+    for (const pts of polygons) {
+      ctx.moveTo(cx + scale * pts[0][0], cy - scale * pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(cx + scale * pts[i][0], cy - scale * pts[i][1]);
+      ctx.closePath();
+    }
+    ctx.fillStyle = fill;
     ctx.fill();
     if (weight > 0) ctx.stroke();
   }
@@ -51,16 +56,9 @@ export function svgDocument({ tiles, halves = [] }, view, opts) {
         return `${i === 0 ? 'M' : 'L'}${fmt(x)} ${fmt(y)}`;
       })
       .join('') + 'Z';
-  // Group tiles by fill so the file stays small.
-  const groups = new Map();
-  const add = (fill, d) => {
-    if (!groups.has(fill)) groups.set(fill, []);
-    groups.get(fill).push(d);
-  };
-  for (const t of tiles) add(tileFill(t, colouring, palette, turn), path(t.points));
-  for (const s of halves) {
-    add(tileFill({ kind: s.kind, axis: 0 }, colouring === 'direction' ? 'kind' : colouring, palette), path([s.a, s.b, s.c]));
-  }
+  const groups = new Map(
+    [...groupByFill({ tiles, halves }, colouring, palette, turn)].map(([fill, polys]) => [fill, polys.map(path)]),
+  );
   const stroke =
     weight > 0
       ? ` stroke="${palette.line}" stroke-width="${fmt(lineWidth(view, edge, weight))}" stroke-linejoin="round"`
