@@ -124,11 +124,17 @@ export function seedsFor(system) {
     .map(([id, s]) => ({ id, ...s }));
 }
 
-export function grow(seedId, generations) {
+// `keep`, if given, drops triangles after each step; a triangle's children
+// lie inside it, so anything dropped could never have reached the view.
+export function grow(seedId, generations, keep = null) {
   const seed = SEEDS[seedId];
   if (!seed) throw new Error(`unknown seed: ${seedId}`);
   let tris = seed.build();
-  for (let g = 0; g < generations; g++) tris = subdivide(tris);
+  if (keep) tris = tris.filter(keep);
+  for (let g = 0; g < generations; g++) {
+    tris = subdivide(tris);
+    if (keep) tris = tris.filter(keep);
+  }
   return tris;
 }
 

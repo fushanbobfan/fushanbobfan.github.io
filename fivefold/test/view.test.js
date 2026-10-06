@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PHI, SEEDS, assemble, grow } from '../src/tiling.js';
-import { cull, fitView, patchRadii, rimEdges, toScreen, toWorld } from '../src/view.js';
+import { cull, fitView, nearView, patchRadii, rimEdges, toScreen, toWorld } from '../src/view.js';
+import { edgeLength } from '../src/tiling.js';
 
 const close = (x, y, eps = 1e-9) => Math.abs(x - y) <= eps;
 
@@ -79,4 +80,17 @@ test('culling keeps only tiles that reach the canvas', () => {
     const s = t.points.map((p) => toScreen(zoomed, p));
     assert.ok(s.some(([x]) => x >= 0) && s.some(([x]) => x <= 800));
   }
+});
+
+test('growing only near the view gives the same visible tiles, all whole', () => {
+  const id = 'p3-sun';
+  const g = 6;
+  const view = fitView(SEEDS[id].build(), 640, 480, { zoom: 3 });
+  const full = cull(assemble(grow(id, g), 'p3').tiles, view);
+  const lean = assemble(grow(id, g, nearView(view, 2 * edgeLength(g))), 'p3');
+  const shown = cull(lean.tiles, view);
+  const key = (t) => t.points.map((p) => p.map((x) => x.toFixed(6)).join(',')).join(';');
+  assert.deepEqual(new Set(shown.map(key)), new Set(full.map(key)));
+  assert.equal(cull(lean.halves, view, (h) => [h.a, h.b, h.c]).length, 0);
+  assert.ok(lean.tiles.length < assemble(grow(id, g), 'p3').tiles.length / 3);
 });

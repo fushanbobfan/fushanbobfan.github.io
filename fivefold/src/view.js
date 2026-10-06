@@ -75,3 +75,18 @@ export function cull(items, view, pointsOf = (it) => it.points) {
     return maxX >= x0 && minX <= x1 && maxY >= y0 && minY <= y1;
   });
 }
+
+// A test for `grow` that keeps triangles within `margin` world units of the
+// view. With a margin of one final tile, both halves of every tile that
+// reaches the canvas survive, so no half tile shows at the edge.
+export function nearView(view, margin) {
+  const [x0, y1] = toWorld(view, [0, 0]);
+  const [x1, y0] = toWorld(view, [view.width, view.height]);
+  const lo = [x0 - margin, y0 - margin];
+  const hi = [x1 + margin, y1 + margin];
+  return (t) =>
+    Math.max(t.a[0], t.b[0], t.c[0]) >= lo[0] &&
+    Math.min(t.a[0], t.b[0], t.c[0]) <= hi[0] &&
+    Math.max(t.a[1], t.b[1], t.c[1]) >= lo[1] &&
+    Math.min(t.a[1], t.b[1], t.c[1]) <= hi[1];
+}
