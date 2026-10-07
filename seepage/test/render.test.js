@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLattice } from '../src/lattice.js';
 import { labelClusters } from '../src/clusters.js';
-import { PALETTES, clusterColour, gridDimensions, hexToRgb, hslToRgb, paintGrid, siteAtPixel } from '../src/render.js';
+import { PALETTES, clusterColour, gridDimensions, hexToRgb, hslToRgb, paintBurn, paintGrid, siteAtPixel } from '../src/render.js';
+import { burn } from '../src/burn.js';
 
 const pixel = (img, x, y) => [...img.data.slice((y * img.width + x) * 4, (y * img.width + x) * 4 + 3)];
 
@@ -74,4 +75,25 @@ test('pixels map back to the site under them', () => {
   const bond = createLattice({ size: 16, mode: 'bond', seed: 1 });
   assert.equal(siteAtPixel(bond, 6, 4), 2 * 16 + 3);
   assert.equal(siteAtPixel(bond, 30, 30), 255);
+});
+
+test('the burning view marks the front, the burnt cells and the ones still waiting', () => {
+  for (const mode of ['site', 'bond']) {
+    const lat = createLattice({ size: 24, mode, seed: 8 });
+    const fire = burn(lat, 0.7);
+    const step = Math.floor(fire.steps / 2);
+    const palette = PALETTES.sea;
+    const img = paintBurn(lat, 0.7, fire, step, { palette });
+    const scale = mode === 'bond' ? 2 : 1;
+    const seen = { front: 0, waiting: 0, burnt: 0 };
+    for (let i = 0; i < 24 * 24; i++) {
+      if (mode === 'site' && lat.site[i] >= 0.7) continue;
+      const got = String(pixel(img, (i % 24) * scale, Math.floor(i / 24) * scale));
+      const t = fire.time[i];
+      if (t === step) { assert.equal(got, String(hexToRgb(palette.span))); seen.front++; }
+      else if (t < 0 || t > step) { assert.equal(got, String(hexToRgb(palette.idle))); seen.waiting++; }
+      else { assert.notEqual(got, String(hexToRgb(palette.idle))); seen.burnt++; }
+    }
+    assert.ok(seen.front && seen.waiting && seen.burnt, `${mode} ${JSON.stringify(seen)}`);
+  }
 });

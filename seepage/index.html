@@ -29,7 +29,7 @@
         </div>
       </div>
       <p id="probe" class="note" aria-live="polite"></p>
-      <p class="hint">Keyboard: with the grid focused, <kbd>←</kbd> and <kbd>→</kbd> nudge <var>p</var> by 0.001 (hold <kbd>Shift</kbd> for 0.01), <kbd>T</kbd> jumps to this grid's threshold, <kbd>N</kbd> draws a new grid, <kbd>B</kbd> switches between site and bond percolation and <kbd>C</kbd> cycles the colouring.</p>
+      <p class="hint">Keyboard: with the grid focused, <kbd>←</kbd> and <kbd>→</kbd> nudge <var>p</var> by 0.001 (hold <kbd>Shift</kbd> for 0.01), <kbd>T</kbd> jumps to this grid's threshold, <kbd>N</kbd> draws a new grid, <kbd>B</kbd> switches between site and bond percolation, <kbd>C</kbd> cycles the colouring and <kbd>F</kbd> lights the top row or puts the fire out.</p>
     </section>
 
     <section class="controls" aria-label="Controls">
@@ -69,6 +69,27 @@
       <fieldset>
         <legend>This grid</legend>
         <dl class="stats" id="stats"></dl>
+      </fieldset>
+
+      <fieldset>
+        <legend>Burning</legend>
+        <p class="note">Sets fire to every open cell on the top row; each step it spreads one link further through the open grid.</p>
+        <div class="buttons">
+          <button id="burn-start" type="button">Light the top row</button>
+          <button id="burn-pause" type="button" disabled>Pause</button>
+          <button id="burn-clear" type="button" disabled>Clear</button>
+        </div>
+        <label class="row">Step <output id="burn-step-out" for="burn-step"></output>
+          <input id="burn-step" type="range" min="0" max="0" step="1" value="0" disabled />
+        </label>
+        <label class="row">Speed
+          <select id="burn-speed">
+            <option value="1">1 step a frame</option>
+            <option value="4" selected>4 steps a frame</option>
+            <option value="16">16 steps a frame</option>
+          </select>
+        </label>
+        <p id="burn-out" class="note" aria-live="polite"></p>
       </fieldset>
 
       <fieldset>
