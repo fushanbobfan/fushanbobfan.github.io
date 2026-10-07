@@ -7,10 +7,10 @@ import { downOpen, rightOpen } from './lattice.js';
 export const COLOURINGS = ['clusters', 'spanning', 'size'];
 
 export const PALETTES = {
-  ink: { closed: '#f4f1ea', idle: '#d9d3c7', span: '#c2410c', hues: [205, 330], sat: 0.45, light: 0.5, ramp: ['#cfd8e3', '#1e3a5f'] },
-  ember: { closed: '#14110f', idle: '#2b2420', span: '#fde047', hues: [0, 40], sat: 0.7, light: 0.45, ramp: ['#3b1f1a', '#f97316'] },
-  sea: { closed: '#0b1d2a', idle: '#173447', span: '#f472b6', hues: [160, 230], sat: 0.55, light: 0.5, ramp: ['#164e63', '#a5f3fc'] },
-  paper: { closed: '#ffffff', idle: '#e5e5e5', span: '#111111', hues: [0, 360], sat: 0, light: 0.62, ramp: ['#e5e5e5', '#404040'] },
+  ink: { closed: '#f4f1ea', idle: '#d9d3c7', span: '#c2410c', hues: [205, 330], sat: 0.45, light: 0.5, ramp: ['#cfd8e3', '#1e3a5f'], burn: ['#f59e0b', '#5b1a0b'] },
+  ember: { closed: '#14110f', idle: '#2b2420', span: '#fde047', hues: [0, 40], sat: 0.7, light: 0.45, ramp: ['#3b1f1a', '#f97316'], burn: ['#fef08a', '#b91c1c'] },
+  sea: { closed: '#0b1d2a', idle: '#173447', span: '#f472b6', hues: [160, 230], sat: 0.55, light: 0.5, ramp: ['#164e63', '#a5f3fc'], burn: ['#a7f3d0', '#1d4ed8'] },
+  paper: { closed: '#ffffff', idle: '#e5e5e5', span: '#111111', hues: [0, 360], sat: 0, light: 0.62, ramp: ['#e5e5e5', '#404040'], burn: ['#b5b5b5', '#111111'] },
 };
 
 export function hexToRgb(hex) {
@@ -109,4 +109,47 @@ export function siteAtPixel(lat, px, py) {
   const x = Math.round(px / 2);
   const y = Math.round(py / 2);
   return Math.min(lat.size - 1, y) * lat.size + Math.min(lat.size - 1, x);
+}
+
+// Burning view: cells that have caught by `step` shade from the palette's first burn
+// colour (early) to its second (late); the cells catching at `step` are the front.
+export function paintBurn(lat, p, { time, steps }, step, { palette = PALETTES.ink } = {}) {
+  const { width, height } = gridDimensions(lat);
+  const data = new Uint8ClampedArray(width * height * 4);
+  const closed = hexToRgb(palette.closed);
+  const idle = hexToRgb(palette.idle);
+  const front = hexToRgb(palette.span);
+  const early = hexToRgb(palette.burn[0]);
+  const late = hexToRgb(palette.burn[1]);
+  const span = Math.max(1, steps);
+  const colourAt = (i) => {
+    const t = time[i];
+    if (t < 0 || t > step) return idle;
+    if (t === step) return front;
+    return mix(early, late, t / span);
+  };
+  const put = (px, rgb) => {
+    const o = px * 4;
+    data[o] = rgb[0];
+    data[o + 1] = rgb[1];
+    data[o + 2] = rgb[2];
+    data[o + 3] = 255;
+  };
+  const { size } = lat;
+  if (lat.mode === 'site') {
+    for (let i = 0; i < time.length; i++) put(i, lat.site[i] < p ? colourAt(i) : closed);
+    return { width, height, data };
+  }
+  for (let px = 0; px < width * height; px++) put(px, closed);
+  for (let i = 0; i < time.length; i++) {
+    const x = i % size;
+    const y = (i - x) / size;
+    const at = 2 * y * width + 2 * x;
+    put(at, colourAt(i));
+    // A bond takes the colour of whichever end caught first.
+    const first = (j) => (time[j] >= 0 && (time[i] < 0 || time[j] < time[i]) ? j : i);
+    if (rightOpen(lat, i, p)) put(at + 1, colourAt(first(i + 1)));
+    if (downOpen(lat, i, p)) put(at + width, colourAt(first(i + size)));
+  }
+  return { width, height, data };
 }
