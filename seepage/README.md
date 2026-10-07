@@ -51,6 +51,15 @@ each *p*; the dashed curve is the average share of cells in the largest
 cluster. Run it at 32 × 32 and again at 256 × 256: the step sharpens and
 the thresholds pile up ever closer to 0.5927.
 
+**Set it alight.** *Light the top row* sets fire to every open cell on
+the top edge and lets it spread one link per step. The step at which a
+cell catches is its shortest distance from the top through open cells.
+Well above the threshold the fire crosses the grid in barely more steps
+than the grid is tall; just above it the only way across is a long,
+winding path, and the fire takes far longer. Below it the fire burns out.
+Scrub the *Step* slider to replay the front, or drag *p* while the fire
+is shown to see the burn redrawn on the same grid.
+
 **Switch to bonds.** In bond percolation every site is present and each
 link between neighbours is open with probability *p*. The threshold is
 exactly 1/2, a result of Kesten (1980) that follows from the square
@@ -65,13 +74,15 @@ lattice being its own dual.
 | Size, Seed | Grid from 32 × 32 to 512 × 512; the seed fixes every random number. |
 | Colouring | Each cluster in its own colour, by cluster size, or the spanning cluster only. |
 | Palette | Ink, Ember, Sea or Paper. |
+| Burning | Light the top row, pause, resume, scrub through the steps or clear; speed from 1 to 16 steps a frame. |
 | Threshold sweep | Runs 50, 200 or 1000 grids of the current size and type. |
 | Copy link, Save PNG | Share the exact grid and *p*; save a sharp image of the grid. |
 
 Keyboard, with the grid focused: <kbd>←</kbd> and <kbd>→</kbd> nudge *p*
 by 0.001 (with <kbd>Shift</kbd>, 0.01), <kbd>T</kbd> jumps to the grid's
 threshold, <kbd>N</kbd> draws a new grid, <kbd>B</kbd> switches between
-site and bond percolation and <kbd>C</kbd> cycles the colouring.
+site and bond percolation, <kbd>C</kbd> cycles the colouring and
+<kbd>F</kbd> lights the top row or puts the fire out.
 
 ## How it works
 
@@ -87,6 +98,10 @@ tracking which ones touch the top and bottom rows. One pass gives the
 exact *p* at which this grid first spans, and the size of its largest
 cluster at every *p*, in about the time of a single sort.
 
+Burning, in `src/burn.js`, is a breadth-first search from every open
+cell on the top row along open links, so a cell's step number is its
+chemical distance from the top.
+
 The test suite checks that:
 
 - raising *p* only ever opens more cells and links, and no link leaves the grid;
@@ -95,6 +110,9 @@ The test suite checks that:
   and the grid spans just above its recorded threshold but not at it;
 - average thresholds over many grids land within 0.02 of 0.5927 (site)
   and 1/2 (bond), and larger grids give a narrower spread;
+- fire reaches exactly the clusters touching the top row, crosses the
+  grid exactly when a cluster spans top to bottom, and takes far longer
+  to cross near the threshold than at high *p*;
 - the painted pixels, share links and chart paths come out as expected.
 
 ## Accessibility
