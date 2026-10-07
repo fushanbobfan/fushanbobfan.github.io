@@ -88,11 +88,13 @@
         <figure class="chart">
           <svg id="chart" viewBox="0 0 260 170" role="img" aria-labelledby="chart-caption">
             <g id="chart-grid"></g>
-            <path id="chart-hist" class="hist" />
-            <path id="chart-span" class="curve span" />
-            <path id="chart-largest" class="curve largest" />
-            <line id="chart-p" class="marker" y1="10" y2="150" />
-            <line id="chart-pc" class="pc" y1="10" y2="150" />
+            <g transform="translate(30 10)">
+              <path id="chart-hist" class="hist" />
+              <path id="chart-span" class="curve span" />
+              <path id="chart-largest" class="curve largest" />
+              <line id="chart-pc" class="pc" y1="0" y2="140" />
+              <line id="chart-p" class="marker" y1="0" y2="140" />
+            </g>
           </svg>
           <figcaption id="chart-caption">
             <span class="key span">spanning probability</span>

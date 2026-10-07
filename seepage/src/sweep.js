@@ -96,12 +96,17 @@ export function sweepLattice(lat, bins = 101) {
   return { threshold, largest: curve };
 }
 
+// Seed of grid number t in a sweep that starts from `seed`.
+export function trialSeed(seed, t) {
+  return (seed + Math.imul(t + 1, 0x9e3779b1)) >>> 0;
+}
+
 // Runs `trials` independent grids. `onTrial` (optional) sees each result as it
 // lands, so a page can show the estimate building up.
 export function runSweep({ size, mode = 'site', trials, seed = 1, bins = 101 }, onTrial) {
   const acc = createAccumulator(bins);
   for (let t = 0; t < trials; t++) {
-    const lat = createLattice({ size, mode, seed: (seed + Math.imul(t + 1, 0x9e3779b1)) >>> 0 });
+    const lat = createLattice({ size, mode, seed: trialSeed(seed, t) });
     const r = sweepLattice(lat, bins);
     addTrial(acc, r);
     if (onTrial) onTrial(r, t);
