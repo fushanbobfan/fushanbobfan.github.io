@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Seepage</title>
+  <meta name="description" content="Percolation in the browser: fill a grid at random, watch clusters merge, and find the threshold where one first spans the whole grid." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23f4f1ea'/%3E%3Cpath d='M3 1h3v5h4v4h3v5h-3v-2H6v-4H3z' fill='%23c2410c'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Seepage</h1>
+    <p class="subtitle">Percolation on a square grid. Open each cell with probability <var>p</var> and neighbouring open cells join into clusters. Below about 0.593 they stay small; just above it one cluster suddenly reaches from edge to edge.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Grid">
+      <canvas id="grid" role="img" tabindex="0" aria-describedby="status"></canvas>
+      <div class="p-bar">
+        <label for="p">Open probability <var>p</var> <output id="p-out" for="p"></output></label>
+        <input id="p" type="range" min="0" max="1" step="0.001" />
+      </div>
+      <div class="stage-bar">
+        <p id="status" class="status" aria-live="polite"></p>
+        <div class="buttons">
+          <button id="to-threshold" type="button">Go to this grid's threshold</button>
+          <button id="reseed" type="button">New grid</button>
+        </div>
+      </div>
+      <p id="probe" class="note" aria-live="polite"></p>
+      <p class="hint">Keyboard: with the grid focused, <kbd>←</kbd> and <kbd>→</kbd> nudge <var>p</var> by 0.001 (hold <kbd>Shift</kbd> for 0.01), <kbd>T</kbd> jumps to this grid's threshold, <kbd>N</kbd> draws a new grid, <kbd>B</kbd> switches between site and bond percolation and <kbd>C</kbd> cycles the colouring.</p>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <fieldset>
+        <legend>Grid</legend>
+        <div class="choice" role="radiogroup" aria-label="Percolation type">
+          <label><input type="radio" name="mode" value="site" checked /> Site: open cells</label>
+          <label><input type="radio" name="mode" value="bond" /> Bond: open links</label>
+        </div>
+        <label class="row">Size
+          <select id="size"></select>
+        </label>
+        <label class="row">Seed
+          <input id="seed" type="number" min="0" max="4294967295" step="1" inputmode="numeric" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Colour</legend>
+        <label class="row">Colouring
+          <select id="colouring">
+            <option value="clusters">Each cluster</option>
+            <option value="size">By cluster size</option>
+            <option value="spanning">Spanning cluster only</option>
+          </select>
+        </label>
+        <label class="row">Palette
+          <select id="palette">
+            <option value="ink">Ink</option>
+            <option value="ember">Ember</option>
+            <option value="sea">Sea</option>
+            <option value="paper">Paper</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>This grid</legend>
+        <dl class="stats" id="stats"></dl>
+      </fieldset>
+
+      <fieldset>
+        <legend>Threshold sweep</legend>
+        <p class="note">Draws many grids of the current size and type, and records for each the exact <var>p</var> at which a cluster first joins top to bottom.</p>
+        <label class="row">Grids
+          <select id="trials">
+            <option value="50">50</option>
+            <option value="200" selected>200</option>
+            <option value="1000">1000</option>
+          </select>
+        </label>
+        <div class="buttons">
+          <button id="sweep" type="button">Run sweep</button>
+          <button id="sweep-stop" type="button" disabled>Stop</button>
+        </div>
+        <figure class="chart">
+          <svg id="chart" viewBox="0 0 260 170" role="img" aria-labelledby="chart-caption">
+            <g id="chart-grid"></g>
+            <path id="chart-hist" class="hist" />
+            <path id="chart-span" class="curve span" />
+            <path id="chart-largest" class="curve largest" />
+            <line id="chart-p" class="marker" y1="10" y2="150" />
+            <line id="chart-pc" class="pc" y1="10" y2="150" />
+          </svg>
+          <figcaption id="chart-caption">
+            <span class="key span">spanning probability</span>
+            <span class="key largest">largest cluster share</span>
+            <span class="key hist">thresholds</span>
+          </figcaption>
+        </figure>
+        <p id="sweep-out" class="note" aria-live="polite"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Share</legend>
+        <div class="buttons">
+          <button id="copy-link" type="button">Copy link</button>
+          <button id="save-png" type="button">Save PNG</button>
+        </div>
+      </fieldset>
+    </section>
+  </main>
+
+  <footer>
+    <p>Clusters are labelled with union-find; the sweep opens cells one by one in order of their random numbers, after Newman and Ziff (2000). <a href="https://github.com/fushanbobfan/seepage">Source on GitHub</a>.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
