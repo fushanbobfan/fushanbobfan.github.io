@@ -3,6 +3,7 @@ import { labelClusters, summarise } from './clusters.js';
 import { BOND_THRESHOLD, SITE_THRESHOLD, addTrial, createAccumulator, summariseSweep, sweepLattice, trialSeed } from './sweep.js';
 import { COLOURINGS, PALETTES, gridDimensions, paintBurn, paintGrid, siteAtPixel } from './render.js';
 import { burn, frontSizes } from './burn.js';
+import { TAU, fitSlope, sizeDistribution } from './distribution.js';
 import { SIZES, decode, encode, normalise } from './share.js';
 import { barsPath, histogram, linePath } from './chart.js';
 import { randomSeed } from './rng.js';
@@ -76,6 +77,7 @@ function draw() {
   ctx.drawImage(buffer, 0, 0, canvas.width, canvas.height);
   showText();
   drawChart();
+  drawSizes();
 }
 
 function describeSpan(s) {
@@ -164,6 +166,65 @@ function drawChart() {
     $('chart-largest').setAttribute('d', linePath(ps, Array.from(own.largest), PLOT));
     $('chart-hist').setAttribute('d', '');
   }
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+function svgEl(name, attrs, text) {
+  const el = document.createElementNS(SVG, name);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+// Log-log chart of n(s): x spans sizes 1 to L^2, y spans eight decades down from 1.
+let sizesDrawnFor = null;
+
+function drawSizes() {
+  if (sizesDrawnFor === result) return;
+  sizesDrawnFor = result;
+  const sites = result.label.length;
+  const pts = sizeDistribution(result.clusters, sites);
+  const xMax = Math.log10(sites);
+  const yMin = -9;
+  const yMax = 0;
+  const X = (s) => (Math.log10(s) / xMax) * PLOT.width;
+  const Y = (n) => ((yMax - Math.log10(n)) / (yMax - yMin)) * PLOT.height;
+
+  const axes = [svgEl('line', { x1: 30, y1: 150, x2: 250, y2: 150, class: 'axis' }), svgEl('line', { x1: 30, y1: 10, x2: 30, y2: 150, class: 'axis' })];
+  for (let e = 0; e <= Math.floor(xMax); e += xMax > 4 ? 2 : 1) {
+    axes.push(svgEl('text', { x: 30 + X(10 ** e), y: 162, class: 'tick', 'text-anchor': 'middle' }, `10${superscript(e)}`));
+  }
+  for (let e = yMax; e >= yMin; e -= 3) {
+    axes.push(svgEl('text', { x: 26, y: 13 + Y(10 ** e), class: 'tick', 'text-anchor': 'end' }, `10${superscript(e)}`));
+  }
+  axes.push(svgEl('text', { x: 140, y: 170, class: 'tick', 'text-anchor': 'middle' }, 'cluster size s'));
+  $('sizes-axes').replaceChildren(...axes);
+
+  const shown = pts.filter((pt) => Math.log10(pt.n) >= yMin);
+  $('sizes-points').replaceChildren(...shown.map((pt) => svgEl('circle', { cx: X(pt.s).toFixed(1), cy: Y(pt.n).toFixed(1), r: 2.5 })));
+  $('sizes-line').setAttribute('d', shown.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.s).toFixed(1)},${Y(pt.n).toFixed(1)}`).join(''));
+
+  // Reference line of slope -tau through the bin starting at size 8 (or the first bin).
+  const anchor = pts.find((pt) => pt.lo === 8) || pts[0];
+  if (anchor) {
+    const at = (s) => anchor.n * (s / anchor.s) ** -TAU;
+    const s1 = 1;
+    const s2 = Math.min(sites, 10 ** ((Math.log10(anchor.n) - yMin) / TAU + Math.log10(anchor.s)));
+    $('sizes-ref').setAttribute('d', `M${X(s1).toFixed(1)},${Y(at(s1)).toFixed(1)}L${X(s2).toFixed(1)},${Y(at(s2)).toFixed(1)}`);
+  } else {
+    $('sizes-ref').setAttribute('d', '');
+  }
+
+  const slope = fitSlope(pts, 8);
+  $('sizes-out').textContent = Number.isFinite(slope)
+    ? `Fitted slope from size 8 up: ${fmt(slope, 2).replace('-', '−')}. On an infinite grid at the threshold it is −187/91 ≈ −2.055; finite grids come out a little shallower, and away from the threshold the large clusters drop off faster.`
+    : 'Too few finite clusters of size 8 or more to fit a slope.';
+}
+
+function superscript(e) {
+  const digits = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  return (e < 0 ? '⁻' : '') + String(Math.abs(e)).split('').map((d) => digits[d]).join('');
 }
 
 function showSweep(done) {
