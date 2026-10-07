@@ -1,7 +1,8 @@
 import { createLattice, openFraction } from './lattice.js';
 import { labelClusters, summarise } from './clusters.js';
 import { BOND_THRESHOLD, SITE_THRESHOLD, addTrial, createAccumulator, summariseSweep, sweepLattice, trialSeed } from './sweep.js';
-import { COLOURINGS, PALETTES, gridDimensions, paintGrid, siteAtPixel } from './render.js';
+import { COLOURINGS, PALETTES, gridDimensions, paintBurn, paintGrid, siteAtPixel } from './render.js';
+import { burn, frontSizes } from './burn.js';
 import { SIZES, decode, encode, normalise } from './share.js';
 import { barsPath, histogram, linePath } from './chart.js';
 import { randomSeed } from './rng.js';
@@ -23,6 +24,7 @@ let stats = null;
 let hovered = -1;
 let frame = 0;
 let sweep = null;
+let fire = null; // { result, fronts, step, playing, timer }
 
 const fmt = (x, d = 3) => (Number.isFinite(x) ? x.toFixed(d) : '–');
 const pct = (x) => `${(100 * x).toFixed(1)}%`;
@@ -39,6 +41,7 @@ function relabel() {
   result = labelClusters(lat, settings.p);
   stats = summarise(result);
   if (hovered >= result.clusters.length) hovered = -1;
+  if (fire) relight();
   schedule();
 }
 
@@ -56,13 +59,15 @@ function fitCanvas() {
   }
 }
 
+function paintView(highlight) {
+  const palette = PALETTES[settings.palette];
+  if (fire) return paintBurn(lat, settings.p, fire.result, fire.step, { palette });
+  return paintGrid(lat, settings.p, result, { colouring: settings.colouring, palette, highlight });
+}
+
 function draw() {
   frame = 0;
-  const img = paintGrid(lat, settings.p, result, {
-    colouring: settings.colouring,
-    palette: PALETTES[settings.palette],
-    highlight: hovered,
-  });
+  const img = paintView(hovered);
   buffer.width = img.width;
   buffer.height = img.height;
   bufferCtx.putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
@@ -221,6 +226,86 @@ function clearSweep() {
   $('sweep-out').textContent = '';
 }
 
+// Burning keeps going when p or the grid changes: the fire is relit on the new grid
+// and stays at the same step.
+function relight() {
+  fire.result = burn(lat, settings.p);
+  fire.fronts = frontSizes(fire.result.time, fire.result.steps);
+  fire.step = Math.min(fire.step, fire.result.steps);
+  syncBurn();
+}
+
+function startBurn() {
+  if (fire && fire.step < fire.result.steps) {
+    playBurn();
+    return;
+  }
+  fire = { result: null, fronts: [], step: 0, playing: false, timer: 0 };
+  relight();
+  fire.step = 0;
+  playBurn();
+}
+
+function playBurn() {
+  fire.playing = true;
+  const tick = () => {
+    if (!fire || !fire.playing) return;
+    fire.step = Math.min(fire.result.steps, fire.step + Number($('burn-speed').value));
+    syncBurn();
+    schedule();
+    if (fire.step >= fire.result.steps) pauseBurn();
+    else fire.timer = requestAnimationFrame(tick);
+  };
+  syncBurn();
+  fire.timer = requestAnimationFrame(tick);
+}
+
+function pauseBurn() {
+  if (!fire) return;
+  fire.playing = false;
+  cancelAnimationFrame(fire.timer);
+  syncBurn();
+}
+
+function clearBurn() {
+  if (fire) cancelAnimationFrame(fire.timer);
+  fire = null;
+  syncBurn();
+  schedule();
+}
+
+function syncBurn() {
+  const slider = $('burn-step');
+  $('burn-pause').disabled = !fire || !fire.playing;
+  $('burn-clear').disabled = !fire;
+  slider.disabled = !fire;
+  $('burn-start').textContent = fire && fire.step < fire.result.steps && !fire.playing ? 'Resume' : 'Light the top row';
+  if (!fire) {
+    slider.max = '0';
+    slider.value = '0';
+    $('burn-step-out').textContent = '';
+    $('burn-out').textContent = '';
+    return;
+  }
+  const { steps, crossed } = fire.result;
+  slider.max = String(steps);
+  slider.value = String(fire.step);
+  $('burn-step-out').textContent = `${fire.step} of ${steps}`;
+  const front = fire.fronts[fire.step] || 0;
+  const unit = (settings.mode === 'site' ? 'cell' : 'site') + (front === 1 ? '' : 's');
+  let line = `Step ${fire.step}: ${front.toLocaleString()} ${unit} catching. `;
+  if (crossed >= 0) {
+    line += fire.step >= crossed
+      ? `The fire reached the bottom at step ${crossed}, ${(crossed / (lat.size - 1)).toFixed(2)} times the straight-line distance.`
+      : 'It has not reached the bottom yet.';
+  } else if (fire.step >= steps) {
+    line += steps ? `It burnt out after ${steps} steps without reaching the bottom.` : 'Nothing on the top row is open.';
+  } else {
+    line += 'It has not reached the bottom yet.';
+  }
+  $('burn-out').textContent = line;
+}
+
 function saveHash() {
   const hash = encode(settings);
   history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
@@ -268,7 +353,7 @@ function savePng() {
   out.height = width * k;
   const octx = out.getContext('2d');
   octx.imageSmoothingEnabled = false;
-  const img = paintGrid(lat, settings.p, result, { colouring: settings.colouring, palette: PALETTES[settings.palette] });
+  const img = paintView(-1);
   buffer.width = img.width;
   buffer.height = img.height;
   bufferCtx.putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
@@ -298,6 +383,17 @@ function bind() {
   $('sweep').addEventListener('click', startSweep);
   $('sweep-stop').addEventListener('click', stopSweep);
   $('save-png').addEventListener('click', savePng);
+  $('burn-start').addEventListener('click', startBurn);
+  $('burn-pause').addEventListener('click', pauseBurn);
+  $('burn-clear').addEventListener('click', clearBurn);
+  $('burn-step').addEventListener('input', () => {
+    if (!fire) return;
+    const step = Number($('burn-step').value);
+    pauseBurn();
+    fire.step = step;
+    syncBurn();
+    schedule();
+  });
   $('copy-link').addEventListener('click', async () => {
     saveHash();
     try {
@@ -319,6 +415,7 @@ function bind() {
     else if (key === 't') update({ p: Math.floor(own.threshold * 1000 + 1) / 1000 });
     else if (key === 'n') update({ seed: randomSeed() });
     else if (key === 'b') update({ mode: settings.mode === 'site' ? 'bond' : 'site' });
+    else if (key === 'f') (fire ? clearBurn() : startBurn());
     else if (key === 'c') update({ colouring: COLOURINGS[(COLOURINGS.indexOf(settings.colouring) + 1) % COLOURINGS.length] });
     else return;
     event.preventDefault();
