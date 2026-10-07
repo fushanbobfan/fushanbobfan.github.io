@@ -45,6 +45,14 @@ the threshold, the *Mean finite cluster* figure (the average size of the
 cluster a random open cell belongs to, leaving out the spanning one) grows
 sharply; on an infinite grid it would diverge.
 
+**Count the cluster sizes.** The *Cluster sizes* chart plots how many
+finite clusters of each size there are per cell, on log–log axes. At the
+threshold the points fall close to a straight line of slope −187/91: a
+power law with no typical cluster size. On a finite grid the fitted slope
+comes out a little shallower, near −1.9 on a 512 × 512 grid. Move *p*
+down to 0.4 or up to 0.7 and the large clusters fall away, bending the
+line downwards.
+
 **Sweep the threshold.** *Run sweep* draws hundreds of grids and records
 each one's threshold. The orange curve is the share of grids that span at
 each *p*; the dashed curve is the average share of cells in the largest
@@ -98,6 +106,12 @@ tracking which ones touch the top and bottom rows. One pass gives the
 exact *p* at which this grid first spans, and the size of its largest
 cluster at every *p*, in about the time of a single sort.
 
+`src/distribution.js` sorts the finite clusters into bins of sizes
+[2^k, 2^(k+1)), divides each count by the bin width and the number of
+cells, and fits a least-squares line to log n(s) against log s from size
+8 up. The exponent τ = 187/91 ≈ 2.055 is exact for two-dimensional
+percolation.
+
 Burning, in `src/burn.js`, is a breadth-first search from every open
 cell on the top row along open links, so a cell's step number is its
 chemical distance from the top.
@@ -113,6 +127,9 @@ The test suite checks that:
 - fire reaches exactly the clusters touching the top row, crosses the
   grid exactly when a cluster spans top to bottom, and takes far longer
   to cross near the threshold than at high *p*;
+- the size bins add up, spanning clusters are left out, an exact power
+  law fits back to its exponent, and four 256 × 256 grids at the
+  threshold give a slope within 0.25 of −187/91, steeper above it;
 - the painted pixels, share links and chart paths come out as expected.
 
 ## Accessibility
