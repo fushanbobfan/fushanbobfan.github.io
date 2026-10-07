@@ -346,3 +346,23 @@ kbd {
   border-radius: 3px;
   background: var(--panel);
 }
+
+.chart .points circle {
+  fill: var(--span);
+}
+
+.chart path.pc {
+  fill: none;
+}
+
+.key.dot::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--span);
+}
+
+.key.ref::before {
+  height: 0;
+  border-top: 1px dashed var(--muted);
+}

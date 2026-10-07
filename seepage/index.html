@@ -72,6 +72,26 @@
       </fieldset>
 
       <fieldset>
+        <legend>Cluster sizes</legend>
+        <p class="note">How many finite clusters there are of each size, per site, on log–log axes. At the threshold the points fall on a straight line.</p>
+        <figure class="chart">
+          <svg id="sizes" viewBox="0 0 260 176" role="img" aria-labelledby="sizes-caption">
+            <g id="sizes-axes"></g>
+            <g transform="translate(30 10)">
+              <path id="sizes-ref" class="pc" />
+              <path id="sizes-line" class="curve largest" />
+              <g id="sizes-points" class="points"></g>
+            </g>
+          </svg>
+          <figcaption id="sizes-caption">
+            <span class="key dot">this grid</span>
+            <span class="key ref">slope −187/91</span>
+          </figcaption>
+        </figure>
+        <p id="sizes-out" class="note" aria-live="polite"></p>
+      </fieldset>
+
+      <fieldset>
         <legend>Burning</legend>
         <p class="note">Sets fire to every open cell on the top row; each step it spreads one link further through the open grid.</p>
         <div class="buttons">
