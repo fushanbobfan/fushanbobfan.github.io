@@ -1,0 +1,25 @@
+{
+  "name": "seepage",
+  "version": "0.1.0",
+  "description": "Percolation in the browser: fill a grid at random, watch clusters merge, and find the threshold where one first spans the whole grid.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "percolation",
+    "phase-transition",
+    "union-find",
+    "simulation",
+    "statistical-physics",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/seepage.git"
+  },
+  "private": false
+}
