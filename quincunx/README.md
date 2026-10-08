@@ -67,11 +67,19 @@ spread.
 
 **Watch the fit test.** *Distance from exact* is the total variation
 distance: half the summed gap between the share of balls in each bin and
-that bin's exact chance. It shrinks roughly like one over the square root
-of the number of balls. The chi-square line asks whether the bins could
+that bin's exact chance. Beside it, *typical* is the distance an honest
+board would show on average after this many balls. The chi-square line asks whether the bins could
 plausibly come from the exact distribution; on an honest board its
 p-value is spread evenly between 0 and 1, so a value under 0.05 turns up
 about one run in twenty by chance alone.
+
+**Watch it get closer.** The *Getting closer* chart plots the distance
+from exact against the number of balls, both on log scales. The dashed
+line is the typical distance, which falls like 1/√N: a straight line of
+slope −1/2, so a hundred times more balls buys only ten times more
+accuracy. The observed line wanders around it, sometimes well above or
+below for a stretch, because each new point shares all the balls that
+came before it.
 
 ## Controls
 
@@ -119,12 +127,19 @@ Keyboard: <kbd>Space</kbd> pours or stops, <kbd>1</kbd>–<kbd>4</kbd> drop
   Bins expected to hold fewer than five balls are pooled with their
   neighbours, starting from the tails, so the chi-square approximation
   holds; the p-value comes from the regularised incomplete gamma function.
+- **Typical distance.** After *N* balls the share in a bin with chance
+  *q* has spread √(q(1 − q)/N), and a normal error's average size is
+  √(2/π) times its spread, so the expected total variation distance is
+  about ½ √(2/(πN)) Σ √(q(1 − q)). The chart records a point each time the
+  ball count grows by 12%, which keeps the history short on a log axis.
 
 The tests check the paths and layout, the binomial against its closed
 form, the per-row distribution against its known mean and variance, that
 uneven rows narrow the pile, the normal and chi-square functions against table values, that the
 chi-square test accepts honest boards and rejects tilted ones, that its
-p-values on honest boards are roughly uniform, and that every queued ball
+p-values on honest boards are roughly uniform, that the typical
+distance matches the average over 300 simulated runs, that 1/√N draws as
+a straight line of slope −1/2 on the chart, and that every queued ball
 lands exactly once.
 
 ## References
