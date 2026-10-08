@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>quincunx · a Galton board</title>
+    <meta name="description" content="Drop balls through rows of pegs and watch the bell curve build up, checked against the binomial and normal distributions." />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>quincunx</h1>
+      <p class="subtitle">
+        A Galton board. Every ball bounces left or right at each peg; the bin it lands in counts how
+        many times it went right. Drop enough of them and the bins trace the binomial distribution,
+        and on a tall board, the normal curve.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage" aria-label="Board">
+        <canvas id="board" role="img" aria-label="Galton board with pegs, falling balls and bins"></canvas>
+        <p class="legend">
+          <span class="key bar"></span> balls in each bin
+          <span class="key exact"></span> exact expected count
+          <span class="key normal"></span> normal curve
+        </p>
+      </section>
+
+      <aside class="panel">
+        <fieldset>
+          <legend>Drop</legend>
+          <div class="buttons">
+            <button type="button" data-drop="1">1 ball</button>
+            <button type="button" data-drop="10">10</button>
+            <button type="button" data-drop="100">100</button>
+            <button type="button" data-drop="1000" title="Too many to animate: added straight to the bins">1000</button>
+          </div>
+          <div class="buttons">
+            <button type="button" id="pour" aria-pressed="false">Pour</button>
+            <button type="button" id="clear">Empty bins</button>
+          </div>
+          <label>Speed <input id="speed" type="range" min="0.5" max="12" step="0.5" value="4" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Board</legend>
+          <label>Rows <output id="rows-out">12</output>
+            <input id="rows" type="range" min="1" max="40" step="1" value="12" />
+          </label>
+          <label>Chance of bouncing right <output id="p-out">0.50</output>
+            <input id="p" type="range" min="0" max="1" step="0.01" value="0.5" />
+          </label>
+          <label class="check"><input id="show-exact" type="checkbox" checked /> Exact expected counts</label>
+          <label class="check"><input id="show-normal" type="checkbox" checked /> Normal curve</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>So far</legend>
+          <dl class="stats">
+            <dt>Balls</dt><dd id="st-total">0</dd>
+            <dt>Mean bin</dt><dd><span id="st-mean">–</span> <small>expected <span id="st-emean">6.00</span></small></dd>
+            <dt>Spread (sd)</dt><dd><span id="st-sd">–</span> <small>expected <span id="st-esd">1.73</span></small></dd>
+            <dt>Distance from exact</dt><dd id="st-tv" title="Total variation distance: half the summed gap between observed shares and exact chances">–</dd>
+            <dt>Chi-square test</dt><dd id="st-chi">–</dd>
+          </dl>
+          <p class="hint" id="chi-hint"></p>
+        </fieldset>
+
+        <div class="buttons">
+          <button type="button" id="share">Copy link</button>
+          <button type="button" id="png">Save PNG</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </aside>
+    </main>
+
+    <footer>
+      Keys: <kbd>Space</kbd> pour or stop · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> drop 1, 10, 100, 1000 ·
+      <kbd>C</kbd> empty the bins. Source on <a href="https://github.com/fushanbobfan/quincunx">GitHub</a>.
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
