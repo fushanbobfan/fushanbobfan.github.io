@@ -1,7 +1,8 @@
-import { ballPosition, dropMany, layout } from './board.js';
+import { ballPosition, biasSpan, dropMany, layout, rowAt } from './board.js';
 import { createFlight, enqueue, step } from './flight.js';
 import { barScale, drawScene, landingY } from './render.js';
 import { mulberry32, randomSeed } from './rng.js';
+import { biasFromX, isUniform, rowBiases } from './patterns.js';
 import { decode, encode } from './share.js';
 import { binPmf, chiSquareTest, countSummary, pmfMoments, totalVariation } from './stats.js';
 
@@ -12,6 +13,7 @@ const ctx = canvas.getContext('2d');
 let settings = decode(location.hash);
 let flight;
 let pmf;
+let biases;
 let moments;
 let pouring = false;
 let L;
@@ -30,6 +32,8 @@ function colours() {
     exact: get('--exact'),
     normal: get('--normal'),
     ball: get('--ball'),
+    guide: get('--guide'),
+    tilt: get('--tilt'),
   };
 }
 let palette = colours();
@@ -45,12 +49,29 @@ function resize() {
   L = layout(settings.rows, rect.width, rect.height);
 }
 
+const PATTERN_HINTS = {
+  same: '',
+  alternate: 'Rows take turns leaning one way and the other. The average is fair, yet the pile comes out narrower than a fair board.',
+  ramp: 'The chance slides evenly from p at the top row to 1 − p at the bottom.',
+  random: 'Each row gets its own chance, fixed by the seed. Empty bins draws a new set.',
+  hand: 'Drag across the pegs to set each row: the left edge is 0, the right edge is 1.',
+};
+
+function showTicks() {
+  return settings.pattern === 'hand' || !isUniform(biases);
+}
+
 function rebuild() {
-  flight = createFlight(settings.rows, settings.p, mulberry32(settings.seed));
-  pmf = binPmf(settings.rows, settings.p);
+  biases = rowBiases(settings.pattern, settings.rows, settings.p, { seed: settings.seed, custom: settings.custom });
+  flight = createFlight(settings.rows, isUniform(biases) ? biases[0] : biases, mulberry32(settings.seed));
+  pmf = binPmf(settings.rows, biases);
   moments = pmfMoments(pmf);
   resize();
   statsDirty = true;
+  const ticks = showTicks();
+  $('tilt-key').hidden = !ticks;
+  $('tilt-label').hidden = !ticks;
+  canvas.classList.toggle('painting', settings.pattern === 'hand');
 }
 
 function syncControls() {
@@ -60,6 +81,9 @@ function syncControls() {
   $('p-out').textContent = settings.p.toFixed(2);
   $('show-exact').checked = settings.exact;
   $('show-normal').checked = settings.normal;
+  $('pattern').value = settings.pattern;
+  $('p').disabled = settings.pattern === 'random' || settings.pattern === 'hand';
+  $('pattern-hint').textContent = PATTERN_HINTS[settings.pattern];
 }
 
 function writeHash() {
@@ -118,6 +142,7 @@ function frame(now) {
       showNormal: settings.normal,
       mean: moments.mean,
       sd: moments.sd,
+      biases: showTicks() ? biases : null,
     },
     palette,
   );
@@ -162,6 +187,51 @@ $('p').addEventListener('input', () => {
   writeHash();
   rebuild();
 });
+$('pattern').addEventListener('change', () => {
+  const pattern = $('pattern').value;
+  // Painting starts from whatever the board showed a moment ago.
+  settings = { ...settings, pattern, custom: pattern === 'hand' ? biases.slice() : [] };
+  syncControls();
+  writeHash();
+  rebuild();
+});
+
+let lastPaintRow = -1;
+function paint(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const row = rowAt(L, y);
+  if (row < 0) return;
+  const { left, right } = biasSpan(L);
+  const value = biasFromX(x, left, right);
+  const custom = biases.slice();
+  // Fill any rows skipped by a quick drag.
+  const from = lastPaintRow < 0 ? row : lastPaintRow;
+  const lo = Math.min(from, row);
+  const hi = Math.max(from, row);
+  for (let r = lo; r <= hi; r++) custom[r] = value;
+  lastPaintRow = row;
+  settings = { ...settings, custom };
+  rebuild();
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (settings.pattern !== 'hand') return;
+  canvas.setPointerCapture(e.pointerId);
+  lastPaintRow = -1;
+  paint(e);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (settings.pattern === 'hand' && canvas.hasPointerCapture(e.pointerId)) paint(e);
+});
+const endPaint = () => {
+  if (lastPaintRow >= 0) writeHash();
+  lastPaintRow = -1;
+};
+canvas.addEventListener('pointerup', endPaint);
+canvas.addEventListener('pointercancel', endPaint);
+
 $('show-exact').addEventListener('change', () => {
   settings = { ...settings, exact: $('show-exact').checked };
   writeHash();
