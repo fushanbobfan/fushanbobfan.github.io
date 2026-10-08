@@ -263,6 +263,51 @@ input:focus-visible {
   color: var(--muted);
 }
 
+.conv svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.conv .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.conv .tick {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.conv .expected {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.conv .observed {
+  fill: none;
+  stroke: var(--exact);
+  stroke-width: 2;
+}
+
+.conv .observed-dot {
+  fill: var(--exact);
+}
+
+.key.observed {
+  height: 3px;
+  margin-left: 0;
+  background: var(--exact);
+}
+
+.key.expected {
+  height: 0;
+  border-top: 2px dashed var(--muted);
+  border-radius: 0;
+}
+
 .hint,
 .status {
   font-size: 0.85rem;

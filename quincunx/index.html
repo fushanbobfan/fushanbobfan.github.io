@@ -73,10 +73,19 @@
             <dt>Balls</dt><dd id="st-total">0</dd>
             <dt>Mean bin</dt><dd><span id="st-mean">–</span> <small>expected <span id="st-emean">6.00</span></small></dd>
             <dt>Spread (sd)</dt><dd><span id="st-sd">–</span> <small>expected <span id="st-esd">1.73</span></small></dd>
-            <dt>Distance from exact</dt><dd id="st-tv" title="Total variation distance: half the summed gap between observed shares and exact chances">–</dd>
+            <dt>Distance from exact</dt><dd><span id="st-tv" title="Total variation distance: half the summed gap between observed shares and exact chances">–</span> <small>typical <span id="st-etv">–</span></small></dd>
             <dt>Chi-square test</dt><dd id="st-chi">–</dd>
           </dl>
           <p class="hint" id="chi-hint"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Getting closer</legend>
+          <div class="conv" id="conv"></div>
+          <p class="hint">
+            <span class="key observed"></span> distance from exact after each drop
+            <span class="key expected"></span> typical distance, falling like 1/√N
+          </p>
         </fieldset>
 
         <div class="buttons">
