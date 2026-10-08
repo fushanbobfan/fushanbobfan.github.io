@@ -88,6 +88,18 @@ export function totalVariation(counts, pmf) {
   return tv / 2;
 }
 
+// What the total variation distance should be on average after `total`
+// balls. Each bin's share has spread sqrt(p(1 - p) / N), and the mean
+// absolute value of a normal with that spread is sqrt(2 / pi) times it,
+// so the expected distance falls like 1 / sqrt(N). The approximation is
+// close once most bins expect a few balls.
+export function expectedTotalVariation(pmf, total) {
+  if (!(total > 0)) return NaN;
+  let sum = 0;
+  for (const q of pmf) sum += Math.sqrt(q * (1 - q));
+  return 0.5 * Math.sqrt(2 / (Math.PI * total)) * sum;
+}
+
 function logGamma(x) {
   const g = [
     676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
