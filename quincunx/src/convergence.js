@@ -61,8 +61,10 @@ export function chartSvg(history, expected, { width = 280, height = 170 } = {}) 
   const parts = [];
   for (const n of decades(range.xmin, range.xmax)) {
     const [x] = at(n, 1);
+    // The last label hangs left of its line so it stays inside the chart.
+    const anchor = n === range.xmax ? 'end' : 'middle';
     parts.push(`<line class="grid" x1="${x.toFixed(1)}" y1="${box.top}" x2="${x.toFixed(1)}" y2="${box.bottom}"/>`);
-    parts.push(`<text class="tick" x="${x.toFixed(1)}" y="${height - 8}" text-anchor="middle">${fmtTick(n)}</text>`);
+    parts.push(`<text class="tick" x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${anchor}">${fmtTick(n)}</text>`);
   }
   for (const v of decades(range.ymin, range.ymax)) {
     const [, y] = at(1, v);

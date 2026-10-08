@@ -57,6 +57,6 @@ test('the chart has the expected curve always and the observed line once there i
   assert.doesNotMatch(empty, /class="observed"/);
   const full = chartSvg([{ total: 10, distance: 0.2 }, { total: 100, distance: 0.08 }], expected);
   assert.match(full, /class="observed" d="M[\d.]+,[\d.]+L[\d.]+,[\d.]+"/);
-  assert.match(full, /<text[^>]*>10k<\/text>/);
+  assert.match(full, /<text[^>]*text-anchor="end">10k<\/text>/);
   assert.doesNotMatch(full, /NaN/);
 });
