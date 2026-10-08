@@ -1,11 +1,16 @@
 // Balls in the air. New balls wait in a queue and are released one at a
-// time, spaced out so they don't overlap at the top; each one falls row by
-// row and is added to the bin counts when it lands.
+// time, spaced out so they don't overlap at the top (closer together while
+// a long queue is waiting); each one falls row by row and is added to the
+// bin counts when it lands.
 
 import { binOf, dropMany, dropPath } from './board.js';
 
 export const MAX_IN_FLIGHT = 600;
 const SPACING = 0.45; // rows between successive releases
+
+export function releaseGap(queued) {
+  return SPACING / (1 + queued / 20);
+}
 
 export function createFlight(rows, bias, rng) {
   return { rows, bias, rng, balls: [], queued: 0, sinceRelease: SPACING, counts: new Array(rows + 1).fill(0) };
@@ -27,9 +32,9 @@ export function enqueue(f, n) {
 export function step(f, rowsElapsed, isLanded = (b) => b.t >= f.rows + 2) {
   for (const b of f.balls) b.t += rowsElapsed;
   f.sinceRelease += rowsElapsed;
-  while (f.queued > 0 && f.sinceRelease >= SPACING) {
+  while (f.queued > 0 && f.sinceRelease >= releaseGap(f.queued)) {
     const path = dropPath(f.rows, f.bias, f.rng);
-    f.sinceRelease -= SPACING;
+    f.sinceRelease -= releaseGap(f.queued);
     f.balls.push({ path, bin: binOf(path), t: f.sinceRelease });
     f.queued--;
   }

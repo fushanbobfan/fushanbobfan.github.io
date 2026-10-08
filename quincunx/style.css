@@ -222,6 +222,7 @@ input:focus-visible {
 
 .stats dd {
   margin: 0;
+  white-space: nowrap;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
