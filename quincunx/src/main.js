@@ -2,9 +2,10 @@ import { ballPosition, biasSpan, dropMany, layout, rowAt } from './board.js';
 import { createFlight, enqueue, step } from './flight.js';
 import { barScale, drawScene, landingY } from './render.js';
 import { mulberry32, randomSeed } from './rng.js';
+import { chartSvg, recordPoint } from './convergence.js';
 import { biasFromX, isUniform, rowBiases } from './patterns.js';
 import { decode, encode } from './share.js';
-import { binPmf, chiSquareTest, countSummary, pmfMoments, totalVariation } from './stats.js';
+import { binPmf, chiSquareTest, countSummary, expectedTotalVariation, pmfMoments, totalVariation } from './stats.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('board');
@@ -14,6 +15,7 @@ let settings = decode(location.hash);
 let flight;
 let pmf;
 let biases;
+let history = [];
 let moments;
 let pouring = false;
 let L;
@@ -66,6 +68,7 @@ function rebuild() {
   flight = createFlight(settings.rows, isUniform(biases) ? biases[0] : biases, mulberry32(settings.seed));
   pmf = binPmf(settings.rows, biases);
   moments = pmfMoments(pmf);
+  history = [];
   resize();
   statsDirty = true;
   const ticks = showTicks();
@@ -106,7 +109,11 @@ function updateStats() {
   $('st-sd').textContent = fmt(s.sd);
   $('st-emean').textContent = fmt(moments.mean);
   $('st-esd').textContent = fmt(moments.sd);
-  $('st-tv').textContent = s.total ? fmt(totalVariation(flight.counts, pmf), 3) : '–';
+  const tv = s.total ? totalVariation(flight.counts, pmf) : NaN;
+  $('st-tv').textContent = fmt(tv, 3);
+  $('st-etv').textContent = fmt(expectedTotalVariation(pmf, s.total), 3);
+  recordPoint(history, s.total, tv);
+  $('conv').innerHTML = chartSvg(history, (n) => expectedTotalVariation(pmf, n));
   const chi = s.total >= 20 ? chiSquareTest(flight.counts, pmf) : null;
   const hint = $('chi-hint');
   if (!chi || chi.df === 0) {
