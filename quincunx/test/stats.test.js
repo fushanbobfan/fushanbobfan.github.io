@@ -6,6 +6,7 @@ import {
   chiSquareSurvival,
   chiSquareTest,
   countSummary,
+  expectedTotalVariation,
   gammaQ,
   normalBins,
   normalCdf,
@@ -103,4 +104,24 @@ test('p-values from honest boards are roughly uniform', () => {
     if (chiSquareTest(counts, pmf).pValue < 0.1) below++;
   }
   assert.ok(below > trials * 0.05 && below < trials * 0.16, `${below} of ${trials} below 0.1`);
+});
+
+test('the expected distance falls like one over the square root of the balls', () => {
+  const pmf = binomialPmf(12, 0.5);
+  const a = expectedTotalVariation(pmf, 100);
+  const b = expectedTotalVariation(pmf, 10000);
+  close(a / b, 10, 1e-12);
+  assert.ok(Number.isNaN(expectedTotalVariation(pmf, 0)));
+});
+
+test('the expected distance matches the average over many simulated runs', () => {
+  const pmf = binomialPmf(12, 0.5);
+  const rng = mulberry32(77);
+  const runs = 300;
+  const balls = 2000;
+  let sum = 0;
+  for (let i = 0; i < runs; i++) sum += totalVariation(dropMany(new Array(13).fill(0), 12, 0.5, rng, balls), pmf);
+  const simulated = sum / runs;
+  const predicted = expectedTotalVariation(pmf, balls);
+  assert.ok(Math.abs(simulated - predicted) / predicted < 0.06, `${simulated} vs ${predicted}`);
 });
