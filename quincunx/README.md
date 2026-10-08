@@ -49,6 +49,22 @@ long tail to the right: a skewed binomial the normal curve misses. Raise
 the rows to 40 with the same tilt and the pile moves away from the wall
 and grows much closer to symmetric.
 
+**Give each row its own chance.** *Row pattern* lets the chance of
+bouncing right change from row to row. With *Alternating p and 1 − p*
+at p = 0.10, half the rows push left and half push right, so the board is
+fair on average and the pile is centred, yet it comes out far narrower
+than a fair board's: a spread of about 1.04 bins on 12 rows instead of
+1.73. For the same average chance, uneven rows always narrow the pile,
+because each row contributes *p(1 − p)* to the variance and that is
+largest at one half. A green tick on each row shows its chance.
+
+**Paint the rows.** With *Paint rows by hand*, drag across the pegs: the
+horizontal position sets that row's chance, from 0 at the left edge to 1
+at the right. Even a wild painting gives a bell shape on a tall board, as
+long as no handful of rows dominates: the central limit theorem does not
+need identical steps, only independent ones that each add a little
+spread.
+
 **Watch the fit test.** *Distance from exact* is the total variation
 distance: half the summed gap between the share of balls in each bin and
 that bin's exact chance. It shrinks roughly like one over the square root
@@ -67,7 +83,8 @@ about one run in twenty by chance alone.
 | Empty bins | Clear the bins and start a fresh random sequence |
 | Speed | How fast balls fall, in rows per second |
 | Rows | 1 to 40 rows of pegs |
-| Chance of bouncing right | The probability of a right bounce at every peg |
+| Row pattern | Same chance every row, alternating, a ramp, random per row, or painted by hand |
+| Chance of bouncing right | The probability of a right bounce (the strength of the pattern) |
 | Exact expected counts / Normal curve | Show or hide each overlay |
 | Copy link | Copy a link that reopens this board |
 | Save PNG | Download the canvas as an image |
@@ -88,16 +105,24 @@ Keyboard: <kbd>Space</kbd> pours or stops, <kbd>1</kbd>–<kbd>4</kbd> drop
   on the top of its bin's bar.
 - **Exact distribution.** The chance of each bin is built row by row:
   every row moves a share *p* of each bin's probability one bin to the
-  right. With one bias for every row this is the binomial distribution.
-- **Normal curve.** The orange curve is the normal density with mean
-  *np* and variance *np(1 − p)*, scaled to the number of balls.
+  right. With one bias for every row this is the binomial distribution;
+  with a different bias per row it is the Poisson binomial distribution,
+  whose mean is the sum of the row chances and whose variance is the sum
+  of *p(1 − p)* over the rows.
+- **Normal curve.** The orange curve is the normal density with the
+  same mean and variance as the exact distribution (*np* and
+  *np(1 − p)* when every row is the same), scaled to the number of balls.
+- **Row patterns.** The random pattern draws its row chances from a
+  separate stream seeded by the board's seed, so a share link restores
+  them; painted rows travel in the link as hundredths.
 - **Fit test.** Pearson's chi-square test against the exact chances.
   Bins expected to hold fewer than five balls are pooled with their
   neighbours, starting from the tails, so the chi-square approximation
   holds; the p-value comes from the regularised incomplete gamma function.
 
 The tests check the paths and layout, the binomial against its closed
-form, the normal and chi-square functions against table values, that the
+form, the per-row distribution against its known mean and variance, that
+uneven rows narrow the pile, the normal and chi-square functions against table values, that the
 chi-square test accepts honest boards and rejects tilted ones, that its
 p-values on honest boards are roughly uniform, and that every queued ball
 lands exactly once.
