@@ -8,7 +8,7 @@ test('the defaults encode to an empty hash and decode back', () => {
 });
 
 test('settings survive a round trip through the link', () => {
-  const s = { rows: 30, p: 0.37, seed: 4000000000, exact: false, normal: true };
+  const s = { rows: 30, p: 0.37, seed: 4000000000, exact: false, normal: true, pattern: 'ramp', custom: [] };
   assert.deepEqual(decode(`#${encode(s)}`), s);
 });
 
@@ -28,4 +28,18 @@ test('rows round to whole numbers and p to two decimals', () => {
   assert.equal(normalise({ rows: 7.6 }).rows, 8);
   assert.equal(normalise({ rows: 0 }).rows, 1);
   assert.equal(normalise({ p: 0.333 }).p, 0.33);
+});
+
+test('painted rows round-trip for the hand-set pattern only', () => {
+  const s = { ...DEFAULTS, rows: 4, pattern: 'hand', custom: [0.1, 0.95, 0, 1] };
+  const hash = encode(s);
+  assert.match(hash, /h=10\.95\.0\.100/);
+  assert.deepEqual(decode(`#${hash}`).custom, [0.1, 0.95, 0, 1]);
+  assert.deepEqual(normalise({ pattern: 'ramp', custom: [0.2] }).custom, []);
+});
+
+test('painted rows are clamped, trimmed to the board and gaps filled with p', () => {
+  const s = decode('#n=3&p=0.4&t=hand&h=250.x..-20.70');
+  assert.deepEqual(s.custom, [1, 0.4, 0.4]);
+  assert.equal(decode('#t=sideways').pattern, 'same');
 });

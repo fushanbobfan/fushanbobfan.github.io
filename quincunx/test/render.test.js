@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { barScale, drawScene, landingY, normalCurvePoints } from '../src/render.js';
-import { binCentre, layout } from '../src/board.js';
+import { barScale, drawRowBiases, drawScene, landingY, normalCurvePoints } from '../src/render.js';
+import { biasSpan, binCentre, layout } from '../src/board.js';
 import { binomialPmf, pmfMoments } from '../src/stats.js';
 
 function stubContext() {
@@ -24,7 +24,7 @@ function stubContext() {
   );
 }
 
-const colours = { bg: '#fff', peg: '#000', wall: '#888', bar: '#ccc', exact: '#00f', normal: '#f00', ball: '#333' };
+const colours = { bg: '#fff', peg: '#000', wall: '#888', bar: '#ccc', exact: '#00f', normal: '#f00', ball: '#333', guide: '#eee', tilt: '#0a0' };
 
 test('bars never overflow the bins and grow no taller than stacked balls', () => {
   const L = layout(10, 600, 500);
@@ -67,4 +67,18 @@ test('a whole scene draws without touching anything but the context', () => {
   assert.ok(scale > 0);
   assert.equal(ctx.calls.fillRect, 1 + 9);
   assert.ok(ctx.calls.arc >= 36 + 1);
+});
+
+test('row chances draw as ticks placed across the bias span', () => {
+  const L = layout(3, 400, 400);
+  const moves = [];
+  const ctx = stubContext();
+  ctx.moveTo = (x, y) => moves.push([x, y]);
+  drawRowBiases(ctx, L, [0, 0.5, 1], colours);
+  const { left, right } = biasSpan(L);
+  const ticks = moves.slice(3);
+  assert.equal(ticks.length, 3);
+  assert.ok(Math.abs(ticks[0][0] - left) < 1e-9);
+  assert.ok(Math.abs(ticks[1][0] - (left + right) / 2) < 1e-9);
+  assert.ok(Math.abs(ticks[2][0] - right) < 1e-9);
 });

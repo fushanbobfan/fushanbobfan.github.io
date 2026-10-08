@@ -1,7 +1,7 @@
 // Drawing the board onto a 2D canvas context. Everything here takes the
 // context, the layout and plain data, so it can run against a stub in tests.
 
-import { ballPosition, binCentre, pegPosition } from './board.js';
+import { ballPosition, biasSpan, binCentre, pegPosition } from './board.js';
 import { normalPdf } from './stats.js';
 
 // Pixels per ball in the bins. The scale is set so the tallest of the
@@ -38,6 +38,32 @@ export function drawBoard(ctx, L, colours) {
   }
   ctx.moveTo(binCentre(L, 0) - L.dx / 2, L.binBottom);
   ctx.lineTo(binCentre(L, L.rows) + L.dx / 2, L.binBottom);
+  ctx.stroke();
+}
+
+// Each row's chance of bouncing right as a tick on a faint guide line
+// across the board: left edge 0, right edge 1.
+export function drawRowBiases(ctx, L, biases, colours) {
+  const { left, right } = biasSpan(L);
+  const h = Math.max(3, L.dy * 0.28);
+  ctx.strokeStyle = colours.guide;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let r = 0; r < biases.length; r++) {
+    const y = L.top + r * L.dy;
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = colours.tilt;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let r = 0; r < biases.length; r++) {
+    const x = left + biases[r] * (right - left);
+    const y = L.top + r * L.dy;
+    ctx.moveTo(x, y - h);
+    ctx.lineTo(x, y + h);
+  }
   ctx.stroke();
 }
 
@@ -100,12 +126,13 @@ export function drawBalls(ctx, L, balls, counts, scale, colours) {
 }
 
 export function drawScene(ctx, L, scene, colours) {
-  const { counts, pmf, balls, showExact, showNormal, mean, sd } = scene;
+  const { counts, pmf, balls, showExact, showNormal, mean, sd, biases } = scene;
   const total = counts.reduce((a, b) => a + b, 0);
   const scale = barScale(L, counts, pmf);
   ctx.fillStyle = colours.bg;
   ctx.fillRect(0, 0, L.width, L.height);
   drawBars(ctx, L, counts, scale, colours);
+  if (biases) drawRowBiases(ctx, L, biases, colours);
   drawBoard(ctx, L, colours);
   if (showNormal) drawNormal(ctx, L, mean, sd, total, scale, colours);
   if (showExact) drawExpected(ctx, L, pmf, total, scale, colours);

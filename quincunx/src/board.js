@@ -97,3 +97,15 @@ export function ballPosition(L, path, t, landY = L.binBottom) {
     y: from.y - lift + (toY - from.y) * s * s - hop * Math.sin(Math.PI * s) * (1 - s),
   };
 }
+
+// The horizontal span used to show and paint each row's chance: from the
+// left edge of the first bin to the right edge of the last.
+export function biasSpan(L) {
+  return { left: binCentre(L, 0) - L.dx / 2, right: binCentre(L, L.rows) + L.dx / 2 };
+}
+
+// The row of pegs nearest a height on the canvas, or -1 outside the pegs.
+export function rowAt(L, y) {
+  const r = Math.round((y - L.top) / L.dy);
+  return r >= 0 && r < L.rows ? r : -1;
+}

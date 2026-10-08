@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ballPosition, binCentre, binOf, dropMany, dropPath, layout, pegPosition } from '../src/board.js';
+import { ballPosition, biasSpan, binCentre, binOf, rowAt, dropMany, dropPath, layout, pegPosition } from '../src/board.js';
 import { mulberry32 } from '../src/rng.js';
 
 test('a path has one step per row and its bin is the number of right steps', () => {
@@ -77,4 +77,15 @@ test('a ball stops at the landing height it is given', () => {
   const p = ballPosition(L, Uint8Array.from([0, 0, 0, 0]), 50, L.binBottom - 30);
   assert.equal(p.y, L.binBottom - 30);
   assert.equal(p.landed, true);
+});
+
+test('rows are found from a height, and the bias span covers every bin', () => {
+  const L = layout(10, 600, 500);
+  assert.equal(rowAt(L, L.top), 0);
+  assert.equal(rowAt(L, L.top + 3.4 * L.dy), 3);
+  assert.equal(rowAt(L, L.top - L.dy), -1);
+  assert.equal(rowAt(L, L.top + 10 * L.dy), -1);
+  const { left, right } = biasSpan(L);
+  assert.ok(Math.abs(right - left - 11 * L.dx) < 1e-9);
+  assert.ok(Math.abs((left + right) / 2 - L.cx) < 1e-9);
 });

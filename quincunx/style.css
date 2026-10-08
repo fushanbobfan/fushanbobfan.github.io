@@ -12,6 +12,8 @@
   --exact: #1d4ed8;
   --normal: #c2410c;
   --ball: #2f2b24;
+  --guide: #ece6d8;
+  --tilt: #15803d;
   --button: #ebe6da;
   --button-hover: #ded7c7;
   color-scheme: light;
@@ -32,6 +34,8 @@
     --exact: #93c5fd;
     --normal: #fb923c;
     --ball: #f1e6cf;
+    --guide: #252a31;
+    --tilt: #4ade80;
     --button: #252a32;
     --button-hover: #30363f;
     color-scheme: dark;
@@ -131,6 +135,34 @@ canvas {
 .key.normal {
   height: 3px;
   background: var(--normal);
+}
+
+.key.tilt {
+  width: 3px;
+  height: 12px;
+  background: var(--tilt);
+}
+
+.key[hidden],
+[hidden] {
+  display: none;
+}
+
+canvas.painting {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  font: inherit;
+  color: var(--text);
+  background: var(--button);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
 }
 
 .panel {

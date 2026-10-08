@@ -25,6 +25,7 @@
           <span class="key bar"></span> balls in each bin
           <span class="key exact"></span> exact expected count
           <span class="key normal"></span> normal curve
+          <span class="key tilt" id="tilt-key" hidden></span><span id="tilt-label" hidden>each row's chance of bouncing right</span>
         </p>
       </section>
 
@@ -49,9 +50,19 @@
           <label>Rows <output id="rows-out">12</output>
             <input id="rows" type="range" min="1" max="40" step="1" value="12" />
           </label>
+          <label>Row pattern
+            <select id="pattern">
+              <option value="same">Same chance every row</option>
+              <option value="alternate">Alternating p and 1 − p</option>
+              <option value="ramp">Ramp from p to 1 − p</option>
+              <option value="random">Random chance per row</option>
+              <option value="hand">Paint rows by hand</option>
+            </select>
+          </label>
           <label>Chance of bouncing right <output id="p-out">0.50</output>
             <input id="p" type="range" min="0" max="1" step="0.01" value="0.5" />
           </label>
+          <p class="hint" id="pattern-hint"></p>
           <label class="check"><input id="show-exact" type="checkbox" checked /> Exact expected counts</label>
           <label class="check"><input id="show-normal" type="checkbox" checked /> Normal curve</label>
         </fieldset>
