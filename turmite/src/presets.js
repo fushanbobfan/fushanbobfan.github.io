@@ -8,7 +8,7 @@ export const PRESETS = [
     lattice: 'square',
     rule: 'RL',
     note:
-      'Two colours. About ten thousand steps of chaos, then at step 9977 the ant starts building a diagonal highway that repeats every 104 steps and never stops.',
+      'Two colours. About ten thousand steps of chaos, then at step 9977 the ant starts building a diagonal highway that repeats every 104 steps and carries it off into empty grid.',
   },
   {
     id: 'chaos',
@@ -70,12 +70,12 @@ export const PRESETS = [
     note: 'Turning 120° each way, the ant lays a straight track two cells wide from its first steps, repeating every 8 steps.',
   },
   {
-    id: 'hex-highway',
-    name: 'Late hexagonal highway',
+    id: 'hex-rim',
+    name: 'Lapping the rim',
     lattice: 'hex',
     rule: 'L1L2NUL2L1R2',
     note:
-      'Seven colours. A hundred thousand steps of growth, then at step 101,404 the ant breaks away on a highway that repeats every 698 steps.',
+      'Seven colours. From step 101,404 the ant walks round the rim of its own hexagon, laying every edge with the same 698-step pattern turned 60° at each corner, so the hexagon grows lap by lap. It looks like a highway along each edge but never breaks away.'
   },
   {
     id: 'hex-mirror',

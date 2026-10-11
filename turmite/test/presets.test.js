@@ -30,7 +30,8 @@ test('every preset parses, has a unique id and a note', () => {
 
 test("Langton's ant: highway at step 9977, period 104", () => {
   const c = lone('langton');
-  c.run(9977 + 104 * 3 + 4096);
+  c.run(30_000);
+  assert.ok(c.highway.escaped);
   assert.equal(c.highway.onset, 9977);
   assert.equal(c.highway.period, 104);
   assert.equal(Math.abs(c.highway.dx), Math.abs(c.highway.dy), 'diagonal');
@@ -82,7 +83,8 @@ test('RRLLLRLLLRRR: a filled triangle that moves off', () => {
 
 test('LLRRRLRLRLLR: straight highway after about 30,000 steps, period 1968', () => {
   const c = lone('long-highway');
-  c.run(45_000);
+  c.run(70_000);
+  assert.ok(c.highway.escaped);
   assert.equal(c.highway.period, 1968);
   assert.ok(c.highway.onset > 25_000 && c.highway.onset < 35_000);
   assert.ok(c.highway.dx === 0 || c.highway.dy === 0, 'straight');
@@ -131,16 +133,36 @@ test('L1L1R1R1 on hexagons: mirror image at every return home', () => {
 
 test('L2R2 on hexagons: a two-cell track from the start, period 8', () => {
   const c = lone('hex-track');
-  c.run(8192);
+  c.run(16384);
+  assert.ok(c.highway.escaped);
   assert.equal(c.highway.period, 8);
   assert.ok(c.highway.onset <= 2);
   const { minX, maxX } = c.box;
   assert.equal(maxX - minX + 1, 2, 'two cells wide');
 });
 
-test('L1L2NUL2L1R2 on hexagons: highway at step 101,404 with period 698', () => {
-  const c = lone('hex-highway');
-  c.run(101_404 + 8192 + 4096);
-  assert.equal(c.highway.onset, 101_404);
-  assert.equal(c.highway.period, 698);
+test('L1L2NUL2L1R2 on hexagons: from step 101,404 it laps its rim, every edge the same 698-step pattern turned 60°', () => {
+  const c = lone('hex-rim');
+  const seen = new Map();
+  let first = null;
+  while (c.steps < 1_000_000) {
+    c.run(4096);
+    const h = c.highway;
+    if (!h) continue;
+    first ??= h.onset;
+    assert.equal(h.period, 698);
+    assert.equal(h.escaped, false, 'never breaks away');
+    seen.set(`${h.dx},${h.dy}`, true);
+  }
+  assert.equal(first, 101_404);
+  // The six rotations of (-21, 3) by 60°: (q, r) -> (-r, q + r).
+  const rotations = [];
+  let [q, r] = [-21, 3];
+  for (let k = 0; k < 6; k++) {
+    rotations.push(`${q},${r}`);
+    [q, r] = [-r, q + r];
+  }
+  assert.deepEqual([...seen.keys()].sort(), rotations.sort());
+  const { minX, maxX, minY, maxY } = c.box;
+  assert.ok(Math.abs(maxX - minX - (maxY - minY)) <= 21, 'as wide as it is tall');
 });
