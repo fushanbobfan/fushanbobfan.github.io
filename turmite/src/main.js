@@ -9,6 +9,7 @@ import {
   makePalette, packRgb, fitView, cellAt, cellCentre, paintPixels, worldBox, worldCentre, SCHEMES, MAX_SCALE,
 } from './render.js';
 import { describePattern, describeHalt } from './describe.js';
+import { looksLikeMachine } from './machine.js';
 
 const $ = (id) => document.getElementById(id);
 const board = $('board');
@@ -30,10 +31,15 @@ let lastTime = 0;
 
 // ---------- setup ----------
 
-for (const [lattice, label] of [['square', 'Square grid'], ['hex', 'Hexagonal grid']]) {
+const PRESET_GROUPS = [
+  ['Square grid', (p) => p.lattice === 'square' && !looksLikeMachine(p.rule)],
+  ['Square grid, state machines', (p) => looksLikeMachine(p.rule)],
+  ['Hexagonal grid', (p) => p.lattice === 'hex'],
+];
+for (const [label, belongs] of PRESET_GROUPS) {
   const group = document.createElement('optgroup');
   group.label = label;
-  for (const p of PRESETS.filter((q) => q.lattice === lattice)) {
+  for (const p of PRESETS.filter(belongs)) {
     const opt = document.createElement('option');
     opt.value = p.id;
     opt.textContent = `${p.name} (${p.rule})`;
@@ -70,23 +76,67 @@ const TURN_WORDS = {
 };
 
 const RULE_HELP = {
-  square: 'L left · R right · N straight on · U turn around',
+  square:
+    'L left · R right · N straight on · U turn around. Or a state machine: {write, turn, next state} per state and ' +
+    'colour, as {{{1,8,1},{1,8,1}},{{1,2,1},{0,1,0}}} or 181181121010, with turns 1 straight, 2 right, 4 around, 8 left.',
   hex: 'L1 / R1 60° left / right · L2 / R2 120° · N straight on · U turn around',
 };
 
 function renderSwatches() {
   const list = $('swatches');
   list.replaceChildren();
+  const machine = colony.rule.kind === 'machine';
   colony.rule.tokens.forEach((letter, i) => {
     const li = document.createElement('li');
     const [r, g, b] = palette[i];
     li.style.background = `rgb(${r} ${g} ${b})`;
     li.style.color = r * 0.299 + g * 0.587 + b * 0.114 > 140 ? '#1f2328' : '#f7f5f0';
     li.textContent = letter;
-    li.title = `Colour ${i}: ${TURN_WORDS[letter]}`;
+    li.title = machine ? `Colour ${i}` : `Colour ${i}: ${TURN_WORDS[letter]}`;
     list.append(li);
   });
-  list.setAttribute('aria-label', `Colours and their turns: ${colony.rule.tokens.join(', ')}`);
+  list.setAttribute(
+    'aria-label',
+    machine ? `${colony.rule.colors} colours` : `Colours and their turns: ${colony.rule.tokens.join(', ')}`,
+  );
+  renderMachineTable();
+}
+
+const TURN_LETTERS = { 0: 'N', 1: 'R', 2: 'U', [-1]: 'L' };
+
+// For a state machine, one row per state and one column per colour, each
+// cell reading "paint, turn, next state".
+function renderMachineTable() {
+  const table = $('machine-table');
+  const rule = colony.rule;
+  table.hidden = rule.kind !== 'machine';
+  table.replaceChildren();
+  if (table.hidden) return;
+  const caption = document.createElement('caption');
+  caption.textContent = 'Paint · turn · next state';
+  const head = document.createElement('tr');
+  head.append(document.createElement('th'));
+  for (let c = 0; c < rule.colors; c++) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = `on ${c}`;
+    head.append(th);
+  }
+  table.append(caption, head);
+  for (let s = 0; s < rule.states; s++) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.scope = 'row';
+    th.textContent = `state ${s}`;
+    tr.append(th);
+    for (let c = 0; c < rule.colors; c++) {
+      const k = s * rule.colors + c;
+      const td = document.createElement('td');
+      td.textContent = `${rule.write[k]} ${TURN_LETTERS[rule.turn[k]]} ${rule.next[k]}`;
+      tr.append(td);
+    }
+    table.append(tr);
+  }
 }
 
 // A new rule, grid or layout gets a fresh view; ants placed by clicking
@@ -108,7 +158,7 @@ function syncControls() {
   $('lattice').value = state.lattice;
   $('rule-help').textContent = RULE_HELP[state.lattice];
   $('rule-label').textContent =
-    state.lattice === 'hex' ? 'Turns, one per colour' : 'Turns, one letter per colour';
+    state.lattice === 'hex' ? 'Turns, one per colour' : 'Turns, one letter per colour, or a state machine';
   $('lines-option').hidden = state.lattice === 'hex';
   const preset = PRESETS.find((p) => p.rule === state.rule && p.lattice === state.lattice);
   $('preset').value = preset ? preset.id : '';

@@ -39,11 +39,12 @@
           <select id="preset"></select>
           <p class="note" id="preset-note"></p>
           <label for="rule" id="rule-label">Turns, one letter per colour</label>
-          <input id="rule" type="text" spellcheck="false" autocomplete="off" maxlength="40"
+          <input id="rule" type="text" spellcheck="false" autocomplete="off" maxlength="400"
                  aria-describedby="rule-help rule-error" />
           <p class="help" id="rule-help">L left · R right · N straight on · U turn around</p>
           <p class="error" id="rule-error" role="alert"></p>
           <ol class="swatches" id="swatches" aria-label="Colours and their turns"></ol>
+          <table class="machine" id="machine-table" hidden></table>
         </fieldset>
 
         <fieldset>
