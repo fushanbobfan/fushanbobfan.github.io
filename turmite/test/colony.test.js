@@ -98,3 +98,26 @@ test('the watch needs enough repeats before it reports', () => {
   assert.equal(found.onsetExact, false, 'the start at step 20 fell out of the 64-step memory');
   assert.equal(w.detect([128]), null, 'a tail longer than the memory is skipped');
 });
+
+test('a hexagonal ant walks the six axial directions', () => {
+  // Always turning 60° right, the ant goes round a hexagon of six cells.
+  const c = new Colony(parseRule('R1R1', 'hex').rule, [{ x: 0, y: 0, dir: 5 }]);
+  const seen = [];
+  for (let i = 0; i < 6; i++) {
+    c.run(1);
+    seen.push([c.ants[0].x, c.ants[0].y]);
+  }
+  assert.deepEqual(seen, [[1, 0], [1, 1], [0, 2], [-1, 2], [-1, 1], [0, 0]]);
+  assert.equal(c.ants[0].dir, 5);
+});
+
+test('hexagonal turns wrap through all six directions', () => {
+  const c = new Colony(parseRule('L1L2', 'hex').rule, [{ x: 0, y: 0, dir: 0 }]);
+  c.run(1);
+  assert.equal(c.ants[0].dir, 5, 'L1 from east is north-east');
+  assert.deepEqual([c.ants[0].x, c.ants[0].y], [1, -1]);
+  const u = new Colony(parseRule('UN', 'hex').rule, [{ x: 0, y: 0, dir: 7 }]);
+  assert.equal(u.ants[0].dir, 1, 'starting directions are reduced mod 6');
+  u.run(1);
+  assert.equal(u.ants[0].dir, 4);
+});
