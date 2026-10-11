@@ -30,10 +30,15 @@
       <aside class="panel">
         <fieldset>
           <legend>Rule</legend>
+          <label for="lattice">Grid</label>
+          <select id="lattice">
+            <option value="square">Square cells, four directions</option>
+            <option value="hex">Hexagonal cells, six directions</option>
+          </select>
           <label for="preset">Start from</label>
           <select id="preset"></select>
           <p class="note" id="preset-note"></p>
-          <label for="rule">Turns, one letter per colour</label>
+          <label for="rule" id="rule-label">Turns, one letter per colour</label>
           <input id="rule" type="text" spellcheck="false" autocomplete="off" maxlength="40"
                  aria-describedby="rule-help rule-error" />
           <p class="help" id="rule-help">L left · R right · N straight on · U turn around</p>
@@ -83,7 +88,7 @@
         <fieldset>
           <legend>View</legend>
           <label class="check"><input id="follow" type="checkbox" checked /> Follow the pattern</label>
-          <label class="check"><input id="lines" type="checkbox" checked /> Grid lines when zoomed in</label>
+          <label class="check" id="lines-option"><input id="lines" type="checkbox" checked /> Grid lines when zoomed in</label>
           <div class="row buttons">
             <button type="button" id="fit">Fit</button>
             <button type="button" id="png">Save PNG</button>

@@ -1,11 +1,13 @@
 // The page: wires controls to a Colony and draws it on the canvas.
 
 import { parseRule } from './rules.js';
-import { Colony, DX, DY } from './colony.js';
+import { Colony, moves } from './colony.js';
 import { PRESETS } from './presets.js';
 import { LAYOUTS, toggleAnt } from './ants.js';
-import { encodeState, decodeState, SPEEDS, MAX_STEPS } from './share.js';
-import { makePalette, packRgb, fitView, cellAt, cellCentre, paintPixels, SCHEMES, MAX_SCALE } from './render.js';
+import { encodeState, decodeState, SPEEDS, MAX_STEPS, DEFAULT_RULES } from './share.js';
+import {
+  makePalette, packRgb, fitView, cellAt, cellCentre, paintPixels, worldBox, worldCentre, SCHEMES, MAX_SCALE,
+} from './render.js';
 import { describePattern, describeHalt } from './describe.js';
 
 const $ = (id) => document.getElementById(id);
@@ -28,11 +30,16 @@ let lastTime = 0;
 
 // ---------- setup ----------
 
-for (const p of PRESETS) {
-  const opt = document.createElement('option');
-  opt.value = p.id;
-  opt.textContent = `${p.name} (${p.rule})`;
-  $('preset').append(opt);
+for (const [lattice, label] of [['square', 'Square grid'], ['hex', 'Hexagonal grid']]) {
+  const group = document.createElement('optgroup');
+  group.label = label;
+  for (const p of PRESETS.filter((q) => q.lattice === lattice)) {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} (${p.rule})`;
+    group.append(opt);
+  }
+  $('preset').append(group);
 }
 const custom = document.createElement('option');
 custom.value = '';
@@ -51,35 +58,61 @@ function rebuildPalette() {
   dirty = true;
 }
 
+const TURN_WORDS = {
+  L: 'turn left',
+  R: 'turn right',
+  N: 'straight on',
+  U: 'turn around',
+  L1: 'turn 60° left',
+  L2: 'turn 120° left',
+  R1: 'turn 60° right',
+  R2: 'turn 120° right',
+};
+
+const RULE_HELP = {
+  square: 'L left · R right · N straight on · U turn around',
+  hex: 'L1 / R1 60° left / right · L2 / R2 120° · N straight on · U turn around',
+};
+
 function renderSwatches() {
   const list = $('swatches');
   list.replaceChildren();
-  colony.rule.text.split('').forEach((letter, i) => {
+  colony.rule.tokens.forEach((letter, i) => {
     const li = document.createElement('li');
     const [r, g, b] = palette[i];
     li.style.background = `rgb(${r} ${g} ${b})`;
     li.style.color = r * 0.299 + g * 0.587 + b * 0.114 > 140 ? '#1f2328' : '#f7f5f0';
     li.textContent = letter;
-    li.title = `Colour ${i}: turn ${{ L: 'left', R: 'right', N: 'straight on', U: 'around' }[letter]}`;
+    li.title = `Colour ${i}: ${TURN_WORDS[letter]}`;
     list.append(li);
   });
-  list.setAttribute('aria-label', `Colours and their turns: ${colony.rule.text.split('').join(', ')}`);
+  list.setAttribute('aria-label', `Colours and their turns: ${colony.rule.tokens.join(', ')}`);
 }
 
-function startColony() {
-  const parsed = parseRule(state.rule);
+// A new rule, grid or layout gets a fresh view; ants placed by clicking
+// keep the view where it is so the next click lands where expected.
+function startColony({ refit = true } = {}) {
+  const parsed = parseRule(state.rule, state.lattice);
   colony = new Colony(parsed.rule, state.ants);
   carry = 0;
   rebuildPalette();
-  if (follow()) fit();
+  if (refit) {
+    $('follow').checked = true;
+    fit();
+  }
   updateReadout();
 }
 
 function syncControls() {
   $('rule').value = state.rule;
-  const preset = PRESETS.find((p) => p.rule === state.rule);
+  $('lattice').value = state.lattice;
+  $('rule-help').textContent = RULE_HELP[state.lattice];
+  $('rule-label').textContent =
+    state.lattice === 'hex' ? 'Turns, one per colour' : 'Turns, one letter per colour';
+  $('lines-option').hidden = state.lattice === 'hex';
+  const preset = PRESETS.find((p) => p.rule === state.rule && p.lattice === state.lattice);
   $('preset').value = preset ? preset.id : '';
-  $('preset-note').textContent = preset ? preset.note : 'Every rule of L, R, N and U letters is a different ant.';
+  $('preset-note').textContent = preset ? preset.note : 'Every rule is a different ant.';
   $('speed').value = state.speed;
   $('speed-out').textContent = `${fmt(SPEEDS[state.speed])} steps/s`;
   $('ant-count-out').textContent = $('ant-count').value;
@@ -114,7 +147,13 @@ function follow() {
 
 function fit() {
   const b = colony.box;
-  view = fitView({ minX: b.minX - 2, maxX: b.maxX + 2, minY: b.minY - 2, maxY: b.maxY + 2 }, board.width, board.height);
+  view = fitView(
+    { minX: b.minX - 2, maxX: b.maxX + 2, minY: b.minY - 2, maxY: b.maxY + 2 },
+    board.width,
+    board.height,
+    0.1,
+    state.lattice,
+  );
   dirty = true;
 }
 
@@ -123,10 +162,13 @@ function fit() {
 function keepInView() {
   const { w, h } = { w: board.width, h: board.height };
   const b = colony.box;
-  const tl = cellCentre(view, w, h, b.minX, b.minY);
-  const br = cellCentre(view, w, h, b.maxX, b.maxY);
+  const wb = worldBox(state.lattice, b);
+  const left = w / 2 + (wb.minX - view.cx) * view.scale;
+  const right = w / 2 + (wb.maxX - view.cx) * view.scale;
+  const top = h / 2 + (wb.minY - view.cy) * view.scale;
+  const bottom = h / 2 + (wb.maxY - view.cy) * view.scale;
   const margin = view.scale;
-  if (tl.px < margin || tl.py < margin || br.px > w - margin || br.py > h - margin) {
+  if (left < margin || top < margin || right > w - margin || bottom > h - margin) {
     const bw = b.maxX - b.minX + 1;
     const bh = b.maxY - b.minY + 1;
     // Leave room to grow so the view is not refitted every frame.
@@ -136,6 +178,7 @@ function keepInView() {
       w,
       h,
       0,
+      state.lattice,
     );
   }
 }
@@ -145,9 +188,19 @@ function draw() {
   const h = board.height;
   if (follow()) keepInView();
   const image = ctx.createImageData(w, h);
-  paintPixels(new Uint32Array(image.data.buffer), w, h, colony.grid, view, palette32, $('lines').checked ? line32 : null);
+  const line = $('lines').checked ? line32 : null;
+  paintPixels(new Uint32Array(image.data.buffer), w, h, colony.grid, view, palette32, line, state.lattice);
   ctx.putImageData(image, 0, 0);
   drawAnts(w, h);
+}
+
+// Unit vector on screen for a direction on the current lattice.
+function heading(dir) {
+  const { dx, dy } = moves(state.lattice);
+  const o = worldCentre(state.lattice, 0, 0);
+  const n = worldCentre(state.lattice, dx[dir], dy[dir]);
+  const len = Math.hypot(n.wx - o.wx, n.wy - o.wy);
+  return [(n.wx - o.wx) / len, (n.wy - o.wy) / len];
 }
 
 function drawAnts(w, h) {
@@ -156,10 +209,9 @@ function drawAnts(w, h) {
   const edge = scheme() === 'dark' ? '#111316' : '#ffffff';
   ctx.lineWidth = Math.max(1, size / 8);
   for (const a of colony.ants) {
-    const { px, py } = cellCentre(view, w, h, a.x, a.y);
+    const { px, py } = cellCentre(view, w, h, a.x, a.y, state.lattice);
     if (px < -size || py < -size || px > w + size || py > h + size) continue;
-    const fx = DX[a.dir];
-    const fy = DY[a.dir];
+    const [fx, fy] = heading(a.dir);
     const r = size / 2;
     ctx.beginPath();
     ctx.moveTo(px + fx * r, py + fy * r);
@@ -181,7 +233,12 @@ function updateReadout() {
   $('r-ants').textContent = fmt(colony.ants.length);
   $('r-extent').textContent = `${fmt(b.maxX - b.minX + 1)} × ${fmt(b.maxY - b.minY + 1)}`;
   $('r-painted').textContent = fmt(colony.painted);
-  $('r-pattern').textContent = describePattern({ highway: colony.highway, ants: colony.ants.length, steps: colony.steps });
+  $('r-pattern').textContent = describePattern({
+    highway: colony.highway,
+    ants: colony.ants.length,
+    steps: colony.steps,
+    lattice: state.lattice,
+  });
   const halt = describeHalt(colony.halted, colony.grid.size);
   if (halt) {
     setStatus(halt);
@@ -260,7 +317,7 @@ async function runTo(target) {
 // ---------- controls ----------
 
 function applyRule(text) {
-  const parsed = parseRule(text);
+  const parsed = parseRule(text, state.lattice);
   const input = $('rule');
   if (!parsed.ok) {
     input.setAttribute('aria-invalid', 'true');
@@ -281,28 +338,47 @@ function applyRule(text) {
   if (wasPlaying) setPlaying(true);
 }
 
-function setAnts(ants) {
+function setAnts(ants, refit = true) {
   state.ants = ants;
   setPlaying(false);
   setStatus('');
+  startColony({ refit });
+  writeHash();
+}
+
+// Switching grids starts over with one ant, since directions differ.
+function setLattice(lattice, rule = DEFAULT_RULES[lattice]) {
+  setPlaying(false);
+  setStatus('');
+  state.lattice = lattice;
+  state.rule = rule;
+  state.ants = LAYOUTS.single();
+  $('rule').removeAttribute('aria-invalid');
+  $('rule-error').textContent = '';
   startColony();
+  syncControls();
   writeHash();
 }
 
 $('preset').addEventListener('change', (e) => {
   const p = PRESETS.find((q) => q.id === e.target.value);
-  if (p) {
+  if (!p) return;
+  if (p.lattice !== state.lattice) {
+    setLattice(p.lattice, p.rule);
+  } else {
     applyRule(p.rule);
     $('rule').value = p.rule;
   }
 });
+
+$('lattice').addEventListener('change', (e) => setLattice(e.target.value));
 
 $('rule').addEventListener('input', (e) => applyRule(e.target.value));
 
 document.querySelectorAll('[data-layout]').forEach((btn) =>
   btn.addEventListener('click', () => {
     const n = Number($('ant-count').value);
-    setAnts(LAYOUTS[btn.dataset.layout](n));
+    setAnts(LAYOUTS[btn.dataset.layout](n, state.lattice));
   }),
 );
 
@@ -363,18 +439,19 @@ $('copy').addEventListener('click', async () => {
 
 $('png').addEventListener('click', () => {
   const b = colony.box;
-  const bw = b.maxX - b.minX + 3;
-  const bh = b.maxY - b.minY + 3;
+  const wb = worldBox(state.lattice, { minX: b.minX - 1, maxX: b.maxX + 1, minY: b.minY - 1, maxY: b.maxY + 1 });
+  const bw = wb.maxX - wb.minX;
+  const bh = wb.maxY - wb.minY;
   const scale = Math.max(1, Math.min(16, Math.floor(4000 / Math.max(bw, bh))));
-  const w = bw * scale;
-  const h = bh * scale;
+  const w = Math.ceil(bw * scale);
+  const h = Math.ceil(bh * scale);
   const out = document.createElement('canvas');
   out.width = w;
   out.height = h;
   const octx = out.getContext('2d');
   const image = octx.createImageData(w, h);
-  const v = { cx: (b.minX + b.maxX + 1) / 2, cy: (b.minY + b.maxY + 1) / 2, scale };
-  paintPixels(new Uint32Array(image.data.buffer), w, h, colony.grid, v, palette32);
+  const v = { cx: (wb.minX + wb.maxX) / 2, cy: (wb.minY + wb.maxY) / 2, scale };
+  paintPixels(new Uint32Array(image.data.buffer), w, h, colony.grid, v, palette32, null, state.lattice);
   octx.putImageData(image, 0, 0);
   out.toBlob((blob) => {
     const a = document.createElement('a');
@@ -414,8 +491,10 @@ board.addEventListener('pointerup', (e) => {
   }
   const rect = board.getBoundingClientRect();
   const { dpr } = canvasSize();
-  const { x, y } = cellAt(view, board.width, board.height, (e.clientX - rect.left) * dpr, (e.clientY - rect.top) * dpr);
-  setAnts(toggleAnt(state.ants, x, y));
+  const px = (e.clientX - rect.left) * dpr;
+  const py = (e.clientY - rect.top) * dpr;
+  const { x, y } = cellAt(view, board.width, board.height, px, py, state.lattice);
+  setAnts(toggleAnt(state.ants, x, y, colony.rule.directions), false);
 });
 board.addEventListener('pointercancel', () => {
   drag = null;
