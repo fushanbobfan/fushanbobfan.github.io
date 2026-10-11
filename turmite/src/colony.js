@@ -37,6 +37,7 @@ export class Colony {
     this.painted = 0;
     this.halted = null;
     this.highway = null;
+    this.stretchBox = null;
     this.watch = this.ants.length === 1 ? new PeriodWatch() : null;
     this.box = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
     if (this.ants.length) {
@@ -73,10 +74,36 @@ export class Colony {
       this.#settle(a);
     }
     this.steps++;
-    if (this.watch && !this.highway && this.steps % CHECK_EVERY === 0) {
-      this.highway = this.watch.detect();
-    }
+    if (this.watch && this.steps % CHECK_EVERY === 0) this.#recheck();
     return true;
+  }
+
+  // A repeating stretch can end: an ant walking along a straight edge of its
+  // own pattern repeats until it reaches the corner. So look again at every
+  // check. If the same period carries on across the previous check, it is
+  // the same stretch and keeps its first known start step.
+  //
+  // A moving stretch only counts as a highway once the ant has escaped: it
+  // stands further outside the pattern's box at the time the stretch was
+  // found than that box is wide. An ant circling the rim of its own pattern
+  // never gets that far out.
+  #recheck() {
+    const found = this.watch.detect();
+    const prev = this.highway;
+    const continuing =
+      found && prev && found.period === prev.period && found.dx === prev.dx && found.dy === prev.dy &&
+      found.onset <= this.steps - CHECK_EVERY;
+    if (!continuing) {
+      this.highway = found ? { ...found, escaped: false } : null;
+      this.stretchBox = found ? { ...this.box } : null;
+      return;
+    }
+    if (!prev.escaped && (prev.dx || prev.dy)) {
+      const b = this.stretchBox;
+      const a = this.ants[0];
+      const out = Math.max(b.minX - a.x, a.x - b.maxX, b.minY - a.y, a.y - b.maxY);
+      if (out > Math.max(b.maxX - b.minX + 1, b.maxY - b.minY + 1)) this.highway = { ...prev, escaped: true };
+    }
   }
 
   // Keep a one-cell margin around every ant so the next move stays inside;
