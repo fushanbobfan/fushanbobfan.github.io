@@ -1,11 +1,11 @@
 // Run a rule for a number of steps and print what the colony did.
-// Usage: node scripts/probe.js RULE STEPS
+// Usage: node scripts/probe.js RULE STEPS [square|hex]
 
 import { parseRule } from '../src/rules.js';
 import { Colony } from '../src/colony.js';
 
-const [text = 'RL', stepsArg = '20000'] = process.argv.slice(2);
-const parsed = parseRule(text);
+const [text = 'RL', stepsArg = '20000', lattice = 'square'] = process.argv.slice(2);
+const parsed = parseRule(text, lattice);
 if (!parsed.ok) {
   console.error(parsed.error);
   process.exit(1);

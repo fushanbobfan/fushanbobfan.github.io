@@ -45,35 +45,73 @@ export function packRgb([r, g, b]) {
 }
 
 export const MAX_SCALE = 32;
+export const HEX_H = Math.sqrt(3) / 2;
 
-// A view puts cell (cx, cy) at the canvas centre at `scale` pixels per cell.
-// Fitting frames the box with some room to spare.
-export function fitView(box, width, height, pad = 0.1) {
-  const bw = box.maxX - box.minX + 1;
-  const bh = box.maxY - box.minY + 1;
-  const scale = Math.min(MAX_SCALE, (Math.min(width / bw, height / bh) * (1 - pad)));
-  return { cx: (box.minX + box.maxX + 1) / 2, cy: (box.minY + box.maxY + 1) / 2, scale };
+// World coordinates are what the view looks at. A square cell (x, y) covers
+// [x, x + 1] x [y, y + 1]. A hexagonal cell (q, r) is a pointy-top hexagon
+// one unit wide centred on (q + r / 2, r * HEX_H).
+export function worldCentre(lattice, x, y) {
+  return lattice === 'hex' ? { wx: x + y / 2, wy: y * HEX_H } : { wx: x + 0.5, wy: y + 0.5 };
 }
 
-export function cellAt(view, width, height, px, py) {
+// The hexagon containing a world point, by rounding cube coordinates.
+export function hexRound(wx, wy) {
+  const rf = wy / HEX_H;
+  const qf = wx - rf / 2;
+  const sf = -qf - rf;
+  let q = Math.round(qf);
+  let r = Math.round(rf);
+  const s = Math.round(sf);
+  const dq = Math.abs(q - qf);
+  const dr = Math.abs(r - rf);
+  const ds = Math.abs(s - sf);
+  if (dq > dr && dq > ds) q = -r - s;
+  else if (dr > ds) r = -q - s;
+  return { x: q || 0, y: r || 0 };
+}
+
+export function worldCell(lattice, wx, wy) {
+  return lattice === 'hex' ? hexRound(wx, wy) : { x: Math.floor(wx), y: Math.floor(wy) };
+}
+
+// The world rectangle covering every cell of a cell box.
+export function worldBox(lattice, box) {
+  if (lattice !== 'hex') return { minX: box.minX, maxX: box.maxX + 1, minY: box.minY, maxY: box.maxY + 1 };
+  const xs = [box.minX + box.minY / 2, box.minX + box.maxY / 2, box.maxX + box.minY / 2, box.maxX + box.maxY / 2];
   return {
-    x: Math.floor(view.cx + (px - width / 2) / view.scale),
-    y: Math.floor(view.cy + (py - height / 2) / view.scale),
+    minX: Math.min(...xs) - 0.5,
+    maxX: Math.max(...xs) + 0.5,
+    minY: box.minY * HEX_H - 0.58,
+    maxY: box.maxY * HEX_H + 0.58,
   };
 }
 
-export function cellCentre(view, width, height, x, y) {
-  return {
-    px: width / 2 + (x + 0.5 - view.cx) * view.scale,
-    py: height / 2 + (y + 0.5 - view.cy) * view.scale,
-  };
+// A view puts world point (cx, cy) at the canvas centre at `scale` pixels
+// per unit. Fitting frames a cell box with some room to spare.
+export function fitView(box, width, height, pad = 0.1, lattice = 'square') {
+  const w = worldBox(lattice, box);
+  const scale = Math.min(MAX_SCALE, Math.min(width / (w.maxX - w.minX), height / (w.maxY - w.minY)) * (1 - pad));
+  return { cx: (w.minX + w.maxX) / 2, cy: (w.minY + w.maxY) / 2, scale };
+}
+
+export function cellAt(view, width, height, px, py, lattice = 'square') {
+  return worldCell(lattice, view.cx + (px - width / 2) / view.scale, view.cy + (py - height / 2) / view.scale);
+}
+
+export function cellCentre(view, width, height, x, y, lattice = 'square') {
+  const { wx, wy } = worldCentre(lattice, x, y);
+  return { px: width / 2 + (wx - view.cx) * view.scale, py: height / 2 + (wy - view.cy) * view.scale };
 }
 
 // Fill a width x height Uint32Array with the grid as seen through the view.
 // Each pixel samples the cell under its centre; cells off the grid are
 // colour 0. With `line` set and cells at least 8 pixels wide, the first pixel
 // row and column of each cell are drawn in the line colour.
-export function paintPixels(out, width, height, grid, view, palette32, line = null) {
+export function paintPixels(out, width, height, grid, view, palette32, line = null, lattice = 'square') {
+  if (lattice === 'hex') {
+    paintHex(out, width, height, grid, view, palette32);
+    return;
+  }
   const { cells, size, half } = grid;
   const cols = new Int32Array(width);
   const colEdge = new Uint8Array(width);
@@ -104,6 +142,20 @@ export function paintPixels(out, width, height, grid, view, palette32, line = nu
         const col = cols[px];
         out[base + px] = colEdge[px] ? line : col < 0 ? bg : palette32[cells[row + col]];
       }
+    }
+  }
+}
+
+function paintHex(out, width, height, grid, view, palette32) {
+  const { cells, size, half } = grid;
+  const bg = palette32[0];
+  for (let py = 0; py < height; py++) {
+    const wy = view.cy + (py + 0.5 - height / 2) / view.scale;
+    const base = py * width;
+    for (let px = 0; px < width; px++) {
+      const { x, y } = hexRound(view.cx + (px + 0.5 - width / 2) / view.scale, wy);
+      out[base + px] =
+        x >= -half && x < size - half && y >= -half && y < size - half ? palette32[cells[(y + half) * size + x + half]] : bg;
     }
   }
 }
