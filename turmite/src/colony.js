@@ -22,6 +22,7 @@ export class Colony {
     this.grid = new Grid();
     this.ants = this.start.map((a) => ({ ...a }));
     this.steps = 0;
+    this.painted = 0;
     this.halted = null;
     this.highway = null;
     this.watch = this.ants.length === 1 ? new PeriodWatch() : null;
@@ -49,7 +50,10 @@ export class Colony {
       const c = grid.cells[i];
       if (this.watch) this.watch.push(c * 4 + a.dir, a.x, a.y);
       a.dir = (a.dir + turns[c] + 4) & 3;
-      grid.cells[i] = c + 1 === colors ? 0 : c + 1;
+      const next = c + 1 === colors ? 0 : c + 1;
+      grid.cells[i] = next;
+      if (c === 0) this.painted++;
+      else if (next === 0) this.painted--;
       a.x += DX[a.dir];
       a.y += DY[a.dir];
       this.#settle(a);

@@ -36,6 +36,15 @@ test('the highway keeps going after it is found', () => {
   assert.deepEqual([c.ants[0].x - a.x, c.ants[0].y - a.y], [-20, 20]);
 });
 
+test('the painted count matches a census of the grid', () => {
+  for (const text of ['RL', 'LLRR', 'RRLLLRLLLRRR']) {
+    const c = lone(text);
+    c.run(20000);
+    const counts = c.grid.census(c.rule.colors);
+    assert.equal(c.painted, counts.reduce((a, b) => a + b) - counts[0], text);
+  }
+});
+
 test('a mirrored rule draws the mirror image', () => {
   const a = lone('RLR');
   const b = lone('LRL');
