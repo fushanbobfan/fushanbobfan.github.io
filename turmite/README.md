@@ -4,7 +4,8 @@ Langton's ant and its relatives in the browser. An ant sits on a grid of
 coloured cells. At each step it reads the colour under it, turns left or
 right as the rule says for that colour, repaints the cell with the next
 colour and steps forward. That is the whole program, and it still produces
-ten thousand steps of chaos followed by a perfectly regular highway.
+ten thousand steps of chaos followed by a perfectly regular highway. The
+ants also live on hexagons, where they turn by sixths of a turn.
 
 **Live demo:** https://fushanbobfan.github.io/turmite/
 
@@ -41,7 +42,20 @@ with `LLRR`, colour 3 goes back to colour 0.
 | Convoluted highway | `LLRRRLRLRLLR` | About thirty thousand steps of wandering, then a straight highway with period 1968 |
 | Going in circles | `RR` | Four cells, forever |
 
-Every line in that table is checked by `test/presets.test.js`.
+### On hexagons
+
+The hexagonal grid has six directions, so a rule is one token per colour:
+`L1` and `R1` turn 60° left or right, `L2` and `R2` turn 120°, `N` goes
+straight on and `U` turns around.
+
+| Start from | Rule | What happens |
+| --- | --- | --- |
+| Langton's ant on hexagons | `L1R1` | No highway in three million steps; every time the ant is home it faces east and the pattern is an exact mirror image |
+| Narrow track | `L2R2` | A straight track two cells wide from the first steps, period 8 |
+| Lapping the rim | `L1L2NUL2L1R2` | From step 101,404 the ant laps the rim of its own hexagon, every edge the same 698-step pattern turned 60° |
+| Hexagonal mirror | `L1L1R1R1` | The same homecoming mirror symmetry as `L1R1` |
+
+Every line in these tables is checked by `test/presets.test.js`.
 
 ## Spotting highways
 
@@ -49,40 +63,53 @@ With a single ant, the lab records what the ant reads and which way it faces
 at each step. Every 4,096 steps it looks for the smallest period of the last
 1,024, 4,096 and 8,192 of those symbols (with the prefix function from
 Knuth–Morris–Pratt). If the tail repeats at least three times, the ant's
-motion repeats too: each period moves it by the same offset. A non-zero
-offset is a highway, a zero offset a loop in place. It then walks back
-through the last 32,768 steps to find where the repetition began, which is
-how it reports step 9977 for Langton's ant.
+motion repeats too: each period moves it by the same offset. A zero offset is
+a loop in place. It then walks back through the last 32,768 steps to find
+where the repetition began, which is how it reports step 9977 for Langton's
+ant.
+
+A repeating stretch with a non-zero offset is not yet a highway. On
+hexagons, `L1L2NUL2L1R2` walks along each straight edge of its own pattern
+with a 698-step repeat, then turns the corner and does it again. So the lab
+checks again every 4,096 steps, drops stretches that have ended, and keeps
+the first start step of one that carries on. It calls a stretch a highway
+only once the ant has escaped: it stands further outside the pattern's
+bounding box (as it was when the stretch was found) than that box is wide.
+Langton's ant escapes by step 20,480; the rim walker never does.
 
 Several ants are drawn and stepped in order on the shared grid, but the
 repeat check only follows a lone ant.
 
 ## Using the lab
 
-- **Start from** a named rule, or type your own (2 to 16 letters). The
+- **Grid**: square cells with four directions or hexagons with six.
+  Switching starts over with one ant and the grid's own Langton rule.
+- **Start from** a named rule, or type your own (2 to 16 colours). The
   swatches show each colour with its turn.
 - **Ants**: one at the origin, two back to back, a line or a ring of 2 to 16.
-  At step 0 you can click a cell to add an ant, click again to turn it a
-  quarter, and a fourth click removes it.
+  At step 0 you can click a cell to add an ant and click again to turn it;
+  once it has faced every way, the next click removes it.
 - **Run**: play, step and reset; speed from 4 to 4,000,000 steps a second;
   **Go to step** runs straight to any step up to 20 million.
 - **View**: the board follows the pattern until you drag or scroll; **Fit**
   brings following back. Grid lines appear when cells are 8 pixels or more.
 - **Save PNG** exports the whole pattern at up to 16 pixels a cell;
-  **Copy link** puts the rule, ants, step and speed in the address. The
+  **Copy link** puts the grid, rule, ants, step and speed in the address. The
   simulation is deterministic, so the link replays to the same grid.
 
 Keys: <kbd>Space</kbd> play or pause, <kbd>S</kbd> or <kbd>→</kbd> step,
 <kbd>R</kbd> reset, <kbd>F</kbd> fit, <kbd>[</kbd> and <kbd>]</kbd> speed.
 
 The grid starts at 128 × 128 cells and doubles whenever an ant comes near the
-edge, up to 4096 × 4096; there the run stops and says so.
+edge, up to 4096 × 4096; there the run stops and says so. Hexagons are kept
+in axial coordinates (q, r) in the same array: cell (q, r) is drawn centred
+at (q + r/2, r·√3/2), and each pixel finds its hexagon by cube rounding.
 
 ## Layout
 
 ```
 index.html, style.css   page and styles
-src/rules.js            rule letters to quarter turns
+src/rules.js            rule letters or tokens to turns, per grid
 src/grid.js             centred grid that doubles as needed
 src/colony.js           ants stepping on the grid, painted-cell count
 src/period.js           smallest period and highway detection
@@ -92,7 +119,7 @@ src/render.js           OKLCH palette, view fitting, pixel painting
 src/share.js            URL hash encoding
 src/describe.js         readout sentences
 src/main.js             DOM wiring
-scripts/probe.js        run a rule headless: node scripts/probe.js RLR 1000000
+scripts/probe.js        run a rule headless: node scripts/probe.js L1R1 1000000 hex
 ```
 
 ## References

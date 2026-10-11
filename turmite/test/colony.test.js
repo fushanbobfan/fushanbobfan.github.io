@@ -141,6 +141,8 @@ test('a real highway escapes and keeps its exact start step long after it began'
   const c = lone('RL');
   c.run(16384);
   assert.equal(c.highway.escaped, false, 'not yet clear of the blob');
-  c.run(100_000 - 16384);
+  c.run(4096);
+  assert.equal(c.highway.escaped, true, 'clear by step 20,480');
+  c.run(100_000 - 20480);
   assert.deepEqual(c.highway, { period: 104, dx: -2, dy: 2, onset: 9977, onsetExact: true, escaped: true });
 });
