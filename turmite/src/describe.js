@@ -31,7 +31,8 @@ export function describePattern({ highway, ants, steps, lattice = 'square' }) {
   const every = `repeats every ${fmt(highway.period)} steps`;
   if (!highway.dx && !highway.dy) return `Loop ${since}: the ant ${every} without going anywhere.`;
   const moved = lattice === 'hex' ? hexOffset(highway.dx, highway.dy) : offset(highway.dx, highway.dy);
-  return `Highway ${since}: the ant ${every}, moving ${moved} each time.`;
+  if (highway.escaped) return `Highway ${since}: the ant ${every}, moving ${moved} each time, out into empty grid.`;
+  return `Repeating ${since}: the ant ${every}, moving ${moved} each time. A highway if it breaks clear of the pattern.`;
 }
 
 export function describeHalt(halted, size) {
