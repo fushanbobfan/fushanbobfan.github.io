@@ -4,7 +4,10 @@ import { parseRule } from '../src/rules.js';
 import { Colony } from '../src/colony.js';
 import { PRESETS, presetById } from '../src/presets.js';
 
-const lone = (id) => new Colony(parseRule(presetById(id).rule).rule, [{ x: 0, y: 0, dir: 0 }]);
+const lone = (id) => {
+  const p = presetById(id);
+  return new Colony(parseRule(p.rule, p.lattice).rule, [{ x: 0, y: 0, dir: 0 }]);
+};
 
 const filled = (c) => {
   const { minX, maxX, minY, maxY } = c.box;
@@ -16,7 +19,8 @@ const filled = (c) => {
 test('every preset parses, has a unique id and a note', () => {
   const ids = new Set();
   for (const p of PRESETS) {
-    assert.ok(parseRule(p.rule).ok, p.id);
+    assert.ok(parseRule(p.rule, p.lattice).ok, p.id);
+    assert.ok(['square', 'hex'].includes(p.lattice), p.id);
     assert.ok(p.note.length > 20, p.id);
     ids.add(p.id);
   }
@@ -91,4 +95,52 @@ test('RR: four cells, forever', () => {
   assert.deepEqual([w, h], [2, 2]);
   assert.equal(c.highway.dx, 0);
   assert.equal(c.highway.dy, 0);
+});
+
+// Hexagonal mirror: (q, r) -> (-q - r - 1, r) reflects across the vertical
+// line through the edge between the first cell and its west neighbour.
+function homeMirror(id, steps) {
+  const c = lone(id);
+  let home = 0;
+  for (let s = 0; s < steps; s++) {
+    c.run(1);
+    const a = c.ants[0];
+    if (a.x !== 0 || a.y !== 0) continue;
+    assert.equal(a.dir, 0, `${id} home facing east at step ${c.steps}`);
+    const { minX, maxX, minY, maxY } = c.box;
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX - 2; x <= maxX + 2; x++) {
+        assert.equal(c.grid.get(x, y), c.grid.get(-x - y - 1, y), `${id} step ${c.steps}`);
+      }
+    }
+    home++;
+  }
+  return home;
+}
+
+test('L1R1 on hexagons: mirror image at every return home, no highway', () => {
+  assert.ok(homeMirror('hex-langton', 100_000) > 500);
+  const c = lone('hex-langton');
+  c.run(3_000_000);
+  assert.equal(c.highway, null);
+});
+
+test('L1L1R1R1 on hexagons: mirror image at every return home', () => {
+  assert.ok(homeMirror('hex-mirror', 100_000) > 500);
+});
+
+test('L2R2 on hexagons: a two-cell track from the start, period 8', () => {
+  const c = lone('hex-track');
+  c.run(8192);
+  assert.equal(c.highway.period, 8);
+  assert.ok(c.highway.onset <= 2);
+  const { minX, maxX } = c.box;
+  assert.equal(maxX - minX + 1, 2, 'two cells wide');
+});
+
+test('L1L2NUL2L1R2 on hexagons: highway at step 101,404 with period 698', () => {
+  const c = lone('hex-highway');
+  c.run(101_404 + 8192 + 4096);
+  assert.equal(c.highway.onset, 101_404);
+  assert.equal(c.highway.period, 698);
 });
