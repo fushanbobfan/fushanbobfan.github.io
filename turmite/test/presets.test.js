@@ -166,3 +166,76 @@ test('L1L2NUL2L1R2 on hexagons: from step 101,404 it laps its rim, every edge th
   const { minX, maxX, minY, maxY } = c.box;
   assert.ok(Math.abs(maxX - minX - (maxY - minY)) <= 21, 'as wide as it is tall');
 });
+
+const size = (c) => ({ w: c.box.maxX - c.box.minX + 1, h: c.box.maxY - c.box.minY + 1 });
+
+// Painted cells in the four corner squares (12% of the shorter side).
+function cornerCells(c) {
+  const { minX, maxX, minY, maxY } = c.box;
+  const { w, h } = size(c);
+  const k = Math.floor(Math.min(w, h) * 0.12);
+  let n = 0;
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j < k; j++) {
+      for (const [x, y] of [[minX + i, minY + j], [maxX - i, minY + j], [minX + i, maxY - j], [maxX - i, maxY - j]]) {
+        if (c.grid.get(x, y)) n++;
+      }
+    }
+  }
+  return n;
+}
+
+test('Fibonacci: two states, one new cell every four steps, a tilted block', () => {
+  const c = lone('fibonacci');
+  assert.deepEqual([c.rule.states, c.rule.colors], [2, 2]);
+  for (const n of [100_000, 1_000_000]) {
+    c.run(n - c.steps);
+    assert.ok(Math.abs(c.painted / c.steps - 0.25) < 0.01, `${c.painted} at ${c.steps}`);
+  }
+  assert.equal(cornerCells(c), 0, 'tilted, so the corners of its box are empty');
+});
+
+test('Coiled rope: as wide as tall at every size, empty corners', () => {
+  const c = lone('coiled-rope');
+  for (const n of [10_000, 100_000, 1_000_000]) {
+    c.run(n - c.steps);
+    const { w, h } = size(c);
+    assert.ok(Math.abs(w - h) <= 4, `${w} x ${h} at ${n}`);
+  }
+  assert.equal(cornerCells(c), 0);
+});
+
+test('Computer art: a square frame that grows slowly', () => {
+  const c = lone('computer-art');
+  c.run(100_000);
+  let { w, h } = size(c);
+  assert.ok(w >= 55 && w <= 61 && Math.abs(w - h) <= 2, `${w} x ${h}`);
+  c.run(900_000);
+  ({ w, h } = size(c));
+  assert.ok(w >= 97 && w <= 105 && Math.abs(w - h) <= 2, `${w} x ${h}`);
+  assert.ok(cornerCells(c) > 0, 'the frame fills the corners');
+});
+
+test('Worm trails: a lopsided blob that paints about a third of its box', () => {
+  const c = lone('worm-trails');
+  for (const n of [100_000, 1_000_000]) {
+    c.run(n - c.steps);
+    const { w, h } = size(c);
+    const fill = c.painted / (w * h);
+    assert.ok(fill > 0.25 && fill < 0.45, `fill ${fill} at ${n}`);
+  }
+  const { w, h } = size(c);
+  assert.ok(Math.max(w, h) / Math.min(w, h) > 1.3, `${w} x ${h}`);
+});
+
+test('Striped spiral: a diamond that repeats along its edges but never escapes', () => {
+  const c = lone('striped-spiral');
+  let repeats = 0;
+  while (c.steps < 1_000_000) {
+    c.run(4096);
+    if (c.highway) repeats++;
+    assert.ok(!c.highway?.escaped, `escaped at ${c.steps}`);
+  }
+  assert.ok(repeats > 10, `${repeats} checks found a repeating stretch`);
+  assert.equal(cornerCells(c), 0, 'diamond: corners of its box are empty');
+});

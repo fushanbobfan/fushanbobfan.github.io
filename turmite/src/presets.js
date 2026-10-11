@@ -1,4 +1,5 @@
-// Named rules worth watching, on the square or the hexagonal grid. Every
+// Named rules worth watching, on the square or the hexagonal grid, and
+// state machines whose names come from github.com/rm-hull/turmites. Every
 // claim in a note is checked in test/presets.test.js against the simulation.
 
 export const PRESETS = [
@@ -84,6 +85,44 @@ export const PRESETS = [
     rule: 'L1L1R1R1',
     note:
       'The hexagonal cousin of LLRR. Like the 60° Langton ant it returns home facing east again and again, each time leaving a pattern that is its own mirror image.',
+  },
+  {
+    id: 'fibonacci',
+    name: 'Fibonacci',
+    lattice: 'square',
+    rule: '181181121010',
+    note:
+      'A state machine: two states, two colours. Grows a tilted block of fine stripes, painting almost exactly one new cell every four steps, so it widens with the square root of time.',
+  },
+  {
+    id: 'coiled-rope',
+    name: 'Coiled rope',
+    lattice: 'square',
+    rule: '111180121010',
+    note: 'Two states. Winds a round, tightly woven disc that is as wide as it is tall at every size, with its corners left empty.',
+  },
+  {
+    id: 'computer-art',
+    name: 'Computer art',
+    lattice: 'square',
+    rule: '180121020081',
+    note:
+      'Two states. A square frame around a noisy interior that the ant keeps walking over again, so it grows slowly: about 58 cells across after 100,000 steps and only about 100 after a million.',
+  },
+  {
+    id: 'worm-trails',
+    name: 'Worm trails',
+    lattice: 'square',
+    rule: '121181121020',
+    note: 'Two states. Winding trails in a ragged, lopsided blob that paints only about a third of the box around it.',
+  },
+  {
+    id: 'striped-spiral',
+    name: 'Striped spiral',
+    lattice: 'square',
+    rule: '021080181020',
+    note:
+      'Two states. Builds a growing diamond of stripes. Along its straight edges it repeats for thousands of steps at a time, but it never breaks away into a highway.',
   },
 ];
 
