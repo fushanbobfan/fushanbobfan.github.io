@@ -246,6 +246,31 @@ button.primary {
   font: 600 0.8rem ui-monospace, Consolas, monospace;
 }
 
+table.machine {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font: 0.8rem ui-monospace, Consolas, monospace;
+}
+
+table.machine caption {
+  text-align: left;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  padding-bottom: 2px;
+}
+
+table.machine th,
+table.machine td {
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+table.machine th {
+  font-weight: 600;
+}
+
 .readout {
   display: grid;
   grid-template-columns: auto 1fr;

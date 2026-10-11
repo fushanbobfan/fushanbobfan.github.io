@@ -5,7 +5,8 @@ coloured cells. At each step it reads the colour under it, turns left or
 right as the rule says for that colour, repaints the cell with the next
 colour and steps forward. That is the whole program, and it still produces
 ten thousand steps of chaos followed by a perfectly regular highway. The
-ants also live on hexagons, where they turn by sixths of a turn.
+ants also live on hexagons, where they turn by sixths of a turn, and as
+full turmites: two-dimensional Turing machines that carry an internal state.
 
 **Live demo:** https://fushanbobfan.github.io/turmite/
 
@@ -55,6 +56,36 @@ straight on and `U` turns around.
 | Lapping the rim | `L1L2NUL2L1R2` | From step 101,404 the ant laps the rim of its own hexagon, every edge the same 698-step pattern turned 60° |
 | Hexagonal mirror | `L1L1R1R1` | The same homecoming mirror symmetry as `L1R1` |
 
+### State machines
+
+A turmite proper also has an internal state. For each state and each colour
+under it, the rule gives a triple: the colour to paint, the turn, and the
+next state. Turns are coded 1 straight on, 2 right, 4 U-turn, 8 left. Type
+a machine into the rule box on the square grid, either with braces, one
+group per state:
+
+```
+{{{1,8,1},{1,8,1}},{{1,2,1},{0,1,0}}}
+```
+
+or as the same digits run together, `181181121010`. With digits the lab
+takes the fewest colours (at least two) that every triple fits. Langton's
+ant is the one-state machine `120080`, and internally every letter rule runs
+as a one-state table like that. A table under the swatches shows the
+machine.
+
+| Start from | Rule | What happens |
+| --- | --- | --- |
+| Fibonacci | `181181121010` | A tilted block of fine stripes, painting almost exactly one new cell every four steps |
+| Coiled rope | `111180121010` | A round, tightly woven disc, as wide as it is tall at every size |
+| Computer art | `180121020081` | A square frame around a noisy interior; about 58 cells across at 100,000 steps and 100 at a million |
+| Worm trails | `121181121020` | Winding trails in a lopsided blob that paints about a third of its box |
+| Striped spiral | `021080181020` | A growing diamond of stripes that repeats along its edges but never escapes into a highway |
+
+The names of these five come from the
+[rm-hull/turmites](https://github.com/rm-hull/turmites) collection; the
+descriptions are what the simulation measures.
+
 Every line in these tables is checked by `test/presets.test.js`.
 
 ## Spotting highways
@@ -84,8 +115,9 @@ repeat check only follows a lone ant.
 
 - **Grid**: square cells with four directions or hexagons with six.
   Switching starts over with one ant and the grid's own Langton rule.
-- **Start from** a named rule, or type your own (2 to 16 colours). The
-  swatches show each colour with its turn.
+- **Start from** a named rule, or type your own (2 to 16 colours, or a
+  machine with up to 16 states on the square grid). The swatches show each
+  colour with its turn.
 - **Ants**: one at the origin, two back to back, a line or a ring of 2 to 16.
   At step 0 you can click a cell to add an ant and click again to turn it;
   once it has faced every way, the next click removes it.
@@ -110,6 +142,7 @@ at (q + r/2, r·√3/2), and each pixel finds its hexagon by cube rounding.
 ```
 index.html, style.css   page and styles
 src/rules.js            rule letters or tokens to turns, per grid
+src/machine.js          state-machine notation and transition tables
 src/grid.js             centred grid that doubles as needed
 src/colony.js           ants stepping on the grid, painted-cell count
 src/period.js           smallest period and highway detection
@@ -128,6 +161,8 @@ scripts/probe.js        run a rule headless: node scripts/probe.js L1R1 1000000 
   *Physica D* 22 (1986) 120–149.
 - D. Gale, J. Propp, S. Sutherland and S. Troubetzkoy, "Further travels with
   my ant", *Mathematical Intelligencer* 17(3) (1995) 48–56.
+- [rm-hull/turmites](https://github.com/rm-hull/turmites): the named
+  two-state machines used as presets.
 
 ## License
 
