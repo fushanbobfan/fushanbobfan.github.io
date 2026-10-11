@@ -9,7 +9,18 @@ function offset(dx, dy) {
   return parts.join(' and ');
 }
 
-export function describePattern({ highway, ants, steps }) {
+const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
+
+// Axial offsets are hard to read, so give the hex distance in cells and the
+// nearest compass direction on screen.
+function hexOffset(dq, dr) {
+  const cells = (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+  const angle = Math.atan2(dr * (Math.sqrt(3) / 2), dq + dr / 2);
+  const sector = ((Math.round(angle / (Math.PI / 4)) % 8) + 8) % 8;
+  return `${cells} ${cells === 1 ? 'cell' : 'cells'} ${COMPASS[sector]}`;
+}
+
+export function describePattern({ highway, ants, steps, lattice = 'square' }) {
   if (ants !== 1) return 'The repeat check follows a single ant; with several ants, watch for yourself.';
   if (!highway) {
     return steps < 4096
@@ -19,7 +30,8 @@ export function describePattern({ highway, ants, steps }) {
   const since = highway.onsetExact ? `since step ${fmt(highway.onset)}` : `since before step ${fmt(highway.onset)}`;
   const every = `repeats every ${fmt(highway.period)} steps`;
   if (!highway.dx && !highway.dy) return `Loop ${since}: the ant ${every} without going anywhere.`;
-  return `Highway ${since}: the ant ${every}, moving ${offset(highway.dx, highway.dy)} each time.`;
+  const moved = lattice === 'hex' ? hexOffset(highway.dx, highway.dy) : offset(highway.dx, highway.dy);
+  return `Highway ${since}: the ant ${every}, moving ${moved} each time.`;
 }
 
 export function describeHalt(halted, size) {

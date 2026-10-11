@@ -24,3 +24,15 @@ test('halts explain themselves', () => {
   assert.equal(describeHalt(null, 4096), '');
   assert.match(describeHalt('edge', 4096), /4096 × 4096/);
 });
+
+test('hexagonal highways are told in cells and compass directions', () => {
+  const hw = (dx, dy) =>
+    describePattern({ ants: 1, steps: 2e5, lattice: 'hex', highway: { period: 698, dx, dy, onset: 101404, onsetExact: true } });
+  assert.equal(
+    hw(-21, 3),
+    'Highway since step 101,404: the ant repeats every 698 steps, moving 21 cells west each time.',
+  );
+  assert.match(hw(0, 1), /1 cell south-east/);
+  assert.match(hw(1, -2), /2 cells north each/);
+  assert.match(hw(2, 0), /2 cells east/);
+});
