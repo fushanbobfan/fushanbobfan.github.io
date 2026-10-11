@@ -132,6 +132,10 @@ label.inline {
   margin: 0;
 }
 
+label.check[hidden] {
+  display: none;
+}
+
 label.check {
   display: flex;
   gap: 6px;

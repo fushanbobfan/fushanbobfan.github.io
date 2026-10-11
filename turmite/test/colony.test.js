@@ -22,10 +22,10 @@ test('the first steps of Langton\'s ant follow the rule by hand', () => {
   assert.equal(c.grid.get(0, 0), 0);
 });
 
-test('Langton\'s ant builds its highway at step 9977 with period 104', () => {
+test('Langton\'s ant starts repeating at step 9977 with period 104', () => {
   const c = lone('RL');
   c.run(12288);
-  assert.deepEqual(c.highway, { period: 104, dx: -2, dy: 2, onset: 9977, onsetExact: true });
+  assert.deepEqual(c.highway, { period: 104, dx: -2, dy: 2, onset: 9977, onsetExact: true, escaped: false });
 });
 
 test('the highway keeps going after it is found', () => {
@@ -58,7 +58,7 @@ test('a mirrored rule draws the mirror image', () => {
 test('RR turns in a two by two loop forever', () => {
   const c = lone('RR');
   c.run(4096);
-  assert.deepEqual(c.highway, { period: 8, dx: 0, dy: 0, onset: 0, onsetExact: true });
+  assert.deepEqual(c.highway, { period: 8, dx: 0, dy: 0, onset: 0, onsetExact: true, escaped: false });
 });
 
 test('several ants step in turn on the shared grid', () => {
@@ -97,4 +97,52 @@ test('the watch needs enough repeats before it reports', () => {
   assert.equal(found.onset, 36);
   assert.equal(found.onsetExact, false, 'the start at step 20 fell out of the 64-step memory');
   assert.equal(w.detect([128]), null, 'a tail longer than the memory is skipped');
+});
+
+test('a hexagonal ant walks the six axial directions', () => {
+  // Always turning 60° right, the ant goes round a hexagon of six cells.
+  const c = new Colony(parseRule('R1R1', 'hex').rule, [{ x: 0, y: 0, dir: 5 }]);
+  const seen = [];
+  for (let i = 0; i < 6; i++) {
+    c.run(1);
+    seen.push([c.ants[0].x, c.ants[0].y]);
+  }
+  assert.deepEqual(seen, [[1, 0], [1, 1], [0, 2], [-1, 2], [-1, 1], [0, 0]]);
+  assert.equal(c.ants[0].dir, 5);
+});
+
+test('hexagonal turns wrap through all six directions', () => {
+  const c = new Colony(parseRule('L1L2', 'hex').rule, [{ x: 0, y: 0, dir: 0 }]);
+  c.run(1);
+  assert.equal(c.ants[0].dir, 5, 'L1 from east is north-east');
+  assert.deepEqual([c.ants[0].x, c.ants[0].y], [1, -1]);
+  const u = new Colony(parseRule('UN', 'hex').rule, [{ x: 0, y: 0, dir: 7 }]);
+  assert.equal(u.ants[0].dir, 1, 'starting directions are reduced mod 6');
+  u.run(1);
+  assert.equal(u.ants[0].dir, 4);
+});
+
+test('a repeating stretch that ends is dropped, and one along a rim never escapes', () => {
+  // On hexagons this ant walks a long straight edge of its own blob for a
+  // while, which repeats with period 698, then turns the corner.
+  const c = new Colony(parseRule('L1L2NUL2L1R2', 'hex').rule, [{ x: 0, y: 0, dir: 0 }]);
+  c.run(106_496);
+  assert.equal(c.highway?.period, 698, 'the edge walk is found');
+  assert.equal(c.highway.escaped, false);
+  c.run(4096);
+  assert.equal(c.highway, null, 'and dropped once it ends');
+  while (c.steps < 1_000_000) {
+    c.run(4096);
+    assert.ok(!c.highway?.escaped, `no escape at step ${c.steps}`);
+  }
+});
+
+test('a real highway escapes and keeps its exact start step long after it began', () => {
+  const c = lone('RL');
+  c.run(16384);
+  assert.equal(c.highway.escaped, false, 'not yet clear of the blob');
+  c.run(4096);
+  assert.equal(c.highway.escaped, true, 'clear by step 20,480');
+  c.run(100_000 - 20480);
+  assert.deepEqual(c.highway, { period: 104, dx: -2, dy: 2, onset: 9977, onsetExact: true, escaped: true });
 });

@@ -66,3 +66,48 @@ test('painting samples cells, pads off-grid with the background and draws lines 
   paintPixels(big, 16, 16, g, { cx: 0, cy: 0, scale: 4 }, pal, 99);
   assert.ok(!big.includes(99), 'no lines when cells are small');
 });
+
+test('hex centres round back to their own cell, and the six neighbours sit one unit away', async () => {
+  const { worldCentre, hexRound, HEX_H } = await import('../src/render.js');
+  const { HEX_DX, HEX_DY } = await import('../src/colony.js');
+  for (let r = -5; r <= 5; r++) {
+    for (let q = -5; q <= 5; q++) {
+      const { wx, wy } = worldCentre('hex', q, r);
+      assert.deepEqual(hexRound(wx, wy), { x: q, y: r });
+      // A point just inside the cell's inscribed circle still belongs to it.
+      for (let k = 0; k < 12; k++) {
+        const t = (k * Math.PI) / 6;
+        assert.deepEqual(hexRound(wx + 0.45 * HEX_H * Math.cos(t) * 1.1, wy + 0.45 * Math.sin(t)), { x: q, y: r });
+      }
+    }
+  }
+  const o = worldCentre('hex', 0, 0);
+  for (let d = 0; d < 6; d++) {
+    const n = worldCentre('hex', HEX_DX[d], HEX_DY[d]);
+    assert.ok(Math.abs(Math.hypot(n.wx - o.wx, n.wy - o.wy) - 1) < 1e-12);
+    // Directions run clockwise on screen (y down) in steps of 60°.
+    const angle = (Math.atan2(n.wy - o.wy, n.wx - o.wx) * 180) / Math.PI;
+    assert.ok(Math.abs(((angle - 60 * d + 540) % 360) - 180) < 1e-9, `direction ${d} at ${angle}°`);
+  }
+});
+
+test('hex views fit, map clicks to cells and paint hexagons', async () => {
+  const { fitView: fit, cellAt: at, cellCentre: centre, paintPixels: paint } = await import('../src/render.js');
+  const box = { minX: -3, maxX: 3, minY: -3, maxY: 3 };
+  const v = fit(box, 300, 300, 0.1, 'hex');
+  for (const [q, r] of [[0, 0], [3, -3], [-3, 3], [2, 1]]) {
+    const { px, py } = centre(v, 300, 300, q, r, 'hex');
+    assert.ok(px > 0 && px < 300 && py > 0 && py < 300, `${q},${r} on canvas`);
+    assert.deepEqual(at(v, 300, 300, px, py, 'hex'), { x: q, y: r });
+  }
+  const g = new Grid(16);
+  g.set(1, 0, 1);
+  const out = new Uint32Array(300 * 300);
+  paint(out, 300, 300, g, v, [5, 6], 99, 'hex');
+  const { px, py } = centre(v, 300, 300, 1, 0, 'hex');
+  assert.equal(out[Math.round(py) * 300 + Math.round(px)], 6);
+  assert.ok(!out.includes(99), 'no square grid lines on hexagons');
+  const painted = out.filter((c) => c === 6).length;
+  const hexArea = (Math.sqrt(3) / 2) * v.scale * v.scale;
+  assert.ok(Math.abs(painted / hexArea - 1) < 0.05, `one hexagon of pixels (${painted} vs ${hexArea})`);
+});
