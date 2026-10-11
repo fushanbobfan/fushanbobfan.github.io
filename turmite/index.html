@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>turmite · Langton's ant lab</title>
+    <meta name="description" content="Langton's ant and its many-coloured relatives: one turning rule per colour, long stretches of chaos, and the highways, squares and triangles that come out of it." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>turmite</h1>
+      <p class="subtitle">
+        An ant reads the colour under it, turns the way the rule says for that colour, repaints the cell
+        with the next colour and steps forward. Nothing else, and still: chaos, then order.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <canvas id="board" role="img" aria-label="Grid painted by the ants"></canvas>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint">
+          Drag to pan, scroll to zoom. At step 0, click a cell to add an ant, click again to turn it, a fourth
+          time to remove it.
+        </p>
+      </section>
+
+      <aside class="panel">
+        <fieldset>
+          <legend>Rule</legend>
+          <label for="preset">Start from</label>
+          <select id="preset"></select>
+          <p class="note" id="preset-note"></p>
+          <label for="rule">Turns, one letter per colour</label>
+          <input id="rule" type="text" spellcheck="false" autocomplete="off" maxlength="40"
+                 aria-describedby="rule-help rule-error" />
+          <p class="help" id="rule-help">L left · R right · N straight on · U turn around</p>
+          <p class="error" id="rule-error" role="alert"></p>
+          <ol class="swatches" id="swatches" aria-label="Colours and their turns"></ol>
+        </fieldset>
+
+        <fieldset>
+          <legend>Ants</legend>
+          <div class="row buttons">
+            <button type="button" data-layout="single">One</button>
+            <button type="button" data-layout="pair">Back to back</button>
+            <button type="button" data-layout="line">In a line</button>
+            <button type="button" data-layout="ring">In a ring</button>
+          </div>
+          <label for="ant-count">Ants in a line or ring <output id="ant-count-out"></output></label>
+          <input id="ant-count" type="range" min="2" max="16" value="4" />
+        </fieldset>
+
+        <fieldset>
+          <legend>Run</legend>
+          <div class="row buttons">
+            <button type="button" id="play" class="primary">Play</button>
+            <button type="button" id="step">Step</button>
+            <button type="button" id="reset">Reset</button>
+          </div>
+          <label for="speed">Speed <output id="speed-out"></output></label>
+          <input id="speed" type="range" min="0" max="10" />
+          <form class="row" id="jump-form">
+            <label for="jump" class="inline">Go to step</label>
+            <input id="jump" type="number" min="0" max="20000000" step="1" inputmode="numeric" />
+            <button type="submit">Go</button>
+          </form>
+        </fieldset>
+
+        <fieldset>
+          <legend>So far</legend>
+          <dl class="readout">
+            <dt>Steps</dt><dd id="r-steps">0</dd>
+            <dt>Ants</dt><dd id="r-ants">1</dd>
+            <dt>Extent</dt><dd id="r-extent">1 × 1</dd>
+            <dt>Painted cells</dt><dd id="r-painted">0</dd>
+          </dl>
+          <p class="pattern" id="r-pattern"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>View</legend>
+          <label class="check"><input id="follow" type="checkbox" checked /> Follow the pattern</label>
+          <label class="check"><input id="lines" type="checkbox" checked /> Grid lines when zoomed in</label>
+          <div class="row buttons">
+            <button type="button" id="fit">Fit</button>
+            <button type="button" id="png">Save PNG</button>
+            <button type="button" id="copy">Copy link</button>
+          </div>
+        </fieldset>
+
+        <p class="keys">
+          Keys: <kbd>Space</kbd> play or pause · <kbd>S</kbd> step · <kbd>R</kbd> reset · <kbd>F</kbd> fit ·
+          <kbd>[</kbd> <kbd>]</kbd> speed
+        </p>
+      </aside>
+    </main>
+
+    <footer>
+      <a href="https://github.com/fushanbobfan/turmite">Source on GitHub</a> · MIT licence
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
