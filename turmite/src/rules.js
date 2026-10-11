@@ -8,6 +8,11 @@
 // Hexagonal grid, one token per colour, turns in sixths clockwise:
 //   N  no turn    R1 60° right   R2 120° right
 //   U  turn around   L2 120° left   L1 60° left
+//
+// On the square grid a rule that starts with a digit or a brace is a
+// state machine instead (see machine.js).
+
+import { looksLikeMachine, parseMachine } from './machine.js';
 
 export const LATTICES = {
   square: { directions: 4, turns: { L: -1, R: 1, N: 0, U: 2 }, token: /[LRNU]/y },
@@ -21,6 +26,9 @@ export const MAX_COLORS = 16;
 export function parseRule(text, lattice = 'square') {
   const spec = LATTICES[lattice];
   if (!spec) return { ok: false, error: `Unknown lattice "${lattice}".` };
+  if (looksLikeMachine(text)) {
+    return lattice === 'square' ? parseMachine(text) : { ok: false, error: 'State machines run on the square grid.' };
+  }
   const clean = String(text ?? '').toUpperCase().replace(/[\s,]+/g, '');
   const tokens = [];
   spec.token.lastIndex = 0;

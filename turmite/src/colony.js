@@ -10,6 +10,7 @@
 
 import { Grid } from './grid.js';
 import { PeriodWatch } from './period.js';
+import { transitionTable } from './machine.js';
 
 export const DX = [0, 1, 0, -1];
 export const DY = [-1, 0, 1, 0];
@@ -25,6 +26,7 @@ const CHECK_EVERY = 4096;
 export class Colony {
   constructor(rule, ants) {
     this.rule = rule;
+    this.table = transitionTable(rule);
     const n = rule.directions ?? 4;
     this.start = ants.map(({ x, y, dir }) => ({ x, y, dir: ((dir % n) + n) % n }));
     this.reset();
@@ -33,6 +35,8 @@ export class Colony {
   reset() {
     this.grid = new Grid();
     this.ants = this.start.map((a) => ({ ...a }));
+    // Internal state of each ant, kept beside the ants so they stay {x, y, dir}.
+    this.states = new Uint8Array(this.ants.length);
     this.steps = 0;
     this.painted = 0;
     this.halted = null;
@@ -56,19 +60,23 @@ export class Colony {
 
   tick() {
     if (this.halted || this.ants.length === 0) return false;
-    const { turns, colors } = this.rule;
+    const { write, turn, next, colors } = this.table;
     const n = this.rule.directions ?? 4;
     const { dx, dy } = moves(this.rule.lattice);
     const grid = this.grid;
-    for (const a of this.ants) {
+    const states = this.states;
+    for (let k = 0; k < this.ants.length; k++) {
+      const a = this.ants[k];
       const i = grid.index(a.x, a.y);
       const c = grid.cells[i];
-      if (this.watch) this.watch.push(c * 8 + a.dir, a.x, a.y);
-      a.dir = (a.dir + turns[c] + n) % n;
-      const next = c + 1 === colors ? 0 : c + 1;
-      grid.cells[i] = next;
-      if (c === 0) this.painted++;
-      else if (next === 0) this.painted--;
+      const j = states[k] * colors + c;
+      if (this.watch) this.watch.push(j * 8 + a.dir, a.x, a.y);
+      a.dir = (a.dir + turn[j] + n) % n;
+      const w = write[j];
+      grid.cells[i] = w;
+      if (c === 0 && w !== 0) this.painted++;
+      else if (c !== 0 && w === 0) this.painted--;
+      states[k] = next[j];
       a.x += dx[a.dir];
       a.y += dy[a.dir];
       this.#settle(a);

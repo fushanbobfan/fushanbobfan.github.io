@@ -146,3 +146,39 @@ test('a real highway escapes and keeps its exact start step long after it began'
   c.run(100_000 - 20480);
   assert.deepEqual(c.highway, { period: 104, dx: -2, dy: 2, onset: 9977, onsetExact: true, escaped: true });
 });
+
+test("Langton's ant written as a machine paints the same grid", () => {
+  const a = lone('RL');
+  const b = new Colony(parseRule('120080').rule, [{ x: 0, y: 0, dir: 0 }]);
+  a.run(15000);
+  b.run(15000);
+  assert.deepEqual(b.ants, a.ants);
+  assert.deepEqual(b.grid.cells, a.grid.cells);
+  assert.deepEqual(b.highway, a.highway);
+  assert.equal(b.painted, a.painted);
+});
+
+test('a machine ant carries its state from step to step', () => {
+  // Fibonacci: state 0 always turns left into state 1; state 1 on colour 0
+  // turns right and stays, on colour 1 it erases and goes back to state 0.
+  const c = new Colony(parseRule('181181121010').rule, [{ x: 0, y: 0, dir: 0 }]);
+  c.run(1);
+  assert.deepEqual(c.ants[0], { x: -1, y: 0, dir: 3 });
+  assert.equal(c.states[0], 1);
+  c.run(1);
+  assert.deepEqual(c.ants[0], { x: -1, y: -1, dir: 0 }, 'state 1 on colour 0 turns right');
+  assert.equal(c.states[0], 1);
+  c.reset();
+  assert.equal(c.states[0], 0);
+});
+
+test('the painted count follows machines that erase', () => {
+  const c = new Colony(parseRule('181181121010').rule, [{ x: 0, y: 0, dir: 0 }]);
+  c.run(50000);
+  const counts = c.grid.census(2);
+  assert.equal(c.painted, counts[1]);
+});
+
+test('state machines stay on the square grid', () => {
+  assert.match(parseRule('120080', 'hex').error, /square grid/);
+});
