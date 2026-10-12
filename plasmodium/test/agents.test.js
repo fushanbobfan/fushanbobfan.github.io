@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createAgents, addAgent, chooseTurn, stepAgents } from '../src/agents.js';
-import { createTrail, deposit, totalTrail, setWall } from '../src/trail.js';
+import { createAgents, addAgent, chooseTurn, stepAgents, smell } from '../src/agents.js';
+import { createTrail, deposit, totalTrail, setWall, sample } from '../src/trail.js';
 import { createRng } from '../src/rng.js';
 
 const deg = Math.PI / 180;
@@ -91,4 +91,37 @@ test('a particle never steps into a wall', () => {
     stepAgents(a, trail, params, rng, true);
     for (let i = 0; i < a.count; i++) assert.notEqual(Math.floor(a.x[i]), 10);
   }
+});
+
+test('a colony smells its own trail minus the others, scaled by repel', () => {
+  const a = createTrail(4, 4);
+  const b = createTrail(4, 4);
+  deposit(a, 1, 1, 3, false);
+  deposit(b, 1, 1, 2, false);
+  assert.equal(smell([a, b], 0, 1, 1, 0.5, false), 2);
+  assert.equal(smell([a, b], 1, 1, 1, 0.5, false), 0.5);
+  assert.equal(smell([a], 0, 1, 1, 0.5, false), 3);
+});
+
+test('each colony lays trail in its own layer', () => {
+  const layers = [createTrail(30, 30), createTrail(30, 30)];
+  const a = createAgents(2);
+  addAgent(a, 5.5, 5.5, 0, 0);
+  addAgent(a, 20.5, 20.5, 0, 1);
+  stepAgents(a, layers, params, createRng(1), true);
+  assert.equal(totalTrail(layers[0]), 5);
+  assert.equal(totalTrail(layers[1]), 5);
+  assert.equal(sample(layers[0], 6.5, 5.5, true), 5);
+  assert.equal(sample(layers[1], 21.5, 20.5, true), 5);
+});
+
+test('a particle turns away from a rival trail on its right', () => {
+  const layers = [createTrail(40, 40), createTrail(40, 40)];
+  const a = createAgents(1);
+  addAgent(a, 10.5, 20.5, 0, 0);
+  // Rival trail ahead and to the right; nothing on the left, so turn left.
+  deposit(layers[1], 11.5 + 4, 20.5, 100, false);
+  deposit(layers[1], 11.5 + Math.cos(params.sensorAngle) * 4, 20.5 + Math.sin(params.sensorAngle) * 4, 100, false);
+  stepAgents(a, layers, { ...params, repel: 1 }, createRng(1), false);
+  assert.ok(Math.abs(a.heading[0] - (2 * Math.PI - params.turnAngle)) < 1e-5);
 });
