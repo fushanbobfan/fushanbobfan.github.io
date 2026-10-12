@@ -3,7 +3,7 @@
 // deposits trail (motor stage), then smells the trail at three sensors ahead
 // of it and turns towards the strongest (sensory stage).
 
-import { deposit, sample } from './trail.js';
+import { deposit, sample, isWall } from './trail.js';
 
 const TAU = Math.PI * 2;
 
@@ -49,6 +49,11 @@ export function stepAgents(agents, trail, p, rng, wrap) {
     if (wrap) {
       if (nx < 0) nx += w; else if (nx >= w) nx -= w;
       if (ny < 0) ny += h; else if (ny >= h) ny -= h;
+    }
+    if (trail.wallCount > 0 && isWall(trail, nx, ny, wrap)) {
+      // A wall works like the rim: stay put and face a random new way.
+      a = rng.next() * TAU;
+    } else if (wrap) {
       x[i] = nx;
       y[i] = ny;
       deposit(trail, nx, ny, p.depositAmount, true);

@@ -23,7 +23,9 @@ const KEYS = {
 
 export const VIEW_DEFAULTS = { palette: 'slime', exposure: 1 };
 
-export function encodeState({ settings, foods = [], view = VIEW_DEFAULTS }) {
+// A carved maze travels as its recipe (mz=seed.corridor.thickness.loops in
+// hundredths); hand-painted walls travel as a run-length code (wl=...).
+export function encodeState({ settings, foods = [], view = VIEW_DEFAULTS, maze = null, walls = '' }) {
   const parts = [];
   for (const [short, key] of Object.entries(KEYS)) {
     const v = settings[key];
@@ -31,6 +33,11 @@ export function encodeState({ settings, foods = [], view = VIEW_DEFAULTS }) {
     parts.push(`${short}=${typeof v === 'boolean' ? (v ? 1 : 0) : encodeURIComponent(v)}`);
   }
   if (foods.length) parts.push(`f=${foods.map((p) => `${Math.round(p.x)}.${Math.round(p.y)}`).join('_')}`);
+  if (maze) {
+    parts.push(`mz=${maze.seed}.${maze.corridor}.${maze.thickness}.${Math.round(maze.loops * 100)}`);
+  } else if (walls) {
+    parts.push(`wl=${walls}`);
+  }
   if (view.palette !== VIEW_DEFAULTS.palette) parts.push(`pal=${view.palette}`);
   if (view.exposure !== VIEW_DEFAULTS.exposure) parts.push(`ex=${view.exposure}`);
   return parts.join('&');
@@ -63,5 +70,16 @@ export function decodeState(hash) {
     palette: pal && PALETTES[pal] ? pal : VIEW_DEFAULTS.palette,
     exposure: Number.isFinite(ex) && ex > 0 ? Math.min(ex, 8) : VIEW_DEFAULTS.exposure,
   };
-  return { settings, foods, view };
+  let maze = null;
+  const mz = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(params.get('mz') || '');
+  if (mz) {
+    maze = {
+      seed: Number(mz[1]) >>> 0,
+      corridor: Math.min(Math.max(Number(mz[2]), 2), 60),
+      thickness: Math.min(Math.max(Number(mz[3]), 1), 20),
+      loops: Math.min(Number(mz[4]), 100) / 100,
+    };
+  }
+  const walls = maze ? '' : (params.get('wl') || '').replace(/[^0-9a-z-]/g, '');
+  return { settings, foods, view, maze, walls };
 }

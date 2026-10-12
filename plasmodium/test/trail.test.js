@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createTrail, deposit, sample, diffuseDecay, totalTrail, maxTrail, wrapIndex, clearTrail, stamp,
+  createTrail, deposit, sample, diffuseDecay, totalTrail, maxTrail, wrapIndex, clearTrail, stamp, setWall, clearWalls, isWall,
 } from '../src/trail.js';
 
 const close = (a, b, eps = 1e-4) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
@@ -87,4 +87,41 @@ test('a stamp paints a disc and clips at a closed edge', () => {
   clearTrail(t);
   stamp(t, 0, 10, 2, 1, false);
   close(totalTrail(t), 9);
+});
+
+test('walls take no trail and nothing spreads into them', () => {
+  const t = createTrail(9, 3);
+  for (let y = 0; y < 3; y++) setWall(t, y * 9 + 4, true);
+  assert.equal(t.wallCount, 3);
+  deposit(t, 4, 1, 10, false);
+  assert.equal(totalTrail(t), 0);
+  deposit(t, 2, 1, 9, false);
+  for (let k = 0; k < 30; k++) diffuseDecay(t, 1, 0, false);
+  for (let y = 0; y < 3; y++) {
+    for (let x = 4; x < 9; x++) assert.equal(sample(t, x, y, false), 0, `${x},${y}`);
+  }
+  assert.ok(isWall(t, 4, 2, false));
+  assert.ok(!isWall(t, 3, 2, false));
+});
+
+test('a wrapped world with walls keeps close to the same total on the open side', () => {
+  const t = createTrail(8, 8);
+  setWall(t, 0, true);
+  deposit(t, 4, 4, 10, true);
+  for (let k = 0; k < 10; k++) diffuseDecay(t, 1, 0, true);
+  close(totalTrail(t), 10, 0.5);
+  assert.equal(t.data[0], 0);
+});
+
+test('setting a wall wipes its trail and clearing walls reopens the cells', () => {
+  const t = createTrail(4, 4);
+  deposit(t, 1, 1, 5, false);
+  setWall(t, 5, true);
+  setWall(t, 5, true);
+  assert.equal(t.wallCount, 1);
+  assert.equal(totalTrail(t), 0);
+  clearWalls(t);
+  assert.equal(t.wallCount, 0);
+  deposit(t, 1, 1, 5, false);
+  assert.equal(totalTrail(t), 5);
 });

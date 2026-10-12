@@ -37,3 +37,20 @@ test('bad input falls back to safe values', () => {
   assert.deepEqual(foods, [{ x: 1, y: 2 }]);
   assert.deepEqual(view, VIEW_DEFAULTS);
 });
+
+test('a maze travels as its recipe and painted walls as their code', () => {
+  const settings = normalizeSettings({ wrap: false });
+  const maze = { seed: 42, corridor: 16, thickness: 4, loops: 0.15 };
+  const a = decodeState('#' + encodeState({ settings, maze, walls: '5-3-9' }));
+  assert.deepEqual(a.maze, maze);
+  assert.equal(a.walls, '');
+  const b = decodeState('#' + encodeState({ settings, walls: '5-3-9' }));
+  assert.equal(b.maze, null);
+  assert.equal(b.walls, '5-3-9');
+});
+
+test('maze recipes are clamped to sensible sizes', () => {
+  const { maze } = decodeState('#mz=1.0.99.500');
+  assert.deepEqual(maze, { seed: 1, corridor: 2, thickness: 20, loops: 1 });
+  assert.equal(decodeState('#mz=1.2').maze, null);
+});

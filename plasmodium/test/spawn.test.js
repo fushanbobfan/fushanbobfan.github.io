@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, LAYOUTS } from '../src/spawn.js';
 import { createAgents } from '../src/agents.js';
 import { createRng } from '../src/rng.js';
+import { createTrail, setWall, isWall } from '../src/trail.js';
 
 const W = 200;
 const H = 120;
@@ -55,4 +56,15 @@ test('the same seed reproduces the same layout', () => {
   spawn(b, 'scatter', 50, W, H, createRng(11));
   assert.deepEqual(a.x, b.x);
   assert.deepEqual(a.heading, b.heading);
+});
+
+test('no particle starts inside a wall', () => {
+  const trail = createTrail(W, H);
+  for (let y = 0; y < H; y++) for (let x = 60; x < 140; x++) setWall(trail, y * W + x, true);
+  for (const layout of Object.keys(LAYOUTS)) {
+    const a = createAgents(2000);
+    spawn(a, layout, 2000, W, H, createRng(8), trail);
+    assert.equal(a.count, 2000);
+    for (let i = 0; i < a.count; i++) assert.ok(!isWall(trail, a.x[i], a.y[i], false), layout);
+  }
 });

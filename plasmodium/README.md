@@ -57,6 +57,27 @@ and seed. The measurable part of each note is checked in
 | Short sight | sensors 45°, turns 45°, distance 3 | Long single threads that wander and curl |
 | Glowing spots | sensors 90°, turns 20°, distance 9 | Many tight bright clumps, none large |
 | Outburst | twenty thousand particles from the centre, facing out | A cross of tubes |
+| Maze | 800 particles, sensors 45°, turns 22.5°, distance 20, food in the first and last rooms | By step 1500 the rooms on the shortest route hold several times the trail of the other rooms |
+
+## Walls and mazes
+
+Walls block both particles and trail. A particle that would step into a wall
+stays put and faces a random new way, as it does at the rim of a closed dish;
+no trail is laid on a wall, and diffusion next to a wall averages only the
+open neighbours.
+
+**Carve a maze** fills the dish with a seeded maze: rooms one corridor wide,
+joined by a depth-first search into a perfect maze (exactly one route between
+any two rooms). **Knock extra passages through** opens 15% of the remaining
+inner walls as well, so some rooms can be reached more than one way. Food
+goes in the top-left and bottom-right rooms.
+
+The readout then adds **Route vs dead ends**: the mean trail in the rooms on
+the shortest route between the two food sources divided by the mean in every
+other room, each read over a 5x5 block at the room's centre. In this model
+the particles do not retract from dead ends the way a real plasmodium does;
+they thin out there because nothing feeds them, while the food at both ends
+keeps the route between them supplied.
 
 ## Reading the network
 
@@ -75,10 +96,13 @@ wraps) form one piece. It reports:
 - **Dish** settings (starting layout, particle count, edges) apply on Reset.
   Food layouts apply at once.
 - Click the dish to drop a food source; click one to take it away.
-- Turn on **Brush paints attractant** and drag to lure the particles.
+- **Clicking the dish** picks the tool: drop or remove food, paint
+  attractant to lure the particles, build walls or erase them.
+- **Carve a maze** and **Clear walls** replace or remove every wall.
 - **New seed** restarts with a different random scattering.
-- **Copy link** puts the settings, food sources, colours and exposure in the
-  URL; the same link replays the same run.
+- **Copy link** puts the settings, food sources, walls, colours and exposure
+  in the URL; the same link replays the same run. A maze travels as its
+  recipe, hand-built walls as a run-length code.
 - Keys: <kbd>Space</kbd> play or pause, <kbd>S</kbd> step, <kbd>R</kbd>
   reset, <kbd>N</kbd> new seed.
 
@@ -99,12 +123,13 @@ node scripts/probe.js sensorAngle=45 turnAngle=22.5 sensorDistance=15 \
 | File | Role |
 | --- | --- |
 | `src/rng.js` | Seeded mulberry32 generator |
-| `src/trail.js` | Trail grid: deposit, sample, diffuse and fade, brush stamp |
+| `src/trail.js` | Trail grid and walls: deposit, sample, diffuse and fade, brush stamp |
 | `src/agents.js` | Particles: motor and sensory stages |
 | `src/spawn.js` | Starting layouts |
 | `src/food.js` | Food sources and food layouts |
 | `src/sim.js` | Settings, a seeded run, reset, retune and stepping |
-| `src/network.js` | Tube threshold, connected pieces, food linking |
+| `src/walls.js` | Wall painting, maze carving and shortest route, wall codes |
+| `src/network.js` | Tube threshold, connected pieces, food linking, route contrast |
 | `src/presets.js` | Named presets with notes |
 | `src/render.js` | Tone curve and palettes |
 | `src/share.js` | Share-link encoding |
