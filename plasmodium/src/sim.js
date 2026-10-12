@@ -6,6 +6,7 @@ import { createAgents, stepAgents } from './agents.js';
 import { spawn, LAYOUTS } from './spawn.js';
 import { createRng } from './rng.js';
 import { feed } from './food.js';
+import { carveMaze } from './walls.js';
 
 const deg = Math.PI / 180;
 
@@ -74,6 +75,7 @@ export function createSim(input) {
     agents: createAgents(settings.population),
     rng: createRng(settings.seed),
     foods: [],
+    maze: null,
     steps: 0,
   };
   resetSim(sim);
@@ -103,4 +105,14 @@ export function stepSim(sim, n = 1) {
     diffuseDecay(sim.trail, s.spread, s.decay, s.wrap);
     sim.steps++;
   }
+}
+
+// Carves a maze into the dish from its own seed, puts food in the first and
+// last rooms and restarts the particles in the open corridors.
+export function buildMaze(sim, spec) {
+  const m = carveMaze(sim.trail, spec, createRng(spec.seed));
+  sim.maze = { ...m, spec: { ...spec } };
+  sim.foods = m.foods.map((f) => ({ ...f }));
+  resetSim(sim);
+  return sim.maze;
 }

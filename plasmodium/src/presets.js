@@ -58,6 +58,18 @@ export const PRESETS = {
     settings: { population: 20000, layout: 'burst', sensorAngle: 22.5, turnAngle: 45, sensorDistance: 9 },
     food: 'none',
   },
+  maze: {
+    label: 'Maze',
+    note:
+      'A maze with food in its first and last rooms. Within fifteen hundred steps the trail along the ' +
+      'shortest route between them is several times as dense as in the dead ends.',
+    settings: {
+      sensorAngle: 45, turnAngle: 22.5, sensorDistance: 20, foodStrength: 50,
+      population: 800, width: 240, height: 160, wrap: false, layout: 'scatter',
+    },
+    food: 'none',
+    maze: { corridor: 16, thickness: 4, loops: 0 },
+  },
 };
 
 export const DEFAULT_PRESET = 'oats';

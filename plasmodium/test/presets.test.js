@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRESETS, DEFAULT_PRESET, presetSettings } from '../src/presets.js';
-import { createSim, stepSim, DEFAULTS } from '../src/sim.js';
+import { createSim, stepSim, buildMaze, DEFAULTS } from '../src/sim.js';
 import { FOOD_LAYOUTS, placeFoodLayout } from '../src/food.js';
 import { LAYOUTS } from '../src/spawn.js';
-import { analyse } from '../src/network.js';
+import { analyse, routeContrast } from '../src/network.js';
 
 function run(name) {
   const sim = createSim(presetSettings(name));
@@ -57,4 +57,13 @@ test('spots: many separate clumps, none of them large', () => {
   const r = coverageAt(run('spots'), 800);
   assert.ok(r.pieces >= 8, `${r.pieces} pieces`);
   assert.ok(r.largest < 0.06, `largest ${r.largest}`);
+});
+
+test('maze: the shortest route carries several times the trail of the dead ends', () => {
+  const sim = createSim(presetSettings('maze'));
+  buildMaze(sim, { ...PRESETS.maze.maze, seed: sim.settings.seed });
+  assert.equal(sim.foods.length, 2);
+  stepSim(sim, 1500);
+  const contrast = routeContrast(sim.trail, sim.maze);
+  assert.ok(contrast > 4, `contrast ${contrast}`);
 });

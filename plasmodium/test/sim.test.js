@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSim, stepSim, resetSim, retune, normalizeSettings, DEFAULTS } from '../src/sim.js';
+import { createSim, stepSim, resetSim, retune, normalizeSettings, buildMaze, DEFAULTS } from '../src/sim.js';
 import { totalTrail } from '../src/trail.js';
 
 const small = { width: 80, height: 60, population: 800 };
@@ -66,4 +66,19 @@ test('food sources keep adding attractant every step', () => {
   sim.foods.push({ x: 20, y: 20 }, { x: 50, y: 30 });
   stepSim(sim, 3);
   assert.ok(Math.abs(totalTrail(sim.trail) - 3 * 2 * 13 * 2) < 1e-3);
+});
+
+test('building a maze places food in its corner rooms and keeps particles in corridors', () => {
+  const sim = createSim({ ...small, wrap: false });
+  const maze = buildMaze(sim, { seed: 3, corridor: 8, thickness: 3, loops: 0 });
+  assert.equal(sim.steps, 0);
+  assert.deepEqual(sim.foods, maze.foods);
+  assert.ok(sim.trail.wallCount > 0);
+  for (let i = 0; i < sim.agents.count; i++) {
+    const k = Math.floor(sim.agents.y[i]) * small.width + Math.floor(sim.agents.x[i]);
+    assert.equal(sim.trail.walls[k], 0);
+  }
+  stepSim(sim, 3);
+  resetSim(sim);
+  assert.ok(sim.trail.wallCount > 0, 'reset keeps the walls');
 });
