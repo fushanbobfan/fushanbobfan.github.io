@@ -3,7 +3,7 @@
 
 import { createTrail, diffuseDecay, clearTrail } from './trail.js';
 import { createAgents, stepAgents } from './agents.js';
-import { spawn } from './spawn.js';
+import { spawn, LAYOUTS } from './spawn.js';
 import { createRng } from './rng.js';
 import { feed } from './food.js';
 
@@ -50,6 +50,7 @@ export function normalizeSettings(input = {}) {
   s.height = Math.round(s.height);
   s.population = Math.round(s.population);
   s.wrap = Boolean(s.wrap);
+  if (!Object.hasOwn(LAYOUTS, s.layout)) s.layout = DEFAULTS.layout;
   s.seed = Number(s.seed) >>> 0;
   return s;
 }
