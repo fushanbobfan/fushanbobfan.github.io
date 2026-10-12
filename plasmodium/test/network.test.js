@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { threshold, labelTubes, analyse } from '../src/network.js';
+import { threshold, labelTubes, analyse, routeContrast } from '../src/network.js';
 import { createTrail } from '../src/trail.js';
 import { createSim, stepSim } from '../src/sim.js';
 import { placeFoodLayout } from '../src/food.js';
@@ -61,4 +61,21 @@ test('in a closed dish, particles grow one network that links all five food sour
   stepSim(sim, 1000);
   const r = analyse(sim.trail, sim.foods, false);
   assert.equal(r.foodLinked, 5);
+});
+
+test('route contrast compares route rooms with the rest', () => {
+  const t = createTrail(30, 10);
+  const maze = {
+    rows: 1,
+    cols: 3,
+    route: [[0, 0], [0, 1]],
+    roomCentre: (r, c) => ({ x: 5 + c * 10, y: 5 }),
+  };
+  for (let y = 3; y <= 7; y++) {
+    for (let x = 0; x < 30; x++) t.data[y * 30 + x] = x < 20 ? 4 : 1;
+  }
+  assert.equal(routeContrast(t, maze), 4);
+  t.data.fill(0);
+  assert.equal(routeContrast(t, maze), null);
+  assert.equal(routeContrast(t, { ...maze, route: [[0, 0], [0, 1], [0, 2]] }), null);
 });

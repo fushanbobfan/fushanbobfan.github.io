@@ -77,3 +77,37 @@ export function analyse(trail, foods, wrap, factor = 1.5) {
     foodTotal: foods.length,
   };
 }
+
+// For a carved maze: mean trail in the rooms on the shortest route divided
+// by the mean in all other rooms, each room read over a 5x5 block at its
+// centre. Above 1 means the particles favour the route over the dead ends.
+export function routeContrast(trail, maze) {
+  const onRoute = new Set(maze.route.map(([r, c]) => r * maze.cols + c));
+  let on = 0;
+  let nOn = 0;
+  let off = 0;
+  let nOff = 0;
+  for (let r = 0; r < maze.rows; r++) {
+    for (let c = 0; c < maze.cols; c++) {
+      const p = maze.roomCentre(r, c);
+      let v = 0;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const x = p.x + dx;
+          const y = p.y + dy;
+          if (x >= 0 && y >= 0 && x < trail.width && y < trail.height) v += trail.data[y * trail.width + x];
+        }
+      }
+      if (onRoute.has(r * maze.cols + c)) {
+        on += v;
+        nOn++;
+      } else {
+        off += v;
+        nOff++;
+      }
+    }
+  }
+  if (!nOn || !nOff) return null;
+  const offMean = off / nOff;
+  return offMean > 0 ? on / nOn / offMean : null;
+}
