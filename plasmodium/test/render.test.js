@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PALETTES, hexToRgb, buildLut, paintTrail, toneScale } from '../src/render.js';
-import { createTrail } from '../src/trail.js';
+import { createTrail, setWall } from '../src/trail.js';
 
 test('hex colours parse to bytes', () => {
   assert.deepEqual(hexToRgb('#ff8000'), [255, 128, 0]);
@@ -48,4 +48,13 @@ test('the tone scale follows the mean and exposure', () => {
   assert.equal(toneScale(t, 1), 16);
   assert.equal(toneScale(t, 2), 8);
   assert.equal(toneScale(createTrail(2, 2), 1), 1);
+});
+
+test('walls are painted flat in the wall colour', () => {
+  const t = createTrail(2, 1);
+  setWall(t, 1, true);
+  const px = new Uint8ClampedArray(8);
+  paintTrail(t, px, buildLut(['#000000', '#ffffff']), 1, hexToRgb(PALETTES.slime.wall));
+  assert.deepEqual([...px.slice(4, 8)], [...hexToRgb(PALETTES.slime.wall), 255]);
+  for (const p of Object.values(PALETTES)) assert.match(p.wall, /^#[0-9a-f]{6}$/);
 });

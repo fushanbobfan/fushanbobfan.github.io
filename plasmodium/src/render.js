@@ -2,10 +2,10 @@
 // [0, 1), and a 256-entry palette turns that into colour.
 
 export const PALETTES = {
-  slime: { label: 'Slime', stops: ['#05060a', '#1f3a10', '#8fbf1f', '#f2f08a', '#ffffff'] },
-  ember: { label: 'Ember', stops: ['#080404', '#4a0d0d', '#c2410c', '#fbbf24', '#fff7d6'] },
-  tide: { label: 'Tide', stops: ['#03070d', '#0b2e4f', '#1d7fa8', '#7fe0e6', '#f2ffff'] },
-  ink: { label: 'Ink on paper', stops: ['#f6f1e7', '#d9cdb4', '#8a7a5f', '#3a3226', '#0e0c09'] },
+  slime: { label: 'Slime', stops: ['#05060a', '#1f3a10', '#8fbf1f', '#f2f08a', '#ffffff'], wall: '#4a4f58' },
+  ember: { label: 'Ember', stops: ['#080404', '#4a0d0d', '#c2410c', '#fbbf24', '#fff7d6'], wall: '#3f4652' },
+  tide: { label: 'Tide', stops: ['#03070d', '#0b2e4f', '#1d7fa8', '#7fe0e6', '#f2ffff'], wall: '#4d4640' },
+  ink: { label: 'Ink on paper', stops: ['#f6f1e7', '#d9cdb4', '#8a7a5f', '#3a3226', '#0e0c09'], wall: '#9fb0c2' },
 };
 
 export function hexToRgb(hex) {
@@ -37,10 +37,19 @@ export function toneScale(trail, exposure) {
   return mean > 0 ? (mean * 4) / exposure : 1;
 }
 
-export function paintTrail(trail, pixels, lut, exposure = 1) {
+// Walls, if the trail has any, are painted flat in `wall` ([r, g, b]).
+export function paintTrail(trail, pixels, lut, exposure = 1, wall = [80, 80, 80]) {
   const d = trail.data;
+  const walls = trail.wallCount > 0 ? trail.walls : null;
   const inv = 1 / toneScale(trail, exposure);
   for (let i = 0, p = 0; i < d.length; i++, p += 4) {
+    if (walls && walls[i]) {
+      pixels[p] = wall[0];
+      pixels[p + 1] = wall[1];
+      pixels[p + 2] = wall[2];
+      pixels[p + 3] = 255;
+      continue;
+    }
     const v = 1 - Math.exp(-d[i] * inv);
     const k = Math.min(255, Math.max(0, Math.round(v * 255))) * 3;
     pixels[p] = lut[k];
