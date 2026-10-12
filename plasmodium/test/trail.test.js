@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createTrail, deposit, sample, diffuseDecay, totalTrail, maxTrail, wrapIndex, clearTrail,
+  createTrail, deposit, sample, diffuseDecay, totalTrail, maxTrail, wrapIndex, clearTrail, stamp,
 } from '../src/trail.js';
 
 const close = (a, b, eps = 1e-4) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
@@ -78,4 +78,13 @@ test('clearing empties the layer', () => {
   deposit(t, 1, 1, 3, true);
   clearTrail(t);
   assert.equal(totalTrail(t), 0);
+});
+
+test('a stamp paints a disc and clips at a closed edge', () => {
+  const t = createTrail(20, 20);
+  stamp(t, 10, 10, 2, 1, false);
+  close(totalTrail(t), 13);
+  clearTrail(t);
+  stamp(t, 0, 10, 2, 1, false);
+  close(totalTrail(t), 9);
 });

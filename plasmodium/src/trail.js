@@ -100,3 +100,14 @@ export function maxTrail(trail) {
   for (let i = 0; i < trail.data.length; i++) if (trail.data[i] > m) m = trail.data[i];
   return m;
 }
+
+// Adds `amount` to every cell within `radius` of (x, y): the attractant brush.
+export function stamp(trail, x, y, radius, amount, wrap) {
+  const r = Math.ceil(radius);
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy > radius * radius) continue;
+      deposit(trail, x + dx, y + dy, amount, wrap);
+    }
+  }
+}
