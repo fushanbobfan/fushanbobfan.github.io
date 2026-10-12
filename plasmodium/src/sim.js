@@ -5,6 +5,7 @@ import { createTrail, diffuseDecay, clearTrail } from './trail.js';
 import { createAgents, stepAgents } from './agents.js';
 import { spawn } from './spawn.js';
 import { createRng } from './rng.js';
+import { feed } from './food.js';
 
 const deg = Math.PI / 180;
 
@@ -20,6 +21,7 @@ export const DEFAULTS = {
   depositAmount: 5,
   decay: 0.1,
   spread: 1,
+  foodStrength: 3,
   wrap: true,
   seed: 1,
 };
@@ -27,7 +29,7 @@ export const DEFAULTS = {
 export const LIMITS = {
   width: [40, 1200],
   height: [40, 1200],
-  population: [1, 400000],
+  population: [0, 400000],
   sensorAngle: [0, 180],
   sensorDistance: [0, 60],
   turnAngle: [0, 180],
@@ -35,6 +37,7 @@ export const LIMITS = {
   depositAmount: [0, 50],
   decay: [0, 1],
   spread: [0, 1],
+  foodStrength: [0, 50],
 };
 
 export function normalizeSettings(input = {}) {
@@ -69,6 +72,7 @@ export function createSim(input) {
     trail: createTrail(settings.width, settings.height),
     agents: createAgents(settings.population),
     rng: createRng(settings.seed),
+    foods: [],
     steps: 0,
   };
   resetSim(sim);
@@ -93,6 +97,7 @@ export function retune(sim, changes) {
 export function stepSim(sim, n = 1) {
   const s = sim.settings;
   for (let k = 0; k < n; k++) {
+    feed(sim.trail, sim.foods, s.foodStrength, s.wrap);
     stepAgents(sim.agents, sim.trail, sim.params, sim.rng, s.wrap);
     diffuseDecay(sim.trail, s.spread, s.decay, s.wrap);
     sim.steps++;

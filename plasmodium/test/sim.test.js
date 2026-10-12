@@ -60,3 +60,10 @@ test('retuning changes behaviour without restarting', () => {
   assert.equal(sim.steps, 4);
   assert.ok(Math.abs(sim.params.sensorAngle - Math.PI / 4) < 1e-9);
 });
+
+test('food sources keep adding attractant every step', () => {
+  const sim = createSim({ ...small, population: 0, decay: 0, foodStrength: 2 });
+  sim.foods.push({ x: 20, y: 20 }, { x: 50, y: 30 });
+  stepSim(sim, 3);
+  assert.ok(Math.abs(totalTrail(sim.trail) - 3 * 2 * 13 * 2) < 1e-3);
+});
