@@ -23,6 +23,8 @@ export const DEFAULTS = {
   decay: 0.1,
   spread: 1,
   foodStrength: 3,
+  colonies: 1,
+  repel: 1,
   wrap: true,
   seed: 1,
 };
@@ -39,6 +41,8 @@ export const LIMITS = {
   decay: [0, 1],
   spread: [0, 1],
   foodStrength: [0, 50],
+  colonies: [1, 3],
+  repel: [0, 3],
 };
 
 export function normalizeSettings(input = {}) {
@@ -50,6 +54,7 @@ export function normalizeSettings(input = {}) {
   s.width = Math.round(s.width);
   s.height = Math.round(s.height);
   s.population = Math.round(s.population);
+  s.colonies = Math.round(s.colonies);
   s.wrap = Boolean(s.wrap);
   if (!Object.hasOwn(LAYOUTS, s.layout)) s.layout = DEFAULTS.layout;
   s.seed = Number(s.seed) >>> 0;
@@ -63,6 +68,7 @@ export function motorParams(s) {
     turnAngle: s.turnAngle * deg,
     stepSize: s.stepSize,
     depositAmount: s.depositAmount,
+    repel: s.repel,
   };
 }
 
@@ -72,6 +78,7 @@ export function createSim(input) {
     settings,
     params: motorParams(settings),
     trail: createTrail(settings.width, settings.height),
+    layers: [],
     agents: createAgents(settings.population),
     rng: createRng(settings.seed),
     foods: [],
@@ -83,12 +90,27 @@ export function createSim(input) {
 }
 
 // Starts over from the seed with the current settings.
+// The colony count takes effect here: particle i joins colony i mod count.
 export function resetSim(sim) {
   const s = sim.settings;
   sim.rng = createRng(s.seed);
-  clearTrail(sim.trail);
+  sim.layers = [sim.trail];
+  for (let k = 1; k < s.colonies; k++) {
+    const layer = createTrail(s.width, s.height);
+    layer.walls = sim.trail.walls;
+    sim.layers.push(layer);
+  }
+  syncWalls(sim);
+  for (const layer of sim.layers) clearTrail(layer);
   spawn(sim.agents, s.layout, s.population, s.width, s.height, sim.rng, sim.trail);
+  for (let i = 0; i < sim.agents.count; i++) sim.agents.species[i] = i % sim.layers.length;
   sim.steps = 0;
+}
+
+// Extra colony layers share the first layer's wall mask; keep their counts
+// in step so they diffuse around the walls too.
+function syncWalls(sim) {
+  for (const layer of sim.layers) layer.wallCount = sim.trail.wallCount;
 }
 
 // Changes the behaviour settings of a running simulation without restarting.
@@ -99,10 +121,11 @@ export function retune(sim, changes) {
 
 export function stepSim(sim, n = 1) {
   const s = sim.settings;
+  syncWalls(sim);
   for (let k = 0; k < n; k++) {
-    feed(sim.trail, sim.foods, s.foodStrength, s.wrap);
-    stepAgents(sim.agents, sim.trail, sim.params, sim.rng, s.wrap);
-    diffuseDecay(sim.trail, s.spread, s.decay, s.wrap);
+    for (const layer of sim.layers) feed(layer, sim.foods, s.foodStrength, s.wrap);
+    stepAgents(sim.agents, sim.layers, sim.params, sim.rng, s.wrap);
+    for (const layer of sim.layers) diffuseDecay(layer, s.spread, s.decay, s.wrap);
     sim.steps++;
   }
 }

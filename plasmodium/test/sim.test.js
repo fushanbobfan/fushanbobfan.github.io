@@ -82,3 +82,30 @@ test('building a maze places food in its corner rooms and keeps particles in cor
   resetSim(sim);
   assert.ok(sim.trail.wallCount > 0, 'reset keeps the walls');
 });
+
+test('colonies get their own layers and split the particles evenly', () => {
+  const sim = createSim({ ...small, population: 900, colonies: 3 });
+  assert.equal(sim.layers.length, 3);
+  assert.equal(sim.layers[0], sim.trail);
+  const counts = [0, 0, 0];
+  for (let i = 0; i < sim.agents.count; i++) counts[sim.agents.species[i]]++;
+  assert.deepEqual(counts, [300, 300, 300]);
+  stepSim(sim, 1);
+  for (const layer of sim.layers) {
+    assert.ok(Math.abs(totalTrail(layer) - 300 * DEFAULTS.depositAmount * (1 - DEFAULTS.decay)) < 1e-2);
+  }
+});
+
+test('the colony count changes on reset, and walls reach every layer', () => {
+  const sim = createSim({ ...small, wrap: false });
+  retune(sim, { colonies: 2 });
+  assert.equal(sim.layers.length, 1);
+  buildMaze(sim, { seed: 1, corridor: 8, thickness: 3, loops: 0 });
+  assert.equal(sim.layers.length, 2);
+  assert.equal(sim.layers[1].walls, sim.trail.walls);
+  assert.equal(sim.layers[1].wallCount, sim.trail.wallCount);
+  stepSim(sim, 20);
+  for (let i = 0; i < sim.trail.walls.length; i++) {
+    if (sim.trail.walls[i]) assert.equal(sim.layers[1].data[i], 0);
+  }
+});
