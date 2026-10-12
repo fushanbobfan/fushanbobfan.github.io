@@ -85,7 +85,7 @@ export function resetSim(sim) {
   const s = sim.settings;
   sim.rng = createRng(s.seed);
   clearTrail(sim.trail);
-  spawn(sim.agents, s.layout, s.population, s.width, s.height, sim.rng);
+  spawn(sim.agents, s.layout, s.population, s.width, s.height, sim.rng, sim.trail);
   sim.steps = 0;
 }
 

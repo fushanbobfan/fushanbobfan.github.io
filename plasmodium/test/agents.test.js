@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAgents, addAgent, chooseTurn, stepAgents } from '../src/agents.js';
-import { createTrail, deposit, totalTrail } from '../src/trail.js';
+import { createTrail, deposit, totalTrail, setWall } from '../src/trail.js';
 import { createRng } from '../src/rng.js';
 
 const deg = Math.PI / 180;
@@ -79,4 +79,16 @@ test('headings stay in [0, 2 pi)', () => {
   for (let i = 0; i < 200; i++) addAgent(a, rng.range(0, 30), rng.range(0, 30), rng.range(0, 2 * Math.PI));
   for (let s = 0; s < 50; s++) stepAgents(a, trail, params, rng, true);
   for (let i = 0; i < a.count; i++) assert.ok(a.heading[i] >= 0 && a.heading[i] < 2 * Math.PI);
+});
+
+test('a particle never steps into a wall', () => {
+  const trail = createTrail(20, 20);
+  for (let y = 0; y < 20; y++) setWall(trail, y * 20 + 10, true);
+  const a = createAgents(50);
+  const rng = createRng(6);
+  for (let i = 0; i < 50; i++) addAgent(a, rng.range(0, 10), rng.range(0, 20), rng.range(0, 2 * Math.PI));
+  for (let s = 0; s < 300; s++) {
+    stepAgents(a, trail, params, rng, true);
+    for (let i = 0; i < a.count; i++) assert.notEqual(Math.floor(a.x[i]), 10);
+  }
 });

@@ -2,6 +2,7 @@
 // inside a width x height world using the seeded generator.
 
 import { addAgent } from './agents.js';
+import { isWall } from './trail.js';
 
 const TAU = Math.PI * 2;
 
@@ -13,7 +14,9 @@ export const LAYOUTS = {
   rim: 'Along the edges, facing inwards',
 };
 
-export function spawn(agents, layout, count, width, height, rng) {
+// With a trail that has walls, a particle that would start inside a wall is
+// moved to a random open cell instead.
+export function spawn(agents, layout, count, width, height, rng, trail = null) {
   agents.count = 0;
   const cx = width / 2;
   const cy = height / 2;
@@ -63,8 +66,17 @@ export function spawn(agents, layout, count, width, height, rng) {
         y = rng.next() * height;
         a = rng.next() * TAU;
     }
+    x = clamp(x, width);
+    y = clamp(y, height);
+    if (trail && trail.wallCount > 0 && isWall(trail, x, y, false)) {
+      if (trail.wallCount >= width * height) return;
+      do {
+        x = rng.next() * width;
+        y = rng.next() * height;
+      } while (isWall(trail, x, y, false));
+    }
     a = ((a % TAU) + TAU) % TAU;
-    addAgent(agents, clamp(x, width), clamp(y, height), a);
+    addAgent(agents, x, y, a);
   }
 }
 
