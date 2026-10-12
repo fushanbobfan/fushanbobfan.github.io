@@ -45,6 +45,9 @@
           <input id="stepSize" type="range" min="0.5" max="3" step="0.1" data-unit=" cells" />
           <label for="depositAmount">Trail laid per step <output for="depositAmount"></output></label>
           <input id="depositAmount" type="range" min="0" max="20" step="0.5" />
+          <label for="repel">Shyness of rival trail <output for="repel"></output></label>
+          <input id="repel" type="range" min="0" max="3" step="0.1" />
+          <p class="help">With two or three colonies: how much a rival's trail counts against the particle's own.</p>
         </fieldset>
 
         <fieldset>
@@ -61,12 +64,18 @@
           <legend>Dish</legend>
           <label for="layout">Particles start</label>
           <select id="layout"></select>
+          <label for="colonies">Colonies</label>
+          <select id="colonies">
+            <option value="1">One colony</option>
+            <option value="2">Two rival colonies</option>
+            <option value="3">Three rival colonies</option>
+          </select>
           <label for="population">Particles <output for="population"></output></label>
           <input id="population" type="range" min="200" max="60000" step="200" />
           <label for="food">Food</label>
           <select id="food"></select>
           <label class="check"><input id="wrap" type="checkbox" /> Edges wrap around</label>
-          <p class="help">Starting layout, particle count and edges apply on Reset.</p>
+          <p class="help">Starting layout, colonies, particle count and edges apply on Reset.</p>
         </fieldset>
 
         <fieldset>
@@ -107,6 +116,7 @@
             <dt>Tube cover</dt><dd id="r-cover">–</dd>
             <dt>Separate pieces</dt><dd id="r-pieces">–</dd>
             <dt>Food linked</dt><dd id="r-food">–</dd>
+            <dt id="r-colonies-label" hidden>Share of the tubes</dt><dd id="r-colonies" hidden></dd>
             <dt id="r-route-label" hidden>Route vs dead ends</dt><dd id="r-route" hidden>–</dd>
           </dl>
           <p class="help">
