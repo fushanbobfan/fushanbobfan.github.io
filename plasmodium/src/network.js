@@ -111,3 +111,37 @@ export function routeContrast(trail, maze) {
   const offMean = off / nOff;
   return offMean > 0 ? on / nOn / offMean : null;
 }
+
+// Sums colony layers into one trail-shaped object so the tube reading works
+// on all colonies together. Reuses `into` when it has the right size.
+export function combineLayers(layers, into = null) {
+  const first = layers[0];
+  if (layers.length === 1) return first;
+  const n = first.data.length;
+  const out = into && into.data.length === n
+    ? into
+    : { width: first.width, height: first.height, data: new Float32Array(n) };
+  out.data.set(layers[0].data);
+  for (let k = 1; k < layers.length; k++) {
+    const d = layers[k].data;
+    for (let i = 0; i < n; i++) out.data[i] += d[i];
+  }
+  return out;
+}
+
+// Share of the tube cells (combined trail above `factor` times its mean)
+// where each colony has the most trail.
+export function territories(layers, factor = 1.5) {
+  const combined = combineLayers(layers);
+  const level = threshold(combined, factor);
+  const counts = new Array(layers.length).fill(0);
+  let tube = 0;
+  for (let i = 0; i < combined.data.length; i++) {
+    if (combined.data[i] <= level) continue;
+    let best = 0;
+    for (let k = 1; k < layers.length; k++) if (layers[k].data[i] > layers[best].data[i]) best = k;
+    counts[best]++;
+    tube++;
+  }
+  return counts.map((c) => (tube ? c / tube : 0));
+}

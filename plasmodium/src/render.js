@@ -2,10 +2,10 @@
 // [0, 1), and a 256-entry palette turns that into colour.
 
 export const PALETTES = {
-  slime: { label: 'Slime', stops: ['#05060a', '#1f3a10', '#8fbf1f', '#f2f08a', '#ffffff'], wall: '#4a4f58' },
-  ember: { label: 'Ember', stops: ['#080404', '#4a0d0d', '#c2410c', '#fbbf24', '#fff7d6'], wall: '#3f4652' },
-  tide: { label: 'Tide', stops: ['#03070d', '#0b2e4f', '#1d7fa8', '#7fe0e6', '#f2ffff'], wall: '#4d4640' },
-  ink: { label: 'Ink on paper', stops: ['#f6f1e7', '#d9cdb4', '#8a7a5f', '#3a3226', '#0e0c09'], wall: '#9fb0c2' },
+  slime: { label: 'Slime', stops: ['#05060a', '#1f3a10', '#8fbf1f', '#f2f08a', '#ffffff'], wall: '#4a4f58', colonies: ['#c6f04a', '#ff5fa2', '#5fc8ff'] },
+  ember: { label: 'Ember', stops: ['#080404', '#4a0d0d', '#c2410c', '#fbbf24', '#fff7d6'], wall: '#3f4652', colonies: ['#ffb238', '#7ad7ff', '#e7e7e7'] },
+  tide: { label: 'Tide', stops: ['#03070d', '#0b2e4f', '#1d7fa8', '#7fe0e6', '#f2ffff'], wall: '#4d4640', colonies: ['#7fe0e6', '#ffd166', '#ef6f9a'] },
+  ink: { label: 'Ink on paper', stops: ['#f6f1e7', '#d9cdb4', '#8a7a5f', '#3a3226', '#0e0c09'], wall: '#9fb0c2', colonies: ['#1f3b73', '#b0302a', '#2f6b2a'] },
 };
 
 export function hexToRgb(hex) {
@@ -55,6 +55,43 @@ export function paintTrail(trail, pixels, lut, exposure = 1, wall = [80, 80, 80]
     pixels[p] = lut[k];
     pixels[p + 1] = lut[k + 1];
     pixels[p + 2] = lut[k + 2];
+    pixels[p + 3] = 255;
+  }
+}
+
+// Several colonies: starting from the background, each colony's colour is
+// laid over the pixel with an opacity from the same tone curve, using one
+// scale for all colonies so their brightness stays comparable.
+export function paintColonies(layers, pixels, palette, exposure = 1, wall = [80, 80, 80]) {
+  const first = layers[0];
+  const n = first.data.length;
+  let sum = 0;
+  for (const l of layers) for (let i = 0; i < n; i++) sum += l.data[i];
+  const mean = sum / n;
+  const inv = mean > 0 ? exposure / (mean * 4) : 1;
+  const bg = hexToRgb(palette.stops[0]);
+  const cols = palette.colonies.map(hexToRgb);
+  const walls = first.wallCount > 0 ? first.walls : null;
+  for (let i = 0, p = 0; i < n; i++, p += 4) {
+    let r = bg[0];
+    let g = bg[1];
+    let b = bg[2];
+    if (walls && walls[i]) {
+      [r, g, b] = wall;
+    } else {
+      for (let k = 0; k < layers.length; k++) {
+        const v = layers[k].data[i];
+        if (v <= 0) continue;
+        const a = 1 - Math.exp(-v * inv);
+        const c = cols[k % cols.length];
+        r += (c[0] - r) * a;
+        g += (c[1] - g) * a;
+        b += (c[2] - b) * a;
+      }
+    }
+    pixels[p] = r;
+    pixels[p + 1] = g;
+    pixels[p + 2] = b;
     pixels[p + 3] = 255;
   }
 }

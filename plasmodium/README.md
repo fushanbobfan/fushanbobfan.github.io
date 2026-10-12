@@ -57,7 +57,26 @@ and seed. The measurable part of each note is checked in
 | Short sight | sensors 45°, turns 45°, distance 3 | Long single threads that wander and curl |
 | Glowing spots | sensors 90°, turns 20°, distance 9 | Many tight bright clumps, none large |
 | Outburst | twenty thousand particles from the centre, facing out | A cross of tubes |
+| Rival colonies | two colonies, shyness 1, reference settings | The colonies split the tubes about evenly and almost never share one |
+| Three colonies, five flakes | three colonies around five food sources in a closed dish | Interleaved stripes, about a third of the tubes each, dozens of separate pieces |
 | Maze | 800 particles, sensors 45°, turns 22.5°, distance 20, food in the first and last rooms | By step 1500 the rooms on the shortest route hold several times the trail of the other rooms |
+
+## Colonies
+
+With two or three colonies, particle *i* joins colony *i* mod the count and
+each colony lays trail in its own layer. A particle smells its own colony's
+trail minus **shyness** times the trail of every other colony, so at
+shyness 0 rivals are simply invisible to each other and above 0 they steer
+away from each other's tubes. Food feeds every layer.
+
+Even at shyness 0 the colonies mostly keep to their own tubes, because each
+one follows only its own trail. With the rival preset's other settings, a
+probe at step 600 found that the leading colony held on average 96.7% of the
+trail in each tube cell at shyness 0, and 99.7% at shyness 1.
+
+The readout adds **Share of the tubes**: for every tube cell (the combined
+trail of all colonies above 1.5 times its average), the colony with the most
+trail there owns it.
 
 ## Walls and mazes
 
@@ -96,6 +115,8 @@ wraps) form one piece. It reports:
 - **Dish** settings (starting layout, particle count, edges) apply on Reset.
   Food layouts apply at once.
 - Click the dish to drop a food source; click one to take it away.
+- **Colonies** (on Reset) and **Shyness of rival trail** (live) set up and
+  tune rival colonies.
 - **Clicking the dish** picks the tool: drop or remove food, paint
   attractant to lure the particles, build walls or erase them.
 - **Carve a maze** and **Clear walls** replace or remove every wall.
@@ -124,14 +145,14 @@ node scripts/probe.js sensorAngle=45 turnAngle=22.5 sensorDistance=15 \
 | --- | --- |
 | `src/rng.js` | Seeded mulberry32 generator |
 | `src/trail.js` | Trail grid and walls: deposit, sample, diffuse and fade, brush stamp |
-| `src/agents.js` | Particles: motor and sensory stages |
+| `src/agents.js` | Particles and colonies: motor and sensory stages |
 | `src/spawn.js` | Starting layouts |
 | `src/food.js` | Food sources and food layouts |
 | `src/sim.js` | Settings, a seeded run, reset, retune and stepping |
 | `src/walls.js` | Wall painting, maze carving and shortest route, wall codes |
-| `src/network.js` | Tube threshold, connected pieces, food linking, route contrast |
+| `src/network.js` | Tube threshold, connected pieces, food linking, route contrast, colony shares |
 | `src/presets.js` | Named presets with notes |
-| `src/render.js` | Tone curve and palettes |
+| `src/render.js` | Tone curve, palettes and colony colours |
 | `src/share.js` | Share-link encoding |
 | `src/main.js` | The page |
 

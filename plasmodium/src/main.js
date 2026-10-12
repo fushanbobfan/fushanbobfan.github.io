@@ -5,8 +5,8 @@ import { createSim, stepSim, resetSim, retune, normalizeSettings, buildMaze } fr
 import { PRESETS, DEFAULT_PRESET, presetSettings } from './presets.js';
 import { LAYOUTS } from './spawn.js';
 import { FOOD_LAYOUTS, placeFoodLayout, addFood, removeFoodNear, FOOD_RADIUS } from './food.js';
-import { PALETTES, buildLut, paintTrail, hexToRgb } from './render.js';
-import { analyse, routeContrast } from './network.js';
+import { PALETTES, buildLut, paintTrail, paintColonies, hexToRgb } from './render.js';
+import { analyse, routeContrast, combineLayers, territories } from './network.js';
 import { stamp, clearWalls, setWall } from './trail.js';
 import { paintWalls, encodeWalls, decodeWalls } from './walls.js';
 import { encodeState, decodeState } from './share.js';
@@ -18,7 +18,7 @@ const ctx = canvas.getContext('2d');
 const offscreen = document.createElement('canvas');
 const offCtx = offscreen.getContext('2d');
 
-const LIVE_KEYS = ['sensorAngle', 'turnAngle', 'sensorDistance', 'stepSize', 'depositAmount', 'decay', 'spread', 'foodStrength'];
+const LIVE_KEYS = ['sensorAngle', 'turnAngle', 'sensorDistance', 'stepSize', 'depositAmount', 'repel', 'decay', 'spread', 'foodStrength'];
 const RESET_KEYS = ['population'];
 const FOOD_LABELS = {
   none: 'None',
@@ -77,6 +77,7 @@ function syncControls() {
     showOutput($(key));
   }
   $('layout').value = s.layout;
+  $('colonies').value = String(s.colonies);
   $('wrap').checked = s.wrap;
   $('palette').value = view.palette;
   $('exposure').value = view.exposure;
@@ -141,7 +142,8 @@ function markCustom() {
 }
 
 function render(full) {
-  paintTrail(sim.trail, image.data, lut, view.exposure, wallRgb);
+  if (sim.layers.length > 1) paintColonies(sim.layers, image.data, PALETTES[view.palette], view.exposure, wallRgb);
+  else paintTrail(sim.trail, image.data, lut, view.exposure, wallRgb);
   offCtx.putImageData(image, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
@@ -158,8 +160,26 @@ function render(full) {
   if (full || frame % 15 === 0) updateReadout();
 }
 
+let combined = null;
+
 function updateReadout() {
-  const r = analyse(sim.trail, sim.foods, sim.settings.wrap);
+  combined = combineLayers(sim.layers, combined);
+  const r = analyse(combined, sim.foods, sim.settings.wrap);
+  const multi = sim.layers.length > 1;
+  $('r-colonies-label').hidden = !multi;
+  $('r-colonies').hidden = !multi;
+  if (multi) {
+    const cols = PALETTES[view.palette].colonies;
+    $('r-colonies').replaceChildren(
+      ...territories(sim.layers).map((share, k) => {
+        const span = document.createElement('span');
+        span.className = 'share';
+        span.style.setProperty('--swatch', cols[k]);
+        span.textContent = sim.steps ? `${Math.round(share * 100)}%` : '–';
+        return span;
+      }),
+    );
+  }
   $('r-steps').textContent = sim.steps.toLocaleString('en-US');
   $('r-cover').textContent = sim.steps ? `${(r.coverage * 100).toFixed(1)}%` : '–';
   $('r-pieces').textContent = sim.steps ? String(r.pieces) : '–';
@@ -169,7 +189,8 @@ function updateReadout() {
   $('r-route').hidden = !sim.maze;
   $('r-route').textContent = contrast === null ? '–' : `${contrast.toFixed(1)}× the trail`;
   $('status').textContent =
-    `${sim.agents.count.toLocaleString('en-US')} particles on a ${sim.settings.width} × ${sim.settings.height} dish` +
+    `${sim.agents.count.toLocaleString('en-US')} particles` +
+    `${sim.layers.length > 1 ? ` in ${sim.layers.length} colonies` : ''} on a ${sim.settings.width} × ${sim.settings.height} dish` +
     `${sim.settings.wrap ? ' with wrapping edges' : ''}, seed ${sim.settings.seed}` +
     (playing ? '' : ' · paused');
 }
@@ -219,6 +240,7 @@ function reset() {
       ...sim.settings,
       population: Number($('population').value),
       layout: $('layout').value,
+      colonies: Number($('colonies').value),
       wrap: $('wrap').checked,
     }),
     sim.foods,
@@ -244,6 +266,7 @@ $('population').addEventListener('input', (e) => {
   markCustom();
 });
 $('layout').addEventListener('change', markCustom);
+$('colonies').addEventListener('change', markCustom);
 $('wrap').addEventListener('change', markCustom);
 
 $('food').addEventListener('change', (e) => {

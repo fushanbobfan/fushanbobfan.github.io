@@ -4,7 +4,7 @@ import { PRESETS, DEFAULT_PRESET, presetSettings } from '../src/presets.js';
 import { createSim, stepSim, buildMaze, DEFAULTS } from '../src/sim.js';
 import { FOOD_LAYOUTS, placeFoodLayout } from '../src/food.js';
 import { LAYOUTS } from '../src/spawn.js';
-import { analyse, routeContrast } from '../src/network.js';
+import { analyse, routeContrast, combineLayers, territories, threshold } from '../src/network.js';
 
 function run(name) {
   const sim = createSim(presetSettings(name));
@@ -15,7 +15,7 @@ function run(name) {
 
 function coverageAt(sim, step) {
   stepSim(sim, step - sim.steps);
-  return analyse(sim.trail, sim.foods, sim.settings.wrap);
+  return analyse(combineLayers(sim.layers), sim.foods, sim.settings.wrap);
 }
 
 test('every preset names a known layout and food layout', () => {
@@ -66,4 +66,35 @@ test('maze: the shortest route carries several times the trail of the dead ends'
   stepSim(sim, 1500);
   const contrast = routeContrast(sim.trail, sim.maze);
   assert.ok(contrast > 4, `contrast ${contrast}`);
+});
+
+// Mean share of the leading colony's trail in each tube cell: 1 when no
+// tube is shared at all.
+function purity(layers) {
+  const c = combineLayers(layers);
+  const level = threshold(c, 1.5);
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < c.data.length; i++) {
+    if (c.data[i] <= level) continue;
+    let top = 0;
+    for (const l of layers) top = Math.max(top, l.data[i]);
+    sum += top / c.data[i];
+    n++;
+  }
+  return sum / n;
+}
+
+test('rivals: an even split and almost no shared tubes', () => {
+  const sim = run('rivals');
+  stepSim(sim, 600);
+  for (const share of territories(sim.layers)) assert.ok(share > 0.35 && share < 0.65, `share ${share}`);
+  assert.ok(purity(sim.layers) > 0.95);
+});
+
+test('stripes: about a third each, in dozens of pieces', () => {
+  const sim = run('stripes');
+  const r = coverageAt(sim, 1000);
+  for (const share of territories(sim.layers)) assert.ok(share > 0.25 && share < 0.42, `share ${share}`);
+  assert.ok(r.pieces >= 24, `${r.pieces} pieces`);
 });

@@ -54,3 +54,9 @@ test('maze recipes are clamped to sensible sizes', () => {
   assert.deepEqual(maze, { seed: 1, corridor: 2, thickness: 20, loops: 1 });
   assert.equal(decodeState('#mz=1.2').maze, null);
 });
+
+test('colonies and repel travel in the link', () => {
+  const settings = normalizeSettings({ colonies: 3, repel: 0.5 });
+  assert.equal(encodeState({ settings }), 'col=3&rp=0.5');
+  assert.deepEqual(decodeState('#col=3&rp=0.5').settings, settings);
+});

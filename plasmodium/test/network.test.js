@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { threshold, labelTubes, analyse, routeContrast } from '../src/network.js';
+import { threshold, labelTubes, analyse, routeContrast, combineLayers, territories } from '../src/network.js';
 import { createTrail } from '../src/trail.js';
 import { createSim, stepSim } from '../src/sim.js';
 import { placeFoodLayout } from '../src/food.js';
@@ -78,4 +78,27 @@ test('route contrast compares route rooms with the rest', () => {
   t.data.fill(0);
   assert.equal(routeContrast(t, maze), null);
   assert.equal(routeContrast(t, { ...maze, route: [[0, 0], [0, 1], [0, 2]] }), null);
+});
+
+test('combined layers add up cell by cell', () => {
+  const a = createTrail(3, 1);
+  const b = createTrail(3, 1);
+  a.data.set([1, 2, 3]);
+  b.data.set([4, 0, 1]);
+  assert.deepEqual([...combineLayers([a, b]).data], [5, 2, 4]);
+  assert.equal(combineLayers([a]), a);
+  const reuse = { width: 3, height: 1, data: new Float32Array(3) };
+  assert.equal(combineLayers([a, b], reuse), reuse);
+});
+
+test('territory goes to the colony with the most trail in each tube cell', () => {
+  const a = createTrail(4, 1);
+  const b = createTrail(4, 1);
+  a.data.set([10, 10, 0, 0]);
+  b.data.set([0, 2, 0, 12]);
+  // Combined [10, 12, 0, 12], mean 8.5: three tube cells, two of them a's.
+  const shares = territories([a, b], 1);
+  assert.ok(Math.abs(shares[0] - 2 / 3) < 1e-9);
+  assert.ok(Math.abs(shares[1] - 1 / 3) < 1e-9);
+  assert.deepEqual(territories([createTrail(2, 2), createTrail(2, 2)]), [0, 0]);
 });

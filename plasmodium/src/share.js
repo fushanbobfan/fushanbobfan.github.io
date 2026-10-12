@@ -17,6 +17,8 @@ const KEYS = {
   dec: 'decay',
   sp: 'spread',
   fs: 'foodStrength',
+  col: 'colonies',
+  rp: 'repel',
   wr: 'wrap',
   s: 'seed',
 };

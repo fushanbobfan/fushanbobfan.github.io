@@ -199,6 +199,22 @@ button:hover {
   text-align: right;
 }
 
+.share {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+}
+
+.share::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--swatch);
+  border: 1px solid var(--border);
+}
+
 .keys {
   color: var(--muted);
   font-size: 0.85rem;

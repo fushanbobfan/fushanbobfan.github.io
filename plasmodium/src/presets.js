@@ -70,6 +70,25 @@ export const PRESETS = {
     food: 'none',
     maze: { corridor: 16, thickness: 4, loops: 0 },
   },
+  rivals: {
+    label: 'Rival colonies',
+    note:
+      'Two colonies, each following its own trail and shying away from the other. They split the ' +
+      'dish about evenly and almost never share a tube.',
+    settings: { colonies: 2, repel: 1, sensorAngle: 22.5, turnAngle: 45, sensorDistance: 9, layout: 'scatter' },
+    food: 'none',
+  },
+  stripes: {
+    label: 'Three colonies, five flakes',
+    note:
+      'Three colonies around five food sources in a closed dish wind into interleaved stripes. Each ' +
+      'holds about a third of the tubes, and the dish breaks into dozens of separate pieces.',
+    settings: {
+      colonies: 3, repel: 1, sensorAngle: 45, turnAngle: 22.5, sensorDistance: 15, foodStrength: 20,
+      population: 11000, wrap: false, layout: 'scatter',
+    },
+    food: 'pentagon',
+  },
 };
 
 export const DEFAULT_PRESET = 'oats';
