@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PALETTES, hexToRgb, buildLut, paintTrail, toneScale } from '../src/render.js';
+import { PALETTES, hexToRgb, buildLut, paintTrail, toneScale, paintColonies } from '../src/render.js';
 import { createTrail, setWall } from '../src/trail.js';
 
 test('hex colours parse to bytes', () => {
@@ -57,4 +57,27 @@ test('walls are painted flat in the wall colour', () => {
   paintTrail(t, px, buildLut(['#000000', '#ffffff']), 1, hexToRgb(PALETTES.slime.wall));
   assert.deepEqual([...px.slice(4, 8)], [...hexToRgb(PALETTES.slime.wall), 255]);
   for (const p of Object.values(PALETTES)) assert.match(p.wall, /^#[0-9a-f]{6}$/);
+});
+
+test('each palette names three distinct colony colours', () => {
+  for (const p of Object.values(PALETTES)) {
+    assert.equal(new Set(p.colonies).size, 3);
+    for (const c of p.colonies) assert.match(c, /^#[0-9a-f]{6}$/);
+  }
+});
+
+test('colonies tint the background towards their own colour', () => {
+  // Thick tubes on a mostly empty dish, as in a running simulation.
+  const a = createTrail(40, 1);
+  const b = createTrail(40, 1);
+  a.data[1] = 50;
+  b.data[2] = 50;
+  const px = new Uint8ClampedArray(160);
+  const pal = PALETTES.slime;
+  paintColonies([a, b], px, pal, 1);
+  assert.deepEqual([...px.slice(0, 3)], hexToRgb(pal.stops[0]));
+  const [c0, c1] = pal.colonies.map(hexToRgb);
+  const near = (got, want) => got.every((v, i) => Math.abs(v - want[i]) < 40);
+  assert.ok(near([...px.slice(4, 7)], c0), `${[...px.slice(4, 7)]}`);
+  assert.ok(near([...px.slice(8, 11)], c1), `${[...px.slice(8, 11)]}`);
 });
