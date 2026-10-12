@@ -323,12 +323,24 @@ function dishPoint(e) {
   };
 }
 
+let lastBrush = null;
+
+// Stamps along the segment from the previous pointer position, one cell
+// apart, so a quick drag leaves a solid wall instead of a row of dots.
 function brushAt(e) {
   const p = dishPoint(e);
+  const from = lastBrush || p;
+  const steps = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y)));
   const tool = $('tool').value;
-  if (tool === 'attract') {
-    stamp(sim.trail, p.x, p.y, 3, 40, sim.settings.wrap);
-  } else if (paintWalls(sim.trail, p.x, p.y, 2.5, tool === 'wall')) {
+  let changed = 0;
+  for (let k = lastBrush ? 1 : 0; k <= steps; k++) {
+    const x = from.x + ((p.x - from.x) * k) / steps;
+    const y = from.y + ((p.y - from.y) * k) / steps;
+    if (tool === 'attract') stamp(sim.trail, x, y, 3, 40 / steps, sim.settings.wrap);
+    else changed += paintWalls(sim.trail, x, y, 2.5, tool === 'wall');
+  }
+  lastBrush = p;
+  if (changed) {
     sim.maze = null;
     markCustom();
     writeHash();
@@ -339,6 +351,7 @@ function brushAt(e) {
 canvas.addEventListener('pointerdown', (e) => {
   if ($('tool').value !== 'food') {
     painting = true;
+    lastBrush = null;
     canvas.setPointerCapture(e.pointerId);
     brushAt(e);
     return;
