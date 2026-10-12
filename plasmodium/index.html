@@ -22,10 +22,7 @@
       <section class="stage">
         <canvas id="dish" role="img" aria-label="Trail laid by the particles"></canvas>
         <p class="status" id="status" aria-live="polite"></p>
-        <p class="hint" id="hint">
-          Click the dish to drop food, click a food source to take it away. With the brush on, drag to paint
-          attractant.
-        </p>
+        <p class="hint" id="hint"></p>
       </section>
 
       <aside class="panel">
@@ -73,6 +70,25 @@
         </fieldset>
 
         <fieldset>
+          <legend>Walls</legend>
+          <label for="tool">Clicking the dish</label>
+          <select id="tool">
+            <option value="food">Drops or removes food</option>
+            <option value="attract">Paints attractant</option>
+            <option value="wall">Builds walls</option>
+            <option value="erase">Erases walls</option>
+          </select>
+          <label for="corridor">Maze corridors <output for="corridor"></output></label>
+          <input id="corridor" type="range" min="6" max="30" step="1" value="16" data-unit=" cells" />
+          <label class="check"><input id="loops" type="checkbox" /> Knock extra passages through</label>
+          <div class="row buttons">
+            <button type="button" id="maze">Carve a maze</button>
+            <button type="button" id="clear-walls">Clear walls</button>
+          </div>
+          <p class="help">A maze puts food in its first and last rooms and restarts the particles.</p>
+        </fieldset>
+
+        <fieldset>
           <legend>Run</legend>
           <div class="row buttons">
             <button type="button" id="play" class="primary">Pause</button>
@@ -91,6 +107,7 @@
             <dt>Tube cover</dt><dd id="r-cover">–</dd>
             <dt>Separate pieces</dt><dd id="r-pieces">–</dd>
             <dt>Food linked</dt><dd id="r-food">–</dd>
+            <dt id="r-route-label" hidden>Route vs dead ends</dt><dd id="r-route" hidden>–</dd>
           </dl>
           <p class="help">
             A cell counts as tube when its trail is above 1.5 times the dish average.
@@ -103,7 +120,6 @@
           <select id="palette"></select>
           <label for="exposure">Exposure <output for="exposure"></output></label>
           <input id="exposure" type="range" min="0.25" max="4" step="0.25" />
-          <label class="check"><input id="brush" type="checkbox" /> Brush paints attractant</label>
           <div class="row buttons">
             <button type="button" id="png">Save PNG</button>
             <button type="button" id="copy">Copy link</button>

@@ -1,13 +1,14 @@
 // The page: wires the simulation to the canvas and the controls.
 // Everything else in src/ is plain logic covered by the Node tests.
 
-import { createSim, stepSim, resetSim, retune, normalizeSettings } from './sim.js';
+import { createSim, stepSim, resetSim, retune, normalizeSettings, buildMaze } from './sim.js';
 import { PRESETS, DEFAULT_PRESET, presetSettings } from './presets.js';
 import { LAYOUTS } from './spawn.js';
 import { FOOD_LAYOUTS, placeFoodLayout, addFood, removeFoodNear, FOOD_RADIUS } from './food.js';
-import { PALETTES, buildLut, paintTrail } from './render.js';
-import { analyse } from './network.js';
-import { stamp } from './trail.js';
+import { PALETTES, buildLut, paintTrail, hexToRgb } from './render.js';
+import { analyse, routeContrast } from './network.js';
+import { stamp, clearWalls, setWall } from './trail.js';
+import { paintWalls, encodeWalls, decodeWalls } from './walls.js';
 import { encodeState, decodeState } from './share.js';
 import { randomSeed } from './rng.js';
 
@@ -32,6 +33,7 @@ const DISPLAY_SCALE = 3;
 let sim;
 let image;
 let lut = buildLut(PALETTES.slime.stops);
+let wallRgb = hexToRgb(PALETTES.slime.wall);
 let view = { palette: 'slime', exposure: 1 };
 let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 let speed = 2;
@@ -84,9 +86,27 @@ function syncControls() {
   $('play').textContent = playing ? 'Pause' : 'Play';
 }
 
-function build(settings, foods) {
+const HINTS = {
+  food: 'Click the dish to drop food; click a food source to take it away.',
+  attract: 'Drag across the dish to paint attractant and lure the particles.',
+  wall: 'Drag across the dish to build walls. Particles turn away from them and no trail crosses them.',
+  erase: 'Drag across the dish to erase walls.',
+};
+
+// walls: { maze } to carve a maze from its recipe, { mask } to copy a wall
+// mask of the same size, or { code } for a run-length code from a link.
+// foods: null keeps whatever the maze placed.
+function build(settings, foods, walls = null) {
   sim = createSim(settings);
-  sim.foods = foods.map((f) => ({ ...f }));
+  if (walls && walls.maze) {
+    buildMaze(sim, walls.maze);
+  } else if (walls && walls.mask && walls.mask.length === sim.trail.walls.length) {
+    walls.mask.forEach((v, i) => v && setWall(sim.trail, i, true));
+    resetSim(sim);
+  } else if (walls && walls.code && decodeWalls(sim.trail, walls.code)) {
+    resetSim(sim);
+  }
+  if (foods) sim.foods = foods.map((f) => ({ ...f }));
   const { width, height } = sim.settings;
   offscreen.width = width;
   offscreen.height = height;
@@ -101,7 +121,13 @@ function loadPreset(name) {
   const p = PRESETS[name] || PRESETS[DEFAULT_PRESET];
   const settings = { ...presetSettings(name), seed: sim ? sim.settings.seed : 1 };
   const s = normalizeSettings(settings);
-  build(s, placeFoodLayout(p.food, s.width, s.height));
+  if (p.maze) {
+    build(s, null, { maze: { ...p.maze, seed: s.seed } });
+    $('corridor').value = p.maze.corridor;
+    $('loops').checked = p.maze.loops > 0;
+  } else {
+    build(s, placeFoodLayout(p.food, s.width, s.height));
+  }
   $('preset').value = name;
   $('food').value = p.food;
   $('preset-note').textContent = p.note;
@@ -115,7 +141,7 @@ function markCustom() {
 }
 
 function render(full) {
-  paintTrail(sim.trail, image.data, lut, view.exposure);
+  paintTrail(sim.trail, image.data, lut, view.exposure, wallRgb);
   offCtx.putImageData(image, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
@@ -138,17 +164,36 @@ function updateReadout() {
   $('r-cover').textContent = sim.steps ? `${(r.coverage * 100).toFixed(1)}%` : '–';
   $('r-pieces').textContent = sim.steps ? String(r.pieces) : '–';
   $('r-food').textContent = r.foodTotal ? `${r.foodLinked} of ${r.foodTotal} on one piece` : 'no food';
+  const contrast = sim.maze && sim.steps ? routeContrast(sim.trail, sim.maze) : null;
+  $('r-route-label').hidden = !sim.maze;
+  $('r-route').hidden = !sim.maze;
+  $('r-route').textContent = contrast === null ? '–' : `${contrast.toFixed(1)}× the trail`;
   $('status').textContent =
     `${sim.agents.count.toLocaleString('en-US')} particles on a ${sim.settings.width} × ${sim.settings.height} dish` +
     `${sim.settings.wrap ? ' with wrapping edges' : ''}, seed ${sim.settings.seed}` +
     (playing ? '' : ' · paused');
 }
 
+function shareState() {
+  return {
+    settings: sim.settings,
+    foods: sim.foods,
+    view,
+    maze: sim.maze ? sim.maze.spec : null,
+    walls: sim.maze ? '' : encodeWalls(sim.trail),
+  };
+}
+
+function currentWalls() {
+  if (sim.maze) return { maze: sim.maze.spec };
+  return sim.trail.wallCount ? { mask: Uint8Array.from(sim.trail.walls) } : null;
+}
+
 let hashTimer = 0;
 function writeHash() {
   clearTimeout(hashTimer);
   hashTimer = setTimeout(() => {
-    const hash = encodeState({ settings: sim.settings, foods: sim.foods, view });
+    const hash = encodeState(shareState());
     history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
   }, 250);
 }
@@ -177,6 +222,7 @@ function reset() {
       wrap: $('wrap').checked,
     }),
     sim.foods,
+    currentWalls(),
   );
   render(true);
   writeHash();
@@ -217,6 +263,7 @@ $('preset').addEventListener('change', (e) => {
 $('palette').addEventListener('change', (e) => {
   view.palette = e.target.value;
   lut = buildLut(PALETTES[view.palette].stops);
+  wallRgb = hexToRgb(PALETTES[view.palette].wall);
   render(true);
   writeHash();
 });
@@ -256,7 +303,7 @@ $('png').addEventListener('click', () => {
 });
 
 $('copy').addEventListener('click', async () => {
-  const hash = encodeState({ settings: sim.settings, foods: sim.foods, view });
+  const hash = encodeState(shareState());
   const url = `${location.origin}${location.pathname}${hash ? `#${hash}` : ''}`;
   try {
     await navigator.clipboard.writeText(url);
@@ -278,12 +325,19 @@ function dishPoint(e) {
 
 function brushAt(e) {
   const p = dishPoint(e);
-  stamp(sim.trail, p.x, p.y, 3, 40, sim.settings.wrap);
+  const tool = $('tool').value;
+  if (tool === 'attract') {
+    stamp(sim.trail, p.x, p.y, 3, 40, sim.settings.wrap);
+  } else if (paintWalls(sim.trail, p.x, p.y, 2.5, tool === 'wall')) {
+    sim.maze = null;
+    markCustom();
+    writeHash();
+  }
   if (!playing) render(true);
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  if ($('brush').checked) {
+  if ($('tool').value !== 'food') {
     painting = true;
     canvas.setPointerCapture(e.pointerId);
     brushAt(e);
@@ -323,12 +377,40 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+$('tool').addEventListener('change', (e) => {
+  $('hint').textContent = HINTS[e.target.value];
+});
+
+$('corridor').addEventListener('input', (e) => showOutput(e.target));
+
+$('maze').addEventListener('click', () => {
+  const spec = { seed: randomSeed(), corridor: Number($('corridor').value), thickness: 4, loops: $('loops').checked ? 0.15 : 0 };
+  if (sim.settings.wrap) {
+    $('wrap').checked = false;
+    build(normalizeSettings({ ...sim.settings, wrap: false }), null, { maze: spec });
+  } else {
+    buildMaze(sim, spec);
+  }
+  $('food').value = '';
+  markCustom();
+  render(true);
+  writeHash();
+});
+
+$('clear-walls').addEventListener('click', () => {
+  clearWalls(sim.trail);
+  sim.maze = null;
+  markCustom();
+  render(true);
+  writeHash();
+});
+
 // Start: a share link if there is one, the default preset otherwise.
 
 if (location.hash.length > 1) {
   const state = decodeState(location.hash);
   view = state.view;
-  build(state.settings, state.foods);
+  build(state.settings, state.foods, { maze: state.maze, code: state.walls });
   $('food').value = '';
   markCustom();
   syncControls();
@@ -337,5 +419,8 @@ if (location.hash.length > 1) {
   loadPreset(DEFAULT_PRESET);
 }
 lut = buildLut(PALETTES[view.palette].stops);
+wallRgb = hexToRgb(PALETTES[view.palette].wall);
+$('hint').textContent = HINTS[$('tool').value];
+showOutput($('corridor'));
 render(true);
 requestAnimationFrame(tick);
