@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>plasmodium · slime mould network lab</title>
+    <meta name="description" content="Thousands of particles sense, turn, step and leave a trail, and grow into the transport networks a slime mould builds between food." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>plasmodium</h1>
+      <p class="subtitle">
+        Each particle smells the trail at three points ahead, turns towards the strongest, steps forward and
+        leaves a little trail of its own. The trail spreads and fades. Together they grow a slime mould's
+        network of tubes.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <canvas id="dish" role="img" aria-label="Trail laid by the particles"></canvas>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint" id="hint">
+          Click the dish to drop food, click a food source to take it away. With the brush on, drag to paint
+          attractant.
+        </p>
+      </section>
+
+      <aside class="panel">
+        <fieldset>
+          <legend>Start from</legend>
+          <label for="preset" class="sr-only">Preset</label>
+          <select id="preset"></select>
+          <p class="note" id="preset-note"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Particles</legend>
+          <label for="sensorAngle">Sensor angle <output for="sensorAngle"></output></label>
+          <input id="sensorAngle" type="range" min="0" max="120" step="2.5" data-unit="°" />
+          <label for="turnAngle">Turn angle <output for="turnAngle"></output></label>
+          <input id="turnAngle" type="range" min="0" max="120" step="2.5" data-unit="°" />
+          <label for="sensorDistance">Sensor distance <output for="sensorDistance"></output></label>
+          <input id="sensorDistance" type="range" min="1" max="40" step="1" data-unit=" cells" />
+          <label for="stepSize">Step length <output for="stepSize"></output></label>
+          <input id="stepSize" type="range" min="0.5" max="3" step="0.1" data-unit=" cells" />
+          <label for="depositAmount">Trail laid per step <output for="depositAmount"></output></label>
+          <input id="depositAmount" type="range" min="0" max="20" step="0.5" />
+        </fieldset>
+
+        <fieldset>
+          <legend>Trail</legend>
+          <label for="decay">Fades per step <output for="decay"></output></label>
+          <input id="decay" type="range" min="0.01" max="0.5" step="0.01" data-unit="" data-percent />
+          <label for="spread">Spreads per step <output for="spread"></output></label>
+          <input id="spread" type="range" min="0" max="1" step="0.05" data-percent />
+          <label for="foodStrength">Food strength <output for="foodStrength"></output></label>
+          <input id="foodStrength" type="range" min="0" max="50" step="1" />
+        </fieldset>
+
+        <fieldset>
+          <legend>Dish</legend>
+          <label for="layout">Particles start</label>
+          <select id="layout"></select>
+          <label for="population">Particles <output for="population"></output></label>
+          <input id="population" type="range" min="1000" max="60000" step="1000" />
+          <label for="food">Food</label>
+          <select id="food"></select>
+          <label class="check"><input id="wrap" type="checkbox" /> Edges wrap around</label>
+          <p class="help">Starting layout, particle count and edges apply on Reset.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Run</legend>
+          <div class="row buttons">
+            <button type="button" id="play" class="primary">Pause</button>
+            <button type="button" id="step">Step</button>
+            <button type="button" id="reset">Reset</button>
+            <button type="button" id="reseed">New seed</button>
+          </div>
+          <label for="speed">Steps per frame <output for="speed"></output></label>
+          <input id="speed" type="range" min="1" max="8" step="1" />
+        </fieldset>
+
+        <fieldset>
+          <legend>Network</legend>
+          <dl class="readout">
+            <dt>Steps</dt><dd id="r-steps">0</dd>
+            <dt>Tube cover</dt><dd id="r-cover">–</dd>
+            <dt>Separate pieces</dt><dd id="r-pieces">–</dd>
+            <dt>Food linked</dt><dd id="r-food">–</dd>
+          </dl>
+          <p class="help">
+            A cell counts as tube when its trail is above 1.5 times the dish average.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>View</legend>
+          <label for="palette">Colours</label>
+          <select id="palette"></select>
+          <label for="exposure">Exposure <output for="exposure"></output></label>
+          <input id="exposure" type="range" min="0.25" max="4" step="0.25" />
+          <label class="check"><input id="brush" type="checkbox" /> Brush paints attractant</label>
+          <div class="row buttons">
+            <button type="button" id="png">Save PNG</button>
+            <button type="button" id="copy">Copy link</button>
+          </div>
+        </fieldset>
+
+        <p class="keys">
+          Keys: <kbd>Space</kbd> play or pause · <kbd>S</kbd> step · <kbd>R</kbd> reset · <kbd>N</kbd> new seed
+        </p>
+      </aside>
+    </main>
+
+    <footer>
+      <a href="https://github.com/fushanbobfan/plasmodium">Source on GitHub</a> · MIT licence
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
