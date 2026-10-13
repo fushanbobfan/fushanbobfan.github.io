@@ -66,3 +66,21 @@ test('queries outside the picture still find the nearest dot', () => {
 test('no dots labels every pixel -1', () => {
   assert.deepEqual([...labelPixels(new Float64Array(0), 0, 3, 2)], [-1, -1, -1, -1, -1, -1]);
 });
+
+test('a mask skips blank pixels and leaves the rest exact', () => {
+  const W = 40;
+  const H = 30;
+  const p = scatter(31, 25, W, H);
+  const mask = new Float32Array(W * H);
+  for (let i = 0; i < mask.length; i++) mask[i] = i % 3 === 0 ? 0 : 0.5;
+  const labels = labelPixels(p, 25, W, H, undefined, mask);
+  for (let i = 0; i < W * H; i++) {
+    const px = i % W;
+    const py = Math.floor(i / W);
+    if (mask[i] === 0) assert.equal(labels[i], -1);
+    else {
+      const k = labels[i];
+      assert.equal((p[2 * k] - px - 0.5) ** 2 + (p[2 * k + 1] - py - 0.5) ** 2, brute(p, 25, px + 0.5, py + 0.5).bestD2);
+    }
+  }
+});

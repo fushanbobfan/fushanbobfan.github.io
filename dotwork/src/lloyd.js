@@ -63,7 +63,7 @@ export function gatherCells(field, points, count, labels, stats) {
 // One relaxation round. Dots whose cell holds no ink stay where they are.
 // Returns the mean and largest move in pixels so callers can watch it settle.
 export function relax(field, points, count, scratch = {}) {
-  const labels = labelPixels(points, count, field.width, field.height, scratch.labels);
+  const labels = labelPixels(points, count, field.width, field.height, scratch.labels, field.data);
   const stats = gatherCells(field, points, count, labels, scratch.stats);
   let total = 0;
   let largest = 0;

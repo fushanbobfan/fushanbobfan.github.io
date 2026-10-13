@@ -62,8 +62,10 @@ export function nearest(buckets, points, x, y) {
   return best;
 }
 
-// Label every pixel of a width x height grid with its nearest dot.
-export function labelPixels(points, count, width, height, out) {
+// Label every pixel of a width x height grid with its nearest dot. With a
+// mask, pixels where the mask is zero are skipped and labelled -1: blank paper
+// adds nothing to any centroid, and it is where searches run longest.
+export function labelPixels(points, count, width, height, out, mask) {
   const labels = out && out.length === width * height ? out : new Int32Array(width * height);
   if (count === 0) {
     labels.fill(-1);
@@ -72,7 +74,8 @@ export function labelPixels(points, count, width, height, out) {
   const buckets = createBuckets(points, count, width, height);
   for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
-      labels[py * width + px] = nearest(buckets, points, px + 0.5, py + 0.5);
+      const i = py * width + px;
+      labels[i] = mask && !(mask[i] > 0) ? -1 : nearest(buckets, points, px + 0.5, py + 0.5);
     }
   }
   return labels;
