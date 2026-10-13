@@ -42,7 +42,7 @@ export function colourGroups(rgb, count, bits = 5) {
     const key = ((rgb[3 * i] >> shift) << (2 * bits)) | ((rgb[3 * i + 1] >> shift) << bits) | (rgb[3 * i + 2] >> shift);
     let g = groups.get(key);
     if (!g) {
-      const mid = (v) => ((v >> shift) << shift) + (1 << shift) / 2;
+      const mid = (v) => (shift ? ((v >> shift) << shift) + (1 << shift) / 2 : v);
       g = { colour: toHex(mid(rgb[3 * i]), mid(rgb[3 * i + 1]), mid(rgb[3 * i + 2])), dots: [] };
       groups.set(key, g);
     }
