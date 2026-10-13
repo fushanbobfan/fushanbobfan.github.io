@@ -11,6 +11,8 @@ export const PALETTES = {
   chalk: { label: 'Chalk on slate', ink: '#eceae4', paper: '#1f2428' },
   sepia: { label: 'Sepia', ink: '#4a2c17', paper: '#efe0c4' },
   blueprint: { label: 'Blueprint', ink: '#e8f1ff', paper: '#1d4f8f' },
+  // Dots take the picture's colours; grey pictures fall back to `ink`.
+  picture: { label: "Picture's own colours", ink: '#1d1b18', paper: '#fbf9f4', fromPicture: true },
 };
 
 const NUMBERS = {

@@ -56,6 +56,13 @@ ink the picture's mean density. *Grows with the ink in its cell* makes each
 dot's area equal the ink its cell holds, so the inked share of the page
 matches the picture's (apart from overlap) and dark regions read darker.
 
+**Colour.** Uploaded images and the two colour pictures keep their colours
+beside the ink density. With *Picture's own colours* each dot takes the
+ink-weighted mean colour of its cell, so where the dots go is still decided
+by darkness alone, but each dot carries the hue of the patch it stands for.
+The canvas fills dots in groups of similar colour; SVG export groups them by
+exact colour.
+
 **One line.** The *One line* view threads a closed tour through the dots, in
 the spirit of Kaplan and Bosch's TSP art (Bridges 2005). It starts from a
 greedy nearest-neighbour walk and then applies 2-opt moves from each dot's
@@ -68,11 +75,11 @@ the length in page widths.
 
 | Control | What it does |
 | --- | --- |
-| Picture | Five built-in pictures drawn from formulas, or your own image (button or drag and drop). Your image stays in the page. |
+| Picture | Seven built-in pictures drawn from formulas (two in colour), or your own image (button or drag and drop). Your image stays in the page. |
 | Working size | Long side of the grid the dots live on. Larger keeps finer detail and runs slower. |
 | Tone | Brightness, contrast, gamma, a blank-paper level and invert. Changes keep the current dots and relax them onto the new tone. |
 | Dots | How many, how their size is chosen, and a size multiplier. Pause or reseed. |
-| Show | Dots, the Voronoi cells, one line, or the picture itself, in four colour schemes. |
+| Show | Dots, the Voronoi cells, one line, or the picture itself, in four colour schemes or the picture's own colours. |
 | Keep | Save SVG (dots as circles, or the line as one path), save PNG, or copy a link with the current settings. |
 
 Keys: <kbd>Space</kbd> runs or pauses, <kbd>R</kbd> reseeds, <kbd>L</kbd>
@@ -96,7 +103,8 @@ result.
 | File | Role |
 | --- | --- |
 | `src/density.js` | Ink density fields, image reading, tone controls, resampling |
-| `src/sources.js` | Built-in pictures drawn from formulas |
+| `src/sources.js` | Built-in pictures drawn from formulas, grey and colour |
+| `src/colour.js` | Dot colours from the picture and colour grouping |
 | `src/voronoi.js` | Bucket grid and nearest-dot labelling of pixels |
 | `src/lloyd.js` | Seeding, cell sums and one relaxation round |
 | `src/dots.js` | Dot radii and page coverage |

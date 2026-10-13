@@ -28,3 +28,11 @@ test('the tour is one closed path in tour order', () => {
 test('an empty tour still makes a valid page', () => {
   assert.doesNotMatch(tourSvg(pts, new Int32Array(0), 10, 8), /<path/);
 });
+
+test('coloured dots are grouped by their exact colour', () => {
+  const colours = new Uint8ClampedArray([255, 0, 0, 0, 128, 255, 255, 0, 0]);
+  const svg = dotsSvg(pts, new Float64Array([1, 1, 1]), 3, 10, 8, { colours });
+  assert.equal((svg.match(/<g fill=/g) || []).length, 2);
+  assert.match(svg, /<g fill="#ff0000"><circle cx="1" cy="2" r="1"\/><circle cx="5" cy="6" r="1"\/><\/g>/);
+  assert.match(svg, /<g fill="#0080ff">/);
+});

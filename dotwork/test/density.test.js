@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createField, fieldFromRgba, adjustField, fieldMean, resizeField, fitSize } from '../src/density.js';
+import { createField, fieldFromRgba, colourFromRgba, adjustField, fieldMean, resizeField, fitSize } from '../src/density.js';
 
 test('black reads as full ink, white and transparent as paper', () => {
   const rgba = new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 0, 0, 128, 128, 128, 255]);
@@ -47,4 +47,11 @@ test('box resampling keeps the mean of an evenly divided field', () => {
 test('fitSize keeps the aspect ratio and never upscales', () => {
   assert.deepEqual(fitSize(2000, 1000, 500), { width: 500, height: 250 });
   assert.deepEqual(fitSize(300, 200, 500), { width: 300, height: 200 });
+});
+
+test('colours are kept per pixel and composited over white', () => {
+  const rgba = new Uint8ClampedArray([200, 10, 30, 255, 0, 0, 0, 0, 0, 0, 0, 128]);
+  const c = colourFromRgba(rgba, 3, 1);
+  assert.deepEqual([...c.rgb.subarray(0, 6)], [200, 10, 30, 255, 255, 255]);
+  assert.deepEqual([...c.rgb.subarray(6)], [127, 127, 127]);
 });

@@ -1,6 +1,8 @@
 // Vector export: dots as circles or the tour as one path, in the picture's
 // pixel units scaled by `scale`, ready for a pen plotter or a print.
 
+import { colourGroups } from './colour.js';
+
 const num = (v) => {
   const s = (Math.round(v * 100) / 100).toString();
   return s === '-0' ? '0' : s;
@@ -18,14 +20,20 @@ function frame(width, height, scale, paper, body) {
   );
 }
 
-export function dotsSvg(points, radii, count, width, height, { scale = 1, ink = '#000', paper = '#fff' } = {}) {
-  const parts = [`<g fill="${ink}">`];
-  for (let i = 0; i < count; i++) {
-    const r = radii[i] * scale;
-    if (r <= 0) continue;
-    parts.push(`<circle cx="${num(points[2 * i] * scale)}" cy="${num(points[2 * i + 1] * scale)}" r="${num(r)}"/>`);
+// With `colours` (RGB per dot), circles are grouped by exact colour, one <g>
+// per colour, instead of all taking the ink colour.
+export function dotsSvg(points, radii, count, width, height, { scale = 1, ink = '#000', paper = '#fff', colours = null } = {}) {
+  const groups = colours ? colourGroups(colours, count, 8) : [{ colour: ink, dots: [...Array(count).keys()] }];
+  const parts = [];
+  for (const g of groups) {
+    parts.push(`<g fill="${g.colour}">`);
+    for (const i of g.dots) {
+      const r = radii[i] * scale;
+      if (r <= 0) continue;
+      parts.push(`<circle cx="${num(points[2 * i] * scale)}" cy="${num(points[2 * i + 1] * scale)}" r="${num(r)}"/>`);
+    }
+    parts.push('</g>');
   }
-  parts.push('</g>');
   return frame(width, height, scale, paper, parts.join(''));
 }
 
