@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SOURCE_IDS, sourceInfo, drawSource } from '../src/sources.js';
+import { SOURCE_IDS, sourceInfo, drawSource, paintSource } from '../src/sources.js';
 import { fieldMean } from '../src/density.js';
 
 test('every built-in picture has a label, a note and values in [0, 1]', () => {
@@ -42,4 +42,29 @@ test('points inside the Mandelbrot set are full ink', () => {
 test('an unknown picture is refused', () => {
   assert.throws(() => drawSource('nope', 10, 10));
   assert.throws(() => sourceInfo('nope'));
+});
+
+test('colour pictures carry colours whose darkness is their ink', () => {
+  for (const id of ['sunset', 'wheel']) {
+    const { field, colour } = paintSource(id, 50, 40);
+    assert.equal(colour.rgb.length, 3 * 50 * 40);
+    for (let i = 0; i < 50 * 40; i += 7) {
+      const [r, g, b] = colour.rgb.subarray(3 * i, 3 * i + 3);
+      const dark = 1 - (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      assert.ok(Math.abs(dark - field.data[i]) < 0.01, `${id} pixel ${i}`);
+    }
+  }
+});
+
+test('grey pictures have no colour layer', () => {
+  assert.equal(paintSource('sphere', 10, 10).colour, null);
+});
+
+test('the colour wheel is saturated at the rim and white outside', () => {
+  const { colour } = paintSource('wheel', 101, 101);
+  const at = (x, y) => [...colour.rgb.subarray(3 * (y * 101 + x), 3 * (y * 101 + x) + 3)];
+  assert.deepEqual(at(0, 0), [255, 255, 255]);
+  // Straight right of centre, near the rim: hue zero, red.
+  const [r, g, b] = at(94, 50);
+  assert.ok(r > 200 && g < 60 && b < 60, `${r},${g},${b}`);
 });
