@@ -19,6 +19,19 @@ export function fieldFromRgba(rgba, width, height) {
   return field;
 }
 
+// The picture's own colours, composited over white paper, one RGB triple per
+// pixel. Dots can take their colour from this while density decides where
+// they go.
+export function colourFromRgba(rgba, width, height) {
+  const n = width * height;
+  const rgb = new Uint8ClampedArray(3 * n);
+  for (let i = 0; i < n; i++) {
+    const a = rgba[4 * i + 3] / 255;
+    for (let c = 0; c < 3; c++) rgb[3 * i + c] = rgba[4 * i + c] * a + 255 * (1 - a);
+  }
+  return { width, height, rgb };
+}
+
 // Tone controls applied before stippling: brightness shifts, contrast scales
 // around mid grey, gamma bends the curve, invert swaps ink and paper. Values
 // below `floor` become exact zero so pale paper stays empty.
