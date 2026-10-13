@@ -39,3 +39,11 @@ test('one palette takes its dot colours from the picture', () => {
   assert.equal(PALETTES.picture.fromPicture, true);
   assert.equal(decodeSettings('palette=picture').palette, 'picture');
 });
+
+test('paper and pen speed are shared and checked', () => {
+  const s = decodeSettings('paper=a3&speed=1000');
+  assert.equal(s.paper, 'a3');
+  assert.equal(s.speed, 200);
+  assert.equal(decodeSettings('paper=tabloid').paper, 'a4');
+  assert.match(encodeSettings({ ...defaults(), paper: 'letter', speed: 25 }), /speed=25.*paper=letter/);
+});

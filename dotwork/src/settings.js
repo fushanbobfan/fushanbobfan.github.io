@@ -4,6 +4,7 @@
 
 import { SOURCE_IDS } from './sources.js';
 import { DOT_MODES } from './dots.js';
+import { PAPERS } from './plot.js';
 
 export const VIEWS = ['dots', 'cells', 'line', 'picture'];
 export const PALETTES = {
@@ -24,6 +25,7 @@ const NUMBERS = {
   floor: { def: 0.02, min: 0, max: 0.5 },
   size: { def: 1, min: 0.2, max: 3 },
   seed: { def: 1, min: 0, max: 4294967295, int: true },
+  speed: { def: 40, min: 5, max: 200, int: true },
 };
 
 const CHOICES = {
@@ -31,6 +33,7 @@ const CHOICES = {
   mode: { def: 'tone', of: DOT_MODES },
   view: { def: 'dots', of: VIEWS },
   palette: { def: 'ink', of: Object.keys(PALETTES) },
+  paper: { def: 'a4', of: Object.keys(PAPERS) },
 };
 
 const FLAGS = { invert: false };
