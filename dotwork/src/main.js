@@ -1,5 +1,6 @@
-import { fieldFromRgba, adjustField, fieldMean, fitSize } from './density.js';
-import { SOURCE_IDS, sourceInfo, drawSource } from './sources.js';
+import { fieldFromRgba, colourFromRgba, adjustField, fieldMean, fitSize } from './density.js';
+import { SOURCE_IDS, sourceInfo, paintSource } from './sources.js';
+import { dotColours, colourGroups } from './colour.js';
 import { seedPoints, relax } from './lloyd.js';
 import { dotRadii, evenRadiusFor } from './dots.js';
 import { nearestNeighbourTour, neighbourLists, twoOpt, tourLength } from './tour.js';
@@ -25,6 +26,7 @@ const FRAME_BUDGET = 14;
 const s = decodeSettings(location.hash.slice(1));
 let upload = null; // an <img> the viewer chose; never leaves the page
 let base = null; // picture before tone controls
+let colour = null; // the picture's own colours, or null for grey pictures
 let field = null;
 let points = new Float64Array(0);
 let count = 0;
@@ -61,9 +63,11 @@ function loadPicture() {
     c.height = height;
     const cx = c.getContext('2d');
     cx.drawImage(upload, 0, 0, width, height);
-    base = fieldFromRgba(cx.getImageData(0, 0, width, height).data, width, height);
+    const rgba = cx.getImageData(0, 0, width, height).data;
+    base = fieldFromRgba(rgba, width, height);
+    colour = colourFromRgba(rgba, width, height);
   } else {
-    base = drawSource(s.picture, width, height);
+    ({ field: base, colour } = paintSource(s.picture, width, height));
   }
   applyTone();
 }
@@ -159,18 +163,30 @@ function drawLayer(rgba) {
   ctx.drawImage(layer, 0, 0, canvas.width, canvas.height);
 }
 
-function drawDots(k, scaleRadius = 1) {
-  ctx.fillStyle = palette().ink;
-  ctx.beginPath();
-  for (let i = 0; i < count; i++) {
-    const r = radii[i] * k * scaleRadius;
-    if (r <= 0) continue;
-    const x = points[2 * i] * k;
-    const y = points[2 * i + 1] * k;
-    ctx.moveTo(x + r, y);
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+// Per-dot RGB when the palette takes the picture's colours and it has some.
+function currentColours() {
+  if (!palette().fromPicture || !colour || !scratch.labels) return null;
+  return dotColours(scratch.labels, field, colour, points, count);
+}
+
+function drawDots(k) {
+  const rgb = currentColours();
+  const groups = rgb ? colourGroups(rgb, count) : [{ colour: palette().ink, dots: null }];
+  for (const g of groups) {
+    ctx.fillStyle = g.colour;
+    ctx.beginPath();
+    const n = g.dots ? g.dots.length : count;
+    for (let j = 0; j < n; j++) {
+      const i = g.dots ? g.dots[j] : j;
+      const r = radii[i] * k;
+      if (r <= 0) continue;
+      const x = points[2 * i] * k;
+      const y = points[2 * i + 1] * k;
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
   }
-  ctx.fill();
 }
 
 function draw() {
@@ -326,6 +342,7 @@ function bind() {
     upload = null;
     $('picture').querySelector('option[value="upload"]')?.remove();
     s.picture = v;
+    if (paintSource(v, 1, 1).colour) s.palette = 'picture';
     syncControls();
     loadPicture();
     reseed();
@@ -416,6 +433,7 @@ function useFile(file) {
   const img = new Image();
   img.onload = () => {
     upload = img;
+    s.palette = 'picture';
     if (!$('picture').querySelector('option[value="upload"]')) $('picture').append(new Option('Your image', 'upload'));
     syncControls();
     loadPicture();
@@ -448,7 +466,7 @@ function saveSvg() {
   const svg =
     s.view === 'line' && line
       ? tourSvg(points, line.tour, field.width, field.height, { scale, ink, paper, stroke: 0.35 * s.size * scale })
-      : dotsSvg(points, radii, count, field.width, field.height, { scale, ink, paper });
+      : dotsSvg(points, radii, count, field.width, field.height, { scale, ink, paper, colours: currentColours() });
   download(`${baseName()}${s.view === 'line' && line ? '-line' : ''}.svg`, new Blob([svg], { type: 'image/svg+xml' }));
 }
 

@@ -34,3 +34,8 @@ test('every palette has two colours and every view a name', () => {
   for (const p of Object.values(PALETTES)) assert.match(p.ink + p.paper, /^#[0-9a-f]{6}#[0-9a-f]{6}$/);
   assert.ok(VIEWS.includes('dots') && VIEWS.includes('line'));
 });
+
+test('one palette takes its dot colours from the picture', () => {
+  assert.equal(PALETTES.picture.fromPicture, true);
+  assert.equal(decodeSettings('palette=picture').palette, 'picture');
+});

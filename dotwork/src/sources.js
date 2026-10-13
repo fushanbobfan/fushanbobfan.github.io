@@ -127,7 +127,7 @@ const SOURCES = {
   },
   sunset: {
     label: 'Sunset (colour)',
-    note: 'Sun over the sea in full colour; choose the picture colours below to see it.',
+    note: 'Sun over the sea in full colour, with a broken reflection on the water.',
     paint: (w, h) => paint(w, h, sunset),
   },
   wheel: {
