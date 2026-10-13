@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>dotwork · stippling lab</title>
+    <meta name="description" content="Thousands of dots settle by weighted Lloyd relaxation until their spacing draws the picture, then one continuous line can visit them all." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>dotwork</h1>
+      <p class="subtitle">
+        Scatter dots where a picture is dark, then move each dot to the ink-weighted centre of the patch of page
+        closest to it, again and again. The dots spread out evenly and their spacing alone draws the picture. When
+        they settle, one unbroken line can be threaded through all of them.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="canvas-wrap" id="drop">
+          <canvas id="page" role="img" aria-label="Stippled picture"></canvas>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <canvas id="settle" class="settle" width="320" height="56" role="img" aria-label="How far the dots moved in each round"></canvas>
+        <p class="hint">Drop an image on the page or choose one below. Space runs or pauses, R reseeds, L draws the line.</p>
+      </section>
+
+      <aside class="panel">
+        <fieldset>
+          <legend>Picture</legend>
+          <label for="picture" class="sr-only">Built-in picture</label>
+          <select id="picture"></select>
+          <p class="note" id="picture-note"></p>
+          <label class="file">
+            <input id="upload" type="file" accept="image/*" />
+            <span>Use your own image…</span>
+          </label>
+          <label for="detail">Working size <output for="detail"></output></label>
+          <input id="detail" type="range" min="200" max="800" step="40" data-unit=" px" />
+        </fieldset>
+
+        <fieldset>
+          <legend>Tone</legend>
+          <label for="brightness">Brightness <output for="brightness"></output></label>
+          <input id="brightness" type="range" min="-0.5" max="0.5" step="0.01" />
+          <label for="contrast">Contrast <output for="contrast"></output></label>
+          <input id="contrast" type="range" min="0.2" max="3" step="0.05" />
+          <label for="gamma">Gamma <output for="gamma"></output></label>
+          <input id="gamma" type="range" min="0.3" max="3" step="0.05" />
+          <label for="floor">Leave blank below <output for="floor"></output></label>
+          <input id="floor" type="range" min="0" max="0.5" step="0.01" />
+          <label class="check"><input id="invert" type="checkbox" /> Invert</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Dots</legend>
+          <label for="dots">Number of dots <output for="dots"></output></label>
+          <input id="dots" type="range" min="100" max="20000" step="100" />
+          <label for="mode">Dot size</label>
+          <select id="mode">
+            <option value="tone">Grows with the ink in its cell</option>
+            <option value="even">All the same</option>
+          </select>
+          <label for="size">Size <output for="size"></output></label>
+          <input id="size" type="range" min="0.2" max="3" step="0.05" data-unit="×" />
+          <div class="buttons">
+            <button id="run" type="button">Pause</button>
+            <button id="reseed" type="button">Reseed</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Show</legend>
+          <div class="segmented" role="radiogroup" aria-label="View">
+            <label><input type="radio" name="view" value="dots" /> Dots</label>
+            <label><input type="radio" name="view" value="cells" /> Cells</label>
+            <label><input type="radio" name="view" value="line" /> One line</label>
+            <label><input type="radio" name="view" value="picture" /> Picture</label>
+          </div>
+          <label for="palette">Colours</label>
+          <select id="palette"></select>
+        </fieldset>
+
+        <fieldset>
+          <legend>Keep</legend>
+          <div class="buttons">
+            <button id="svg" type="button">Save SVG</button>
+            <button id="png" type="button">Save PNG</button>
+            <button id="share" type="button">Copy link</button>
+          </div>
+        </fieldset>
+      </aside>
+    </main>
+
+    <footer>
+      <p>
+        Weighted Voronoi stippling after Adrian Secord (NPAR 2002); the single line after Kaplan and Bosch's TSP art
+        (Bridges 2005). Source on <a href="https://github.com/fushanbobfan/dotwork">GitHub</a>.
+      </p>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
