@@ -71,6 +71,16 @@ two pairs of dots the other way round shortens the line. The 2-opt pass runs
 a slice per frame so the page stays responsive, and the status line reports
 the length in page widths.
 
+**Plotting.** Stipples and TSP art are classic pen-plotter drawings, so the
+*Plot* panel works out what one would take. The picture is fitted inside A4,
+A3 or Letter with a 15 mm margin, turned to match its orientation. The line
+is drawn pen-down end to end at the chosen pen speed. Dots are visited in
+tour order with the pen up, moving at three times the drawing speed, plus a
+quarter of a second per dot to lower, mark and lift. These are rough figures
+for a typical hobby plotter; real machines add acceleration and their own
+lift timing. *Watch it plot* replays the pen as a twelve-second time-lapse,
+threading the line first if it has not been drawn yet.
+
 ## Controls
 
 | Control | What it does |
@@ -80,10 +90,11 @@ the length in page widths.
 | Tone | Brightness, contrast, gamma, a blank-paper level and invert. Changes keep the current dots and relax them onto the new tone. |
 | Dots | How many, how their size is chosen, and a size multiplier. Pause or reseed. |
 | Show | Dots, the Voronoi cells, one line, or the picture itself, in four colour schemes or the picture's own colours. |
+| Plot | Paper size and pen speed, the size and pen time of the plot, and a replay of the pen. |
 | Keep | Save SVG (dots as circles, or the line as one path), save PNG, or copy a link with the current settings. |
 
 Keys: <kbd>Space</kbd> runs or pauses, <kbd>R</kbd> reseeds, <kbd>L</kbd>
-switches to the line.
+switches to the line, <kbd>P</kbd> plays or stops the plot.
 
 ## Probe
 
@@ -109,6 +120,7 @@ result.
 | `src/lloyd.js` | Seeding, cell sums and one relaxation round |
 | `src/dots.js` | Dot radii and page coverage |
 | `src/tour.js` | Greedy tour, neighbour lists and 2-opt |
+| `src/plot.js` | Paper fitting, pen position along the tour, pen time |
 | `src/svg.js` | SVG output for dots and the line |
 | `src/render.js` | Pixel layers for the picture and cell views |
 | `src/settings.js` | Shareable settings, ranges and the link format |

@@ -25,7 +25,7 @@
         </div>
         <p class="status" id="status" aria-live="polite"></p>
         <canvas id="settle" class="settle" width="320" height="56" role="img" aria-label="How far the dots moved in each round"></canvas>
-        <p class="hint">Drop an image on the page or choose one below. Space runs or pauses, R reseeds, L draws the line.</p>
+        <p class="hint">Drop an image on the page or choose one below. Space runs or pauses, R reseeds, L draws the line, P plays the plot.</p>
       </section>
 
       <aside class="panel">
@@ -82,6 +82,18 @@
           </div>
           <label for="palette">Colours</label>
           <select id="palette"></select>
+        </fieldset>
+
+        <fieldset>
+          <legend>Plot</legend>
+          <label for="paper">Paper</label>
+          <select id="paper"></select>
+          <label for="speed">Pen speed <output for="speed"></output></label>
+          <input id="speed" type="range" min="5" max="200" step="5" data-unit=" mm/s" />
+          <p class="note" id="plot-note" aria-live="polite"></p>
+          <div class="buttons">
+            <button id="play" type="button">Watch it plot</button>
+          </div>
         </fieldset>
 
         <fieldset>

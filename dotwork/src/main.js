@@ -8,6 +8,7 @@ import { dotsSvg, tourSvg } from './svg.js';
 import { pictureRgba, cellsRgba } from './render.js';
 import { decodeSettings, encodeSettings, clampSetting, PALETTES } from './settings.js';
 import { createRng, randomSeed } from './rng.js';
+import { PAPERS, mmPerPixel, cumulativeLengths, penAt, plotSeconds, formatDuration } from './plot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('page');
@@ -22,6 +23,8 @@ const SETTLED = 0.0004;
 const MIN_ROUNDS = 10;
 const MAX_ROUNDS = 300;
 const FRAME_BUDGET = 14;
+// A plot is replayed as a time-lapse of this many seconds, whatever its length.
+const PLAYBACK = 12;
 
 const s = decodeSettings(location.hash.slice(1));
 let upload = null; // an <img> the viewer chose; never leaves the page
@@ -39,6 +42,7 @@ let running = true;
 let settled = false;
 let line = null; // { tour, neighbours, done, moves }
 let dirty = true;
+let play = null; // { start, cum } while a plot is being replayed
 let notice = '';
 let noticeTimer = 0;
 const layer = document.createElement('canvas');
@@ -94,6 +98,7 @@ function reseed() {
 function wake() {
   settled = false;
   line = null;
+  stopPlay();
   dirty = true;
 }
 
@@ -115,6 +120,29 @@ function spacing() {
 
 function settleBelow() {
   return SETTLED * spacing();
+}
+
+function stopPlay() {
+  if (!play) return;
+  play = null;
+  dirty = true;
+}
+
+// Plots follow the tour: the line is drawn pen-down, dots are tapped in order.
+function plotMode() {
+  return s.view === 'line' ? 'line' : 'dots';
+}
+
+function plotEstimate() {
+  if (!line) return null;
+  const mm = mmPerPixel(field.width, field.height, s.paper);
+  const length = tourLength(points, line.tour);
+  const seconds = plotSeconds({ mode: plotMode(), length, dots: count, mmPerPx: mm, drawSpeed: s.speed, travelSpeed: 3 * s.speed });
+  return {
+    size: `${Math.round(field.width * mm)} × ${Math.round(field.height * mm)} mm`,
+    metres: (length * mm) / 1000,
+    seconds,
+  };
 }
 
 function sizeDots() {
@@ -195,7 +223,9 @@ function draw() {
   ctx.fillStyle = paper;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   sizeDots();
-  if (s.view === 'picture') {
+  if (play && play.start) {
+    drawPlayback(k);
+  } else if (s.view === 'picture') {
     drawLayer(pictureRgba(field, ink, paper));
   } else if (s.view === 'cells') {
     if (scratch.labels) drawLayer(cellsRgba(scratch.labels, field, ink, paper));
@@ -221,6 +251,49 @@ function draw() {
   drawChart();
   updateStatus();
   dirty = false;
+}
+
+// The plot so far: the line up to the pen, or the dots it has tapped, with
+// the pen itself as a ring.
+function drawPlayback(k) {
+  const t = Math.min(1, (performance.now() - play.start) / (PLAYBACK * 1000));
+  const tour = line.tour;
+  const pen = penAt(points, tour, play.cum, t * play.cum[tour.length]);
+  const { ink } = palette();
+  if (plotMode() === 'line') {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = Math.max(0.6, k * 0.35 * s.size);
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let n = 0; n < pen.passed; n++) {
+      const i = tour[n];
+      if (n === 0) ctx.moveTo(points[2 * i] * k, points[2 * i + 1] * k);
+      else ctx.lineTo(points[2 * i] * k, points[2 * i + 1] * k);
+    }
+    ctx.lineTo(pen.x * k, pen.y * k);
+    ctx.stroke();
+  } else {
+    const rgb = currentColours();
+    ctx.fillStyle = ink;
+    for (let n = 0; n < pen.passed; n++) {
+      const i = tour[n];
+      const r = radii[i] * k;
+      if (r <= 0) continue;
+      if (rgb) ctx.fillStyle = `rgb(${rgb[3 * i]},${rgb[3 * i + 1]},${rgb[3 * i + 2]})`;
+      ctx.beginPath();
+      ctx.arc(points[2 * i] * k, points[2 * i + 1] * k, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent');
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(pen.x * k, pen.y * k, 6, 0, Math.PI * 2);
+  ctx.stroke();
+  if (t >= 1) {
+    play = null;
+    dirty = true;
+  }
 }
 
 function drawChart() {
@@ -263,8 +336,24 @@ function updateStatus() {
     }
   }
   statusEl.textContent = notice || parts.join(' · ');
+  updatePlotNote();
   $('run').textContent = running && !settled ? 'Pause' : settled ? 'Settled' : 'Run';
   $('run').disabled = settled;
+}
+
+function updatePlotNote() {
+  const est = plotEstimate();
+  const paper = PAPERS[s.paper].label;
+  let text;
+  if (play && !play.start) text = 'Threading the line to plot along…';
+  else if (!est) text = `On ${paper}, the pen time appears once the line has been threaded.`;
+  else if (plotMode() === 'line') {
+    text = `On ${paper}: ${est.size}, ${est.metres.toFixed(1)} m of line, about ${formatDuration(est.seconds)} at ${s.speed} mm/s.`;
+  } else {
+    text = `On ${paper}: ${est.size}, ${count.toLocaleString()} taps, about ${formatDuration(est.seconds)} with ${est.metres.toFixed(1)} m of pen-up travel.`;
+  }
+  $('plot-note').textContent = text;
+  $('play').textContent = play ? 'Stop' : 'Watch it plot';
 }
 
 // ---------- loop ----------
@@ -272,7 +361,13 @@ function updateStatus() {
 function frame() {
   const start = performance.now();
   const deadline = () => performance.now() - start > FRAME_BUDGET;
-  if (running && !settled) {
+  if (play) {
+    if (!line || !line.done) growLine(deadline);
+    else {
+      if (!play.start) play = { start, cum: cumulativeLengths(points, line.tour) };
+      dirty = true;
+    }
+  } else if (running && !settled) {
     do step();
     while (!settled && !deadline());
   } else if (s.view === 'line' && (!line || !line.done)) {
@@ -284,7 +379,7 @@ function frame() {
 
 // ---------- controls ----------
 
-const SLIDERS = ['detail', 'brightness', 'contrast', 'gamma', 'floor', 'dots', 'size'];
+const SLIDERS = ['detail', 'brightness', 'contrast', 'gamma', 'floor', 'dots', 'size', 'speed'];
 
 function show(id) {
   const input = $(id);
@@ -304,12 +399,14 @@ function syncControls() {
   $('invert').checked = s.invert;
   $('mode').value = s.mode;
   $('palette').value = s.palette;
+  $('paper').value = s.paper;
   for (const r of document.querySelectorAll('input[name="view"]')) r.checked = r.value === s.view;
 }
 
 function fillSelects() {
   for (const id of SOURCE_IDS) $('picture').append(new Option(sourceInfo(id).label, id));
   for (const [id, p] of Object.entries(PALETTES)) $('palette').append(new Option(p.label, id));
+  for (const [id, p] of Object.entries(PAPERS)) $('paper').append(new Option(`${p.label} (${p.short} × ${p.long} mm)`, id));
 }
 
 function saveHash() {
@@ -326,7 +423,7 @@ function bind() {
         loadPicture();
         reseed();
       } else if (id === 'dots') reseed();
-      else if (id === 'size') dirty = true;
+      else if (id === 'size' || id === 'speed') dirty = true;
       else applyTone();
       saveHash();
     });
@@ -365,6 +462,12 @@ function bind() {
       saveHash();
     });
   }
+  $('paper').addEventListener('change', () => {
+    s.paper = $('paper').value;
+    dirty = true;
+    saveHash();
+  });
+  $('play').addEventListener('click', togglePlay);
   $('run').addEventListener('click', toggleRun);
   $('reseed').addEventListener('click', newSeed);
   $('upload').addEventListener('change', () => {
@@ -395,6 +498,7 @@ function bind() {
       e.preventDefault();
       toggleRun();
     } else if (e.key === 'r' || e.key === 'R') newSeed();
+    else if (e.key === 'p' || e.key === 'P') togglePlay();
     else if (e.key === 'l' || e.key === 'L') {
       s.view = 'line';
       syncControls();
@@ -415,7 +519,19 @@ function say(text) {
   }, 4000);
 }
 
+function togglePlay() {
+  if (play) {
+    stopPlay();
+    return;
+  }
+  // Replaying freezes the dots; the line is threaded first if needed.
+  running = false;
+  play = { start: 0, cum: null };
+  dirty = true;
+}
+
 function toggleRun() {
+  stopPlay();
   if (settled) return;
   running = !running;
   dirty = true;
