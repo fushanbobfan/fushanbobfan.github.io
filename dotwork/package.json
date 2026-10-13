@@ -1,0 +1,26 @@
+{
+  "name": "dotwork",
+  "version": "0.1.0",
+  "description": "Stippling in the browser: thousands of dots settle by weighted Lloyd relaxation until their spacing draws the picture, then one continuous line can visit them all.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js",
+    "probe": "node scripts/probe.js"
+  },
+  "keywords": [
+    "stippling",
+    "voronoi",
+    "lloyd-relaxation",
+    "tsp-art",
+    "creative-coding",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/dotwork.git"
+  },
+  "private": false
+}
