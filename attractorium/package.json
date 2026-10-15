@@ -1,0 +1,25 @@
+{
+  "name": "attractorium",
+  "version": "0.1.0",
+  "description": "Strange attractors in the browser: Lorenz, Rössler and their relatives integrated live, turned in 3D, with a cloud of nearby starts spreading over the attractor.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js",
+    "probe": "node scripts/probe.js"
+  },
+  "keywords": [
+    "strange-attractor",
+    "lorenz",
+    "chaos",
+    "dynamical-systems",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/attractorium.git"
+  },
+  "private": false
+}
