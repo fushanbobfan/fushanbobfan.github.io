@@ -9,7 +9,7 @@ export const GENERAL = {
   tail: { value: 40, min: 2, max: 200, int: true },
   speed: { value: 4, min: 1, max: 40, int: true },
   seed: { value: 1, min: 0, max: 4294967295, int: true },
-  yaw: { value: 0.6, min: -Math.PI, max: Math.PI },
+  yaw: { value: -0.7, min: -Math.PI, max: Math.PI },
   pitch: { value: 0.25, min: -1.56, max: 1.56 },
   zoom: { value: 1, min: 0.25, max: 12 },
 };

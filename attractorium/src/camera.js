@@ -10,11 +10,22 @@ export function horizontalAxes(up) {
   return [(up + 1) % 3, (up + 2) % 3];
 }
 
-// Centres the camera on the bounding box and sizes it by the box's
-// half-diagonal, so the whole attractor fits whichever way it is turned.
-export function fitCamera(cam, box) {
+// Centres the camera on the bounding box and sizes it by the farthest point
+// from that centre (or the box's half-diagonal when no points are given), so
+// the whole attractor fits whichever way it is turned.
+export function fitCamera(cam, box, points = null, length = 0) {
   cam.center = box.center.slice();
-  cam.radius = Math.max(1e-9, 0.5 * Math.hypot(box.max[0] - box.min[0], box.max[1] - box.min[1], box.max[2] - box.min[2]));
+  let r = 0.5 * Math.hypot(box.max[0] - box.min[0], box.max[1] - box.min[1], box.max[2] - box.min[2]);
+  if (points && length > 0) {
+    // The farthest sampled point is a tighter bound than the box corner.
+    r = 0;
+    const c = cam.center;
+    for (let i = 0; i < length; i++) {
+      const d = Math.hypot(points[3 * i] - c[0], points[3 * i + 1] - c[1], points[3 * i + 2] - c[2]);
+      if (d > r) r = d;
+    }
+  }
+  cam.radius = Math.max(1e-9, r);
   return cam;
 }
 

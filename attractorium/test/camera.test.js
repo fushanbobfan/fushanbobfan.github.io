@@ -67,3 +67,10 @@ test('orbiting wraps yaw and clamps pitch; zoom is bounded', () => {
   zoomCamera(cam, 1e-6);
   assert.equal(cam.zoom, 0.25);
 });
+
+test('fitting to points uses the farthest point, which is never wider than the box', () => {
+  const pts = new Float32Array([1, 0, 0, -1, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 1, 0, 0, -1]);
+  const box = { min: [-1, -1, -1], max: [1, 1, 1], center: [0, 0, 0] };
+  assert.ok(close(fitCamera(createCamera(), box, pts, 6).radius, 1));
+  assert.ok(close(fitCamera(createCamera(), box).radius, Math.sqrt(3)));
+});

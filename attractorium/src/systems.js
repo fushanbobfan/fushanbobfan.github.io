@@ -1,8 +1,10 @@
 // Continuous three-dimensional flows with strange attractors. Each system gives
 // its vector field, named parameters with ranges, a step size that keeps RK4
 // accurate at the default parameters, a starting point inside the basin, the
-// axis drawn upward, and its full set of equilibria where they have a closed
-// form (null otherwise).
+// axis drawn upward (also the default return-map coordinate unless mapAxis
+// says otherwise), and its full set of equilibria where they have a closed
+// form (null otherwise). Slow flows set how long a stretch of orbit the page
+// draws as the backdrop (orbitTime).
 
 const sqrt = Math.sqrt;
 
@@ -47,6 +49,7 @@ export const SYSTEMS = {
     dt: 0.01,
     start: [1, 1, 0],
     up: 2,
+    mapAxis: 0,
     note: 'A single spiral that occasionally lifts off and folds back over itself. Raising c from 2.5 walks the period-doubling cascade: one loop, two (c = 3.5), four (c = 4), then chaos.',
     field(p, s, out) {
       out[0] = -s[1] - s[2];
@@ -99,6 +102,7 @@ export const SYSTEMS = {
     params: [{ key: 'b', label: 'b', value: 0.208186, min: 0.05, max: 0.33, step: 0.0001 }],
     dt: 0.05,
     start: [0.1, 0, 0],
+    orbitTime: 4000,
     up: 2,
     note: 'Cyclically symmetric under x → y → z → x. As the friction b drops toward 0 the attractor fills more of the lattice of cells; at b = 0 the orbit wanders through it like a random walk.',
     field(p, s, out) {
@@ -145,6 +149,7 @@ export const SYSTEMS = {
     ],
     dt: 0.01,
     start: [0.1, 0, 0],
+    orbitTime: 600,
     up: 2,
     note: 'A sphere-like shell with a tube through its axis: the orbit spirals over the surface and is thrown back down the tube. The x³ term breaks the rotational symmetry.',
     field(p, s, out) {
