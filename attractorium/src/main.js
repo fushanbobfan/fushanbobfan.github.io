@@ -485,7 +485,10 @@ function updateReadouts() {
   const lambda = lyap.value;
   $('lyap').textContent = Number.isFinite(lambda) ? `${lambda.toFixed(3)} (t = ${lyap.time.toFixed(0)})` : '–';
   const g = growthRate(cloud.history, Math.max(settings.radius * 3, 1e-12), Math.max(cam.radius * 0.05, settings.radius * 10));
-  $('growth').textContent = Number.isFinite(g.rate) && g.samples >= 40 ? `${g.rate.toFixed(3)} per unit time` : '–';
+  // Early on the spread wobbles while the cloud lines up with the stretching
+  // direction, so the fit is only shown once the cloud has grown a hundredfold.
+  const grown = cloud.history.some((h) => h.spread > 100 * cloud.history[0].spread);
+  $('growth').textContent = !grown ? 'waiting for the cloud to grow' : Number.isFinite(g.rate) && g.samples >= 40 ? `${g.rate.toFixed(3)} per unit time` : '–';
   $('doubling').textContent = Number.isFinite(lambda) && lambda > 0.005 ? `${(Math.LN2 / lambda).toFixed(2)} time units` : 'none (no exponential growth)';
   $('alive').textContent = `${cloud.aliveCount()} of ${cloud.count}`;
   const spread = cloud.history[cloud.history.length - 1].spread;
