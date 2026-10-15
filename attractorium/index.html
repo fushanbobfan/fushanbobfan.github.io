@@ -32,11 +32,13 @@
             <figcaption>Cloud spread (log scale) against time. The dashed line grows at the measured Lyapunov exponent λ.</figcaption>
           </figure>
           <figure>
-            <canvas id="map" role="img" aria-label="Return map: each maximum against the one before it"></canvas>
+            <canvas id="map" role="img" aria-label="Return map of successive maxima, or a Poincaré section"></canvas>
             <figcaption>
-              Return map: each maximum of
-              <select id="map-axis" aria-label="Coordinate for the return map"><option value="0">x</option><option value="1">y</option><option value="2">z</option></select>
-              against the one before.
+              <select id="map-mode" aria-label="Chart"><option value="map">Return map</option><option value="section">Poincaré section</option></select>
+              for
+              <select id="map-axis" aria-label="Coordinate"><option value="0">x</option><option value="1">y</option><option value="2">z</option></select>.
+              <span id="map-help">Each maximum against the one before.</span>
+              <label id="level-row" hidden>Plane at <input id="level" type="range" min="0" max="1" step="0.01" value="0.5" aria-label="Position of the section plane across the attractor" /></label>
             </figcaption>
           </figure>
           <figure class="wide">

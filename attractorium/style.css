@@ -124,6 +124,17 @@ figure {
   margin: 0;
 }
 
+#level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#level-row[hidden] {
+  display: none;
+}
+
 figure.wide {
   grid-column: 1 / -1;
 }
@@ -187,6 +198,7 @@ button {
 }
 
 #map-axis,
+#map-mode,
 #sweep-key {
   width: auto;
   padding: 0 4px;

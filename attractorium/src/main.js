@@ -1,8 +1,8 @@
 import { SYSTEMS, SYSTEM_KEYS, defaultParams } from './systems.js';
-import { sampleOrbit, bounds, createLyapunov, successiveMaxima } from './integrate.js';
+import { sampleOrbit, bounds, createLyapunov, successiveMaxima, sectionCrossings } from './integrate.js';
 import { createCamera, fitCamera, orbitCamera, zoomCamera } from './camera.js';
 import { createCloud, growthRate } from './cloud.js';
-import { drawOrbit, drawCloud, drawEquilibria, drawAxes, drawReturnMap, drawSpread, drawBifurcation, bifurcationValueAt } from './render.js';
+import { drawOrbit, drawCloud, drawEquilibria, drawAxes, drawReturnMap, drawSpread, drawSection, drawBifurcation, bifurcationValueAt } from './render.js';
 import { createSweep } from './bifurcation.js';
 import { GENERAL, decodeSettings, encodeSettings } from './settings.js';
 import { randomSeed } from './rng.js';
@@ -29,6 +29,10 @@ let running = true;
 let backdrop = null;
 let backdropKey = '';
 let sweep = null;
+let mapMode = 'map';
+let levelFraction = 0.5;
+let cuts = [];
+let sectionLevel = 0;
 let sweepKey = system.sweepKey;
 let sweepSignature = '';
 
@@ -71,12 +75,26 @@ function rebuild() {
   cam.yaw = settings.yaw;
   cam.pitch = settings.pitch;
   cam.zoom = settings.zoom;
-  maxima = orbit.length ? successiveMaxima(orbit.points, orbit.length, mapAxis) : [];
+  updateMapData();
   const start = orbit.length ? Array.from(orbit.state) : system.start;
   lyap = createLyapunov(system, p, { start });
   backdropKey = '';
   restartSweepIfStale();
   release(false);
+}
+
+// Return-map maxima and section crossings for the chosen coordinate. The
+// section plane sits at a fraction of the way across the attractor's extent.
+function updateMapData() {
+  if (!orbit || !orbit.length) {
+    maxima = [];
+    cuts = [];
+    return;
+  }
+  maxima = successiveMaxima(orbit.points, orbit.length, mapAxis);
+  const box = bounds(orbit.points, orbit.length);
+  sectionLevel = box.min[mapAxis] + levelFraction * (box.max[mapAxis] - box.min[mapAxis]);
+  cuts = sectionCrossings(orbit.points, orbit.length, mapAxis, sectionLevel);
 }
 
 // The diagram depends on every parameter except the swept one, so moving the
@@ -204,8 +222,18 @@ function initControls() {
   });
   $('map-axis').addEventListener('change', (e) => {
     mapAxis = Number(e.target.value);
-    maxima = orbit.length ? successiveMaxima(orbit.points, orbit.length, mapAxis) : [];
+    updateMapData();
     restartSweepIfStale();
+  });
+  $('map-mode').addEventListener('change', (e) => {
+    mapMode = e.target.value;
+    $('level-row').hidden = mapMode !== 'section';
+    $('map-help').textContent =
+      mapMode === 'section' ? 'Points where the orbit crosses the plane going up.' : 'Each maximum against the one before.';
+  });
+  $('level').addEventListener('input', (e) => {
+    levelFraction = Number(e.target.value);
+    updateMapData();
   });
   $('sweep-key').addEventListener('change', (e) => {
     sweepKey = e.target.value;
@@ -463,7 +491,9 @@ function draw() {
   const mctx = mapCanvas.getContext('2d');
   mctx.save();
   mctx.scale(m1.dpr, m1.dpr);
-  drawReturnMap(mctx, maxima, { width: m1.width / m1.dpr, height: m1.height / m1.dpr, colours: palette, axisName: 'xyz'[mapAxis] });
+  const mapSize = { width: m1.width / m1.dpr, height: m1.height / m1.dpr, colours: palette };
+  if (mapMode === 'section') drawSection(mctx, cuts, { ...mapSize, axis: mapAxis, level: sectionLevel });
+  else drawReturnMap(mctx, maxima, { ...mapSize, axisName: 'xyz'[mapAxis] });
   mctx.restore();
   const b1 = sizeCanvas(bifCanvas);
   const bctx = bifCanvas.getContext('2d');
