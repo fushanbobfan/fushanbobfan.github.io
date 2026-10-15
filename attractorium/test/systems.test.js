@@ -10,6 +10,7 @@ test('every system declares what the page needs', () => {
     assert.equal(s.start.length, 3, key);
     assert.ok(s.dt > 0 && s.dt <= 0.05, key);
     assert.ok([0, 1, 2].includes(s.up), key);
+    assert.ok(s.params.some((q) => q.key === s.sweepKey), `${key} sweeps one of its parameters`);
     for (const q of s.params) {
       assert.ok(q.min <= q.value && q.value <= q.max, `${key}.${q.key} default within range`);
       assert.ok(q.step > 0, `${key}.${q.key} step`);
