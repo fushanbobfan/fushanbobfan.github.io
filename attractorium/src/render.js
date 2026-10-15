@@ -332,3 +332,51 @@ export function bifurcationValueAt(sweep, x, width) {
   if (f < 0 || f > 1) return null;
   return sweep.valueAt(f);
 }
+
+// Poincaré section: the crossing points plotted in the two coordinates that
+// lie in the plane, with equal scales so shapes are not distorted.
+export function drawSection(ctx, cuts, { width, height, colours, axis, level }) {
+  const pad = { l: 34, r: 8, t: 8, b: 26 };
+  frame(ctx, width, height, colours, pad);
+  const [u, v] = [(axis + 1) % 3, (axis + 2) % 3];
+  const names = 'xyz';
+  ctx.fillStyle = colours.muted;
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${names[axis]} = ${+level.toPrecision(4)}, crossing upward · ${cuts.length} points`, pad.l + 6, pad.t + 12);
+  if (cuts.length === 0) {
+    ctx.textAlign = 'center';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText('the orbit does not cross this plane', width / 2, height / 2);
+    return null;
+  }
+  const lo = [Infinity, Infinity];
+  const hi = [-Infinity, -Infinity];
+  for (const c of cuts) {
+    [c[u], c[v]].forEach((val, k) => {
+      if (val < lo[k]) lo[k] = val;
+      if (val > hi[k]) hi[k] = val;
+    });
+  }
+  const w = width - pad.l - pad.r;
+  const h = height - pad.t - pad.b - 16;
+  const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], 1e-9) * 1.08;
+  const scale = Math.min(w, h) / span;
+  const cx = pad.l + w / 2;
+  const cy = pad.t + 16 + h / 2;
+  const mu = (lo[0] + hi[0]) / 2;
+  const mv = (lo[1] + hi[1]) / 2;
+  const X = (a) => cx + (a - mu) * scale;
+  const Y = (b) => cy - (b - mv) * scale;
+  const tu = niceTicks(mu - w / 2 / scale, mu + w / 2 / scale, 4);
+  const tv = niceTicks(mv - h / 2 / scale, mv + h / 2 / scale, 3);
+  ctx.textAlign = 'center';
+  for (const t of tu.ticks) if (X(t) >= pad.l && X(t) <= width - pad.r) ctx.fillText(fmtTick(t), X(t), height - pad.b + 12);
+  ctx.fillText(names[u], pad.l + w / 2, height - 3);
+  ctx.textAlign = 'right';
+  for (const t of tv.ticks) if (Y(t) >= pad.t + 16 && Y(t) <= height - pad.b) ctx.fillText(fmtTick(t), pad.l - 4, Y(t) + 3);
+  ctx.fillText(names[v], pad.l - 22, pad.t + 26);
+  ctx.fillStyle = colours.accent;
+  for (const c of cuts) ctx.fillRect(X(c[u]) - 1, Y(c[v]) - 1, 2, 2);
+  return { scale, u, v };
+}
