@@ -154,3 +154,22 @@ export function distinctLevels(values, tol) {
   if (n > 0) levels.push(sum / n);
   return levels;
 }
+
+// Poincaré section: where a sampled orbit crosses the plane
+// points[axis] = level going upward, located by linear interpolation between
+// the two samples on either side. Returns the crossing points as [x, y, z].
+export function sectionCrossings(points, length, axis, level) {
+  const out = [];
+  for (let i = 1; i < length; i++) {
+    const a = points[3 * (i - 1) + axis] - level;
+    const b = points[3 * i + axis] - level;
+    if (a < 0 && b >= 0) {
+      const f = a / (a - b);
+      const p = [0, 0, 0];
+      for (let k = 0; k < 3; k++) p[k] = points[3 * (i - 1) + k] + f * (points[3 * i + k] - points[3 * (i - 1) + k]);
+      p[axis] = level;
+      out.push(p);
+    }
+  }
+  return out;
+}

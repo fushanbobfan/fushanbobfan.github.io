@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { drawBifurcation, bifurcationValueAt, niceTicks, groupOf, groupColour, GROUPS, drawOrbit, drawCloud, drawReturnMap, drawSpread, drawAxes, drawEquilibria } from '../src/render.js';
+import { drawSection, drawBifurcation, bifurcationValueAt, niceTicks, groupOf, groupColour, GROUPS, drawOrbit, drawCloud, drawReturnMap, drawSpread, drawAxes, drawEquilibria } from '../src/render.js';
 import { SYSTEMS, defaultParams } from '../src/systems.js';
-import { sampleOrbit, bounds, successiveMaxima } from '../src/integrate.js';
+import { sampleOrbit, bounds, successiveMaxima, sectionCrossings } from '../src/integrate.js';
 import { createCamera, fitCamera } from '../src/camera.js';
 import { createCloud } from '../src/cloud.js';
 import { createSweep } from '../src/bifurcation.js';
@@ -96,4 +96,16 @@ test('the bifurcation diagram draws partial and finished sweeps and maps clicks 
   assert.equal(bifurcationValueAt(sweep, 592, 600), 6);
   assert.ok(Math.abs(bifurcationValueAt(sweep, 316, 600) - 4) < 1e-9);
   assert.equal(bifurcationValueAt(sweep, 10, 600), null);
+});
+
+test('the section plots the two in-plane coordinates at equal scale and says when there are no crossings', () => {
+  const s = SYSTEMS.lorenz;
+  const o = sampleOrbit(s, defaultParams('lorenz'), { transient: 2000, count: 20000 });
+  const cuts = sectionCrossings(o.points, o.length, 2, 27);
+  assert.ok(cuts.length > 50);
+  const { ctx, calls } = fakeContext();
+  const r = drawSection(ctx, cuts, { width: 300, height: 200, colours, axis: 2, level: 27 });
+  assert.deepEqual([r.u, r.v], [0, 1]);
+  assert.equal(calls.fillRect, cuts.length + 1);
+  assert.equal(drawSection(ctx, [], { width: 300, height: 200, colours, axis: 2, level: 99 }), null);
 });

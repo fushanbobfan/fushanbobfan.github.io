@@ -85,6 +85,16 @@ by a parabola through three samples. In a periodic window the map collapses to
 a few points: one for a simple loop, two after the first period doubling, and
 so on.
 
+**Poincaré section.** The same panel can show a section instead: every point
+where the backdrop orbit crosses a plane perpendicular to the chosen
+coordinate going upward, located by linear interpolation between the two
+samples on either side. The two in-plane coordinates are drawn at equal
+scale, and a slider moves the plane across the attractor's extent. On Lorenz
+with the plane near z = 27 the section is two thin arcs, one per wing: the
+attractor is nearly a surface. A limit cycle cuts the plane in one point, and
+after a period doubling in two (checked in the tests on Rössler at c = 2.5
+and 3.5).
+
 **Bifurcation diagram.** The wide chart sweeps one parameter across its
 slider range in 220 columns. Each column runs 150 time units to settle and
 then records up to 120 maxima over the next 150, starting from where the
@@ -122,7 +132,8 @@ attractor are left out.
 ```
 index.html, style.css      page shell, light and dark schemes
 src/systems.js             the seven flows, parameter ranges, equilibria
-src/integrate.js           RK4, orbit sampling, Lyapunov exponent, maxima
+src/integrate.js           RK4, orbit sampling, Lyapunov exponent, maxima,
+                           section crossings
 src/cloud.js               the cloud of nearby orbits and its spread
 src/camera.js              orbit camera and projection
 src/bifurcation.js         parameter sweep for the bifurcation diagram
