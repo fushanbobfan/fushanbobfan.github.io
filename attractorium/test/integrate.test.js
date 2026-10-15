@@ -8,6 +8,7 @@ import {
   largestLyapunov,
   successiveMaxima,
   distinctLevels,
+  sectionCrossings,
 } from '../src/integrate.js';
 
 const oscillator = (p, s, out) => {
@@ -127,4 +128,34 @@ test('Halvorsen is chaotic at its default and periodic at a = 1.89, as its note 
   const opts = { transient: 50, time: 300 };
   assert.ok(maxLevels('halvorsen', {}, 0, opts) > 100);
   assert.equal(maxLevels('halvorsen', { a: 1.89 }, 0, opts), 3);
+});
+
+test('section crossings land on the plane and are found going upward only', () => {
+  // A helix around the z axis tilted so x crosses 0.5 once per turn going up.
+  const n = 4000;
+  const pts = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const t = i * 0.01;
+    pts[3 * i] = Math.cos(t);
+    pts[3 * i + 1] = Math.sin(t);
+    pts[3 * i + 2] = t;
+  }
+  const cuts = sectionCrossings(pts, n, 0, 0.5);
+  assert.equal(cuts.length, 6);
+  for (const c of cuts) {
+    assert.equal(c[0], 0.5);
+    // Going up through x = 0.5 means sin t < 0, so y = -sqrt(3)/2.
+    assert.ok(Math.abs(c[1] + Math.sqrt(3) / 2) < 1e-3, `y ${c[1]}`);
+  }
+  for (let k = 1; k < cuts.length; k++) assert.ok(Math.abs(cuts[k][2] - cuts[k - 1][2] - 2 * Math.PI) < 0.02);
+});
+
+test('the Rossler limit cycle cuts a section in one point and its doubled cycle in two', () => {
+  const at = (c) => {
+    const s = SYSTEMS.rossler;
+    const o = sampleOrbit(s, { ...defaultParams('rossler'), c }, { transient: Math.round(1000 / s.dt), count: Math.round(300 / s.dt) });
+    return distinctLevels(sectionCrossings(o.points, o.length, 1, 0).map((p) => p[0]), 1e-2).length;
+  };
+  assert.equal(at(2.5), 1);
+  assert.equal(at(3.5), 2);
 });
