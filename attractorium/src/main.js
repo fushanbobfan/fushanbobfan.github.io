@@ -2,7 +2,8 @@ import { SYSTEMS, SYSTEM_KEYS, defaultParams } from './systems.js';
 import { sampleOrbit, bounds, createLyapunov, successiveMaxima } from './integrate.js';
 import { createCamera, fitCamera, orbitCamera, zoomCamera } from './camera.js';
 import { createCloud, growthRate } from './cloud.js';
-import { drawOrbit, drawCloud, drawEquilibria, drawAxes, drawReturnMap, drawSpread } from './render.js';
+import { drawOrbit, drawCloud, drawEquilibria, drawAxes, drawReturnMap, drawSpread, drawBifurcation, bifurcationValueAt } from './render.js';
+import { createSweep } from './bifurcation.js';
 import { GENERAL, decodeSettings, encodeSettings } from './settings.js';
 import { randomSeed } from './rng.js';
 
@@ -10,6 +11,7 @@ const $ = (id) => document.getElementById(id);
 const view = $('view');
 const spreadCanvas = $('spread');
 const mapCanvas = $('map');
+const bifCanvas = $('bifurcation');
 
 // Long enough for orbits in the periodic windows quoted in the notes to settle.
 const TRANSIENT_TIME = 300;
@@ -26,6 +28,9 @@ let mapAxis = system.mapAxis ?? system.up;
 let running = true;
 let backdrop = null;
 let backdropKey = '';
+let sweep = null;
+let sweepKey = system.sweepKey;
+let sweepSignature = '';
 
 function colours() {
   const css = getComputedStyle(document.documentElement);
@@ -70,7 +75,31 @@ function rebuild() {
   const start = orbit.length ? Array.from(orbit.state) : system.start;
   lyap = createLyapunov(system, p, { start });
   backdropKey = '';
+  restartSweepIfStale();
   release(false);
+}
+
+// The diagram depends on every parameter except the swept one, so moving the
+// swept parameter's own slider keeps the finished sweep.
+function restartSweepIfStale() {
+  const others = Object.entries(settings.params).filter(([k]) => k !== sweepKey);
+  const signature = JSON.stringify([settings.system, sweepKey, mapAxis, others]);
+  if (signature === sweepSignature && sweep) return;
+  sweepSignature = signature;
+  sweep = createSweep(system, settings.params, { key: sweepKey, axis: mapAxis, columns: 220 });
+}
+
+function buildSweepOptions() {
+  const sel = $('sweep-key');
+  sel.replaceChildren(
+    ...system.params.map((q) => {
+      const o = document.createElement('option');
+      o.value = q.key;
+      o.textContent = q.label;
+      return o;
+    }),
+  );
+  sel.value = sweepKey;
 }
 
 function release(newSeed = true) {
@@ -124,6 +153,7 @@ function buildSystemControls() {
   const year = system.year ? ` (${system.year})` : '';
   $('note').textContent = `${system.name}${year}. ${system.note}`;
   $('map-axis').value = String(mapAxis);
+  buildSweepOptions();
 }
 
 let rebuildTimer = 0;
@@ -163,6 +193,7 @@ function initControls() {
     settings.zoom = GENERAL.zoom.value;
     system = SYSTEMS[sel.value];
     mapAxis = system.mapAxis ?? system.up;
+    sweepKey = system.sweepKey;
     buildSystemControls();
     rebuild();
   });
@@ -174,6 +205,20 @@ function initControls() {
   $('map-axis').addEventListener('change', (e) => {
     mapAxis = Number(e.target.value);
     maxima = orbit.length ? successiveMaxima(orbit.points, orbit.length, mapAxis) : [];
+    restartSweepIfStale();
+  });
+  $('sweep-key').addEventListener('change', (e) => {
+    sweepKey = e.target.value;
+    restartSweepIfStale();
+  });
+  bifCanvas.addEventListener('click', (e) => {
+    const r = bifCanvas.getBoundingClientRect();
+    const v = bifurcationValueAt(sweep, e.clientX - r.left, r.width);
+    if (v === null) return;
+    const q = system.params.find((p) => p.key === sweepKey);
+    settings.params[sweepKey] = Math.round(v / q.step) * q.step;
+    buildSystemControls();
+    rebuild();
   });
   $('count').addEventListener('input', (e) => {
     settings.count = Number(e.target.value);
@@ -420,13 +465,30 @@ function draw() {
   mctx.scale(m1.dpr, m1.dpr);
   drawReturnMap(mctx, maxima, { width: m1.width / m1.dpr, height: m1.height / m1.dpr, colours: palette, axisName: 'xyz'[mapAxis] });
   mctx.restore();
+  const b1 = sizeCanvas(bifCanvas);
+  const bctx = bifCanvas.getContext('2d');
+  bctx.save();
+  bctx.scale(b1.dpr, b1.dpr);
+  const q = system.params.find((p) => p.key === sweepKey);
+  drawBifurcation(bctx, sweep, {
+    width: b1.width / b1.dpr,
+    height: b1.height / b1.dpr,
+    colours: palette,
+    current: settings.params[sweepKey],
+    label: q.label,
+    axisName: 'xyz'[mapAxis],
+  });
+  bctx.restore();
 }
 
 function updateReadouts() {
   const lambda = lyap.value;
   $('lyap').textContent = Number.isFinite(lambda) ? `${lambda.toFixed(3)} (t = ${lyap.time.toFixed(0)})` : '–';
   const g = growthRate(cloud.history, Math.max(settings.radius * 3, 1e-12), Math.max(cam.radius * 0.05, settings.radius * 10));
-  $('growth').textContent = Number.isFinite(g.rate) && g.samples >= 40 ? `${g.rate.toFixed(3)} per unit time` : '–';
+  // Early on the spread wobbles while the cloud lines up with the stretching
+  // direction, so the fit is only shown once the cloud has grown a hundredfold.
+  const grown = cloud.history.some((h) => h.spread > 100 * cloud.history[0].spread);
+  $('growth').textContent = !grown ? 'waiting for the cloud to grow' : Number.isFinite(g.rate) && g.samples >= 40 ? `${g.rate.toFixed(3)} per unit time` : '–';
   $('doubling').textContent = Number.isFinite(lambda) && lambda > 0.005 ? `${(Math.LN2 / lambda).toFixed(2)} time units` : 'none (no exponential growth)';
   $('alive').textContent = `${cloud.aliveCount()} of ${cloud.count}`;
   const spread = cloud.history[cloud.history.length - 1].spread;
@@ -443,6 +505,7 @@ function frame(now) {
     cloud.advance(settings.speed);
     lyap.advance(Math.max(1, Math.round(settings.speed / 2)));
   }
+  if (!sweep.done) sweep.advance(8, Infinity, () => performance.now());
   draw();
   if (now - lastReadout > 200) {
     updateReadouts();
@@ -462,6 +525,7 @@ window.addEventListener('hashchange', () => {
   settings = next;
   system = SYSTEMS[settings.system];
   mapAxis = system.mapAxis ?? system.up;
+  sweepKey = system.sweepKey;
   $('system').value = settings.system;
   buildSystemControls();
   syncGeneralControls();

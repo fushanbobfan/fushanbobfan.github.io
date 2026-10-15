@@ -124,6 +124,15 @@ figure {
   margin: 0;
 }
 
+figure.wide {
+  grid-column: 1 / -1;
+}
+
+figure.wide canvas {
+  aspect-ratio: 3 / 1;
+  cursor: crosshair;
+}
+
 .charts canvas {
   display: block;
   width: 100%;
@@ -177,7 +186,8 @@ button {
   padding: 4px 8px;
 }
 
-#map-axis {
+#map-axis,
+#sweep-key {
   width: auto;
   padding: 0 4px;
   font-size: 13px;
@@ -266,5 +276,9 @@ a {
 @media (max-width: 520px) {
   .charts {
     grid-template-columns: 1fr;
+  }
+
+  figure.wide canvas {
+    aspect-ratio: 3 / 2;
   }
 }

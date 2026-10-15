@@ -4,7 +4,8 @@
 // axis drawn upward (also the default return-map coordinate unless mapAxis
 // says otherwise), and its full set of equilibria where they have a closed
 // form (null otherwise). Slow flows set how long a stretch of orbit the page
-// draws as the backdrop (orbitTime).
+// draws as the backdrop (orbitTime). sweepKey names the parameter the
+// bifurcation diagram sweeps by default.
 
 const sqrt = Math.sqrt;
 
@@ -20,6 +21,7 @@ export const SYSTEMS = {
     ],
     dt: 0.005,
     start: [1, 1, 20],
+    sweepKey: 'rho',
     up: 2,
     note: 'Two lobes around the equilibria C± with the trajectory switching sides at irregular times. Below ρ ≈ 24.74 the equilibria C± are stable as well, and below about 24.06 the chaos is gone and orbits spiral into them; near ρ = 99.65 and ρ = 160 the flow settles on periodic orbits.',
     field(p, s, out) {
@@ -48,6 +50,7 @@ export const SYSTEMS = {
     ],
     dt: 0.01,
     start: [1, 1, 0],
+    sweepKey: 'c',
     up: 2,
     mapAxis: 0,
     note: 'A single spiral that occasionally lifts off and folds back over itself. Raising c from 2.5 walks the period-doubling cascade: one loop, two (c = 3.5), four (c = 4), then chaos.',
@@ -77,6 +80,7 @@ export const SYSTEMS = {
     ],
     dt: 0.002,
     start: [-10, 0, 37],
+    sweepKey: 'c',
     up: 2,
     note: 'A close relative of Lorenz with the same left-right symmetry; the −y damping in the second equation becomes +cy, and the two wings are wound more tightly.',
     field(p, s, out) {
@@ -103,6 +107,7 @@ export const SYSTEMS = {
     dt: 0.05,
     start: [0.1, 0, 0],
     orbitTime: 4000,
+    sweepKey: 'b',
     up: 2,
     note: 'Cyclically symmetric under x → y → z → x. As the friction b drops toward 0 the attractor fills more of the lattice of cells; at b = 0 the orbit wanders through it like a random walk.',
     field(p, s, out) {
@@ -120,6 +125,7 @@ export const SYSTEMS = {
     params: [{ key: 'a', label: 'a', value: 1.4, min: 1, max: 2.2, step: 0.001 }],
     dt: 0.005,
     start: [-1.48, -1.51, 2.04],
+    sweepKey: 'a',
     up: 2,
     note: 'Three interlocking lobes related by the same cyclic symmetry as Thomas; look along the diagonal x = y = z to see it. Raise a to 1.89, a value often quoted for this system, and the orbit from the default start locks onto a periodic loop instead.',
     field(p, s, out) {
@@ -150,6 +156,7 @@ export const SYSTEMS = {
     dt: 0.01,
     start: [0.1, 0, 0],
     orbitTime: 600,
+    sweepKey: 'a',
     up: 2,
     note: 'A sphere-like shell with a tube through its axis: the orbit spirals over the surface and is thrown back down the tube. The x³ term breaks the rotational symmetry.',
     field(p, s, out) {
@@ -177,6 +184,7 @@ export const SYSTEMS = {
     ],
     dt: 0.005,
     start: [1.1, 2.1, -2],
+    sweepKey: 'e',
     up: 2,
     note: 'Scrolls wound around the origin and visited in an order that never repeats.',
     field(p, s, out) {

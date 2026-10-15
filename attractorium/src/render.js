@@ -259,3 +259,76 @@ export function drawSpread(ctx, history, { width, height, colours, lambda, radiu
 function fmtTick(v) {
   return Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0) ? v.toExponential(0) : String(+v.toPrecision(4));
 }
+
+// Bifurcation diagram: one column of settled maxima per parameter value, a
+// marker at the current value, and a hatch where orbits ran off to infinity.
+const BIF_PAD = { l: 40, r: 8, t: 8, b: 28 };
+
+export function drawBifurcation(ctx, sweep, { width, height, colours, current, label, axisName }) {
+  const pad = BIF_PAD;
+  frame(ctx, width, height, colours, pad);
+  const w = width - pad.l - pad.r;
+  const h = height - pad.t - pad.b;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of sweep.results) {
+    for (const m of r.maxima) {
+      if (m < lo) lo = m;
+      if (m > hi) hi = m;
+    }
+  }
+  const tx = niceTicks(sweep.from, sweep.to, 6);
+  const X = (v) => pad.l + ((v - sweep.from) / (sweep.to - sweep.from || 1)) * w;
+  ctx.fillStyle = colours.muted;
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  for (const v of tx.ticks) if (v >= sweep.from - 1e-9 && v <= sweep.to + 1e-9) ctx.fillText(fmtTick(v), X(v), height - pad.b + 12);
+  ctx.fillText(label, pad.l + w / 2, height - 3);
+  const colW = Math.max(1, w / Math.max(1, sweep.columns));
+  let ty = null;
+  if (lo <= hi) {
+    const span = hi - lo || Math.abs(hi) || 1;
+    ty = niceTicks(lo - 0.03 * span, hi + 0.03 * span, 4);
+    const Y = (v) => pad.t + h - ((v - ty.lo) / (ty.hi - ty.lo)) * h;
+    ctx.textAlign = 'right';
+    for (const v of ty.ticks) ctx.fillText(fmtTick(v), pad.l - 4, Y(v) + 3);
+    ctx.save();
+    ctx.translate(10, pad.t + h / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText(`max ${axisName}`, 0, 0);
+    ctx.restore();
+    ctx.fillStyle = colours.accent;
+    ctx.globalAlpha = 0.55;
+    for (const r of sweep.results) {
+      const x = X(r.value);
+      for (const m of r.maxima) ctx.fillRect(x - colW / 2, Y(m) - 0.75, Math.max(1, colW * 0.8), 1.5);
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = colours.grid;
+  for (const r of sweep.results) if (r.escaped) ctx.fillRect(X(r.value) - colW / 2, pad.t + 1, colW, h - 2);
+  if (!sweep.done) {
+    ctx.fillStyle = colours.muted;
+    ctx.textAlign = 'left';
+    ctx.fillText(`sweeping… ${sweep.results.length}/${sweep.columns}`, pad.l + 6, pad.t + 12);
+  }
+  if (Number.isFinite(current) && current >= sweep.from && current <= sweep.to) {
+    ctx.strokeStyle = colours.ink ?? colours.muted;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(X(current), pad.t);
+    ctx.lineTo(X(current), pad.t + h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  return { pad, w, h, ty };
+}
+
+// Parameter value under a canvas x coordinate (CSS pixels), or null outside the plot.
+export function bifurcationValueAt(sweep, x, width) {
+  const pad = BIF_PAD;
+  const f = (x - pad.l) / (width - pad.l - pad.r);
+  if (f < 0 || f > 1) return null;
+  return sweep.valueAt(f);
+}

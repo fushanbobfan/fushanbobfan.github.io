@@ -66,7 +66,10 @@ root-mean-square distance from the cloud's centroid. While the cloud is small
 it grows like e^(λt), then it stops at the size of the attractor. The cloud
 growth rate readout is a least-squares fit of ln(spread) against time over the
 stretch between three times the starting size and a twentieth of the
-attractor. On the Lorenz system it lands near λ, typically between 0.8 and 1.0.
+attractor. It is shown once the cloud has grown a hundredfold. On the Lorenz
+system, from the default start, it settles at about 0.8, a little under
+λ ≈ 0.9: the stretch it fits covers only a few loops, and the flow stretches
+harder in some parts of the attractor than in others.
 
 **Lyapunov exponent.** Benettin's method: a shadow orbit starts 10⁻⁸ away, and
 every ten steps the separation is measured, its log growth added to a running
@@ -81,6 +84,18 @@ last. The map panel draws this for any coordinate, with each maximum refined
 by a parabola through three samples. In a periodic window the map collapses to
 a few points: one for a simple loop, two after the first period doubling, and
 so on.
+
+**Bifurcation diagram.** The wide chart sweeps one parameter across its
+slider range in 220 columns. Each column runs 150 time units to settle and
+then records up to 120 maxima over the next 150, starting from where the
+previous column's orbit ended so a branch is followed as the parameter moves.
+A column with one dot is a simple loop, two dots a doubled period, a smear is
+chaos, and grey columns ran off to infinity. The work is spread over animation
+frames (8 ms per frame), and moving the swept parameter's own slider keeps
+the finished diagram. Click anywhere on it to jump to that value. On Rössler
+the cascade and a period-3 window near c ≈ 16.8, doubling to period 6 just
+above it, stand out; on Lorenz, the periodic windows near ρ = 100 and from
+about 146 to 166.
 
 **View.** An orthographic camera keeps each system's vertical axis upright.
 Yaw turns the attractor around it and pitch tilts it. The frame is
@@ -110,7 +125,8 @@ src/systems.js             the seven flows, parameter ranges, equilibria
 src/integrate.js           RK4, orbit sampling, Lyapunov exponent, maxima
 src/cloud.js               the cloud of nearby orbits and its spread
 src/camera.js              orbit camera and projection
-src/render.js              canvas drawing for the view and both charts
+src/bifurcation.js         parameter sweep for the bifurcation diagram
+src/render.js              canvas drawing for the view and the charts
 src/settings.js            share-link encoding
 src/main.js                page wiring
 scripts/probe.js           command-line measurements

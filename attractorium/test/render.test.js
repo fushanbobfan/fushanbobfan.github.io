@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { niceTicks, groupOf, groupColour, GROUPS, drawOrbit, drawCloud, drawReturnMap, drawSpread, drawAxes, drawEquilibria } from '../src/render.js';
+import { drawBifurcation, bifurcationValueAt, niceTicks, groupOf, groupColour, GROUPS, drawOrbit, drawCloud, drawReturnMap, drawSpread, drawAxes, drawEquilibria } from '../src/render.js';
 import { SYSTEMS, defaultParams } from '../src/systems.js';
 import { sampleOrbit, bounds, successiveMaxima } from '../src/integrate.js';
 import { createCamera, fitCamera } from '../src/camera.js';
 import { createCloud } from '../src/cloud.js';
+import { createSweep } from '../src/bifurcation.js';
 
 // Records the calls a drawing makes and checks every coordinate is finite.
 function fakeContext() {
@@ -78,4 +79,21 @@ test('the spread chart copes with a shrinking cloud and a negative exponent', ()
   const r = drawSpread(ctx, history, { width: 300, height: 200, colours, lambda: -0.8, radius: 0.5 });
   const last = Math.log10(history[history.length - 1].spread);
   assert.ok(r.lo <= last && r.hi >= Math.log10(0.5), `axis ${r.lo}..${r.hi} must hold ${last}`);
+});
+
+test('the bifurcation diagram draws partial and finished sweeps and maps clicks back to values', () => {
+  const sweep = createSweep(SYSTEMS.rossler, defaultParams('rossler'), { key: 'c', from: 2, to: 6, columns: 20, transientTime: 50, sampleTime: 50 });
+  const { ctx, calls } = fakeContext();
+  drawBifurcation(ctx, sweep, { width: 600, height: 200, colours, current: 5.7, label: 'c', axisName: 'x' });
+  sweep.advance(Infinity, 5);
+  const before = calls.fillText;
+  drawBifurcation(ctx, sweep, { width: 600, height: 200, colours, current: 5.7, label: 'c', axisName: 'x' });
+  assert.ok(calls.fillText > before);
+  sweep.advance();
+  const r = drawBifurcation(ctx, sweep, { width: 600, height: 200, colours, current: 9, label: 'c', axisName: 'x' });
+  assert.ok(r.ty.lo < r.ty.hi);
+  assert.equal(bifurcationValueAt(sweep, 40, 600), 2);
+  assert.equal(bifurcationValueAt(sweep, 592, 600), 6);
+  assert.ok(Math.abs(bifurcationValueAt(sweep, 316, 600) - 4) < 1e-9);
+  assert.equal(bifurcationValueAt(sweep, 10, 600), null);
 });
