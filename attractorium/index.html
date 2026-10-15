@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>attractorium · strange attractors</title>
+    <meta name="description" content="Strange attractors in the browser: Lorenz, Rössler and their relatives integrated live and turned in 3D, with a cloud of nearby starts spreading over the attractor at the rate the Lyapunov exponent predicts." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>attractorium</h1>
+      <p class="subtitle">
+        Three equations, no randomness, and still no way to say where the orbit will be a minute from now. Release a
+        cloud of starting points closer together than a speck of dust and watch the flow pull them apart over the whole
+        attractor, at the rate the largest Lyapunov exponent predicts.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="canvas-wrap">
+          <canvas id="view" tabindex="0" role="img" aria-label="Attractor view: drag to turn, scroll to zoom"></canvas>
+          <p class="overlay" id="warning" hidden></p>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint">Drag to turn, scroll or pinch to zoom. Space runs or pauses, R releases a new cloud, O shows or hides the orbit, arrow keys turn, + and − zoom.</p>
+        <div class="charts">
+          <figure>
+            <canvas id="spread" role="img" aria-label="Spread of the cloud against time on a log scale, with a dashed line of slope lambda"></canvas>
+            <figcaption>Cloud spread (log scale) against time. The dashed line grows at the measured Lyapunov exponent λ.</figcaption>
+          </figure>
+          <figure>
+            <canvas id="map" role="img" aria-label="Return map: each maximum against the one before it"></canvas>
+            <figcaption>
+              Return map: each maximum of
+              <select id="map-axis" aria-label="Coordinate for the return map"><option value="0">x</option><option value="1">y</option><option value="2">z</option></select>
+              against the one before.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <fieldset>
+          <legend>System</legend>
+          <label for="system" class="sr-only">System</label>
+          <select id="system"></select>
+          <ol class="equations" id="equations"></ol>
+          <div id="params"></div>
+          <button id="reset-params" type="button">Default parameters</button>
+          <p class="note" id="note"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Cloud</legend>
+          <label>Orbits <output id="count-out"></output></label>
+          <input id="count" type="range" min="1" max="3000" step="1" aria-label="Number of orbits" />
+          <label>Starting spread <output id="radius-out"></output></label>
+          <input id="radius" type="range" min="-9" max="0" step="1" aria-label="Starting spread as a power of ten" />
+          <label>Tail length <output id="tail-out"></output></label>
+          <input id="tail" type="range" min="2" max="200" step="1" aria-label="Tail length" />
+          <label>Speed <output id="speed-out"></output></label>
+          <input id="speed" type="range" min="1" max="40" step="1" aria-label="Integration steps per frame" />
+          <div class="row">
+            <button id="release" type="button">Release cloud</button>
+            <button id="run" type="button" aria-pressed="true">Pause</button>
+          </div>
+          <label class="check"><input id="orbit" type="checkbox" /> Show the long orbit</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Measurements</legend>
+          <dl class="readouts">
+            <dt>Largest Lyapunov exponent λ</dt><dd id="lyap">–</dd>
+            <dt>Cloud growth rate</dt><dd id="growth">–</dd>
+            <dt>Doubling time ln 2 / λ</dt><dd id="doubling">–</dd>
+            <dt>Orbits still bounded</dt><dd id="alive">–</dd>
+          </dl>
+        </fieldset>
+
+        <fieldset>
+          <legend>Share</legend>
+          <div class="row">
+            <button id="reset-view" type="button">Reset view</button>
+            <button id="copy" type="button">Copy link</button>
+            <button id="png" type="button">Save PNG</button>
+          </div>
+        </fieldset>
+      </aside>
+    </main>
+
+    <footer>
+      <p><a href="https://github.com/fushanbobfan/attractorium">Source on GitHub</a> · MIT licence</p>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
