@@ -79,3 +79,14 @@ test('unknown parameters are refused and the maxima range spans every column', (
   assert.deepEqual(maximaRange([{ maxima: [2, 5] }, { maxima: [] }, { maxima: [-1] }]), { lo: -1, hi: 5 });
   assert.equal(maximaRange([{ maxima: [] }]), null);
 });
+
+test('the windows named in the README show up in the sweeps', () => {
+  // Started cold at c = 16.8 the orbit has not settled within the transient,
+  // so the sweep comes in from below as the page does, by continuation.
+  const r = createSweep(rossler, defaultParams('rossler'), { key: 'c', from: 15, to: 16.9, columns: 20, transientTime: 400, sampleTime: 300 });
+  r.advance();
+  for (const col of r.results.slice(-2)) assert.equal(distinctLevels(col.maxima, 1e-2).length, 3, `c = ${col.value}`);
+  const l = createSweep(SYSTEMS.lorenz, defaultParams('lorenz'), { key: 'rho', from: 156, to: 166, columns: 3, transientTime: 200, sampleTime: 100 });
+  l.advance();
+  for (const col of l.results) assert.equal(distinctLevels(col.maxima, 1e-2).length, 2, `rho = ${col.value}`);
+});
