@@ -249,6 +249,22 @@ button[aria-pressed='true'],
   margin: 8px 0 4px;
 }
 
+.held-name {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+input[type='text'] {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  font: inherit;
+  color: inherit;
+}
+
 textarea {
   width: 100%;
   resize: vertical;
