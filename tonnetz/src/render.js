@@ -10,7 +10,7 @@ export const PALETTE = {
   dark: {
     bg: '#0f1115', edge: 'rgba(200, 210, 230, 0.16)', node: '#1b1f27', nodeRing: 'rgba(200, 210, 230, 0.35)',
     text: '#d9dee8', faint: 'rgba(217, 222, 232, 0.5)',
-    major: [240, 170, 90], minor: [90, 180, 220], path: '#f3f5f9', sounding: '#ffd166',
+    major: [240, 160, 70], minor: [70, 170, 230], path: '#f3f5f9', sounding: '#ffd166',
   },
   light: {
     bg: '#fbfaf7', edge: 'rgba(40, 50, 70, 0.18)', node: '#ffffff', nodeRing: 'rgba(40, 50, 70, 0.4)',
@@ -33,16 +33,23 @@ export function visibleRange(view, w, h) {
   };
 }
 
+const triKey = (tri) => `${tri.q},${tri.r},${tri.up ? 1 : 0}`;
+
 // How strongly a triangle is filled: 1 for the current chord's triangle,
-// 0.55 for other copies of it, 0.3 under the pointer, otherwise a faint wash.
+// 0.55 for other copies of it, 0.35 along the traced path, 0.3 under the
+// pointer, otherwise a faint wash.
 export function emphasis(tri, triadOfTri, state) {
   if (state.current && sameTriangle(tri, state.current)) return 1;
   if (state.currentTriad && sameTriad(triadOfTri, state.currentTriad)) return 0.55;
+  if (state.pathKeys?.has(triKey(tri))) return 0.35;
   if (state.hover && sameTriangle(tri, state.hover)) return 0.3;
-  return 0.07;
+  return 0.1;
 }
 
-export function draw(ctx, state) {
+export function draw(ctx, input) {
+  const path = input.path ?? [];
+  const head = Math.min(path.length - 1, input.pathHead ?? path.length - 1);
+  const state = { ...input, pathKeys: new Set(path.slice(0, head + 1).map(triKey)) };
   const { view, w, h } = state;
   const pal = PALETTE[state.theme] ?? PALETTE.dark;
   const S = (q, r) => {
@@ -71,7 +78,7 @@ export function draw(ctx, state) {
         ctx.lineTo(v[1].x, v[1].y);
         ctx.lineTo(v[2].x, v[2].y);
         ctx.closePath();
-        ctx.fillStyle = rgba(up ? pal.major : pal.minor, e * 0.75);
+        ctx.fillStyle = rgba(up ? pal.major : pal.minor, (state.theme === 'dark' && e < 0.3 ? e * 1.6 : e) * 0.75);
         ctx.fill();
       }
     }
@@ -107,26 +114,18 @@ export function draw(ctx, state) {
   }
 
   // Path through centroids, up to pathHead.
-  const path = state.path ?? [];
-  const head = Math.min(path.length - 1, state.pathHead ?? path.length - 1);
   if (head >= 1) {
     const pts = path.slice(0, head + 1).map((tri) => W(triangleCentroid(tri)));
     ctx.strokeStyle = pal.path;
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.45;
     ctx.lineWidth = 2;
-    ctx.setLineDash?.([6, 5]);
+    ctx.setLineDash?.([5, 5]);
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.setLineDash?.([]);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = pal.path;
-    for (const p of pts) {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
 
   // Chord names at centroids.
@@ -141,7 +140,7 @@ export function draw(ctx, state) {
           const tri = { q, r, up };
           const t = triangleTriad(tri);
           const c = W(triangleCentroid(tri));
-          ctx.fillStyle = emphasis(tri, t, state) >= 0.55 ? pal.text : pal.faint;
+          ctx.fillStyle = emphasis(tri, t, state) >= 0.35 ? pal.text : pal.faint;
           ctx.fillText(chordName(t, state.spelling), c.x, c.y);
         }
       }

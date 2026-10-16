@@ -37,7 +37,9 @@ test('emphasis ranks the current triangle, its copies, the hover and the rest', 
   assert.equal(emphasis(cur, triad(0, 'M'), st), 1);
   assert.equal(emphasis({ q: 12, r: 0, up: true }, triad(0, 'M'), st), 0.55);
   assert.equal(emphasis({ q: 0, r: 0, up: false }, triad(4, 'm'), st), 0.3);
-  assert.equal(emphasis({ q: 1, r: 0, up: true }, triad(7, 'M'), st), 0.07);
+  assert.equal(emphasis({ q: 1, r: 0, up: true }, triad(7, 'M'), st), 0.1);
+  const onPath = { ...st, pathKeys: new Set(['1,0,1']) };
+  assert.equal(emphasis({ q: 1, r: 0, up: true }, triad(7, 'M'), onPath), 0.35);
 });
 
 test('labels follow the label mode and spelling', () => {
