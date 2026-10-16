@@ -1,7 +1,8 @@
 // Share-link settings. Only values that differ from the defaults are written,
 // and anything out of range is clamped or dropped on the way back in.
 
-import { SPELLINGS } from './pitch.js';
+import { SPELLINGS, pcName } from './pitch.js';
+import { parseNotes } from './chordset.js';
 import { parseChord, chordName } from './chords.js';
 
 export const DEFAULTS = {
@@ -10,6 +11,7 @@ export const DEFAULTS = {
   spelling: 'auto',
   labels: 'both',
   chord: 'C',
+  held: '',
 };
 
 export const TEMPO_RANGE = [30, 200];
@@ -29,10 +31,25 @@ export function normalise(s) {
     const c = parseChord(s.chord);
     if (c) out.chord = chordName(c);
   }
+  if (typeof s.held === 'string') {
+    // Held notes keep the order they were added in (the first is the bass),
+    // without repeats, at most twelve.
+    out.held = heldToText(heldFromText(s.held).slice(0, 12));
+  }
   return out;
 }
 
-const KEYS = { progression: 'p', tempo: 't', spelling: 's', labels: 'l', chord: 'c' };
+export function heldToText(pcs) {
+  return pcs.map((pc) => pcName(pc)).join(' ');
+}
+
+export function heldFromText(text) {
+  const seen = [];
+  for (const pc of parseNotes(text).pcs) if (!seen.includes(pc)) seen.push(pc);
+  return seen;
+}
+
+const KEYS = { progression: 'p', tempo: 't', spelling: 's', labels: 'l', chord: 'c', held: 'h' };
 
 export function encode(settings) {
   const s = normalise(settings);

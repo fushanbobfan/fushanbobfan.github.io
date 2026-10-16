@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, encode, decode, normalise } from '../src/settings.js';
+import { DEFAULTS, encode, decode, normalise, heldToText, heldFromText } from '../src/settings.js';
 
 test('defaults encode to an empty query', () => {
   assert.equal(encode(DEFAULTS), '');
@@ -28,4 +28,13 @@ test('out-of-range and unknown values fall back safely', () => {
 test('long progressions are cut and chords are normalised', () => {
   assert.equal(normalise({ progression: 'C '.repeat(500) }).progression.length, 400);
   assert.equal(normalise({ chord: 'a' }).chord, 'Am');
+});
+
+test('held notes keep their order, drop repeats and bad names, and round-trip', () => {
+  assert.equal(normalise({ held: 'E c g E H b' }).held, 'E C G B');
+  assert.deepEqual(heldFromText('E C G B'), [4, 0, 7, 11]);
+  assert.equal(heldToText([10, 2, 5]), 'Bb D F');
+  const s = { ...DEFAULTS, held: 'G B D F' };
+  assert.deepEqual(decode(encode(s)), s);
+  assert.equal(normalise({ held: 'C C# D D# E F F# G G# A A# B C' }).held.split(' ').length, 12);
 });
