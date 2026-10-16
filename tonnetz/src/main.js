@@ -3,7 +3,6 @@
 
 import { pitchClasses, chordName, chordLongName, spellTriad, parseChord, parseProgression, sameTriad } from './chords.js';
 import { TRANSFORM_NAMES, movingVoice, voiceLead, closeVoicing } from './plr.js';
-import { pcName } from './pitch.js';
 import { neighbour, triangleTriad, triangleAt, nodeAt, nearestTriangleOf, triangleCentroid, pcAt } from './lattice.js';
 import { PRESETS, tracePath, pathBounds, describe } from './progression.js';
 import { timeline, eventAt } from './player.js';
@@ -12,6 +11,8 @@ import { draw } from './render.js';
 import { createSynth } from './audio.js';
 import { decode, encode, heldFromText, heldToText } from './settings.js';
 import { describeSet, parseNotes, toggle } from './chordset.js';
+import { keyboardLayout, midiLabel } from './keyboard.js';
+import { SPELLINGS, pcName } from './pitch.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -31,6 +32,7 @@ const state = {
   trace: null,
   playing: null,
   held: [],
+  soundingMidi: [],
 };
 
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
@@ -66,6 +68,7 @@ function render() {
     pathHead: state.pathHead,
     held: state.held,
   });
+  updatePiano();
 }
 
 function resize() {
@@ -88,9 +91,11 @@ let soundingTimer = 0;
 function sound(notes, duration = 1.2) {
   synth.play(notes, duration);
   state.sounding = [...new Set(notes.map((n) => ((n % 12) + 12) % 12))];
+  state.soundingMidi = notes.slice();
   clearTimeout(soundingTimer);
   soundingTimer = setTimeout(() => {
     state.sounding = [];
+    state.soundingMidi = [];
     requestDraw();
   }, duration * 1000 + 150);
   requestDraw();
@@ -503,6 +508,58 @@ $('held-clear').addEventListener('click', () => {
   setHeld([]);
   $('held-error').hidden = true;
 });
+
+// ---------- piano strip ----------
+
+const piano = $('piano');
+const layout = keyboardLayout(48, 83);
+const keyButtons = layout.keys.map((k) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = k.black ? 'black' : 'white';
+  b.style.left = `${(k.x / layout.width) * 100}%`;
+  b.style.width = `${(k.w / layout.width) * 100}%`;
+  b.tabIndex = k.midi === 60 ? 0 : -1;
+  b.dataset.midi = String(k.midi);
+  if (k.pc === 0) {
+    const label = document.createElement('span');
+    label.className = 'octave';
+    label.textContent = midiLabel(k.midi, SPELLINGS.auto);
+    label.setAttribute('aria-hidden', 'true');
+    b.append(label);
+  }
+  b.addEventListener('click', () => {
+    setHeld(toggle(state.held, k.pc));
+    sound([k.midi], 0.9);
+  });
+  piano.append(b);
+  return { key: k, button: b };
+});
+
+// Arrow keys move focus along the strip; only one key is in the tab order.
+piano.addEventListener('keydown', (e) => {
+  const i = keyButtons.findIndex((kb) => kb.button === document.activeElement);
+  if (i < 0) return;
+  let j = i;
+  if (e.key === 'ArrowRight') j = Math.min(keyButtons.length - 1, i + 1);
+  else if (e.key === 'ArrowLeft') j = Math.max(0, i - 1);
+  else if (e.key === 'Home') j = 0;
+  else if (e.key === 'End') j = keyButtons.length - 1;
+  else return;
+  e.preventDefault();
+  e.stopPropagation();
+  keyButtons[i].button.tabIndex = -1;
+  keyButtons[j].button.tabIndex = 0;
+  keyButtons[j].button.focus();
+});
+
+function updatePiano() {
+  for (const { key, button } of keyButtons) {
+    button.setAttribute('aria-label', `${midiLabel(key.midi, SPELLINGS[settings.spelling] ?? SPELLINGS.auto)}`);
+    button.setAttribute('aria-pressed', String(state.held.includes(key.pc)));
+    button.classList.toggle('sounding', state.soundingMidi.includes(key.midi));
+  }
+}
 
 // ---------- display, sound, share ----------
 

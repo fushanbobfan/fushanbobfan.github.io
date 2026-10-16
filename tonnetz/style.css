@@ -104,6 +104,62 @@ main {
   font-size: 18px;
 }
 
+.piano {
+  position: relative;
+  height: 74px;
+  margin-top: 10px;
+  user-select: none;
+}
+
+.piano button {
+  position: absolute;
+  top: 0;
+  padding: 0;
+  border-radius: 0 0 4px 4px;
+  border: 1px solid var(--line);
+}
+
+.piano .white {
+  height: 100%;
+  background: #fdfdfb;
+  z-index: 0;
+}
+
+.piano .black {
+  height: 60%;
+  background: #22252c;
+  border-color: #22252c;
+  z-index: 1;
+}
+
+.piano .sounding {
+  background: #ffd166;
+  border-color: #c27c00;
+}
+
+.piano .black.sounding {
+  background: #c27c00;
+}
+
+.piano [aria-pressed='true'] {
+  box-shadow: inset 0 -6px 0 #7c3aed;
+}
+
+.piano button:focus-visible {
+  z-index: 2;
+}
+
+.piano .octave {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  font-size: 10px;
+  color: #646a78;
+  text-align: center;
+  pointer-events: none;
+}
+
 .status {
   min-height: 1.5em;
   margin: 8px 0 0;

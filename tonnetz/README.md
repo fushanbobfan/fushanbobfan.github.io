@@ -82,6 +82,12 @@ triangles side by side. A dominant seventh fills only one triangle, because
 its upper three notes form a diminished triad, which has no triangle of its
 own. The held notes travel in the share link.
 
+The piano strip under the lattice does the same from the keyboard side:
+pressing a key holds or releases its note, every octave of a held note is
+marked, and the keys that are sounding light up as chords play. The strip is
+a row of real buttons, so it works without a pointer: Tab reaches it, the
+arrow keys, Home and End move along it, and Enter or Space presses a key.
+
 ## Controls
 
 | Input | Action |
@@ -89,6 +95,7 @@ own. The held notes travel in the share link.
 | Click a triangle | Play its chord and make it current |
 | Click a circle | Play that note |
 | Shift-click a circle | Add or remove a held note |
+| Piano key (click, or Enter on a focused key) | Add or remove a held note |
 | P, L, R (keys or buttons) | Move the current chord across an edge |
 | Backspace / Step back | Return to the previous chord |
 | Space / Play | Play or stop the progression |
@@ -111,6 +118,7 @@ notes into the link.
 | `src/plr.js` | P, L and R, shortest words, cycles, the moving voice, voice leading |
 | `src/lattice.js` | Lattice coordinates, triangles, neighbours, hit testing |
 | `src/chordset.js` | Naming held note sets: extended triads, sevenths, intervals |
+| `src/keyboard.js` | Piano strip layout |
 | `src/progression.js` | Presets and tracing a progression as a lattice path |
 | `src/player.js` | Playback timeline and voicings |
 | `src/view.js` | Pan, zoom and fitting |
