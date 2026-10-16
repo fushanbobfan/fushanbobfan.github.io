@@ -3,19 +3,19 @@
 
 import { pcName } from './pitch.js';
 import { chordName, sameTriad, pitchClasses } from './chords.js';
-import { pcAt, toScreen, triangleVertices, triangleTriad, triangleCentroid, sameTriangle, toLattice } from './lattice.js';
+import { pcAt, toScreen, triangleVertices, triangleTriad, triangleCentroid, sameTriangle, toLattice, trianglesWithin } from './lattice.js';
 import { worldToScreen, visibleBox } from './view.js';
 
 export const PALETTE = {
   dark: {
     bg: '#0f1115', edge: 'rgba(200, 210, 230, 0.16)', node: '#1b1f27', nodeRing: 'rgba(200, 210, 230, 0.35)',
     text: '#d9dee8', faint: 'rgba(217, 222, 232, 0.5)',
-    major: [240, 160, 70], minor: [70, 170, 230], path: '#f3f5f9', sounding: '#ffd166',
+    major: [240, 160, 70], minor: [70, 170, 230], path: '#f3f5f9', sounding: '#ffd166', held: '#c4a7ff',
   },
   light: {
     bg: '#fbfaf7', edge: 'rgba(40, 50, 70, 0.18)', node: '#ffffff', nodeRing: 'rgba(40, 50, 70, 0.4)',
     text: '#1d2230', faint: 'rgba(29, 34, 48, 0.5)',
-    major: [214, 120, 30], minor: [30, 120, 175], path: '#1d2230', sounding: '#c27c00',
+    major: [214, 120, 30], minor: [30, 120, 175], path: '#1d2230', sounding: '#c27c00', held: '#6d28d9',
   },
 };
 
@@ -36,10 +36,12 @@ export function visibleRange(view, w, h) {
 const triKey = (tri) => `${tri.q},${tri.r},${tri.up ? 1 : 0}`;
 
 // How strongly a triangle is filled: 1 for the current chord's triangle,
-// 0.55 for other copies of it, 0.35 along the traced path, 0.3 under the
-// pointer, otherwise a faint wash.
+// 0.7 for triangles filled by held notes, 0.55 for other copies of the
+// current chord, 0.35 along the traced path, 0.3 under the pointer,
+// otherwise a faint wash.
 export function emphasis(tri, triadOfTri, state) {
   if (state.current && sameTriangle(tri, state.current)) return 1;
+  if (state.heldKeys?.has(triKey(tri))) return 0.7;
   if (state.currentTriad && sameTriad(triadOfTri, state.currentTriad)) return 0.55;
   if (state.pathKeys?.has(triKey(tri))) return 0.35;
   if (state.hover && sameTriangle(tri, state.hover)) return 0.3;
@@ -49,7 +51,9 @@ export function emphasis(tri, triadOfTri, state) {
 export function draw(ctx, input) {
   const path = input.path ?? [];
   const head = Math.min(path.length - 1, input.pathHead ?? path.length - 1);
-  const state = { ...input, pathKeys: new Set(path.slice(0, head + 1).map(triKey)) };
+  const held = input.held ?? [];
+  const heldKeys = new Set(held.length >= 3 ? trianglesWithin(held, visibleBox(input.view, input.w, input.h, 1)).map(triKey) : []);
+  const state = { ...input, pathKeys: new Set(path.slice(0, head + 1).map(triKey)), heldKeys };
   const { view, w, h } = state;
   const pal = PALETTE[state.theme] ?? PALETTE.dark;
   const S = (q, r) => {
@@ -158,6 +162,13 @@ export function draw(ctx, input) {
       const pc = pcAt(q, r);
       const p = S(q, r);
       const lit = sounding.has(pc);
+      if (held.includes(pc)) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius + 4, 0, Math.PI * 2);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = pal.held;
+        ctx.stroke();
+      }
       ctx.beginPath();
       ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
       ctx.fillStyle = lit ? pal.sounding : pal.node;
