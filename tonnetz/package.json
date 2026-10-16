@@ -1,0 +1,25 @@
+{
+  "name": "tonnetz",
+  "version": "0.1.0",
+  "description": "The Tonnetz in the browser: a lattice of fifths and thirds where every triangle is a triad, with neo-Riemannian P, L and R moves, chord progressions traced as paths, and smooth voice leading you can hear.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "tonnetz",
+    "neo-riemannian",
+    "music-theory",
+    "harmony",
+    "web-audio",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/tonnetz.git"
+  },
+  "private": false
+}
