@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>tonnetz · a map of harmony</title>
+    <meta name="description" content="The Tonnetz in the browser: a lattice of fifths and thirds where every triangle is a major or minor triad. Step between chords with the neo-Riemannian P, L and R moves, trace progressions as paths and hear the voices move." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>tonnetz</h1>
+      <p class="subtitle">
+        Notes a fifth apart run left to right, major thirds climb to the right and minor thirds to the left, so every
+        triangle is a triad: pointing up, major; pointing down, minor. Two chords that share an edge share two notes,
+        and moving between them shifts a single voice by a step. Click a triangle to hear it, press P, L or R to flip
+        across an edge, or type a progression and watch the path it takes.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="canvas-wrap">
+          <canvas id="view" tabindex="0" role="img" aria-label="Tonnetz lattice: click a triangle to play its chord, drag to move, scroll to zoom"></canvas>
+          <div class="zoom">
+            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" id="fit" aria-label="Fit the path in view">⤢</button>
+          </div>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint">Click a triangle for its chord or a circle for one note. P, L and R move the current chord, Backspace steps back, Space plays the progression, arrow keys pan, + and − zoom, F fits the path.</p>
+      </section>
+
+      <aside class="panel">
+        <section aria-labelledby="h-chord">
+          <h2 id="h-chord">Chord</h2>
+          <p class="chord-name"><span id="chord-name">C</span> <span class="notes" id="chord-notes">C E G</span></p>
+          <div class="moves" role="group" aria-label="Neo-Riemannian moves">
+            <button type="button" data-move="P" title="Parallel: major ↔ minor on the same root; the third moves a semitone"><b>P</b> parallel</button>
+            <button type="button" data-move="L" title="Leading-tone exchange: the major root falls a semitone (C → Em)"><b>L</b> leading-tone</button>
+            <button type="button" data-move="R" title="Relative: the major fifth rises a tone (C → Am)"><b>R</b> relative</button>
+          </div>
+          <div class="moves secondary">
+            <button type="button" id="undo">Step back</button>
+            <button type="button" id="replay">Play chord</button>
+          </div>
+          <p class="voice" id="voice"></p>
+        </section>
+
+        <section aria-labelledby="h-prog">
+          <h2 id="h-prog">Progression</h2>
+          <label class="row">Preset
+            <select id="preset"><option value="">Choose…</option></select>
+          </label>
+          <label class="stack" for="progression">Chords (C, Am, F#, Bbm …)</label>
+          <textarea id="progression" rows="2" spellcheck="false" autocomplete="off"></textarea>
+          <p class="error" id="prog-error" hidden></p>
+          <div class="moves secondary">
+            <button type="button" id="play">Play</button>
+            <button type="button" id="trace">Trace</button>
+          </div>
+          <label class="row">Tempo <input type="range" id="tempo" min="30" max="200" step="1" /> <output id="tempo-out"></output></label>
+          <ol class="steps" id="steps" aria-label="Progression steps"></ol>
+          <p class="summary" id="summary"></p>
+        </section>
+
+        <section aria-labelledby="h-display">
+          <h2 id="h-display">Display and sound</h2>
+          <label class="row">Spelling
+            <select id="spelling">
+              <option value="auto">Usual (B♭, F♯)</option>
+              <option value="flats">Flats</option>
+              <option value="sharps">Sharps</option>
+            </select>
+          </label>
+          <label class="row">Labels
+            <select id="labels">
+              <option value="both">Notes and chords</option>
+              <option value="notes">Notes</option>
+              <option value="chords">Chords</option>
+            </select>
+          </label>
+          <label class="row">Volume <input type="range" id="volume" min="0" max="1" step="0.01" value="0.6" /></label>
+          <label class="row check"><input type="checkbox" id="mute" /> Mute</label>
+          <div class="moves secondary">
+            <button type="button" id="share">Copy share link</button>
+            <button type="button" id="png">Save PNG</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <p>
+        The lattice is Euler's <i>Tonnetz</i> (1739) as revived by Riemann and by neo-Riemannian theory (Cohn, Lewin).
+        Progressions are drawn by replacing each chord change with its shortest sequence of P, L and R moves.
+        <a href="https://github.com/fushanbobfan/tonnetz">Source</a>
+      </p>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
