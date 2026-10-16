@@ -4,7 +4,7 @@ import { chordName, pitchClasses, sameTriad } from '../src/chords.js';
 import { TRANSFORMS, shortestWord } from '../src/plr.js';
 import {
   pcAt, toScreen, toLattice, triangleVertices, triangleTriad, triangleCentroid, neighbour, walk,
-  triangleAt, nodeAt, trianglesOf, nearestTriangleOf, sameTriangle,
+  triangleAt, nodeAt, trianglesOf, nearestTriangleOf, sameTriangle, trianglesWithin,
 } from '../src/lattice.js';
 
 const sorted = (a) => a.slice().sort((x, y) => x - y);
@@ -98,4 +98,17 @@ test('copies of a triad repeat on their own lattice', () => {
   const near = nearestTriangleOf({ root: 9, quality: 'm' }, 0.5, -0.3);
   assert.equal(chordName(triangleTriad(near)), 'Am');
   assert.ok(sameTriangle(near, neighbour({ q: 0, r: 0, up: true }, 'R')));
+});
+
+test('held sets fill the triangles of the triads they contain', () => {
+  const box = { x0: -2, x1: 3, y0: -2, y1: 2 };
+  const maj7 = trianglesWithin([0, 4, 7, 11], box);
+  const names = new Set(maj7.map((t) => chordName(triangleTriad(t))));
+  assert.deepEqual([...names].sort(), ['C', 'Em']);
+  const adjacent = maj7.some((a) => maj7.some((b) => sameTriangle(neighbour(a, 'L'), b)));
+  assert.ok(adjacent, 'Cmaj7 shows as C and Em sharing an edge');
+  assert.equal(trianglesWithin([0, 4, 8], box).length, 0);
+  assert.equal(trianglesWithin([0, 7], box).length, 0);
+  const g7 = new Set(trianglesWithin([7, 11, 2, 5], box).map((t) => chordName(triangleTriad(t))));
+  assert.deepEqual([...g7], ['G']);
 });

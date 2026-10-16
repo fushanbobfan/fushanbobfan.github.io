@@ -64,12 +64,31 @@ lit during the first beat, and each chord is voiced from the one before by
 moving every voice as little as possible, so a single move changes a single
 note.
 
+## Held notes
+
+Shift-click circles, or type note names into the held-notes box, to build any
+set of up to twelve notes. The panel names it: a triad of any quality
+(major, minor, diminished, augmented, suspended), a seventh chord (major,
+dominant, minor, half-diminished, diminished, minor-major, augmented major),
+an interval, or a plain list when nothing fits. Symmetric chords list every
+root they could have, starting from the first note held, which is also the
+bass when the set is played.
+
+Any major or minor triad inside the set lights up on the lattice. That shows
+which seventh chords live there: a major seventh is a major triad and the
+minor triad that shares its upper edge (Cmaj7 = C + Em), and a minor seventh
+is a minor triad and its relative major (Am7 = Am + C). Both sit as two
+triangles side by side. A dominant seventh fills only one triangle, because
+its upper three notes form a diminished triad, which has no triangle of its
+own. The held notes travel in the share link.
+
 ## Controls
 
 | Input | Action |
 | --- | --- |
 | Click a triangle | Play its chord and make it current |
 | Click a circle | Play that note |
+| Shift-click a circle | Add or remove a held note |
 | P, L, R (keys or buttons) | Move the current chord across an edge |
 | Backspace / Step back | Return to the previous chord |
 | Space / Play | Play or stop the progression |
@@ -80,8 +99,8 @@ note.
 Spelling can follow the usual lead-sheet choice (B♭, E♭, F♯), all flats or
 all sharps. Chord notes are spelled on consecutive letters, so A♭ major is
 A♭ C E♭ and F♯ major is F♯ A♯ C♯. A typed root keeps its spelling. The share
-button writes the progression, tempo, spelling, labels and current chord into
-the link.
+button writes the progression, tempo, spelling, labels, current chord and held
+notes into the link.
 
 ## Code layout
 
@@ -91,6 +110,7 @@ the link.
 | `src/chords.js` | The 24 triads, chord symbols, progression parsing, triad recognition |
 | `src/plr.js` | P, L and R, shortest words, cycles, the moving voice, voice leading |
 | `src/lattice.js` | Lattice coordinates, triangles, neighbours, hit testing |
+| `src/chordset.js` | Naming held note sets: extended triads, sevenths, intervals |
 | `src/progression.js` | Presets and tracing a progression as a lattice path |
 | `src/player.js` | Playback timeline and voicings |
 | `src/view.js` | Pan, zoom and fitting |

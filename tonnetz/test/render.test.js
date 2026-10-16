@@ -63,3 +63,22 @@ test('sounding notes are lit and a path draws without errors', () => {
   draw(rec.ctx, base({ sounding: [7, 11, 2], path, pathHead: 2, current: path[2], currentTriad: triad(7, 'M'), theme: 'light' }));
   assert.ok(rec.fills.includes('#c27c00'));
 });
+
+test('held notes are ringed and fill the triangles they complete', () => {
+  const rec = recorder();
+  const strokes = [];
+  const ctx = new Proxy(rec.ctx, {
+    get(t, prop) {
+      if (prop === 'stroke') return () => strokes.push(t.strokeStyle);
+      return t[prop];
+    },
+    set(t, prop, v) {
+      t[prop] = v;
+      return true;
+    },
+  });
+  draw(ctx, base({ held: [0, 4, 7, 11], theme: 'light' }));
+  assert.ok(strokes.includes('#6d28d9'));
+  const st = { heldKeys: new Set(['0,0,1']) };
+  assert.equal(emphasis({ q: 0, r: 0, up: true }, triad(0, 'M'), st), 0.7);
+});

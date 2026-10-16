@@ -10,7 +10,8 @@ import { timeline, eventAt } from './player.js';
 import { createView, screenToWorld, pan, zoomAt, fitBox, keepInView } from './view.js';
 import { draw } from './render.js';
 import { createSynth } from './audio.js';
-import { decode, encode } from './settings.js';
+import { decode, encode, heldFromText, heldToText } from './settings.js';
+import { describeSet, parseNotes, toggle } from './chordset.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -29,6 +30,7 @@ const state = {
   voicing: null,
   trace: null,
   playing: null,
+  held: [],
 };
 
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
@@ -62,6 +64,7 @@ function render() {
     sounding: state.sounding,
     path: state.path,
     pathHead: state.pathHead,
+    held: state.held,
   });
 }
 
@@ -231,7 +234,7 @@ function endPointer(e) {
   pointers.delete(e.pointerId);
   if (pointers.size === 0) {
     canvas.classList.remove('dragging');
-    if (wasClick) clickAt(p);
+    if (wasClick) clickAt(p, e.shiftKey);
     drag = null;
   }
 }
@@ -246,9 +249,14 @@ canvas.addEventListener('pointerleave', () => {
   requestDraw();
 });
 
-function clickAt(p) {
+function clickAt(p, shift = false) {
   const w = screenToWorld(state.view, size.w, size.h, p.x, p.y);
   const node = nodeAt(w.x, w.y);
+  if (shift && node.distance < 0.35) {
+    setHeld(toggle(state.held, pcAt(node.q, node.r)));
+    playHeld(0.9);
+    return;
+  }
   if (node.distance < 0.2) {
     const pc = pcAt(node.q, node.r);
     const midi = 60 + pc;
@@ -453,11 +461,55 @@ tempo.addEventListener('input', () => {
   $('tempo-out').textContent = `${settings.tempo} bpm`;
 });
 
+// ---------- held notes ----------
+
+const heldInput = $('held');
+
+function setHeld(pcs, { fromInput = false } = {}) {
+  state.held = pcs.slice(0, 12);
+  settings.held = heldToText(state.held);
+  if (!fromInput) heldInput.value = state.held.map((pc) => pcName(pc, settings.spelling)).join(' ');
+  $('held-name').textContent = describeSet(state.held, { spelling: settings.spelling, bass: state.held[0] ?? null });
+  requestDraw();
+}
+
+// Held notes sound upward from the first one, each above the last.
+function heldVoicing() {
+  const out = [];
+  for (const pc of state.held) {
+    let m = 48 + pc;
+    if (out.length) while (m <= out[out.length - 1]) m += 12;
+    out.push(m);
+  }
+  return out;
+}
+
+function playHeld(duration = 1.4) {
+  if (state.held.length) sound(heldVoicing(), duration);
+}
+
+heldInput.addEventListener('input', () => {
+  const { errors } = parseNotes(heldInput.value);
+  const err = $('held-error');
+  err.hidden = errors.length === 0;
+  err.textContent = errors.length ? `Not a note name: ${errors.join(', ')}` : '';
+  setHeld(heldFromText(heldInput.value), { fromInput: true });
+});
+heldInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') playHeld();
+});
+$('held-play').addEventListener('click', () => playHeld());
+$('held-clear').addEventListener('click', () => {
+  setHeld([]);
+  $('held-error').hidden = true;
+});
+
 // ---------- display, sound, share ----------
 
 $('spelling').addEventListener('change', () => {
   settings.spelling = $('spelling').value;
   updateChordPanel(null, null);
+  setHeld(state.held);
   renderSteps();
   requestDraw();
 });
@@ -504,6 +556,7 @@ $('labels').value = settings.labels;
 if (!synth.available) $('voice').textContent = 'This browser has no Web Audio, so chords are shown but not played.';
 
 resize();
+setHeld(heldFromText(settings.held));
 loadProgression({ play: false });
 const startChord = parseChord(settings.chord);
 if (startChord && state.current && !sameTriad(triangleTriad(state.current), startChord)) {

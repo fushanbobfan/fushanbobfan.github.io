@@ -142,3 +142,21 @@ export function nearestTriangleOf(t, x, y) {
   }
   return best;
 }
+
+// Triangles whose three notes all belong to a set of pitch classes, with
+// centroids inside the box. A major or minor seventh chord fills two
+// triangles that share an edge; an augmented triad or a lone interval fills
+// none.
+export function trianglesWithin(pcs, box) {
+  const set = new Set(pcs.map((p) => ((p % 12) + 12) % 12));
+  const out = [];
+  for (const root of set) {
+    for (const quality of ['M', 'm']) {
+      const t = triad(root, quality);
+      const third = (root + (quality === 'M' ? 4 : 3)) % 12;
+      const fifth = (root + 7) % 12;
+      if (set.has(third) && set.has(fifth)) out.push(...trianglesOf(t, box));
+    }
+  }
+  return out;
+}
