@@ -1,0 +1,54 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  createGas, momentum, temperature, setTemperature, packingFraction,
+} from '../src/gas.js';
+
+function minGap(gas) {
+  let gap = Infinity;
+  for (let i = 0; i < gas.n; i++) {
+    for (let j = i + 1; j < gas.n; j++) {
+      const d = Math.hypot(gas.x[i] - gas.x[j], gas.y[i] - gas.y[j]);
+      gap = Math.min(gap, d - gas.r[i] - gas.r[j]);
+    }
+  }
+  return gap;
+}
+
+test('disks start inside the box without overlapping', () => {
+  const gas = createGas({ n: 400, radius: 2, width: 100, height: 80, seed: 5 });
+  assert.ok(minGap(gas) >= -1e-9);
+  for (let i = 0; i < gas.n; i++) {
+    assert.ok(gas.x[i] >= gas.r[i] - 1e-9 && gas.x[i] <= gas.width - gas.r[i] + 1e-9);
+    assert.ok(gas.y[i] >= gas.r[i] - 1e-9 && gas.y[i] <= gas.height - gas.r[i] + 1e-9);
+  }
+});
+
+test('the starting gas has the requested temperature and no drift', () => {
+  const gas = createGas({ n: 250, kT: 2.5, mass: 3, seed: 9 });
+  assert.ok(Math.abs(temperature(gas) - 2.5) < 1e-12);
+  const [px, py] = momentum(gas);
+  assert.ok(Math.abs(px) < 1e-9 && Math.abs(py) < 1e-9);
+});
+
+test('a seed reproduces the same gas', () => {
+  const a = createGas({ n: 50, seed: 11 });
+  const b = createGas({ n: 50, seed: 11 });
+  assert.deepEqual(Array.from(a.x), Array.from(b.x));
+  assert.deepEqual(Array.from(a.vy), Array.from(b.vy));
+});
+
+test('too many disks for the box is refused', () => {
+  assert.throws(() => createGas({ n: 3000, radius: 2, width: 100, height: 100 }), RangeError);
+});
+
+test('rescaling sets the temperature exactly', () => {
+  const gas = createGas({ n: 100, kT: 1, seed: 2 });
+  setTemperature(gas, 0.25);
+  assert.ok(Math.abs(temperature(gas) - 0.25) < 1e-12);
+});
+
+test('packing fraction is disk area over box area', () => {
+  const gas = createGas({ n: 100, radius: 1, width: 100, height: 100 });
+  assert.ok(Math.abs(packingFraction(gas) - (100 * Math.PI) / 10000) < 1e-12);
+});
