@@ -14,6 +14,7 @@ export function createGas({
   mass = 1,
   seed = 1,
   start = 'maxwell',
+  tracer = null,
 } = {}) {
   const rand = mulberry32(seed);
   const normal = gaussian(rand);
@@ -29,7 +30,12 @@ export function createGas({
     m: new Float64Array(n).fill(mass),
     time: 0,
     collisions: 0,
+    tracer: Boolean(tracer),
   };
+  if (tracer && n > 0) {
+    gas.r[0] = tracer.radius;
+    gas.m[0] = tracer.mass;
+  }
   placeWithoutOverlap(gas, rand);
   assignVelocities(gas, start, kT, rand, normal);
   return gas;
@@ -57,6 +63,11 @@ export function assignVelocities(gas, start, kT, rand, normal) {
       gas.vx[i] = v * Math.cos(a);
       gas.vy[i] = v * Math.sin(a);
     }
+    // Unequal masses (a tracer) leave a little net momentum to remove.
+    if (gas.tracer) {
+      removeDrift(gas);
+      setTemperature(gas, kT);
+    }
     return;
   }
   for (let i = 0; i < n; i++) {
@@ -71,24 +82,42 @@ export function assignVelocities(gas, start, kT, rand, normal) {
 
 // Put disks on randomly chosen cells of a grid whose spacing fits the
 // largest disk, jittered inside their cell so the start is not a crystal.
+// A tracer (disk 0, larger than the rest) starts in the middle of the box and
+// the grid cells it would overlap are left empty.
 export function placeWithoutOverlap(gas, rand) {
   const { n, width, height } = gas;
+  const first = gas.tracer ? 1 : 0;
   let rmax = 0;
-  for (let i = 0; i < n; i++) rmax = Math.max(rmax, gas.r[i]);
+  for (let i = first; i < n; i++) rmax = Math.max(rmax, gas.r[i]);
+  if (rmax === 0) rmax = gas.r[0] || 1;
   const cols = Math.max(1, Math.floor(width / (2 * rmax)));
   const rows = Math.max(1, Math.floor(height / (2 * rmax)));
-  if (cols * rows < n) {
-    throw new RangeError(`cannot fit ${n} disks of radius ${rmax} in ${width}x${height}`);
-  }
   const cw = width / cols;
   const ch = height / rows;
-  const cells = Array.from({ length: cols * rows }, (_, k) => k);
+  let cells = Array.from({ length: cols * rows }, (_, k) => k);
+  if (first === 1) {
+    gas.x[0] = width / 2;
+    gas.y[0] = height / 2;
+    // A cell is safe if no point of it lies within the tracer radius plus
+    // the largest small radius of the tracer centre.
+    const reach = gas.r[0] + rmax;
+    cells = cells.filter((c) => {
+      const x0 = (c % cols) * cw;
+      const y0 = Math.floor(c / cols) * ch;
+      const nx = Math.max(x0, Math.min(gas.x[0], x0 + cw));
+      const ny = Math.max(y0, Math.min(gas.y[0], y0 + ch));
+      return Math.hypot(nx - gas.x[0], ny - gas.y[0]) >= reach;
+    });
+  }
+  if (cells.length < n - first) {
+    throw new RangeError(`cannot fit ${n} disks of radius ${rmax} in ${width}x${height}`);
+  }
   for (let k = cells.length - 1; k > 0; k--) {
     const j = Math.floor(rand() * (k + 1));
     [cells[k], cells[j]] = [cells[j], cells[k]];
   }
-  for (let i = 0; i < n; i++) {
-    const c = cells[i];
+  for (let i = first; i < n; i++) {
+    const c = cells[i - first];
     const ri = gas.r[i];
     const slackX = cw / 2 - ri;
     const slackY = ch / 2 - ri;

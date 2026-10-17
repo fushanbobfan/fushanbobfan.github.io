@@ -74,3 +74,20 @@ test('a hot-cold start puts more energy on the left', () => {
   assert.ok(left / nl > 2.5 * (right / nr));
   assert.ok(Math.abs(temperature(gas) - 1) < 1e-12);
 });
+
+test('a tracer starts in the middle with nothing overlapping it', () => {
+  const gas = createGas({ n: 500, radius: 1.2, tracer: { radius: 6, mass: 40 }, seed: 3 });
+  assert.equal(gas.r[0], 6);
+  assert.equal(gas.m[0], 40);
+  assert.equal(gas.x[0], 50);
+  assert.equal(gas.y[0], 50);
+  assert.ok(minGap(gas) >= -1e-9);
+  assert.ok(Math.abs(temperature(gas) - 1) < 1e-12);
+});
+
+test('a tracer with an equal-speed start still has no drift', () => {
+  const gas = createGas({ n: 300, start: 'equal', tracer: { radius: 4, mass: 25 }, seed: 5 });
+  const [px, py] = momentum(gas);
+  assert.ok(Math.abs(px) < 1e-9 && Math.abs(py) < 1e-9);
+  assert.ok(Math.abs(temperature(gas) - 1) < 1e-12);
+});
