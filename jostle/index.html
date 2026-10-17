@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>jostle · a hard-disk gas</title>
+    <meta name="description" content="A hard-disk gas in the browser: hundreds of elastic disks collide in a box, their speeds settle into the Maxwell-Boltzmann distribution, Boltzmann's H falls to its floor, and the pressure on the walls follows the hard-disk equation of state." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>jostle</h1>
+      <p class="subtitle">
+        Start every disk at the same speed and let them collide. Nothing in the rules prefers any speed, yet within a
+        few hundred collisions the histogram takes the shape Maxwell wrote down in 1860, and Boltzmann's H falls to its
+        floor and stays there. Each collision is exactly elastic, so the total energy never changes; only the way it is
+        shared out does.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="canvas-wrap">
+          <canvas id="box" role="img" aria-label="The box of colliding disks, coloured from blue for slow to orange for fast"></canvas>
+        </div>
+        <div class="transport" role="group" aria-label="Playback">
+          <button type="button" id="play" aria-pressed="true">Pause</button>
+          <button type="button" id="step">Step</button>
+          <button type="button" id="restart">Restart</button>
+          <button type="button" id="reseed">New seed</button>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint">Space pauses, S steps, R restarts with the same seed, N draws a new one.</p>
+      </section>
+
+      <aside class="panel">
+        <section aria-labelledby="h-speeds">
+          <h2 id="h-speeds">Speeds</h2>
+          <canvas id="hist" class="chart" role="img" aria-label="Histogram of disk speeds with the Maxwell-Boltzmann curve"></canvas>
+          <p class="legend"><span class="key bar"></span> disks now <span class="key curve"></span> Maxwell–Boltzmann at this temperature</p>
+          <dl class="readout">
+            <div><dt>KS distance</dt><dd id="ks">–</dd></div>
+            <div><dt>Mean speed</dt><dd id="mean">–</dd></div>
+            <div><dt>Theory</dt><dd id="mean-theory">–</dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="h-h">
+          <h2 id="h-h">Boltzmann's H</h2>
+          <canvas id="hchart" class="chart short" role="img" aria-label="Boltzmann's H against time with the Maxwell floor dashed"></canvas>
+          <dl class="readout">
+            <div><dt>H now</dt><dd id="h-now">–</dd></div>
+            <div><dt>Maxwell floor</dt><dd id="h-floor">–</dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="h-pressure">
+          <h2 id="h-pressure">Pressure</h2>
+          <dl class="readout">
+            <div><dt>On the walls</dt><dd id="p-wall">–</dd></div>
+            <div><dt>Ideal gas</dt><dd id="p-ideal">–</dd></div>
+            <div><dt>Henderson</dt><dd id="p-henderson">–</dd></div>
+            <div><dt>Packing</dt><dd id="eta">–</dd></div>
+            <div><dt>Collisions</dt><dd id="hits">–</dd></div>
+            <div><dt>Energy drift</dt><dd id="drift">–</dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="h-gas">
+          <h2 id="h-gas">Gas</h2>
+          <label class="row" for="start">Start
+            <select id="start">
+              <option value="equal">All at one speed</option>
+              <option value="maxwell">Already Maxwellian</option>
+              <option value="hotcold">Hot left, cold right</option>
+            </select>
+          </label>
+          <label class="row" for="n">Disks <output id="n-out" for="n"></output></label>
+          <input type="range" id="n" min="2" max="1500" step="1" />
+          <label class="row" for="radius">Radius <output id="radius-out" for="radius"></output></label>
+          <input type="range" id="radius" min="0.4" max="3" step="0.1" />
+          <label class="row" for="kT">Temperature <output id="kT-out" for="kT"></output></label>
+          <input type="range" id="kT" min="0.1" max="5" step="0.1" />
+          <label class="row" for="rate">Speed <output id="rate-out" for="rate"></output></label>
+          <input type="range" id="rate" min="0.1" max="8" step="0.1" />
+          <label class="row" for="colour">Colour
+            <select id="colour">
+              <option value="speed">By speed</option>
+              <option value="half">By starting half</option>
+              <option value="plain">Plain</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="trace" /> Trace one disk</label>
+          <div class="actions">
+            <button type="button" id="share">Copy share link</button>
+            <button type="button" id="png">Save PNG</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <p>Disks, box and time are in arbitrary units with Boltzmann's constant set to 1. <a href="https://github.com/fushanbobfan/jostle">Source</a></p>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
