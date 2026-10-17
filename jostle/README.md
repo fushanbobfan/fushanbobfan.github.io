@@ -47,6 +47,25 @@ dashed line is H for the exact Maxwell distribution binned the same way. The
 chart keeps the whole run by thinning old points rather than scrolling them
 away, so the early fall stays visible.
 
+**Brownian motion.** Tick "Heavy tracer" to put one large, heavy disk in the
+middle of the box. It is pushed about by the small disks the way a pollen
+grain is pushed about by water molecules. The chart plots its mean squared
+displacement against the lag τ on log-log axes, averaged over every starting
+point in the last 2000 time units of its path. Two regimes show up as two
+slopes:
+
+- at short lags the tracer still moves in a straight line at thermal speed,
+  so MSD = (2kT / M) τ², the dashed line;
+- once it has forgotten its velocity it random-walks, MSD = 4Dτ, and the
+  solid line is a least-squares fit of 4Dτ + b over the lags past that point.
+
+The fit starts at the first lag where the measured MSD has fallen below 30%
+of the free-flight line. Heavier tracers remember their velocity longer, so
+the bend moves right as the mass goes up. Lags are capped at 300 time units,
+beyond which the walls start to hold the tracer in. D comes from one tracer,
+so it is noisy: four runs of the default tracer (mass 25, radius 5) gave
+values between 0.34 and 1.14.
+
 **Pressure.** The walls count the momentum every bounce delivers. Dividing by
 the perimeter and the elapsed time gives the pressure, shown as
 Z = PA / NkT. An ideal gas of points has Z = 1; disks take up room, so Z
@@ -109,9 +128,10 @@ same gas, seed included. "Save PNG" saves the box as it is now.
 | File | Role |
 | --- | --- |
 | `src/rng.js` | Seeded uniform and normal random numbers |
-| `src/gas.js` | Disk arrays, placement without overlap, starting velocities, energy and temperature |
+| `src/gas.js` | Disk arrays, placement without overlap (around a tracer if there is one), starting velocities, energy and temperature |
 | `src/physics.js` | Wall bounces, elastic pair collisions and the stepping loop |
 | `src/stats.js` | Maxwell curves, histograms, H, KS distance, pressure and Henderson's equation |
+| `src/diffusion.js` | Tracer path record, mean squared displacement, onset of diffusion and the fit for D |
 | `src/render.js` | Colours, chart geometry and canvas drawing |
 | `src/settings.js` | Defaults, clamping and the share-link format |
 | `src/main.js` | Page wiring: animation loop, controls and readouts |
@@ -121,6 +141,7 @@ same gas, seed included. "Save PNG" saves the box as it is now.
 - J. C. Maxwell, "Illustrations of the dynamical theory of gases", *Philosophical Magazine* 19 (1860) 19–32.
 - L. Boltzmann, "Weitere Studien über das Wärmegleichgewicht unter Gasmolekülen", *Wiener Berichte* 66 (1872) 275–370.
 - D. Henderson, "A simple equation of state for hard discs", *Molecular Physics* 30 (1975) 971–972.
+- A. Einstein, "Über die von der molekularkinetischen Theorie der Wärme geforderte Bewegung von in ruhenden Flüssigkeiten suspendierten Teilchen", *Annalen der Physik* 17 (1905) 549–560.
 - B. J. Alder and T. E. Wainwright, "Studies in molecular dynamics. I. General method", *Journal of Chemical Physics* 31 (1959) 459–466.
 
 ## License

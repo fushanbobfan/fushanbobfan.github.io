@@ -4,6 +4,7 @@ import { createGas } from '../src/gas.js';
 import { speedHistogram } from '../src/stats.js';
 import {
   speedColour, boxView, histogramGeometry, seriesGeometry, niceStep, drawGas, drawHistogram,
+  msdGeometry, drawMsd,
 } from '../src/render.js';
 
 function recorder() {
@@ -68,4 +69,39 @@ test('drawing a gas draws every disk and the traced path', () => {
   const hist = speedHistogram(gas, 8, 4);
   drawHistogram(hctx, histogramGeometry(hist, 1, 1, 300, 200), hist, THEME);
   assert.equal(hctx.calls.filter((c) => c[0] === 'fillRect').length, 8);
+});
+
+test('the MSD panel maps a power law to a straight line', () => {
+  const pts = [1, 10, 100].map((tau) => ({ tau, msd: 3 * tau * tau }));
+  const g = msdGeometry(pts, 1, 2, null, 240, 132);
+  const [a, b, c] = g.dots;
+  // Equal steps in log tau and equal steps in log msd: collinear and evenly spaced.
+  assert.ok(Math.abs((b[0] - a[0]) - (c[0] - b[0])) < 1e-9);
+  assert.ok(Math.abs((b[1] - a[1]) - (c[1] - b[1])) < 1e-9);
+  assert.equal(a[0], g.pad.l);
+  assert.equal(c[0], g.pad.l + g.pw);
+  assert.equal(g.diffusive.length, 0);
+  assert.ok(g.ballistic.length > 10);
+  const withFit = msdGeometry(pts, 1, 2, { D: 1, b: 0 }, 240, 132);
+  assert.ok(withFit.diffusive.length > 10);
+  assert.equal(msdGeometry(pts.slice(0, 1), 1, 2, null, 240, 132), null);
+});
+
+test('drawing the MSD panel draws one dot per point', () => {
+  const pts = [1, 2, 5, 10].map((tau) => ({ tau, msd: tau }));
+  const ctx = recorder();
+  drawMsd(ctx, msdGeometry(pts, 1, 1, { D: 0.25, b: 0 }, 240, 132), { ...THEME, muted: '#999' });
+  assert.equal(ctx.calls.filter((c) => c[0] === 'arc').length, 4);
+});
+
+test('MSD lines stay inside the panel and the fit starts at its onset', () => {
+  const pts = [1, 10, 100, 1000].map((tau) => ({ tau, msd: tau }));
+  const g = msdGeometry(pts, 1, 1, { D: 0.25, b: 0, from: 100 }, 240, 132);
+  for (const [, y] of [...g.ballistic, ...g.diffusive]) {
+    assert.ok(y >= g.pad.t - 1e-9 && y <= g.pad.t + g.ph + 1e-9);
+  }
+  // The ballistic tau^2 line leaves through the top long before tau = 1000.
+  assert.ok(g.ballistic[g.ballistic.length - 1][0] < g.pad.l + g.pw);
+  const startX = g.pad.l + ((2 - 0) / 3) * g.pw;
+  assert.ok(Math.abs(g.diffusive[0][0] - startX) < 1e-9);
 });

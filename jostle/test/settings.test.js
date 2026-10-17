@@ -28,3 +28,22 @@ test('the disk count never exceeds what the box can hold', () => {
   assert.equal(s.n, capacity(3));
   assert.equal(capacity(3), 256);
 });
+
+test('tracer settings round-trip and shrink the room for other disks', () => {
+  const s = { ...DEFAULTS, tracer: true, tracerMass: 60, tracerRadius: 8 };
+  const q = encodeSettings(s);
+  assert.equal(q, 'tracer=1&tracerMass=60&tracerRadius=8');
+  assert.deepEqual(decodeSettings(q), s);
+  assert.ok(capacity(1.2, 100, 100, 8) < capacity(1.2));
+  const packed = clampSettings({ n: 1500, radius: 3, tracer: '1', tracerRadius: 12 });
+  assert.equal(packed.n, capacity(3, 100, 100, 12));
+});
+
+test('the capacity with a tracer really fits', async () => {
+  const { createGas } = await import('../src/gas.js');
+  for (const [r, R] of [[1.2, 5], [2, 12], [0.4, 1], [3, 7]]) {
+    const n = capacity(r, 100, 100, R);
+    assert.doesNotThrow(() => createGas({ n, radius: r, tracer: { radius: R, mass: 10 } }));
+    assert.throws(() => createGas({ n: n + 1, radius: r, tracer: { radius: R, mass: 10 } }), RangeError);
+  }
+});

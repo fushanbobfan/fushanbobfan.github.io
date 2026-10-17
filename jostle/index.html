@@ -55,6 +55,24 @@
           </dl>
         </section>
 
+        <section aria-labelledby="h-brown">
+          <h2 id="h-brown">Brownian motion</h2>
+          <label class="check"><input type="checkbox" id="tracer" /> Heavy tracer in the middle</label>
+          <div id="tracer-controls">
+            <label class="row" for="tracerMass">Mass <output id="tracerMass-out" for="tracerMass"></output></label>
+            <input type="range" id="tracerMass" min="1" max="200" step="1" />
+            <label class="row" for="tracerRadius">Radius <output id="tracerRadius-out" for="tracerRadius"></output></label>
+            <input type="range" id="tracerRadius" min="1" max="12" step="0.5" />
+            <canvas id="msd" class="chart" role="img" aria-label="Mean squared displacement of the tracer against lag time on log-log axes"></canvas>
+            <p class="legend"><span class="key dot"></span> tracer <span class="key dash"></span> free flight (2kT/M)τ² <span class="key curve"></span> fit 4Dτ</p>
+            <dl class="readout">
+              <div><dt>D fitted</dt><dd id="d-fit">–</dd></div>
+              <div><dt>Diffusive from</dt><dd id="onset">–</dd></div>
+              <div><dt>Record</dt><dd id="record">–</dd></div>
+            </dl>
+          </div>
+        </section>
+
         <section aria-labelledby="h-pressure">
           <h2 id="h-pressure">Pressure</h2>
           <dl class="readout">

@@ -14,6 +14,9 @@ export const DEFAULTS = Object.freeze({
   rate: 1,
   colour: 'speed',
   trace: true,
+  tracer: false,
+  tracerMass: 25,
+  tracerRadius: 5,
 });
 
 const NUMBERS = {
@@ -22,11 +25,28 @@ const NUMBERS = {
   kT: { min: 0.1, max: 5 },
   seed: { min: 0, max: 4294967295, integer: true },
   rate: { min: 0.1, max: 8 },
+  tracerMass: { min: 1, max: 200 },
+  tracerRadius: { min: 1, max: 12 },
 };
 
-// Most disks the box (100 x 100 units) can start with at a given radius.
-export function capacity(radius, width = 100, height = 100) {
-  return Math.floor(width / (2 * radius)) * Math.floor(height / (2 * radius));
+// Most disks the box (100 x 100 units) can start with at a given radius,
+// less the grid cells a central tracer of radius `tracerRadius` blocks.
+export function capacity(radius, width = 100, height = 100, tracerRadius = 0) {
+  const cols = Math.floor(width / (2 * radius));
+  const rows = Math.floor(height / (2 * radius));
+  if (!tracerRadius) return cols * rows;
+  const cw = width / cols;
+  const ch = height / rows;
+  const reach = tracerRadius + radius;
+  let free = 0;
+  for (let c = 0; c < cols * rows; c++) {
+    const x0 = (c % cols) * cw;
+    const y0 = Math.floor(c / cols) * ch;
+    const nx = Math.max(x0, Math.min(width / 2, x0 + cw));
+    const ny = Math.max(y0, Math.min(height / 2, y0 + ch));
+    if (Math.hypot(nx - width / 2, ny - height / 2) >= reach) free++;
+  }
+  return free + 1;
 }
 
 export function clampSettings(raw) {
@@ -39,8 +59,10 @@ export function clampSettings(raw) {
   }
   if (STARTS.includes(raw.start)) s.start = raw.start;
   if (COLOURINGS.includes(raw.colour)) s.colour = raw.colour;
-  if (raw.trace !== undefined) s.trace = raw.trace === true || raw.trace === '1' || raw.trace === 'true';
-  s.n = Math.min(s.n, capacity(s.radius));
+  for (const key of ['trace', 'tracer']) {
+    if (raw[key] !== undefined) s[key] = raw[key] === true || raw[key] === '1' || raw[key] === 'true';
+  }
+  s.n = Math.min(s.n, capacity(s.radius, 100, 100, s.tracer ? s.tracerRadius : 0));
   return s;
 }
 
