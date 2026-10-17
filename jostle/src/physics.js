@@ -55,6 +55,53 @@ export function bounceWalls(gas, i) {
   return impulse;
 }
 
+// A partition is a thin vertical wall at x = gas.partition.x with a hole of
+// height gas.partition.hole centred on the box. Its two pieces are line
+// segments; a disk touching one bounces off the nearest point on it, which
+// handles the flat faces and the rim of the hole alike.
+export function partitionSegments(gas) {
+  const p = gas.partition;
+  if (!p) return [];
+  const y1 = Math.max(0, (gas.height - p.hole) / 2);
+  const y2 = Math.min(gas.height, (gas.height + p.hole) / 2);
+  const segs = [];
+  if (y1 > 0) segs.push([0, y1]);
+  if (y2 < gas.height) segs.push([y2, gas.height]);
+  return segs;
+}
+
+// Bounce disk i off the partition. Returns the impulse it receives.
+export function bouncePartition(gas, i, segs = partitionSegments(gas)) {
+  const px = gas.partition.x;
+  const r = gas.r[i];
+  if (Math.abs(gas.x[i] - px) >= r) return 0;
+  let impulse = 0;
+  for (const [a, b] of segs) {
+    const qy = Math.min(b, Math.max(a, gas.y[i]));
+    let nx = gas.x[i] - px;
+    let ny = gas.y[i] - qy;
+    const d = Math.hypot(nx, ny);
+    if (d >= r) continue;
+    if (d === 0) {
+      // Centre exactly on the wall: push back the way it came.
+      nx = gas.vx[i] > 0 ? -1 : 1;
+      ny = 0;
+    } else {
+      nx /= d;
+      ny /= d;
+    }
+    gas.x[i] = px + nx * r;
+    gas.y[i] = qy + ny * r;
+    const vn = gas.vx[i] * nx + gas.vy[i] * ny;
+    if (vn < 0) {
+      gas.vx[i] -= 2 * vn * nx;
+      gas.vy[i] -= 2 * vn * ny;
+      impulse += -2 * gas.m[i] * vn;
+    }
+  }
+  return impulse;
+}
+
 // Resolve one overlapping pair. Returns true if they collided.
 export function collidePair(gas, i, j, dt) {
   let dx = gas.x[i] - gas.x[j];
@@ -125,6 +172,10 @@ export function step(gas, dt, grid = createGrid(gas)) {
   }
   // A collision near a wall can push a disk past it; bounce once more.
   for (let i = 0; i < n; i++) impulse += bounceWalls(gas, i);
+  if (gas.partition) {
+    const segs = partitionSegments(gas);
+    for (let i = 0; i < n; i++) bouncePartition(gas, i, segs);
+  }
 
   gas.time += dt;
   gas.collisions += hits;
