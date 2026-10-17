@@ -47,3 +47,23 @@ test('the capacity with a tracer really fits', async () => {
     assert.throws(() => createGas({ n: n + 1, radius: r, tracer: { radius: R, mass: 10 } }), RangeError);
   }
 });
+
+test('partition settings round-trip, drop the tracer and cap the disks to the left half', async () => {
+  const { EFFUSION_PRESET } = await import('../src/settings.js');
+  const s = clampSettings({ ...DEFAULTS, ...EFFUSION_PRESET });
+  assert.equal(encodeSettings(s), 'n=300&radius=0.5&start=maxwell&partition=1&mix=0.5');
+  assert.deepEqual(decodeSettings(encodeSettings(s)), s);
+  const both = clampSettings({ partition: '1', tracer: '1' });
+  assert.equal(both.tracer, false);
+  const full = clampSettings({ partition: '1', n: 1500, radius: 2 });
+  assert.equal(full.n, capacity(2, 100, 100, 0, true));
+});
+
+test('the left-half capacity really fits', async () => {
+  const { createGas } = await import('../src/gas.js');
+  for (const r of [0.4, 0.5, 1.2, 2, 3]) {
+    const n = capacity(r, 100, 100, 0, true);
+    assert.doesNotThrow(() => createGas({ n, radius: r, layout: 'left' }));
+    assert.throws(() => createGas({ n: n + 1, radius: r, layout: 'left' }), RangeError);
+  }
+});

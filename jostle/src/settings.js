@@ -17,6 +17,16 @@ export const DEFAULTS = Object.freeze({
   tracer: false,
   tracerMass: 25,
   tracerRadius: 5,
+  partition: false,
+  hole: 8,
+  mix: 0,
+  ratio: 4,
+});
+
+// The effusion demonstration: a dilute two-mass mixture on the left of a
+// partition with a hole narrower than the mean free path.
+export const EFFUSION_PRESET = Object.freeze({
+  partition: true, hole: 8, mix: 0.5, ratio: 4, n: 300, radius: 0.5, start: 'maxwell', tracer: false,
 });
 
 const NUMBERS = {
@@ -27,13 +37,23 @@ const NUMBERS = {
   rate: { min: 0.1, max: 8 },
   tracerMass: { min: 1, max: 200 },
   tracerRadius: { min: 1, max: 12 },
+  hole: { min: 0, max: 40 },
+  mix: { min: 0, max: 1 },
+  ratio: { min: 1, max: 16 },
 };
 
 // Most disks the box (100 x 100 units) can start with at a given radius,
 // less the grid cells a central tracer of radius `tracerRadius` blocks.
-export function capacity(radius, width = 100, height = 100, tracerRadius = 0) {
+// With `leftOnly`, only the cells clear of a partition at the middle count.
+export function capacity(radius, width = 100, height = 100, tracerRadius = 0, leftOnly = false) {
   const cols = Math.floor(width / (2 * radius));
   const rows = Math.floor(height / (2 * radius));
+  if (leftOnly) {
+    const cw = width / cols;
+    let usable = 0;
+    for (let c = 0; c < cols; c++) if ((c + 1) * cw <= width / 2 - radius) usable++;
+    return usable * rows;
+  }
   if (!tracerRadius) return cols * rows;
   const cw = width / cols;
   const ch = height / rows;
@@ -59,10 +79,12 @@ export function clampSettings(raw) {
   }
   if (STARTS.includes(raw.start)) s.start = raw.start;
   if (COLOURINGS.includes(raw.colour)) s.colour = raw.colour;
-  for (const key of ['trace', 'tracer']) {
+  for (const key of ['trace', 'tracer', 'partition']) {
     if (raw[key] !== undefined) s[key] = raw[key] === true || raw[key] === '1' || raw[key] === 'true';
   }
-  s.n = Math.min(s.n, capacity(s.radius, 100, 100, s.tracer ? s.tracerRadius : 0));
+  // The partition start packs the gas on the left and has no tracer.
+  if (s.partition) s.tracer = false;
+  s.n = Math.min(s.n, capacity(s.radius, 100, 100, s.tracer ? s.tracerRadius : 0, s.partition));
   return s;
 }
 
