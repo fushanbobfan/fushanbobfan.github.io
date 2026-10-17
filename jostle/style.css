@@ -233,6 +233,15 @@ output {
   vertical-align: middle;
 }
 
+.key.light {
+  background: hsl(45 90% 50%);
+}
+
+.key.heavy {
+  background: hsl(265 55% 55%);
+}
+
+#effusion-results[hidden],
 #tracer-controls[hidden] {
   display: none;
 }

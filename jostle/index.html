@@ -73,6 +73,33 @@
           </div>
         </section>
 
+        <section aria-labelledby="h-effusion">
+          <h2 id="h-effusion">Effusion</h2>
+          <label class="check"><input type="checkbox" id="partition" /> Partition with a hole, gas starts on the left</label>
+          <label class="row" for="hole">Hole <output id="hole-out" for="hole"></output></label>
+          <input type="range" id="hole" min="0" max="40" step="0.5" />
+          <label class="row" for="mix">Heavy share <output id="mix-out" for="mix"></output></label>
+          <input type="range" id="mix" min="0" max="1" step="0.05" />
+          <label class="row" for="ratio">Mass ratio <output id="ratio-out" for="ratio"></output></label>
+          <input type="range" id="ratio" min="1" max="16" step="0.5" />
+          <div class="actions">
+            <button type="button" id="effusion-demo">Load the effusion demo</button>
+          </div>
+          <div id="effusion-results">
+            <canvas id="rightchart" class="chart short" role="img" aria-label="Share of light and heavy disks on the right of the partition against time"></canvas>
+            <p class="legend"><span class="key light"></span> light <span class="key heavy"></span> heavy, share on the right</p>
+            <dl class="readout">
+              <div><dt>Light / theory</dt><dd id="flux-light">–</dd></div>
+              <div><dt>Heavy / theory</dt><dd id="flux-heavy">–</dd></div>
+              <div><dt>Light : heavy</dt><dd id="graham">–</dd></div>
+              <div><dt>Graham</dt><dd id="graham-theory">–</dd></div>
+              <div><dt>Free path</dt><dd id="mfp">–</dd></div>
+              <div><dt>Crossings</dt><dd id="crossings">–</dd></div>
+            </dl>
+            <p class="note">Rates are crossings per unit time, per unit gap, per unit density on the near side, as a multiple of √(kT/2πm). Effusion needs the free path well above the hole; a wider hole lets the gas flow through faster.</p>
+          </div>
+        </section>
+
         <section aria-labelledby="h-pressure">
           <h2 id="h-pressure">Pressure</h2>
           <dl class="readout">
@@ -107,6 +134,7 @@
             <select id="colour">
               <option value="speed">By speed</option>
               <option value="half">By starting half</option>
+              <option value="species">By species</option>
               <option value="plain">Plain</option>
             </select>
           </label>
