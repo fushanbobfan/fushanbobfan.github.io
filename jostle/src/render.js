@@ -2,6 +2,7 @@
 // draw functions only replay that geometry onto a canvas context.
 
 import { maxwellPdf } from './stats.js';
+import { partitionSegments } from './physics.js';
 
 // Blue for slow disks through a neutral grey to orange for fast ones, scaled
 // by the most probable speed. Avoiding greens keeps the two ends apart for
@@ -19,10 +20,13 @@ export function speedColour(v, vmp) {
 }
 
 export const HALF_COLOURS = ['hsl(350 70% 58%)', 'hsl(190 70% 45%)'];
+// Light disks, heavy disks.
+export const SPECIES_COLOURS = ['hsl(45 90% 50%)', 'hsl(265 55% 55%)'];
 
 export function diskColour(gas, i, colouring, vmp, plain) {
   if (colouring === 'speed') return speedColour(Math.hypot(gas.vx[i], gas.vy[i]), vmp);
   if (colouring === 'half') return HALF_COLOURS[gas.tag ? gas.tag[i] : 0];
+  if (colouring === 'species') return SPECIES_COLOURS[gas.species ? gas.species[i] : 0];
   return plain;
 }
 
@@ -79,6 +83,18 @@ export function drawGas(ctx, gas, view, opts) {
   ctx.strokeStyle = theme.wall;
   ctx.lineWidth = 2;
   ctx.strokeRect(view.ox, view.oy, gas.width * view.scale, gas.height * view.scale);
+
+  if (gas.partition) {
+    ctx.strokeStyle = theme.wall;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    const x = view.ox + gas.partition.x * view.scale;
+    for (const [a, b] of partitionSegments(gas)) {
+      ctx.moveTo(x, view.oy + a * view.scale);
+      ctx.lineTo(x, view.oy + b * view.scale);
+    }
+    ctx.stroke();
+  }
 
   if (trail && trail.length > 1) {
     ctx.strokeStyle = theme.trail;
@@ -253,5 +269,18 @@ export function drawMsd(ctx, geom, theme) {
   for (let e = Math.ceil(geom.m0); e <= Math.floor(geom.m1); e++) {
     const y = pad.t + ph - ((e - geom.m0) / (geom.m1 - geom.m0 || 1)) * ph;
     ctx.fillText(`1e${e}`, pad.l - 4, y);
+  }
+}
+
+// Several coloured series on one panel, e.g. how many of each species have
+// reached the right-hand side.
+export function drawLines(ctx, lines) {
+  for (const { points, colour } of lines) {
+    if (points.length < 2) continue;
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
   }
 }

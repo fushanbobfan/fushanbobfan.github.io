@@ -3,7 +3,7 @@
 
 import { STARTS } from './gas.js';
 
-export const COLOURINGS = ['speed', 'half', 'plain'];
+export const COLOURINGS = ['speed', 'half', 'species', 'plain'];
 
 export const DEFAULTS = Object.freeze({
   n: 400,
