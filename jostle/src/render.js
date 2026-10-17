@@ -3,13 +3,19 @@
 
 import { maxwellPdf } from './stats.js';
 
-// Cool blue for slow disks through to warm orange for fast ones, scaled by
-// the most probable speed.
+// Blue for slow disks through a neutral grey to orange for fast ones, scaled
+// by the most probable speed. Avoiding greens keeps the two ends apart for
+// most forms of colour blindness.
+const SPEED_STOPS = [[47, 111, 208], [176, 172, 166], [232, 89, 12]];
+
 export function speedColour(v, vmp) {
   const t = Math.max(0, Math.min(1, v / (2.5 * vmp)));
-  const hue = 215 - 190 * t;
-  const light = 52 + 8 * t;
-  return `hsl(${hue.toFixed(0)} 80% ${light.toFixed(0)}%)`;
+  const k = t < 0.5 ? 0 : 1;
+  const u = t < 0.5 ? t * 2 : t * 2 - 1;
+  const a = SPEED_STOPS[k];
+  const b = SPEED_STOPS[k + 1];
+  const c = a.map((x, j) => Math.round(x + (b[j] - x) * u));
+  return `rgb(${c[0]} ${c[1]} ${c[2]})`;
 }
 
 export const HALF_COLOURS = ['hsl(350 70% 58%)', 'hsl(190 70% 45%)'];

@@ -20,8 +20,9 @@ function recorder() {
 const THEME = { box: '#fff', wall: '#000', trail: '#888', disk: '#36c', ink: '#111', bar: '#ccc', curve: '#c33', axis: '#555' };
 
 test('slow disks are blue, fast disks orange, and the scale saturates', () => {
-  assert.equal(speedColour(0, 1), 'hsl(215 80% 52%)');
-  assert.equal(speedColour(2.5, 1), 'hsl(25 80% 60%)');
+  assert.equal(speedColour(0, 1), 'rgb(47 111 208)');
+  assert.equal(speedColour(1.25, 1), 'rgb(176 172 166)');
+  assert.equal(speedColour(2.5, 1), 'rgb(232 89 12)');
   assert.equal(speedColour(99, 1), speedColour(2.5, 1));
 });
 
