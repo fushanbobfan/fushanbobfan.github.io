@@ -66,6 +66,43 @@ beyond which the walls start to hold the tracer in. D comes from one tracer,
 so it is noisy: four runs of the default tracer (mass 25, radius 5) gave
 values between 0.34 and 1.14.
 
+**Effusion.** Tick "Partition" to put a wall down the middle with a hole in
+it and start the whole gas on the left. "Heavy share" makes some of the disks
+heavier by the mass ratio; "Load the effusion demo" sets up a dilute
+half-and-half mixture with a 4 : 1 mass ratio and colours disks by species.
+For a dilute gas the number of disks crossing a gap of width w per unit time
+is
+
+    rate = n w √(kT / 2πm),
+
+the one-dimensional Maxwell flux, with n the number per unit area on the near
+side. At the same temperature light disks are faster, so they leak through
+first and the light-to-heavy ratio of rates per unit density is √(M / m):
+Graham's law. The chart shows the share of each species that has reached the
+right, and the readouts give each measured rate as a multiple of its
+theoretical value, pooling both directions and integrating the density on
+each side over time so the comparison stays fair as the left side empties.
+The gap counts only the width a disk's centre can pass, w = hole − 2r.
+
+The formula assumes disks cross the hole without meeting each other on the
+way, which needs a mean free path λ = 1 / (√2 n d) well above the hole. The
+readout shows both. With a denser gas the hole stops being a pinhole, the gas
+flows through and leaks faster than the formula. Three seeds at two densities,
+run for 1500 time units with an 8-unit hole and a 4 : 1 mixture:
+
+| Disks | Radius | Seed | Light / theory | Heavy / theory | Light : heavy |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 300 | 0.5 | 31 | 1.05 | 1.15 | 1.83 |
+| 300 | 0.5 | 32 | 1.14 | 1.21 | 1.88 |
+| 300 | 0.5 | 33 | 1.23 | 0.94 | 2.61 |
+| 400 | 1.2 | 31 | 1.10 | 1.64 | 1.35 |
+| 400 | 1.2 | 32 | 1.31 | 1.52 | 1.72 |
+| 400 | 1.2 | 33 | 1.28 | 1.40 | 1.82 |
+
+Graham's law predicts 2. A few hundred crossings per run leave a spread of
+roughly ±10% on each rate, and the dilute runs sit a little above the formula
+as well; the denser runs leak faster still.
+
 **Pressure.** The walls count the momentum every bounce delivers. Dividing by
 the perimeter and the elapsed time gives the pressure, shown as
 Z = PA / NkT. An ideal gas of points has Z = 1; disks take up room, so Z
@@ -86,6 +123,9 @@ total only moves by floating-point rounding.
 | All at one speed | The histogram begins as a single spike and spreads into the Maxwell curve within a few collision times. |
 | Already Maxwellian | Equilibrium from the first frame: the curve fits and H sits on its floor, with fluctuations. |
 | Hot left, cold right | The left half starts four times hotter. Colour by starting half to watch them diffuse into each other. |
+
+With the partition on, the gas starts packed into the left half whatever the
+start.
 
 ## How the dynamics work
 
@@ -129,8 +169,9 @@ same gas, seed included. "Save PNG" saves the box as it is now.
 | --- | --- |
 | `src/rng.js` | Seeded uniform and normal random numbers |
 | `src/gas.js` | Disk arrays, placement without overlap (around a tracer if there is one), starting velocities, energy and temperature |
-| `src/physics.js` | Wall bounces, elastic pair collisions and the stepping loop |
+| `src/physics.js` | Wall and partition bounces, elastic pair collisions and the stepping loop |
 | `src/stats.js` | Maxwell curves, histograms, H, KS distance, pressure and Henderson's equation |
+| `src/effusion.js` | Crossing counts per species, density exposure, Maxwell flux, Graham's law and the mean free path |
 | `src/diffusion.js` | Tracer path record, mean squared displacement, onset of diffusion and the fit for D |
 | `src/render.js` | Colours, chart geometry and canvas drawing |
 | `src/settings.js` | Defaults, clamping and the share-link format |
@@ -142,6 +183,7 @@ same gas, seed included. "Save PNG" saves the box as it is now.
 - L. Boltzmann, "Weitere Studien über das Wärmegleichgewicht unter Gasmolekülen", *Wiener Berichte* 66 (1872) 275–370.
 - D. Henderson, "A simple equation of state for hard discs", *Molecular Physics* 30 (1975) 971–972.
 - A. Einstein, "Über die von der molekularkinetischen Theorie der Wärme geforderte Bewegung von in ruhenden Flüssigkeiten suspendierten Teilchen", *Annalen der Physik* 17 (1905) 549–560.
+- T. Graham, "On the motion of gases", *Philosophical Transactions of the Royal Society of London* 136 (1846) 573–631.
 - B. J. Alder and T. E. Wainwright, "Studies in molecular dynamics. I. General method", *Journal of Chemical Physics* 31 (1959) 459–466.
 
 ## License
