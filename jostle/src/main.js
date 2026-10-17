@@ -181,7 +181,7 @@ function drawTracer(t) {
   m.ctx.clearRect(0, 0, m.w, m.h);
   const pts = meanSquaredDisplacement(traj, logLags(usefulLag(traj)));
   const onset = diffusiveOnset(pts, settings.kT, settings.tracerMass);
-  const fit = Number.isFinite(onset) ? fitDiffusion(pts, onset) : null;
+  const fit = Number.isFinite(onset) ? { ...fitDiffusion(pts, onset), from: onset } : null;
   const geom = msdGeometry(pts, settings.kT, settings.tracerMass, fit, m.w, m.h);
   if (geom) drawMsd(m.ctx, geom, t);
   $('d-fit').textContent = fit && fit.D > 0 ? format(fit.D) : 'collecting';

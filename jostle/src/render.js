@@ -170,7 +170,8 @@ function formatTick(v) {
 }
 
 // Log-log panel for the tracer's MSD: measured points, the ballistic line
-// (2kT/M) tau^2 and, once fitted, the diffusive line 4 D tau + b.
+// (2kT/M) tau^2 and, once fitted, the diffusive line 4 D tau + b drawn from
+// the lag where the fit starts (`fit.from`).
 export function msdGeometry(points, kT, mass, fit, w, h, pad = { l: 40, r: 8, t: 10, b: 22 }) {
   if (points.length < 2) return null;
   const pw = w - pad.l - pad.r;
@@ -191,19 +192,25 @@ export function msdGeometry(points, kT, mass, fit, w, h, pad = { l: 40, r: 8, t:
   const X = (tau) => pad.l + ((Math.log10(tau) - t0) / (t1 - t0 || 1)) * pw;
   const Y = (msd) => pad.t + ph - ((Math.log10(msd) - m0) / (m1 - m0 || 1)) * ph;
   const dots = points.filter((p) => p.msd > 0).map((p) => [X(p.tau), Y(p.msd)]);
-  const line = (f) => {
+  // Lines are sampled on [from, t1] in log tau and cut where they leave the
+  // panel rather than flattened against its edge.
+  const line = (f, from = t0) => {
     const out = [];
+    const a = Math.max(t0, from);
     for (let k = 0; k <= 40; k++) {
-      const tau = 10 ** (t0 + ((t1 - t0) * k) / 40);
+      const tau = 10 ** (a + ((t1 - a) * k) / 40);
       const v = f(tau);
-      if (v > 0) out.push([X(tau), Math.min(pad.t + ph, Math.max(pad.t, Y(v)))]);
+      if (!(v > 0)) continue;
+      const y = Y(v);
+      if (y < pad.t - 1e-9 || y > pad.t + ph + 1e-9) continue;
+      out.push([X(tau), y]);
     }
     return out;
   };
   return {
     pad, pw, ph, t0, t1, m0, m1, dots,
     ballistic: line((tau) => ((2 * kT) / mass) * tau * tau),
-    diffusive: fit ? line((tau) => 4 * fit.D * tau + fit.b) : [],
+    diffusive: fit ? line((tau) => 4 * fit.D * tau + fit.b, Math.log10(fit.from || points[0].tau)) : [],
   };
 }
 

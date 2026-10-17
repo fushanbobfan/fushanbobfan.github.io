@@ -93,3 +93,15 @@ test('drawing the MSD panel draws one dot per point', () => {
   drawMsd(ctx, msdGeometry(pts, 1, 1, { D: 0.25, b: 0 }, 240, 132), { ...THEME, muted: '#999' });
   assert.equal(ctx.calls.filter((c) => c[0] === 'arc').length, 4);
 });
+
+test('MSD lines stay inside the panel and the fit starts at its onset', () => {
+  const pts = [1, 10, 100, 1000].map((tau) => ({ tau, msd: tau }));
+  const g = msdGeometry(pts, 1, 1, { D: 0.25, b: 0, from: 100 }, 240, 132);
+  for (const [, y] of [...g.ballistic, ...g.diffusive]) {
+    assert.ok(y >= g.pad.t - 1e-9 && y <= g.pad.t + g.ph + 1e-9);
+  }
+  // The ballistic tau^2 line leaves through the top long before tau = 1000.
+  assert.ok(g.ballistic[g.ballistic.length - 1][0] < g.pad.l + g.pw);
+  const startX = g.pad.l + ((2 - 0) / 3) * g.pw;
+  assert.ok(Math.abs(g.diffusive[0][0] - startX) < 1e-9);
+});
