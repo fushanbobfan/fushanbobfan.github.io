@@ -5,7 +5,7 @@ import { createGas } from '../src/gas.js';
 import { step, createGrid, safeStep } from '../src/physics.js';
 import {
   createTrajectory, recordPosition, logLags, meanSquaredDisplacement,
-  ballisticMsd, fitDiffusion, diffusiveOnset,
+  ballisticMsd, fitDiffusion, diffusiveOnset, usefulLag,
 } from '../src/diffusion.js';
 
 test('positions are recorded once per interval and the record is capped', () => {
@@ -56,7 +56,8 @@ test('the onset is where MSD drops well under the ballistic line', () => {
     { tau: 1, msd: 2 }, { tau: 2, msd: 7 }, { tau: 4, msd: 12 }, { tau: 8, msd: 20 },
   ];
   // Ballistic with 2kT/M = 2: 2, 8, 32, 128.
-  assert.equal(diffusiveOnset(pts, 1, 1), 8);
+  assert.equal(diffusiveOnset(pts, 1, 1, 0.25), 8);
+  assert.equal(diffusiveOnset(pts, 1, 1, 0.4), 4);
   assert.equal(diffusiveOnset(pts.slice(0, 2), 1, 1), Infinity);
 });
 
@@ -77,4 +78,12 @@ test('a heavy tracer in the gas starts ballistic and then diffuses', () => {
   assert.ok(Number.isFinite(onset));
   const fit = fitDiffusion(pts, onset);
   assert.ok(fit && fit.D > 0);
+});
+
+test('the useful lag is a third of the record, capped in time', () => {
+  const traj = createTrajectory(0.5, 10000);
+  for (let k = 0; k < 300; k++) recordPosition(traj, k * 0.5, 0, 0);
+  assert.equal(usefulLag(traj), 100);
+  for (let k = 300; k < 6000; k++) recordPosition(traj, k * 0.5, 0, 0);
+  assert.equal(usefulLag(traj), 600);
 });

@@ -7,7 +7,12 @@ import {
 } from './stats.js';
 import {
   boxView, drawGas, histogramGeometry, drawHistogram, seriesGeometry, drawSeries,
+  msdGeometry, drawMsd,
 } from './render.js';
+import {
+  createTrajectory, recordPosition, logLags, meanSquaredDisplacement, fitDiffusion, diffusiveOnset,
+  usefulLag,
+} from './diffusion.js';
 import { decodeSettings, encodeSettings, clampSettings, capacity } from './settings.js';
 import { randomSeed } from './rng.js';
 
@@ -18,11 +23,15 @@ const H_POINTS = 360;
 // crosses the box in about six seconds.
 const TIME_PER_SECOND = 13;
 const MAX_SUBSTEPS = 240;
+// Tracer positions are kept every half time unit, the last 4000 of them.
+const SAMPLE_EVERY = 0.5;
+const SAMPLES = 4000;
 
 const $ = (id) => document.getElementById(id);
 const boxCanvas = $('box');
 const histCanvas = $('hist');
 const hCanvas = $('hchart');
+const msdCanvas = $('msd');
 
 let settings = decodeSettings(location.hash);
 let gas;
@@ -33,6 +42,7 @@ let hHistory = createHistory(H_POINTS);
 let hNow = 0;
 let hAvg = null;
 let meter;
+let traj;
 let running = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 let last = 0;
 
@@ -41,7 +51,7 @@ function theme() {
   const v = (name) => css.getPropertyValue(name).trim();
   return {
     box: v('--box'), wall: v('--muted'), trail: v('--accent'), disk: v('--muted'),
-    ink: v('--ink'), bar: v('--bar'), curve: v('--curve'), axis: v('--line'),
+    ink: v('--ink'), bar: v('--bar'), curve: v('--curve'), axis: v('--line'), muted: v('--muted'),
   };
 }
 
@@ -62,6 +72,7 @@ function fitCanvas(canvas) {
 function rebuild() {
   gas = createGas({
     n: settings.n, radius: settings.radius, kT: settings.kT, start: settings.start, seed: settings.seed,
+    tracer: settings.tracer ? { mass: settings.tracerMass, radius: settings.tracerRadius } : null,
   });
   gas.tag = new Uint8Array(gas.n);
   for (let i = 0; i < gas.n; i++) gas.tag[i] = gas.x[i] < gas.width / 2 ? 0 : 1;
@@ -71,6 +82,8 @@ function rebuild() {
   hHistory = createHistory(H_POINTS);
   hAvg = null;
   meter = createPressureMeter(40);
+  traj = createTrajectory(SAMPLE_EVERY, SAMPLES);
+  recordPosition(traj, gas.time, gas.x[0], gas.y[0]);
   sampleH();
   draw();
 }
@@ -79,8 +92,13 @@ function vmax() {
   return 4 * Math.sqrt(settings.kT);
 }
 
+// The speed statistics describe the unit-mass gas, so a tracer is left out.
+function gasOnly() {
+  return gas.tracer ? (i) => i > 0 : null;
+}
+
 function sampleH() {
-  const hist = speedHistogram(gas, BINS, vmax());
+  const hist = speedHistogram(gas, BINS, vmax(), gasOnly());
   hNow = boltzmannH(hist);
   pushHistory(hHistory, hNow);
   hAvg = blendHistogram(hAvg, hist, 0.8);
@@ -94,6 +112,7 @@ function advance(seconds) {
   for (let k = 0; k < n; k++) {
     const { impulse } = step(gas, Math.min(h, dt), grid);
     recordPressure(meter, impulse, Math.min(h, dt));
+    if (gas.tracer) recordPosition(traj, gas.time, gas.x[0], gas.y[0]);
   }
   if (settings.trace) {
     trail.push([gas.x[0], gas.y[0]]);
@@ -120,7 +139,7 @@ function draw() {
 
   const hc = fitCanvas(histCanvas);
   hc.ctx.clearRect(0, 0, hc.w, hc.h);
-  const hist = hAvg || speedHistogram(gas, BINS, vmax());
+  const hist = hAvg || speedHistogram(gas, BINS, vmax(), gasOnly());
   drawHistogram(hc.ctx, histogramGeometry(hist, 1, kT, hc.w, hc.h), hist, t);
 
   const floor = maxwellH(1, kT, BINS, vmax());
@@ -134,9 +153,11 @@ function draw() {
   drawSeries(g.ctx, pts, floorY, t, 34, g.w - 8);
 
   let sum = 0;
-  for (let i = 0; i < gas.n; i++) sum += Math.hypot(gas.vx[i], gas.vy[i]);
-  $('ks').textContent = format(ksDistance(gas, 1, kT), 2);
-  $('mean').textContent = format(sum / gas.n);
+  const first = gas.tracer ? 1 : 0;
+  for (let i = first; i < gas.n; i++) sum += Math.hypot(gas.vx[i], gas.vy[i]);
+  $('ks').textContent = format(ksDistance(gas, 1, kT, gasOnly()), 2);
+  $('mean').textContent = format(sum / (gas.n - first));
+  if (gas.tracer) drawTracer(t);
   $('mean-theory').textContent = format(speeds.mean);
   $('h-now').textContent = format(hNow);
   $('h-floor').textContent = format(floor);
@@ -155,6 +176,19 @@ function draw() {
   $('status').textContent = `t = ${format(gas.time, 4)} · ${gas.n} disks · kT = ${kT}`;
 }
 
+function drawTracer(t) {
+  const m = fitCanvas(msdCanvas);
+  m.ctx.clearRect(0, 0, m.w, m.h);
+  const pts = meanSquaredDisplacement(traj, logLags(usefulLag(traj)));
+  const onset = diffusiveOnset(pts, settings.kT, settings.tracerMass);
+  const fit = Number.isFinite(onset) ? fitDiffusion(pts, onset) : null;
+  const geom = msdGeometry(pts, settings.kT, settings.tracerMass, fit, m.w, m.h);
+  if (geom) drawMsd(m.ctx, geom, t);
+  $('d-fit').textContent = fit && fit.D > 0 ? format(fit.D) : 'collecting';
+  $('onset').textContent = Number.isFinite(onset) ? `τ ≈ ${format(onset, 2)}` : 'not yet';
+  $('record').textContent = `${format((traj.x.length - 1) * SAMPLE_EVERY, 3)} t`;
+}
+
 function frame(now) {
   const seconds = Math.min(0.05, (now - last) / 1000 || 0);
   last = now;
@@ -166,11 +200,13 @@ function frame(now) {
 }
 
 function syncControls() {
-  for (const key of ['n', 'radius', 'kT', 'rate']) {
+  for (const key of ['n', 'radius', 'kT', 'rate', 'tracerMass', 'tracerRadius']) {
     $(key).value = settings[key];
     $(`${key}-out`).textContent = key === 'rate' ? `${settings.rate}×` : settings[key];
   }
-  $('n').max = capacity(settings.radius);
+  $('n').max = capacity(settings.radius, 100, 100, settings.tracer ? settings.tracerRadius : 0);
+  $('tracer').checked = settings.tracer;
+  $('tracer-controls').hidden = !settings.tracer;
   $('start').value = settings.start;
   $('colour').value = settings.colour;
   $('trace').checked = settings.trace;
@@ -191,7 +227,7 @@ function togglePlay() {
   syncControls();
 }
 
-for (const key of ['n', 'radius', 'kT']) {
+for (const key of ['n', 'radius', 'kT', 'tracerMass', 'tracerRadius']) {
   $(key).addEventListener('input', (e) => update({ [key]: Number(e.target.value) }, true));
 }
 $('rate').addEventListener('input', (e) => update({ rate: Number(e.target.value) }, false));
@@ -201,6 +237,7 @@ $('trace').addEventListener('change', (e) => {
   trail = [[gas.x[0], gas.y[0]]];
   update({ trace: e.target.checked }, false);
 });
+$('tracer').addEventListener('change', (e) => update({ tracer: e.target.checked }, true));
 $('play').addEventListener('click', togglePlay);
 $('step').addEventListener('click', () => { advance(1 / 30); draw(); });
 $('restart').addEventListener('click', rebuild);

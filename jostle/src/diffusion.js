@@ -54,6 +54,12 @@ export function meanSquaredDisplacement(traj, lags) {
   return out;
 }
 
+// Longest lag worth plotting: a third of the record for averaging, and no
+// more than `maxTime`, after which the walls start to hold the tracer in.
+export function usefulLag(traj, maxTime = 300) {
+  return Math.min(Math.floor(traj.x.length / 3), Math.floor(maxTime / traj.interval));
+}
+
 export function ballisticMsd(tau, kT, mass) {
   return ((2 * kT) / mass) * tau * tau;
 }
@@ -80,9 +86,9 @@ export function fitDiffusion(points, tauMin = 0) {
 }
 
 // Where to start the diffusive fit: the first lag at which the measured MSD
-// has fallen below a quarter of the ballistic value, i.e. well past the
-// velocity memory. Returns Infinity if the run is still ballistic.
-export function diffusiveOnset(points, kT, mass, ratio = 0.25) {
+// has fallen below 30% of the ballistic value, i.e. well past the velocity
+// memory. Returns Infinity if the run is still ballistic.
+export function diffusiveOnset(points, kT, mass, ratio = 0.3) {
   for (const p of points) {
     if (p.msd < ratio * ballisticMsd(p.tau, kT, mass)) return p.tau;
   }
