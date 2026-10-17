@@ -131,3 +131,23 @@ export function meterReading(meter, width, height) {
   for (const [i, d] of meter.samples) { imp += i; t += d; }
   return wallPressure(imp, t, width, height);
 }
+
+// A history that keeps its whole span in at most `cap` points: when full it
+// drops every other point and from then on records every other sample, so
+// the early fall of H stays on the chart however long the run.
+export function createHistory(cap = 360) {
+  return { cap, values: [], stride: 1, skipped: 0 };
+}
+
+export function pushHistory(history, value) {
+  if (history.skipped + 1 < history.stride) {
+    history.skipped++;
+    return;
+  }
+  history.skipped = 0;
+  history.values.push(value);
+  if (history.values.length > history.cap) {
+    history.values = history.values.filter((_, k) => k % 2 === 0);
+    history.stride *= 2;
+  }
+}

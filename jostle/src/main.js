@@ -3,6 +3,7 @@ import { step, createGrid, safeStep } from './physics.js';
 import {
   speedHistogram, blendHistogram, boltzmannH, maxwellH, ksDistance, characteristicSpeeds,
   idealPressure, hendersonZ, createPressureMeter, recordPressure, meterReading,
+  createHistory, pushHistory,
 } from './stats.js';
 import {
   boxView, drawGas, histogramGeometry, drawHistogram, seriesGeometry, drawSeries,
@@ -28,7 +29,8 @@ let gas;
 let grid;
 let e0;
 let trail = [];
-let hSeries = [];
+let hHistory = createHistory(H_POINTS);
+let hNow = 0;
 let hAvg = null;
 let meter;
 let running = !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -66,7 +68,7 @@ function rebuild() {
   grid = createGrid(gas);
   e0 = kineticEnergy(gas);
   trail = [[gas.x[0], gas.y[0]]];
-  hSeries = [];
+  hHistory = createHistory(H_POINTS);
   hAvg = null;
   meter = createPressureMeter(40);
   sampleH();
@@ -79,8 +81,8 @@ function vmax() {
 
 function sampleH() {
   const hist = speedHistogram(gas, BINS, vmax());
-  hSeries.push(boltzmannH(hist));
-  if (hSeries.length > H_POINTS) hSeries.shift();
+  hNow = boltzmannH(hist);
+  pushHistory(hHistory, hNow);
   hAvg = blendHistogram(hAvg, hist, 0.8);
 }
 
@@ -122,6 +124,7 @@ function draw() {
   drawHistogram(hc.ctx, histogramGeometry(hist, 1, kT, hc.w, hc.h), hist, t);
 
   const floor = maxwellH(1, kT, BINS, vmax());
+  const hSeries = hHistory.values;
   const lo = floor - 0.15;
   const hi = Math.max(floor + 0.3, ...hSeries) + 0.05;
   const g = fitCanvas(hCanvas);
@@ -135,7 +138,7 @@ function draw() {
   $('ks').textContent = format(ksDistance(gas, 1, kT), 2);
   $('mean').textContent = format(sum / gas.n);
   $('mean-theory').textContent = format(speeds.mean);
-  $('h-now').textContent = format(hSeries[hSeries.length - 1]);
+  $('h-now').textContent = format(hNow);
   $('h-floor').textContent = format(floor);
 
   const eta = packingFraction(gas);

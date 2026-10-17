@@ -5,7 +5,7 @@ import { step, createGrid, safeStep } from '../src/physics.js';
 import {
   maxwellPdf, maxwellCdf, characteristicSpeeds, speedHistogram, blendHistogram,
   boltzmannH, maxwellH, ksDistance, wallPressure, idealPressure, hendersonZ,
-  createPressureMeter, recordPressure, meterReading,
+  createPressureMeter, recordPressure, meterReading, createHistory, pushHistory,
 } from '../src/stats.js';
 
 function integrate(f, a, b, n = 20000) {
@@ -99,4 +99,13 @@ test('an equal-speed start relaxes: H falls toward the Maxwell floor', () => {
   const floor = maxwellH(1, 1, 24, 4);
   assert.ok(H0 - H1 > 0.5 * (H0 - floor), `H ${H0} -> ${H1}, floor ${floor}`);
   assert.ok(ksDistance(gas, 1, 1) < 0.08);
+});
+
+test('a history keeps its first value and its span while halving', () => {
+  const h = createHistory(8);
+  for (let k = 0; k < 100; k++) pushHistory(h, k);
+  assert.ok(h.values.length <= 8 + 1);
+  assert.equal(h.values[0], 0);
+  assert.ok(h.values[h.values.length - 1] >= 100 - h.stride);
+  for (let k = 1; k < h.values.length; k++) assert.equal(h.values[k] - h.values[k - 1], h.stride);
 });
