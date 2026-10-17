@@ -52,3 +52,25 @@ test('packing fraction is disk area over box area', () => {
   const gas = createGas({ n: 100, radius: 1, width: 100, height: 100 });
   assert.ok(Math.abs(packingFraction(gas) - (100 * Math.PI) / 10000) < 1e-12);
 });
+
+test('an equal-speed start gives every disk the same speed and no drift', () => {
+  const gas = createGas({ n: 300, kT: 1.5, start: 'equal', seed: 6 });
+  const v0 = Math.hypot(gas.vx[0], gas.vy[0]);
+  for (let i = 1; i < gas.n; i++) {
+    assert.ok(Math.abs(Math.hypot(gas.vx[i], gas.vy[i]) - v0) < 1e-12);
+  }
+  assert.ok(Math.abs(temperature(gas) - 1.5) < 1e-12);
+  const [px, py] = momentum(gas);
+  assert.ok(Math.abs(px) < 1e-9 && Math.abs(py) < 1e-9);
+});
+
+test('a hot-cold start puts more energy on the left', () => {
+  const gas = createGas({ n: 400, kT: 1, start: 'hotcold', seed: 6 });
+  let left = 0; let nl = 0; let right = 0; let nr = 0;
+  for (let i = 0; i < gas.n; i++) {
+    const e = 0.5 * (gas.vx[i] ** 2 + gas.vy[i] ** 2);
+    if (gas.x[i] < gas.width / 2) { left += e; nl++; } else { right += e; nr++; }
+  }
+  assert.ok(left / nl > 2.5 * (right / nr));
+  assert.ok(Math.abs(temperature(gas) - 1) < 1e-12);
+});

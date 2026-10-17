@@ -88,3 +88,15 @@ test('a relaxed gas has Maxwell speeds and pressure near the equation of state',
   // 400 disks: the 1% KS critical value is about 1.63 / sqrt(400) = 0.08.
   assert.ok(ksDistance(gas, 1, 1) < 0.08);
 });
+
+test('an equal-speed start relaxes: H falls toward the Maxwell floor', () => {
+  const gas = createGas({ n: 400, radius: 1.2, kT: 1, start: 'equal', seed: 13 });
+  const grid = createGrid(gas);
+  const dt = safeStep(gas, 0.25);
+  const H0 = boltzmannH(speedHistogram(gas, 24, 4));
+  for (let s = 0; s < 2500; s++) step(gas, dt, grid);
+  const H1 = boltzmannH(speedHistogram(gas, 24, 4));
+  const floor = maxwellH(1, 1, 24, 4);
+  assert.ok(H0 - H1 > 0.5 * (H0 - floor), `H ${H0} -> ${H1}, floor ${floor}`);
+  assert.ok(ksDistance(gas, 1, 1) < 0.08);
+});

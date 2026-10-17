@@ -13,6 +13,7 @@ export function createGas({
   kT = 1,
   mass = 1,
   seed = 1,
+  start = 'maxwell',
 } = {}) {
   const rand = mulberry32(seed);
   const normal = gaussian(rand);
@@ -30,14 +31,42 @@ export function createGas({
     collisions: 0,
   };
   placeWithoutOverlap(gas, rand);
-  const sd = Math.sqrt(kT / mass);
+  assignVelocities(gas, start, kT, rand, normal);
+  return gas;
+}
+
+export const STARTS = ['maxwell', 'equal', 'hotcold'];
+
+// How the energy is shared out at the start:
+//  maxwell  already in equilibrium;
+//  equal    every disk at the same speed, directions evenly spread, so the
+//           distribution starts as a spike and has to relax;
+//  hotcold  the left half of the box four times hotter than the right.
+export function assignVelocities(gas, start, kT, rand, normal) {
+  const { n } = gas;
+  if (start === 'equal') {
+    const order = Array.from({ length: n }, (_, k) => k);
+    for (let k = n - 1; k > 0; k--) {
+      const j = Math.floor(rand() * (k + 1));
+      [order[k], order[j]] = [order[j], order[k]];
+    }
+    const offset = rand() * 2 * Math.PI;
+    for (let i = 0; i < n; i++) {
+      const v = Math.sqrt((2 * kT) / gas.m[i]);
+      const a = offset + (2 * Math.PI * order[i]) / n;
+      gas.vx[i] = v * Math.cos(a);
+      gas.vy[i] = v * Math.sin(a);
+    }
+    return;
+  }
   for (let i = 0; i < n; i++) {
+    const local = start === 'hotcold' ? (gas.x[i] < gas.width / 2 ? 4 : 1) : 1;
+    const sd = Math.sqrt((local * kT) / gas.m[i]);
     gas.vx[i] = sd * normal();
     gas.vy[i] = sd * normal();
   }
   removeDrift(gas);
   setTemperature(gas, kT);
-  return gas;
 }
 
 // Put disks on randomly chosen cells of a grid whose spacing fits the
