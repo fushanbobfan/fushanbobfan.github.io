@@ -104,7 +104,7 @@ function advance(seconds) {
 
 function format(v, digits = 3) {
   if (!Number.isFinite(v)) return '–';
-  return Number(v.toPrecision(digits)).toLocaleString('en-US');
+  return v.toLocaleString('en-US', { maximumSignificantDigits: digits });
 }
 
 function draw() {
@@ -143,12 +143,15 @@ function draw() {
 
   const eta = packingFraction(gas);
   const ideal = idealPressure(gas.n, kT, gas.width, gas.height);
-  $('p-wall').textContent = meter.samples.length ? format(meterReading(meter, gas.width, gas.height)) : '–';
-  $('p-ideal').textContent = format(ideal);
-  $('p-henderson').textContent = format(ideal * hendersonZ(eta));
+  const wall = meterReading(meter, gas.width, gas.height);
+  const ready = meter.samples.length > 0;
+  $('z-wall').textContent = ready ? format(wall / ideal) : '–';
+  $('z-henderson').textContent = format(hendersonZ(eta));
+  $('p-wall').textContent = ready ? format(wall) : '–';
   $('eta').textContent = format(eta, 2);
   $('hits').textContent = gas.collisions.toLocaleString('en-US');
-  $('drift').textContent = `${format(((kineticEnergy(gas) - e0) / e0) * 100, 2)}%`;
+  const drift = (kineticEnergy(gas) - e0) / e0;
+  $('drift').textContent = Math.abs(drift) < 1e-9 ? 'below 1e-9' : `${format(drift * 100, 2)}%`;
   $('status').textContent = `t = ${format(gas.time, 4)} · ${gas.n} disks · kT = ${kT}`;
 }
 
