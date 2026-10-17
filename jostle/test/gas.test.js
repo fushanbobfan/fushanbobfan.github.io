@@ -91,3 +91,28 @@ test('a tracer with an equal-speed start still has no drift', () => {
   assert.ok(Math.abs(px) < 1e-9 && Math.abs(py) < 1e-9);
   assert.ok(Math.abs(temperature(gas) - 1) < 1e-12);
 });
+
+test('a mixture makes the requested share of disks heavier', () => {
+  const gas = createGas({ n: 400, mixture: { ratio: 4, fraction: 0.25 }, seed: 2 });
+  let heavy = 0;
+  for (let i = 0; i < gas.n; i++) {
+    if (gas.species[i] === 1) { heavy++; assert.equal(gas.m[i], 4); } else assert.equal(gas.m[i], 1);
+  }
+  assert.equal(heavy, 100);
+  assert.ok(Math.abs(temperature(gas) - 1) < 1e-12);
+  const [px, py] = momentum(gas);
+  assert.ok(Math.abs(px) < 1e-9 && Math.abs(py) < 1e-9);
+});
+
+test('a left layout keeps every disk clear of the middle line', () => {
+  const gas = createGas({ n: 300, radius: 1, layout: 'left', seed: 4 });
+  for (let i = 0; i < gas.n; i++) assert.ok(gas.x[i] + gas.r[i] <= gas.width / 2 + 1e-9);
+  assert.ok(minGap(gas) >= -1e-9);
+  assert.throws(() => createGas({ n: 2000, radius: 1, layout: 'left' }), RangeError);
+});
+
+test('an equal-speed mixture has no drift', () => {
+  const gas = createGas({ n: 300, start: 'equal', mixture: { ratio: 9, fraction: 0.5 }, seed: 8 });
+  const [px, py] = momentum(gas);
+  assert.ok(Math.abs(px) < 1e-9 && Math.abs(py) < 1e-9);
+});
