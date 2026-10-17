@@ -76,3 +76,49 @@ test('overlaps stay a small fraction of a radius', () => {
   }
   assert.ok(worst < 0.5 * 1.5, `worst overlap ${worst}`);
 });
+
+test('the partition leaves a hole in the middle', async () => {
+  const { partitionSegments } = await import('../src/physics.js');
+  const gas = createGas({ n: 1, seed: 1 });
+  gas.partition = { x: 50, hole: 10 };
+  assert.deepEqual(partitionSegments(gas), [[0, 45], [55, 100]]);
+  gas.partition.hole = 100;
+  assert.deepEqual(partitionSegments(gas), []);
+});
+
+test('a disk hitting the partition face bounces straight back', async () => {
+  const { bouncePartition } = await import('../src/physics.js');
+  const gas = createGas({ n: 1, radius: 1, seed: 1 });
+  gas.partition = { x: 50, hole: 10 };
+  gas.x[0] = 49.5; gas.y[0] = 20; gas.vx[0] = 2; gas.vy[0] = 0.5;
+  const j = bouncePartition(gas, 0);
+  assert.equal(gas.vx[0], -2);
+  assert.equal(gas.vy[0], 0.5);
+  assert.ok(Math.abs(gas.x[0] - 49) < 1e-12);
+  assert.ok(Math.abs(j - 4) < 1e-12);
+});
+
+test('a disk passing through the hole is not touched, and the rim deflects', async () => {
+  const { bouncePartition } = await import('../src/physics.js');
+  const gas = createGas({ n: 1, radius: 1, seed: 1 });
+  gas.partition = { x: 50, hole: 10 };
+  gas.x[0] = 50; gas.y[0] = 50; gas.vx[0] = 1; gas.vy[0] = 0;
+  assert.equal(bouncePartition(gas, 0), 0);
+  assert.equal(gas.vx[0], 1);
+  // Grazing the upper rim at (50, 45): pushed down and out, speed kept.
+  gas.x[0] = 49.6; gas.y[0] = 45.6; gas.vx[0] = 1; gas.vy[0] = -1;
+  bouncePartition(gas, 0);
+  assert.ok(Math.abs(Math.hypot(gas.vx[0], gas.vy[0]) - Math.SQRT2) < 1e-12);
+  assert.ok(Math.hypot(gas.x[0] - 50, gas.y[0] - 45) >= 1 - 1e-12);
+});
+
+test('with a closed partition no disk changes side', () => {
+  const gas = createGas({ n: 300, radius: 1, layout: 'left', seed: 9 });
+  gas.partition = { x: 50, hole: 0 };
+  const grid = createGrid(gas);
+  const dt = safeStep(gas, 0.25);
+  const e0 = kineticEnergy(gas);
+  for (let s = 0; s < 1500; s++) step(gas, dt, grid);
+  for (let i = 0; i < gas.n; i++) assert.ok(gas.x[i] < 50);
+  assert.ok(Math.abs(kineticEnergy(gas) - e0) / e0 < 1e-9);
+});

@@ -105,3 +105,22 @@ test('MSD lines stay inside the panel and the fit starts at its onset', () => {
   const startX = g.pad.l + ((2 - 0) / 3) * g.pw;
   assert.ok(Math.abs(g.diffusive[0][0] - startX) < 1e-9);
 });
+
+test('the partition is drawn as two segments and species get their own colours', async () => {
+  const { SPECIES_COLOURS, drawLines } = await import('../src/render.js');
+  const gas = createGas({ n: 10, mixture: { ratio: 4, fraction: 0.5 }, layout: 'left', seed: 2 });
+  gas.partition = { x: 50, hole: 10 };
+  const ctx = recorder();
+  const fills = [];
+  const proxy = new Proxy(ctx, {
+    set(target, key, value) { if (key === 'fillStyle') fills.push(value); target[key] = value; return true; },
+    get(target, key) { return target[key]; },
+  });
+  drawGas(proxy, gas, boxView(gas, 300, 300), { colouring: 'species', vmp: 1, theme: THEME, trail: null });
+  // The box outline uses strokeRect; the partition adds two moveTo/lineTo pairs.
+  assert.equal(ctx.calls.filter((c) => c[0] === 'moveTo').length, 2);
+  assert.ok(fills.includes(SPECIES_COLOURS[0]) && fills.includes(SPECIES_COLOURS[1]));
+  const lctx = recorder();
+  drawLines(lctx, [{ points: [[0, 0], [1, 1], [2, 0]], colour: 'red' }, { points: [[0, 0]], colour: 'blue' }]);
+  assert.equal(lctx.calls.filter((c) => c[0] === 'lineTo').length, 2);
+});

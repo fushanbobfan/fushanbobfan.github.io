@@ -7,13 +7,18 @@ import {
 } from './stats.js';
 import {
   boxView, drawGas, histogramGeometry, drawHistogram, seriesGeometry, drawSeries,
-  msdGeometry, drawMsd,
+  msdGeometry, drawMsd, drawLines, SPECIES_COLOURS,
 } from './render.js';
+import {
+  createEffusion, updateEffusion, measuredFlux, effectiveGap, grahamRatio, meanFreePath, sideCounts,
+} from './effusion.js';
 import {
   createTrajectory, recordPosition, logLags, meanSquaredDisplacement, fitDiffusion, diffusiveOnset,
   usefulLag,
 } from './diffusion.js';
-import { decodeSettings, encodeSettings, clampSettings, capacity } from './settings.js';
+import {
+  decodeSettings, encodeSettings, clampSettings, capacity, EFFUSION_PRESET,
+} from './settings.js';
 import { randomSeed } from './rng.js';
 
 const BINS = 30;
@@ -32,6 +37,7 @@ const boxCanvas = $('box');
 const histCanvas = $('hist');
 const hCanvas = $('hchart');
 const msdCanvas = $('msd');
+const rightCanvas = $('rightchart');
 
 let settings = decodeSettings(location.hash);
 let gas;
@@ -43,6 +49,8 @@ let hNow = 0;
 let hAvg = null;
 let meter;
 let traj;
+let eff;
+let rightShare = [];
 let running = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 let last = 0;
 
@@ -73,7 +81,10 @@ function rebuild() {
   gas = createGas({
     n: settings.n, radius: settings.radius, kT: settings.kT, start: settings.start, seed: settings.seed,
     tracer: settings.tracer ? { mass: settings.tracerMass, radius: settings.tracerRadius } : null,
+    mixture: settings.mix > 0 ? { ratio: settings.ratio, fraction: settings.mix } : null,
+    layout: settings.partition ? 'left' : 'fill',
   });
+  if (settings.partition) gas.partition = { x: gas.width / 2, hole: settings.hole };
   gas.tag = new Uint8Array(gas.n);
   for (let i = 0; i < gas.n; i++) gas.tag[i] = gas.x[i] < gas.width / 2 ? 0 : 1;
   grid = createGrid(gas);
@@ -83,6 +94,8 @@ function rebuild() {
   hAvg = null;
   meter = createPressureMeter(40);
   traj = createTrajectory(SAMPLE_EVERY, SAMPLES);
+  eff = createEffusion(gas);
+  rightShare = [createHistory(H_POINTS), createHistory(H_POINTS)];
   recordPosition(traj, gas.time, gas.x[0], gas.y[0]);
   sampleH();
   draw();
@@ -92,9 +105,11 @@ function vmax() {
   return 4 * Math.sqrt(settings.kT);
 }
 
-// The speed statistics describe the unit-mass gas, so a tracer is left out.
+// The speed statistics describe the unit-mass gas, so a tracer and any heavy
+// disks are left out.
 function gasOnly() {
-  return gas.tracer ? (i) => i > 0 : null;
+  if (!gas.tracer && !gas.species.includes(1)) return null;
+  return (i) => !(gas.tracer && i === 0) && gas.species[i] === 0;
 }
 
 function sampleH() {
@@ -102,6 +117,13 @@ function sampleH() {
   hNow = boltzmannH(hist);
   pushHistory(hHistory, hNow);
   hAvg = blendHistogram(hAvg, hist, 0.8);
+  if (gas.partition) {
+    const counts = sideCounts(gas, eff);
+    for (let sp = 0; sp < 2; sp++) {
+      const total = counts[0][sp] + counts[1][sp];
+      pushHistory(rightShare[sp], total ? counts[1][sp] / total : 0);
+    }
+  }
 }
 
 function advance(seconds) {
@@ -113,6 +135,7 @@ function advance(seconds) {
     const { impulse } = step(gas, Math.min(h, dt), grid);
     recordPressure(meter, impulse, Math.min(h, dt));
     if (gas.tracer) recordPosition(traj, gas.time, gas.x[0], gas.y[0]);
+    if (gas.partition) updateEffusion(gas, eff, Math.min(h, dt));
   }
   if (settings.trace) {
     trail.push([gas.x[0], gas.y[0]]);
@@ -153,11 +176,17 @@ function draw() {
   drawSeries(g.ctx, pts, floorY, t, 34, g.w - 8);
 
   let sum = 0;
-  const first = gas.tracer ? 1 : 0;
-  for (let i = first; i < gas.n; i++) sum += Math.hypot(gas.vx[i], gas.vy[i]);
-  $('ks').textContent = format(ksDistance(gas, 1, kT, gasOnly()), 2);
-  $('mean').textContent = format(sum / (gas.n - first));
+  let counted = 0;
+  const pick = gasOnly();
+  for (let i = 0; i < gas.n; i++) {
+    if (pick && !pick(i)) continue;
+    sum += Math.hypot(gas.vx[i], gas.vy[i]);
+    counted++;
+  }
+  $('ks').textContent = format(ksDistance(gas, 1, kT, pick), 2);
+  $('mean').textContent = format(sum / counted);
   if (gas.tracer) drawTracer(t);
+  if (gas.partition) drawEffusion(t);
   $('mean-theory').textContent = format(speeds.mean);
   $('h-now').textContent = format(hNow);
   $('h-floor').textContent = format(floor);
@@ -189,6 +218,33 @@ function drawTracer(t) {
   $('record').textContent = `${format((traj.x.length - 1) * SAMPLE_EVERY, 3)} t`;
 }
 
+function drawEffusion(t) {
+  const c = fitCanvas(rightCanvas);
+  c.ctx.clearRect(0, 0, c.w, c.h);
+  const heavyPresent = gas.species.includes(1);
+  const lightPresent = gas.species.includes(0);
+  const lines = [];
+  if (lightPresent) lines.push({ points: seriesGeometry(rightShare[0].values, 0, 0.6, c.w, c.h), colour: SPECIES_COLOURS[0] });
+  if (heavyPresent) lines.push({ points: seriesGeometry(rightShare[1].values, 0, 0.6, c.w, c.h), colour: SPECIES_COLOURS[1] });
+  const half = seriesGeometry([0.5, 0.5], 0, 0.6, c.w, c.h);
+  drawSeries(c.ctx, [], half[0][1], t, 34, c.w - 8);
+  drawLines(c.ctx, lines);
+
+  const { kT, ratio, radius } = settings;
+  const gap = effectiveGap(settings.hole, radius);
+  const unit = Math.sqrt(kT / (2 * Math.PI));
+  const light = measuredFlux(eff, 0, gap);
+  const heavy = measuredFlux(eff, 1, gap);
+  $('flux-light').textContent = lightPresent ? format(light / unit, 2) : '–';
+  $('flux-heavy').textContent = heavyPresent ? format(heavy / (unit / Math.sqrt(ratio)), 2) : '–';
+  $('graham').textContent = lightPresent && heavyPresent ? format(light / heavy, 3) : '–';
+  $('graham-theory').textContent = heavyPresent ? format(grahamRatio(1, ratio), 3) : '–';
+  const counts = sideCounts(gas, eff);
+  const leftDensity = (counts[0][0] + counts[0][1]) / (gas.partition.x * gas.height);
+  $('mfp').textContent = `${format(meanFreePath(leftDensity, 2 * radius), 2)} vs ${format(gap, 2)}`;
+  $('crossings').textContent = `${eff.lr[0] + eff.lr[1]} → · ${eff.rl[0] + eff.rl[1]} ←`;
+}
+
 function frame(now) {
   const seconds = Math.min(0.05, (now - last) / 1000 || 0);
   last = now;
@@ -200,11 +256,13 @@ function frame(now) {
 }
 
 function syncControls() {
-  for (const key of ['n', 'radius', 'kT', 'rate', 'tracerMass', 'tracerRadius']) {
+  for (const key of ['n', 'radius', 'kT', 'rate', 'tracerMass', 'tracerRadius', 'hole', 'mix', 'ratio']) {
     $(key).value = settings[key];
     $(`${key}-out`).textContent = key === 'rate' ? `${settings.rate}×` : settings[key];
   }
-  $('n').max = capacity(settings.radius, 100, 100, settings.tracer ? settings.tracerRadius : 0);
+  $('n').max = capacity(settings.radius, 100, 100, settings.tracer ? settings.tracerRadius : 0, settings.partition);
+  $('partition').checked = settings.partition;
+  $('effusion-results').hidden = !settings.partition;
   $('tracer').checked = settings.tracer;
   $('tracer-controls').hidden = !settings.tracer;
   $('start').value = settings.start;
@@ -227,7 +285,7 @@ function togglePlay() {
   syncControls();
 }
 
-for (const key of ['n', 'radius', 'kT', 'tracerMass', 'tracerRadius']) {
+for (const key of ['n', 'radius', 'kT', 'tracerMass', 'tracerRadius', 'hole', 'mix', 'ratio']) {
   $(key).addEventListener('input', (e) => update({ [key]: Number(e.target.value) }, true));
 }
 $('rate').addEventListener('input', (e) => update({ rate: Number(e.target.value) }, false));
@@ -238,6 +296,8 @@ $('trace').addEventListener('change', (e) => {
   update({ trace: e.target.checked }, false);
 });
 $('tracer').addEventListener('change', (e) => update({ tracer: e.target.checked }, true));
+$('partition').addEventListener('change', (e) => update({ partition: e.target.checked }, true));
+$('effusion-demo').addEventListener('click', () => update({ ...EFFUSION_PRESET, colour: 'species' }, true));
 $('play').addEventListener('click', togglePlay);
 $('step').addEventListener('click', () => { advance(1 / 30); draw(); });
 $('restart').addEventListener('click', rebuild);

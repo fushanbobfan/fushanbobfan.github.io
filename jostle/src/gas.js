@@ -15,6 +15,8 @@ export function createGas({
   seed = 1,
   start = 'maxwell',
   tracer = null,
+  mixture = null,
+  layout = 'fill',
 } = {}) {
   const rand = mulberry32(seed);
   const normal = gaussian(rand);
@@ -31,7 +33,20 @@ export function createGas({
     time: 0,
     collisions: 0,
     tracer: Boolean(tracer),
+    layout,
+    species: new Uint8Array(n),
   };
+  // A mixture makes a share of the disks (spread evenly through the index
+  // order, never the tracer) heavier by `ratio`.
+  if (mixture && mixture.fraction > 0) {
+    const first = tracer ? 1 : 0;
+    const heavy = Math.round((n - first) * mixture.fraction);
+    for (let k = 0; k < heavy; k++) {
+      const i = first + Math.floor(((k + 0.5) * (n - first)) / heavy);
+      gas.species[i] = 1;
+      gas.m[i] = mass * mixture.ratio;
+    }
+  }
   if (tracer && n > 0) {
     gas.r[0] = tracer.radius;
     gas.m[0] = tracer.mass;
@@ -63,8 +78,8 @@ export function assignVelocities(gas, start, kT, rand, normal) {
       gas.vx[i] = v * Math.cos(a);
       gas.vy[i] = v * Math.sin(a);
     }
-    // Unequal masses (a tracer) leave a little net momentum to remove.
-    if (gas.tracer) {
+    // Unequal masses (a tracer or a mixture) leave net momentum to remove.
+    if (gas.m.some((m) => m !== gas.m[0])) {
       removeDrift(gas);
       setTemperature(gas, kT);
     }
@@ -95,6 +110,11 @@ export function placeWithoutOverlap(gas, rand) {
   const cw = width / cols;
   const ch = height / rows;
   let cells = Array.from({ length: cols * rows }, (_, k) => k);
+  // 'left' packs everything into the left half, clear of a partition at the
+  // middle, so the right half starts empty.
+  if (gas.layout === 'left') {
+    cells = cells.filter((c) => ((c % cols) + 1) * cw <= width / 2 - rmax);
+  }
   if (first === 1) {
     gas.x[0] = width / 2;
     gas.y[0] = height / 2;
