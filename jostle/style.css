@@ -220,6 +220,23 @@ output {
   background: var(--curve);
 }
 
+.key.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.key.dash {
+  height: 0;
+  border-top: 2px dashed var(--muted);
+  vertical-align: middle;
+}
+
+#tracer-controls[hidden] {
+  display: none;
+}
+
 .status,
 .hint,
 .note {
