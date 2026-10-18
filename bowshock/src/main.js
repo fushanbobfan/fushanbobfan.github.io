@@ -99,7 +99,7 @@ function frame(now) {
   if (playing) {
     const dt = lastFrame === null ? STEP : Math.min(0.1, (now - lastFrame) / 1000);
     const steps = Math.max(1, Math.round(dt / STEP));
-    // The microphone and the boom detector need every step, not every frame.
+    // The microphone and the boom detector sample every simulation step.
     for (let i = 0; i < steps; i++) {
       stepSim(sim);
       found = heard(sim);
