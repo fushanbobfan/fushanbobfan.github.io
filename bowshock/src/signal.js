@@ -40,3 +40,28 @@ export class Trace {
     return m;
   }
 }
+
+// A boom is the moment the edge of the cone reaches the listener: the root
+// count of the arrival condition jumps by two as a pair of images is born
+// from one point of the track. Track the count step by step and log those
+// moments.
+export class BoomLog {
+  constructor(window) {
+    this.window = window;
+    this.times = [];
+    this.count = null;
+  }
+
+  // Returns true when this step brought a boom.
+  update(t, count) {
+    const boom = this.count !== null && count - this.count >= 2;
+    this.count = count;
+    if (boom) this.times.push(t);
+    while (this.times.length && this.times[0] < t - this.window) this.times.shift();
+    return boom;
+  }
+
+  get last() {
+    return this.times.length ? this.times[this.times.length - 1] : null;
+  }
+}
