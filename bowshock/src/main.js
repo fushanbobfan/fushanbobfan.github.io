@@ -4,15 +4,18 @@
 import { SOUND_SPEED, WORLD } from './path.js';
 import { createSim, stepSim, heard, windVelocity, STEP } from './sim.js';
 import { machAngle, dopplerRatio } from './doppler.js';
-import { makeView, toWorld, toScreen, airMotion, drawWorld, drawPitch } from './render.js';
+import { makeView, toWorld, toScreen, airMotion, drawWorld, drawPitch, drawTrace } from './render.js';
 import { PRESETS, applyPreset, encode, decode } from './settings.js';
+import { pressure, Trace, BoomLog } from './signal.js';
 import { Tone } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const worldCanvas = $('world');
 const pitchCanvas = $('pitch');
+const micCanvas = $('mic');
 const wctx = worldCanvas.getContext('2d');
 const pctx = pitchCanvas.getContext('2d');
+const mctx = micCanvas.getContext('2d');
 
 let settings = decode(location.hash);
 const listenerFromSettings = () => ({ x: settings.lx * WORLD.width, y: settings.ly * WORLD.height });
@@ -25,11 +28,19 @@ let found = [];
 const tone = new Tone();
 
 const CHART_WINDOW = 10;
+const MIC_WINDOW = 4;
+// How long the listener's ring flashes after a boom, in seconds.
+const FLASH = 0.6;
+const trace = new Trace(MIC_WINDOW);
+const booms = new BoomLog(CHART_WINDOW);
 
 // A restart keeps the listener where it is unless the settings say otherwise.
 function restart(listener = { x: sim.listener.x, y: sim.listener.y }) {
   sim = createSim({ ...settings, listener });
   samples = [];
+  trace.clear();
+  booms.times = [];
+  booms.count = null;
   found = [];
   lastFrame = null;
 }
@@ -43,7 +54,7 @@ function writeHash() {
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  for (const c of [worldCanvas, pitchCanvas]) {
+  for (const c of [worldCanvas, pitchCanvas, micCanvas]) {
     const r = c.getBoundingClientRect();
     c.width = Math.max(1, Math.round(r.width * dpr));
     c.height = Math.max(1, Math.round(r.height * dpr));
@@ -75,6 +86,8 @@ function updateReadouts() {
   $('count').textContent = String(found.length);
   $('ratios').textContent = found.length ? found.map((im) => ratioText(im.ratio)).join(', ') : 'silence';
   $('delay').textContent = found.length ? found.map((im) => `${fmt(sim.t - im.tau, 1)} s`).join(', ') : '–';
+  $('booms').textContent = String(booms.times.length);
+  $('last-boom').textContent = booms.last === null ? 'none yet' : `${fmt(sim.t - booms.last, 1)} s ago`;
   let status = playing ? '' : 'Paused. ';
   if (found.length === 0) status += m > 1 ? 'The listener is outside the cone: nothing has arrived yet.' : 'Waiting for the first sound.';
   else if (found.length > 1) status += 'Inside the cone: sound from the approach and from the retreat arrive together.';
@@ -86,15 +99,23 @@ function frame(now) {
   if (playing) {
     const dt = lastFrame === null ? STEP : Math.min(0.1, (now - lastFrame) / 1000);
     const steps = Math.max(1, Math.round(dt / STEP));
-    for (let i = 0; i < steps; i++) stepSim(sim);
-    found = heard(sim);
+    // The microphone and the boom detector need every step, not every frame.
+    for (let i = 0; i < steps; i++) {
+      stepSim(sim);
+      found = heard(sim);
+      trace.push(sim.t, pressure(found, sim.rate));
+      booms.update(sim.t, found.length);
+    }
     samples.push({ t: sim.t, images: found.map((im) => ({ ratio: im.ratio })) });
     while (samples.length && samples[0].t < sim.t - CHART_WINDOW) samples.shift();
     tone.update(found);
   }
   lastFrame = now;
-  drawWorld(wctx, view, sim, { cone: settings.cone && sim.path === 'line', tint: settings.tint, images: found });
-  drawPitch(pctx, samples, sim.t, CHART_WINDOW);
+  const since = booms.last === null ? Infinity : sim.t - booms.last;
+  const flash = since < FLASH ? 1 - since / FLASH : 0;
+  drawWorld(wctx, view, sim, { cone: settings.cone && sim.path === 'line', tint: settings.tint, images: found, flash });
+  drawPitch(pctx, samples, sim.t, CHART_WINDOW, booms.times);
+  drawTrace(mctx, trace, booms.times, sim.t, MIC_WINDOW);
   updateReadouts();
   requestAnimationFrame(frame);
 }
@@ -103,9 +124,12 @@ function frame(now) {
 // (in "Follow the pointer") or drop the listener where the pointer is.
 let dragging = null;
 
+// Jumping the listener into the cone is not a boom, so the detector starts
+// counting afresh from wherever it lands.
 function moveListener(p) {
   sim.listener.x = p.x;
   sim.listener.y = p.y;
+  booms.count = null;
 }
 
 function pointerWorld(ev) {
