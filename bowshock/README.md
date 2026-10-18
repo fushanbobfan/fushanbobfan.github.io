@@ -79,6 +79,33 @@ On the straight pass the source wraps round from one edge to the other. The
 track records the wrap as a break, so the listener can still hear the last
 pass fading out but no sound is ever made up from the jump itself.
 
+## Wind and a walking listener
+
+**Wind** moves the air itself, and every ring moves with it: the ring sent at
+τ is centred on s(τ) + A(t) − A(τ), where A(t) is how far the air has been
+carried by time t. The track stores A with each sample, so a wind that
+changes while sound is in flight is still followed exactly. The arrival
+condition becomes
+
+    |L − s(τ) − (A(t) − A(τ))| = c (t − τ).
+
+A source and listener both at rest hear no shift in any wind; the sound just
+takes longer to arrive upwind and less time downwind. For a moving source the
+pitch along a direction u is (c + w·u) / (c + w·u − v·u). The cone belongs to
+the source's motion through the air, so a source below Mach 1 over the ground
+can still drag a cone behind it into a headwind ("Into a headwind" runs at
+ground Mach 0.7 against a wind of 0.5 c, which is Mach 1.2 through the air).
+
+**The walking listener** paces its row and turns at the edges. Which rings
+reach it depends only on where it stands; its velocity o sets how fast it
+meets them, so o enters the pitch:
+
+    ratio = (c + w·u − o·u) / (c + w·u − v·u).
+
+Walking at the source's own speed behind a receding source cancels the shift
+completely. Walking faster than sound overtakes rings, which the sign of the
+ratio reports as sound heard backwards.
+
 ## Sound
 
 "Sound on" plays up to two sine voices at 330 Hz times each image's ratio,
@@ -93,21 +120,23 @@ as the pitch climbs so the squeal near Mach 1 stays bearable.
 | Path | Straight pass, circle, follow the pointer, or standing still |
 | Mach number | Source speed as a multiple of c; with "Follow the pointer" it is the top speed |
 | Tone | Rings sent per second |
-| Scenes | Passing car (M 0.4), the sound barrier (M 1), a supersonic jet (M 1.8), circling below and above Mach 1 |
+| Wind | Air speed as a fraction of c, positive to the right, up to 0.8 c either way |
+| Listener walks at | The listener's pacing speed as a fraction of c |
+| Scenes | Passing car (M 0.4), the sound barrier (M 1), a supersonic jet (M 1.8), circling below and above Mach 1, a headwind, a walking listener |
 | Drag | Grab the listener to move it; with "Follow the pointer", drag elsewhere to steer the source |
 | Keys | Arrows move the listener when the stage has focus (Shift for bigger steps), Space pauses, R restarts, M toggles sound |
 
-"Copy share link" stores the path, speed, tone, listener position and view
-options in the URL; only settings that differ from the defaults are written.
+"Copy share link" stores the path, speed, tone, wind, walking speed, listener
+position and view options in the URL; only settings that differ from the defaults are written.
 
 ## Code layout
 
 | File | Contents |
 | --- | --- |
 | `src/path.js` | World size, speed of sound, the straight, circular and steered paths |
-| `src/history.js` | Sliding window of track samples with breaks |
+| `src/history.js` | Sliding window of track samples with breaks and the air's displacement |
 | `src/doppler.js` | Doppler ratio, Mach angle, retarded-time images |
-| `src/sim.js` | Stepping the source, emitting and dropping rings |
+| `src/sim.js` | Stepping the source, the air and the listener; emitting and dropping rings |
 | `src/render.js` | Stage and pitch chart drawing, colour and geometry helpers |
 | `src/audio.js` | Image to voice mapping and the Web Audio tone |
 | `src/settings.js` | Defaults, scenes and share links |
