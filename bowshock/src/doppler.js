@@ -34,15 +34,20 @@ export const receding = (mach) => 1 / (1 + mach);
 // it plays backwards.
 //
 // A wind carries each ring along with the air, so the ring sent at tau is
-// centred on s(tau) + w (t - tau) and the condition becomes
-//   |L - s(tau) - w (t - tau)| = c (t - tau).
-// `obs` is the listener's velocity, which changes the pitch but not which
-// rings have arrived.
-export function images(history, lx, ly, t, c, { wind = ZERO, obs = ZERO } = {}) {
+// centred on s(tau) + A(t) - A(tau), where A is how far the air has moved
+// (stored with each track sample), and the condition becomes
+//   |L - s(tau) - (A(t) - A(tau))| = c (t - tau).
+// In a steady wind w that shift is just w (t - tau). `air` is A(t), by
+// default the newest sample's; `wind` (the wind now) and `obs` (the
+// listener's velocity) set the pitch but not which rings have arrived.
+export function images(history, lx, ly, t, c, { wind = ZERO, obs = ZERO, air = null } = {}) {
   const out = [];
   const n = history.length;
-  const dx = (p) => lx - p.x - wind.x * (t - p.t);
-  const dy = (p) => ly - p.y - wind.y * (t - p.t);
+  const last = n > 0 ? history.at(n - 1) : null;
+  const ax = air ? air.x : last ? last.ax + wind.x * (t - last.t) : 0;
+  const ay = air ? air.y : last ? last.ay + wind.y * (t - last.t) : 0;
+  const dx = (p) => lx - p.x - (ax - p.ax);
+  const dy = (p) => ly - p.y - (ay - p.ay);
   const g = (p) => Math.hypot(dx(p), dy(p)) - c * (t - p.t);
   let prev = n > 0 ? history.at(0) : null;
   let gPrev = prev ? g(prev) : 0;
