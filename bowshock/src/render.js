@@ -187,6 +187,13 @@ export function drawWorld(ctx, view, sim, opts) {
   ctx.beginPath();
   ctx.arc(lx, ly, 2, 0, 2 * Math.PI);
   ctx.fill();
+  if (opts.flash > 0) {
+    ctx.strokeStyle = `rgba(255, 107, 107, ${opts.flash})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(lx, ly, Math.max(6, view.scale * 2.2) * (1 + 3 * (1 - opts.flash)), 0, 2 * Math.PI);
+    ctx.stroke();
+  }
   const walk = listenerVelocity(sim);
   if (walk.x !== 0) arrow(ctx, lx, ly, walk.x / sim.c, view.scale * 8, COLOURS.listener);
   if (wind.x !== 0) {
@@ -218,9 +225,61 @@ function arrow(ctx, x, y, amount, scale, colour) {
   ctx.stroke();
 }
 
+// Vertical position of a pressure value on a plot scaled to `peak`.
+export function traceY(v, peak, top, height) {
+  const k = peak > 0 ? Math.max(-1, Math.min(1, v / peak)) : 0;
+  return top + height * (0.5 - 0.45 * k);
+}
+
+// A dashed vertical line at each boom inside the plot's time window.
+function boomMarks(ctx, booms, now, window, left, width, top, height) {
+  ctx.strokeStyle = COLOURS.cone;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  for (const b of booms) {
+    const age = now - b;
+    if (age < 0 || age > window) continue;
+    const x = left + width * (1 - age / window);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, top + height);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+// The microphone: pressure at the listener over the last `window` seconds,
+// newest on the right, scaled to the loudest moment on screen.
+export function drawTrace(ctx, trace, booms, now, window) {
+  const { width, height } = ctx.canvas;
+  const pad = { l: 8, r: 8, t: 6, b: 6 };
+  const w = width - pad.l - pad.r;
+  const h = height - pad.t - pad.b;
+  ctx.fillStyle = COLOURS.bg;
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = COLOURS.grid;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + h / 2);
+  ctx.lineTo(pad.l + w, pad.t + h / 2);
+  ctx.stroke();
+  boomMarks(ctx, booms, now, window, pad.l, w, pad.t, h);
+  const peak = trace.peak();
+  ctx.strokeStyle = COLOURS.listener;
+  ctx.lineWidth = Math.max(1, height / 90);
+  ctx.beginPath();
+  for (let i = 0; i < trace.t.length; i++) {
+    const x = pad.l + w * (1 - (now - trace.t[i]) / window);
+    const y = traceY(trace.v[i], peak, pad.t, h);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
 // The pitch chart: each image the listener hears is a dot at its ratio,
 // newest on the right, over the last `window` seconds.
-export function drawPitch(ctx, samples, now, window = 10) {
+export function drawPitch(ctx, samples, now, window = 10, booms = []) {
   const { width, height } = ctx.canvas;
   const pad = { l: 44, r: 8, t: 8, b: 20 };
   const w = width - pad.l - pad.r;
@@ -244,6 +303,7 @@ export function drawPitch(ctx, samples, now, window = 10) {
   }
   ctx.textAlign = 'left';
   ctx.fillText(`last ${window} s`, pad.l, height - pad.b / 2);
+  boomMarks(ctx, booms, now, window, pad.l, w, pad.t, h);
   const size = Math.max(1.5, 1.6 * dpr);
   for (const s of samples) {
     const age = now - s.t;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeView, toScreen, toWorld, tint, coneEdges, airMotion, ratioToY, COLOURS } from '../src/render.js';
+import { makeView, toScreen, toWorld, tint, coneEdges, airMotion, ratioToY, traceY, COLOURS } from '../src/render.js';
 import { machAngle } from '../src/doppler.js';
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
@@ -56,4 +56,12 @@ test('the cone follows the motion of the source through the air', () => {
   close(head.mach, 2);
   close(head.vx, 50);
   assert.equal(coneEdges({ ...src, vx: tail.vx, vy: tail.vy }, tail.mach, 10), null);
+});
+
+test('the microphone plot is centred on zero and scaled to its peak', () => {
+  close(traceY(0, 2, 0, 100), 50);
+  close(traceY(2, 2, 0, 100), 5);
+  close(traceY(-2, 2, 0, 100), 95);
+  close(traceY(9, 2, 0, 100), 5);
+  close(traceY(1, 0, 0, 100), 50);
 });
