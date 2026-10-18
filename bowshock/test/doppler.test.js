@@ -129,3 +129,32 @@ test('sound never crosses a break in the track', () => {
   for (const im of found) assert.ok(im.x === 1000 || im.tau < 5);
   assert.ok(found.every((im) => Math.abs(im.dist - 25 * (10 - im.tau)) < 1e-6));
 });
+
+test('in a wind the arriving ring is the one the air has carried to the listener', () => {
+  const c = 25;
+  const v = 10;
+  const t = 20;
+  const wind = { x: -6, y: 3 };
+  const h = lineTrack(v, t);
+  const found = images(h, 0, 30, t, c, { wind });
+  assert.equal(found.length, 1);
+  const [im] = found;
+  const age = t - im.tau;
+  close(Math.hypot(0 - im.x - wind.x * age, 30 - im.y - wind.y * age), c * age, 1e-6);
+  close(im.dist, c * age, 1e-6);
+});
+
+test('a still source heard in a wind keeps its pitch', () => {
+  const h = new History(30);
+  for (let k = 0; k <= 1000; k++) h.push(k * 0.01, 0, 0, 0, 0);
+  const [im] = images(h, 40, 10, 10, 25, { wind: { x: 8, y: 0 } });
+  close(im.ratio, 1, 1e-12);
+});
+
+test('a listener chasing a receding source at the same speed hears no shift', () => {
+  const v = 10;
+  const h = lineTrack(v, 20);
+  const sx = -200 + v * 20;
+  const [im] = images(h, sx - 50, 0, 20, 25, { obs: { x: v, y: 0 } });
+  close(im.ratio, 1, 1e-9);
+});

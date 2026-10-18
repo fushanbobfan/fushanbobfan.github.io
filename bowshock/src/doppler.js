@@ -32,10 +32,18 @@ export const receding = (mach) => 1 / (1 + mach);
 // several (inside it, sound from the approach and from the retreat arrive
 // together). Each image carries its Doppler ratio, its distance and whether
 // it plays backwards.
-export function images(history, lx, ly, t, c) {
+//
+// A wind carries each ring along with the air, so the ring sent at tau is
+// centred on s(tau) + w (t - tau) and the condition becomes
+//   |L - s(tau) - w (t - tau)| = c (t - tau).
+// `obs` is the listener's velocity, which changes the pitch but not which
+// rings have arrived.
+export function images(history, lx, ly, t, c, { wind = ZERO, obs = ZERO } = {}) {
   const out = [];
   const n = history.length;
-  const g = (p) => Math.hypot(lx - p.x, ly - p.y) - c * (t - p.t);
+  const dx = (p) => lx - p.x - wind.x * (t - p.t);
+  const dy = (p) => ly - p.y - wind.y * (t - p.t);
+  const g = (p) => Math.hypot(dx(p), dy(p)) - c * (t - p.t);
   let prev = n > 0 ? history.at(0) : null;
   let gPrev = prev ? g(prev) : 0;
   for (let i = 1; i < n; i++) {
@@ -50,10 +58,10 @@ export function images(history, lx, ly, t, c) {
         else hi = mid;
       }
       const p = history.lerp(i, (lo + hi) / 2);
-      const dist = Math.hypot(lx - p.x, ly - p.y);
-      const ux = dist > 0 ? (lx - p.x) / dist : 0;
-      const uy = dist > 0 ? (ly - p.y) / dist : 0;
-      const ratio = dopplerRatio(p.vx, p.vy, ux, uy, c);
+      const dist = Math.hypot(dx(p), dy(p));
+      const ux = dist > 0 ? dx(p) / dist : 0;
+      const uy = dist > 0 ? dy(p) / dist : 0;
+      const ratio = dopplerRatio(p.vx, p.vy, ux, uy, c, wind, obs);
       out.push({ tau: p.t, x: p.x, y: p.y, dist, ratio, reversed: ratio < 0 });
     }
     prev = cur;
