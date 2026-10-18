@@ -104,6 +104,10 @@ canvas {
   height: 170px;
 }
 
+.chart.short {
+  height: 100px;
+}
+
 h2 {
   margin: 0 0 8px;
   font-size: 15px;
