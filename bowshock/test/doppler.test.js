@@ -28,15 +28,33 @@ test('ahead of a supersonic source the ratio turns negative', () => {
   assert.ok(dopplerRatio(50, 0, -1, 0, 25) > 0);
 });
 
+test('wind alone shifts nothing for a source and listener at rest', () => {
+  close(dopplerRatio(0, 0, 1, 0, 25, { x: 10, y: 0 }), 1);
+  close(dopplerRatio(0, 0, -1, 0, 25, { x: 10, y: 0 }), 1);
+});
+
+test('a moving source in a wind follows (c + w) / (c + w - v)', () => {
+  close(dopplerRatio(10, 0, 1, 0, 25, { x: 5, y: 0 }), 30 / 20);
+  close(dopplerRatio(10, 0, -1, 0, 25, { x: 5, y: 0 }), 20 / 30);
+});
+
+test('a listener walking towards the sound hears it higher', () => {
+  // Sound travelling in +x, listener moving in -x at 5.
+  close(dopplerRatio(0, 0, 1, 0, 25, undefined, { x: -5, y: 0 }), 30 / 25);
+  // Moving with the source at the same speed cancels the shift.
+  close(dopplerRatio(10, 0, 1, 0, 25, undefined, { x: 10, y: 0 }), 1);
+});
+
 import { History } from '../src/history.js';
 import { images } from '../src/doppler.js';
 
 // A source on the x axis moving right at speed v, sampled every dt up to time t.
-function lineTrack(v, t, dt = 0.01, span = 30) {
+// With a steady wind the air has moved wind * s by time s.
+function lineTrack(v, t, dt = 0.01, span = 30, wind = { x: 0, y: 0 }) {
   const h = new History(span);
   for (let k = 0; k * dt <= t + 1e-12; k++) {
     const s = k * dt;
-    h.push(s, -200 + v * s, 0, v, 0);
+    h.push(s, -200 + v * s, 0, v, 0, false, wind.x * s, wind.y * s);
   }
   return h;
 }
@@ -111,4 +129,49 @@ test('sound never crosses a break in the track', () => {
   const found = images(h, 0, 100, 10, 25);
   for (const im of found) assert.ok(im.x === 1000 || im.tau < 5);
   assert.ok(found.every((im) => Math.abs(im.dist - 25 * (10 - im.tau)) < 1e-6));
+});
+
+test('in a wind the arriving ring is the one the air has carried to the listener', () => {
+  const c = 25;
+  const v = 10;
+  const t = 20;
+  const wind = { x: -6, y: 3 };
+  const h = lineTrack(v, t, 0.01, 30, wind);
+  const found = images(h, 0, 30, t, c, { wind });
+  assert.equal(found.length, 1);
+  const [im] = found;
+  const age = t - im.tau;
+  close(Math.hypot(0 - im.x - wind.x * age, 30 - im.y - wind.y * age), c * age, 1e-6);
+  close(im.dist, c * age, 1e-6);
+});
+
+test('a still source heard in a wind keeps its pitch', () => {
+  const h = new History(30);
+  for (let k = 0; k <= 1000; k++) h.push(k * 0.01, 0, 0, 0, 0, false, 0.08 * k, 0);
+  const [im] = images(h, 40, 10, 10, 25, { wind: { x: 8, y: 0 } });
+  close(im.ratio, 1, 1e-12);
+});
+
+test('a listener chasing a receding source at the same speed hears no shift', () => {
+  const v = 10;
+  const h = lineTrack(v, 20);
+  const sx = -200 + v * 20;
+  const [im] = images(h, sx - 50, 0, 20, 25, { obs: { x: v, y: 0 } });
+  close(im.ratio, 1, 1e-9);
+});
+
+test('a wind that changed mid-flight is followed through the stored air shift', () => {
+  // Still source at the origin; calm until t = 8, then a wind of 10 to the right.
+  const h = new History(30);
+  let ax = 0;
+  for (let k = 0; k <= 1000; k++) {
+    const s = k * 0.01;
+    if (s > 8 + 1e-9) ax += 10 * 0.01;
+    h.push(s, 0, 0, 0, 0, false, ax, 0);
+  }
+  const A = (s) => 10 * Math.max(0, s - 8);
+  const [im] = images(h, 150, 0, 10, 25, { wind: { x: 10, y: 0 } });
+  // Sound that left at 4.8 in calm air: its ring has moved only A(10) = 20.
+  close(150 - (A(10) - A(im.tau)), 25 * (10 - im.tau), 0.05);
+  close(im.tau, 4.8, 0.01);
 });

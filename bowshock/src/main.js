@@ -1,11 +1,11 @@
 // Page wiring: the animation loop, pointer and keyboard input, controls,
 // readouts, sound, share links and PNG export.
 
-import { SOUND_SPEED } from './path.js';
-import { createSim, stepSim, heard, STEP } from './sim.js';
-import { machAngle, approaching, receding } from './doppler.js';
-import { makeView, toWorld, toScreen, drawWorld, drawPitch } from './render.js';
-import { PRESETS, encode, decode } from './settings.js';
+import { SOUND_SPEED, WORLD } from './path.js';
+import { createSim, stepSim, heard, windVelocity, STEP } from './sim.js';
+import { machAngle, dopplerRatio } from './doppler.js';
+import { makeView, toWorld, toScreen, airMotion, drawWorld, drawPitch } from './render.js';
+import { PRESETS, applyPreset, encode, decode } from './settings.js';
 import { Tone } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -15,8 +15,8 @@ const wctx = worldCanvas.getContext('2d');
 const pctx = pitchCanvas.getContext('2d');
 
 let settings = decode(location.hash);
-let sim = createSim(settings);
-let listener = { x: settings.lx * sim.world.width, y: settings.ly * sim.world.height };
+const listenerFromSettings = () => ({ x: settings.lx * WORLD.width, y: settings.ly * WORLD.height });
+let sim = createSim({ ...settings, listener: listenerFromSettings() });
 let playing = true;
 let samples = [];
 let view = makeView(1, 1, sim.world);
@@ -26,16 +26,17 @@ const tone = new Tone();
 
 const CHART_WINDOW = 10;
 
-function restart() {
-  sim = createSim(settings);
+// A restart keeps the listener where it is unless the settings say otherwise.
+function restart(listener = { x: sim.listener.x, y: sim.listener.y }) {
+  sim = createSim({ ...settings, listener });
   samples = [];
   found = [];
   lastFrame = null;
 }
 
 function writeHash() {
-  settings.lx = listener.x / sim.world.width;
-  settings.ly = listener.y / sim.world.height;
+  settings.lx = sim.listener.x / sim.world.width;
+  settings.ly = sim.listener.y / sim.world.height;
   const text = encode(settings);
   history.replaceState(null, '', text ? `#${text}` : location.pathname + location.search);
 }
@@ -50,14 +51,25 @@ function resize() {
   view = makeView(worldCanvas.width, worldCanvas.height, sim.world);
 }
 
+const windText = (w) => (w === 0 ? 'calm' : `${fmt(Math.abs(w))} c to the ${w > 0 ? 'right' : 'left'}`);
 const fmt = (v, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 const ratioText = (r) => (Math.abs(r) > 50 ? '≫ 1' : `×${fmt(Math.abs(r))}${r < 0 ? ' (backwards)' : ''}`);
 
 function updateReadouts() {
-  const m = sim.mach;
-  $('speed').textContent = `${fmt(m * SOUND_SPEED, 1)} u/s`;
-  $('ahead').textContent = m >= 1 ? 'silent' : `×${fmt(approaching(m))}`;
-  $('behind').textContent = `×${fmt(receding(m))}`;
+  const wind = windVelocity(sim);
+  const air = airMotion(sim.src, wind, sim.c);
+  const m = air.mach;
+  const v = Math.hypot(sim.src.vx, sim.src.vy);
+  // Along the line of motion, or along x for a source at rest.
+  const ux = v > 0 ? sim.src.vx / v : 1;
+  const uy = v > 0 ? sim.src.vy / v : 0;
+  const ahead = dopplerRatio(sim.src.vx, sim.src.vy, ux, uy, sim.c, wind);
+  const behind = dopplerRatio(sim.src.vx, sim.src.vy, -ux, -uy, sim.c, wind);
+  $('speed').textContent = `${fmt(v, 1)} u/s`;
+  $('ahead').textContent = ahead < 0 || !Number.isFinite(ahead) ? 'silent' : `×${fmt(ahead)}`;
+  $('behind').textContent = `×${fmt(behind)}`;
+  $('air-mach').textContent = fmt(m);
+  $('walk-speed').textContent = `${fmt(sim.walk * SOUND_SPEED, 1)} u/s`;
   const mu = machAngle(m);
   $('angle').textContent = mu === null ? 'none below Mach 1' : `${fmt((mu * 180) / Math.PI, 1)}°`;
   $('count').textContent = String(found.length);
@@ -75,13 +87,13 @@ function frame(now) {
     const dt = lastFrame === null ? STEP : Math.min(0.1, (now - lastFrame) / 1000);
     const steps = Math.max(1, Math.round(dt / STEP));
     for (let i = 0; i < steps; i++) stepSim(sim);
-    found = heard(sim, listener);
+    found = heard(sim);
     samples.push({ t: sim.t, images: found.map((im) => ({ ratio: im.ratio })) });
     while (samples.length && samples[0].t < sim.t - CHART_WINDOW) samples.shift();
     tone.update(found);
   }
   lastFrame = now;
-  drawWorld(wctx, view, sim, listener, { cone: settings.cone && sim.path === 'line', tint: settings.tint, images: found });
+  drawWorld(wctx, view, sim, { cone: settings.cone && sim.path === 'line', tint: settings.tint, images: found });
   drawPitch(pctx, samples, sim.t, CHART_WINDOW);
   updateReadouts();
   requestAnimationFrame(frame);
@@ -90,6 +102,11 @@ function frame(now) {
 // Pointer: grab the listener when close to it, otherwise steer the source
 // (in "Follow the pointer") or drop the listener where the pointer is.
 let dragging = null;
+
+function moveListener(p) {
+  sim.listener.x = p.x;
+  sim.listener.y = p.y;
+}
 
 function pointerWorld(ev) {
   const r = worldCanvas.getBoundingClientRect();
@@ -103,11 +120,11 @@ function pointerWorld(ev) {
 
 worldCanvas.addEventListener('pointerdown', (ev) => {
   const p = pointerWorld(ev);
-  const [lx, ly] = toScreen(view, listener.x, listener.y);
+  const [lx, ly] = toScreen(view, sim.listener.x, sim.listener.y);
   const [px, py] = toScreen(view, p.x, p.y);
   const grab = Math.hypot(px - lx, py - ly) < Math.max(18, view.scale * 5);
   dragging = grab || settings.path !== 'drag' ? 'listener' : 'source';
-  if (dragging === 'listener') listener = p;
+  if (dragging === 'listener') moveListener(p);
   else sim.target = p;
   worldCanvas.setPointerCapture(ev.pointerId);
 });
@@ -115,7 +132,7 @@ worldCanvas.addEventListener('pointerdown', (ev) => {
 worldCanvas.addEventListener('pointermove', (ev) => {
   if (!dragging) return;
   const p = pointerWorld(ev);
-  if (dragging === 'listener') listener = p;
+  if (dragging === 'listener') moveListener(p);
   else sim.target = p;
 });
 
@@ -132,10 +149,10 @@ worldCanvas.addEventListener('keydown', (ev) => {
   const m = moves[ev.key];
   if (!m) return;
   ev.preventDefault();
-  listener = {
-    x: Math.min(sim.world.width, Math.max(0, listener.x + m[0])),
-    y: Math.min(sim.world.height, Math.max(0, listener.y + m[1])),
-  };
+  moveListener({
+    x: Math.min(sim.world.width, Math.max(0, sim.listener.x + m[0])),
+    y: Math.min(sim.world.height, Math.max(0, sim.listener.y + m[1])),
+  });
   writeHash();
 });
 
@@ -146,6 +163,10 @@ function syncControls() {
   $('mach-out').textContent = fmt(settings.mach);
   $('rate').value = settings.rate;
   $('rate-out').textContent = fmt(settings.rate, 1);
+  $('wind').value = settings.wind;
+  $('wind-out').textContent = windText(settings.wind);
+  $('walk').value = settings.walk;
+  $('walk-out').textContent = `Mach ${fmt(settings.walk)}`;
   $('tint').checked = settings.tint;
   $('cone').checked = settings.cone;
 }
@@ -171,6 +192,20 @@ $('rate').addEventListener('input', (ev) => {
   writeHash();
 });
 
+$('wind').addEventListener('input', (ev) => {
+  settings.wind = Number(ev.target.value);
+  sim.wind = settings.wind;
+  $('wind-out').textContent = windText(settings.wind);
+  writeHash();
+});
+
+$('walk').addEventListener('input', (ev) => {
+  settings.walk = Number(ev.target.value);
+  sim.walk = settings.walk;
+  $('walk-out').textContent = `Mach ${fmt(settings.walk)}`;
+  writeHash();
+});
+
 for (const key of ['tint', 'cone']) {
   $(key).addEventListener('change', (ev) => {
     settings[key] = ev.target.checked;
@@ -184,7 +219,7 @@ for (const [key, preset] of Object.entries(PRESETS)) {
   b.textContent = preset.label;
   b.dataset.preset = key;
   b.addEventListener('click', () => {
-    settings = { ...settings, path: preset.path, mach: preset.mach };
+    settings = applyPreset(settings, key);
     syncControls();
     restart();
     writeHash();
@@ -215,7 +250,7 @@ async function toggleSound() {
 }
 
 $('play').addEventListener('click', () => setPlaying(!playing));
-$('restart').addEventListener('click', restart);
+$('restart').addEventListener('click', () => restart());
 $('sound').addEventListener('click', toggleSound);
 
 $('share').addEventListener('click', async () => {
@@ -250,9 +285,8 @@ document.addEventListener('keydown', (ev) => {
 
 window.addEventListener('hashchange', () => {
   settings = decode(location.hash);
-  listener = { x: settings.lx * sim.world.width, y: settings.ly * sim.world.height };
   syncControls();
-  restart();
+  restart(listenerFromSettings());
 });
 
 window.addEventListener('resize', resize);

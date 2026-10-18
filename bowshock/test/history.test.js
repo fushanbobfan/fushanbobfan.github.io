@@ -31,8 +31,8 @@ test('breaks survive pushing and compacting', () => {
 
 test('lerp interpolates every field between neighbours', () => {
   const h = new History(10);
-  h.push(0, 0, 0, 1, 2);
-  h.push(1, 10, 20, 3, 4);
+  h.push(0, 0, 0, 1, 2, false, 0, 0);
+  h.push(1, 10, 20, 3, 4, false, 4, -8);
   const p = h.lerp(1, 0.25);
-  assert.deepEqual(p, { t: 0.25, x: 2.5, y: 5, vx: 1.5, vy: 2.5 });
+  assert.deepEqual(p, { t: 0.25, x: 2.5, y: 5, vx: 1.5, vy: 2.5, ax: 1, ay: -2 });
 });

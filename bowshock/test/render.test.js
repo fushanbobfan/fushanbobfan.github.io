@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeView, toScreen, toWorld, tint, coneEdges, ratioToY, COLOURS } from '../src/render.js';
+import { makeView, toScreen, toWorld, tint, coneEdges, airMotion, ratioToY, COLOURS } from '../src/render.js';
 import { machAngle } from '../src/doppler.js';
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
@@ -44,4 +44,16 @@ test('the pitch axis is logarithmic and centred on the emitted tone', () => {
   close(ratioToY(0.5, 0, 100), 75);
   close(ratioToY(100, 0, 100), 0);
   close(ratioToY(-2, 0, 100), 25);
+});
+
+test('the cone follows the motion of the source through the air', () => {
+  const src = { x: 0, y: 0, vx: 40, vy: 0 };
+  // A tailwind of 20 leaves the source at Mach 0.8 through the air: no cone.
+  const tail = airMotion(src, { x: 20, y: 0 }, 25);
+  close(tail.mach, 0.8);
+  // A headwind of 10 makes it Mach 2 through the air.
+  const head = airMotion(src, { x: -10, y: 0 }, 25);
+  close(head.mach, 2);
+  close(head.vx, 50);
+  assert.equal(coneEdges({ ...src, vx: tail.vx, vy: tail.vy }, tail.mach, 10), null);
 });
