@@ -15,20 +15,22 @@ export function circleRadius(world = WORLD) {
   return Math.min(world.width, world.height) * 0.32;
 }
 
-// Source state at time t for the analytic paths. `lap` counts wraps of the
+// Source state after travelling a distance d along one of the analytic
+// paths at the given speed. Going by distance rather than time lets the
+// speed change mid-run without the source jumping. `lap` counts wraps of the
 // straight line so callers can tell a jump from motion.
-export function pathAt(path, t, speed, world = WORLD) {
+export function pathAt(path, d, speed, world = WORLD) {
   const cx = world.width / 2;
   const cy = world.height / 2;
   if (path === 'line') {
     const span = world.width + 2 * LINE_MARGIN;
-    const d = speed * t + LINE_MARGIN + world.width * 0.15;
-    const lap = Math.floor(d / span);
-    return { x: d - lap * span - LINE_MARGIN, y: cy, vx: speed, vy: 0, lap };
+    const run = d + LINE_MARGIN + world.width * 0.15;
+    const lap = Math.floor(run / span);
+    return { x: run - lap * span - LINE_MARGIN, y: cy, vx: speed, vy: 0, lap };
   }
   if (path === 'circle') {
     const r = circleRadius(world);
-    const a = (speed / r) * t - Math.PI / 2;
+    const a = d / r - Math.PI / 2;
     const w = speed / r;
     return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), vx: -r * w * Math.sin(a), vy: r * w * Math.cos(a), lap: 0 };
   }

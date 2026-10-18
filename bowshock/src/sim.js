@@ -17,6 +17,7 @@ export function createSim({ path = 'line', mach = 0.6, rate = 2.5, world = WORLD
   const sim = {
     world, c, path, mach, rate,
     t: 0,
+    travelled: 0,
     src: null,
     target: { x: world.width / 2, y: world.height / 2 },
     fronts: [],
@@ -54,7 +55,8 @@ export function stepSim(sim) {
   const before = sim.src;
   sim.t += STEP;
   const speed = sim.mach * sim.c;
-  sim.src = sim.path === 'drag' ? steer(before, sim.target, STEP, speed) : pathAt(sim.path, sim.t, speed, sim.world);
+  sim.travelled += speed * STEP;
+  sim.src = sim.path === 'drag' ? steer(before, sim.target, STEP, speed) : pathAt(sim.path, sim.travelled, speed, sim.world);
   sim.history.push(sim.t, sim.src.x, sim.src.y, sim.src.vx, sim.src.vy, sim.src.lap !== before.lap);
   emitDue(sim, before, sim.src);
   sim.fronts = sim.fronts.filter((f) => sim.c * (sim.t - f.t0) <= f.reach);

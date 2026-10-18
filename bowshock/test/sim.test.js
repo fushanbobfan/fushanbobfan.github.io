@@ -77,3 +77,12 @@ test('the wrap of the straight line is stored as a break', () => {
     assert.ok(Math.abs(h.at(i).x - h.at(i - 1).x) < 2 * SOUND_SPEED * STEP + 1e-9);
   }
 });
+
+test('changing the Mach number mid-run does not move the source', () => {
+  const sim = createSim({ path: 'line', mach: 0.4 });
+  run(sim, 3);
+  const x = sim.src.x;
+  sim.mach = 1.6;
+  stepSim(sim);
+  assert.ok(Math.abs(sim.src.x - x - 1.6 * SOUND_SPEED * STEP) < 1e-9);
+});
