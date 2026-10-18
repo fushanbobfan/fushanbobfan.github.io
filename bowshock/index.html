@@ -45,6 +45,16 @@
           </dl>
         </section>
 
+        <section aria-labelledby="h-mic">
+          <h2 id="h-mic">Microphone</h2>
+          <canvas id="mic" class="chart short" role="img" aria-label="Pressure at the listener over the last four seconds, with booms marked by dashed red lines"></canvas>
+          <dl class="readout">
+            <div><dt>Booms, last 10 s</dt><dd id="booms">–</dd></div>
+            <div><dt>Last boom</dt><dd id="last-boom">–</dd></div>
+          </dl>
+          <p class="note">The pressure the listener's ear would record: one sine per image, each at the phase it left with. A boom, marked in red here and on the pitch chart, is the moment two images are born together at the edge of the cone.</p>
+        </section>
+
         <section aria-labelledby="h-source">
           <h2 id="h-source">Source</h2>
           <label class="row" for="path">Path
