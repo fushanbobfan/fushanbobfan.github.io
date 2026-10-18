@@ -79,6 +79,24 @@ On the straight pass the source wraps round from one edge to the other. The
 track records the wrap as a break, so the listener can still hear the last
 pass fading out but no sound is ever made up from the jump itself.
 
+## Microphone and booms
+
+The microphone panel plots the pressure the listener would record over the
+last four seconds. The source emits a sine at the ring rate f, so an image
+from emission time τ contributes sin(2π f τ), weakened by the square root of
+how far its ring has travelled; the images are summed. Below Mach 1 this is
+one sine, squeezed while the source approaches and stretched as it leaves.
+
+A boom is the moment the edge of the cone reaches the listener: two new
+images appear together where the track touches the arrival condition, and
+both start at infinite pitch. The page counts images every simulation step and
+logs a boom whenever the count jumps by two. Booms show as dashed red lines on
+the microphone and pitch charts, and the listener's ring flashes red. On the
+straight pass the boom lands when the source is h√(M² − 1) past the listener,
+h being the listener's distance from the flight path; the tests check that
+against the simulation. Moving the listener by hand restarts the count, so
+dropping it straight into the cone does not register as a boom.
+
 ## Wind and a walking listener
 
 **Wind** moves the air itself, and every ring moves with it: the ring sent at
@@ -138,6 +156,7 @@ position and view options in the URL; only settings that differ from the default
 | `src/doppler.js` | Doppler ratio, Mach angle, retarded-time images |
 | `src/sim.js` | Stepping the source, the air and the listener; emitting and dropping rings |
 | `src/render.js` | Stage and pitch chart drawing, colour and geometry helpers |
+| `src/signal.js` | Pressure at the listener, its trace and the boom log |
 | `src/audio.js` | Image to voice mapping and the Web Audio tone |
 | `src/settings.js` | Defaults, scenes and share links |
 | `src/main.js` | Page wiring |
