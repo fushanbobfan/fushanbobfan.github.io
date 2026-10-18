@@ -17,3 +17,42 @@ export function dopplerRatio(vx, vy, ux, uy, c) {
 // The textbook cases along the line of motion.
 export const approaching = (mach) => 1 / (1 - mach);
 export const receding = (mach) => 1 / (1 + mach);
+
+// Every moment tau on the recorded track whose sound reaches the listener at
+// (lx, ly) exactly at time t, i.e. every root of
+//   g(tau) = |L - s(tau)| - c (t - tau).
+// Below Mach 1, g only rises, so there is one root. A supersonic source can
+// have none (the listener is outside the cone, nothing has arrived yet) or
+// several (inside it, sound from the approach and from the retreat arrive
+// together). Each image carries its Doppler ratio, its distance and whether
+// it plays backwards.
+export function images(history, lx, ly, t, c) {
+  const out = [];
+  const n = history.length;
+  const g = (p) => Math.hypot(lx - p.x, ly - p.y) - c * (t - p.t);
+  let prev = n > 0 ? history.at(0) : null;
+  let gPrev = prev ? g(prev) : 0;
+  for (let i = 1; i < n; i++) {
+    const cur = history.at(i);
+    const gCur = g(cur);
+    if (!cur.brk && (gPrev < 0) !== (gCur < 0)) {
+      let lo = 0;
+      let hi = 1;
+      for (let k = 0; k < 40; k++) {
+        const mid = (lo + hi) / 2;
+        if ((g(history.lerp(i, mid)) < 0) === (gPrev < 0)) lo = mid;
+        else hi = mid;
+      }
+      const p = history.lerp(i, (lo + hi) / 2);
+      const dist = Math.hypot(lx - p.x, ly - p.y);
+      const ux = dist > 0 ? (lx - p.x) / dist : 0;
+      const uy = dist > 0 ? (ly - p.y) / dist : 0;
+      const ratio = dopplerRatio(p.vx, p.vy, ux, uy, c);
+      out.push({ tau: p.t, x: p.x, y: p.y, dist, ratio, reversed: ratio < 0 });
+    }
+    prev = cur;
+    gPrev = gCur;
+  }
+  // Newest sound first.
+  return out.reverse();
+}
