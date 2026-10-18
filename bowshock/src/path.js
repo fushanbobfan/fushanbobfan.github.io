@@ -16,7 +16,7 @@ export function circleRadius(world = WORLD) {
 }
 
 // Source state after travelling a distance d along one of the analytic
-// paths at the given speed. Going by distance rather than time lets the
+// paths at the given speed. Going by distance lets the
 // speed change mid-run without the source jumping. `lap` counts wraps of the
 // straight line so callers can tell a jump from motion.
 export function pathAt(path, d, speed, world = WORLD) {

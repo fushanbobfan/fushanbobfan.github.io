@@ -3,7 +3,7 @@
 // pure so they can be tested without a canvas.
 
 import { machAngle, dopplerRatio } from './doppler.js';
-import { radius } from './sim.js';
+import { radius, centre, windVelocity, listenerVelocity } from './sim.js';
 
 export const COLOURS = {
   bg: '#0f1420',
@@ -39,6 +39,15 @@ export function tint(ratio) {
   return base.map((b, i) => Math.round(b + (to[i] - b) * k));
 }
 
+// The source's velocity through the air and its Mach number there. In a wind
+// this air speed decides whether the source outruns its sound and which way
+// the cone points.
+export function airMotion(src, wind, c) {
+  const vx = src.vx - wind.x;
+  const vy = src.vy - wind.y;
+  return { vx, vy, mach: Math.hypot(vx, vy) / c };
+}
+
 // End points of the two Mach cone edges, `length` world units back from the
 // source along its velocity, or null below Mach 1.
 export function coneEdges(src, mach, length) {
@@ -64,7 +73,10 @@ export function ratioToY(ratio, top, height, octaves = 2) {
 
 const ARCS = 48;
 
-export function drawWorld(ctx, view, sim, listener, opts) {
+export function drawWorld(ctx, view, sim, opts) {
+  const listener = sim.listener;
+  const wind = windVelocity(sim);
+  const diag = Math.hypot(sim.world.width, sim.world.height);
   const { width, height } = ctx.canvas;
   ctx.fillStyle = COLOURS.bg;
   ctx.fillRect(0, 0, width, height);
@@ -96,8 +108,9 @@ export function drawWorld(ctx, view, sim, listener, opts) {
   for (const f of sim.fronts) {
     const r = radius(sim, f);
     if (r <= 0) continue;
-    const fade = Math.max(0.15, 1 - r / f.reach);
-    const [cx, cy] = toScreen(view, f.x, f.y);
+    const fade = Math.max(0.15, 1 - r / (1.2 * diag));
+    const p = centre(sim, f);
+    const [cx, cy] = toScreen(view, p.x, p.y);
     if (!opts.tint || (f.vx === 0 && f.vy === 0)) {
       ctx.strokeStyle = `rgba(201, 210, 227, ${fade})`;
       ctx.beginPath();
@@ -109,7 +122,7 @@ export function drawWorld(ctx, view, sim, listener, opts) {
       const a0 = (k / ARCS) * 2 * Math.PI;
       const a1 = ((k + 1) / ARCS) * 2 * Math.PI;
       const am = (a0 + a1) / 2;
-      const [r8, g8, b8] = tint(dopplerRatio(f.vx, f.vy, Math.cos(am), Math.sin(am), sim.c));
+      const [r8, g8, b8] = tint(dopplerRatio(f.vx, f.vy, Math.cos(am), Math.sin(am), sim.c, wind));
       ctx.strokeStyle = `rgba(${r8}, ${g8}, ${b8}, ${fade})`;
       ctx.beginPath();
       ctx.arc(cx, cy, r * view.scale, a0, a1 + 0.01);
@@ -118,7 +131,8 @@ export function drawWorld(ctx, view, sim, listener, opts) {
   }
 
   if (opts.cone) {
-    const edges = coneEdges(sim.src, sim.mach, Math.hypot(sim.world.width, sim.world.height) * 2);
+    const air = airMotion(sim.src, wind, sim.c);
+    const edges = coneEdges({ x: sim.src.x, y: sim.src.y, vx: air.vx, vy: air.vy }, air.mach, diag * 2);
     if (edges) {
       const [sx, sy] = toScreen(view, sim.src.x, sim.src.y);
       ctx.strokeStyle = COLOURS.cone;
@@ -173,7 +187,35 @@ export function drawWorld(ctx, view, sim, listener, opts) {
   ctx.beginPath();
   ctx.arc(lx, ly, 2, 0, 2 * Math.PI);
   ctx.fill();
+  const walk = listenerVelocity(sim);
+  if (walk.x !== 0) arrow(ctx, lx, ly, walk.x / sim.c, view.scale * 8, COLOURS.listener);
+  if (wind.x !== 0) {
+    const [wx, wy] = toScreen(view, sim.world.width / 2, 6);
+    arrow(ctx, wx, wy, wind.x / sim.c, view.scale * 12, COLOURS.muted);
+    ctx.fillStyle = COLOURS.muted;
+    ctx.font = `${Math.round(Math.max(11, view.scale * 3))}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('wind', wx, wy + view.scale * 2);
+  }
   ctx.restore();
+}
+
+// A horizontal arrow from (x, y) whose length grows with `amount` (a
+// fraction of the speed of sound, signed for direction).
+function arrow(ctx, x, y, amount, scale, colour) {
+  const len = amount * scale;
+  const dir = Math.sign(len);
+  const head = Math.min(Math.abs(len), scale * 0.25) * dir;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + len, y);
+  ctx.moveTo(x + len - head, y - Math.abs(head) * 0.6);
+  ctx.lineTo(x + len, y);
+  ctx.lineTo(x + len - head, y + Math.abs(head) * 0.6);
+  ctx.stroke();
 }
 
 // The pitch chart: each image the listener hears is a dot at its ratio,
