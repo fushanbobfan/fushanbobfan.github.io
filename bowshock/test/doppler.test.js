@@ -28,6 +28,23 @@ test('ahead of a supersonic source the ratio turns negative', () => {
   assert.ok(dopplerRatio(50, 0, -1, 0, 25) > 0);
 });
 
+test('wind alone shifts nothing for a source and listener at rest', () => {
+  close(dopplerRatio(0, 0, 1, 0, 25, { x: 10, y: 0 }), 1);
+  close(dopplerRatio(0, 0, -1, 0, 25, { x: 10, y: 0 }), 1);
+});
+
+test('a moving source in a wind follows (c + w) / (c + w - v)', () => {
+  close(dopplerRatio(10, 0, 1, 0, 25, { x: 5, y: 0 }), 30 / 20);
+  close(dopplerRatio(10, 0, -1, 0, 25, { x: 5, y: 0 }), 20 / 30);
+});
+
+test('a listener walking towards the sound hears it higher', () => {
+  // Sound travelling in +x, listener moving in -x at 5.
+  close(dopplerRatio(0, 0, 1, 0, 25, undefined, { x: -5, y: 0 }), 30 / 25);
+  // Moving with the source at the same speed cancels the shift.
+  close(dopplerRatio(10, 0, 1, 0, 25, undefined, { x: 10, y: 0 }), 1);
+});
+
 import { History } from '../src/history.js';
 import { images } from '../src/doppler.js';
 
