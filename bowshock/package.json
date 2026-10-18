@@ -1,0 +1,25 @@
+{
+  "name": "bowshock",
+  "version": "0.1.0",
+  "description": "The Doppler effect and the Mach cone in the browser: a moving source sends out circular crests, a listener hears the shifted pitch, and past the speed of sound the crests pile into a shock cone.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "doppler-effect",
+    "mach-cone",
+    "sonic-boom",
+    "acoustics",
+    "physics",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/bowshock.git"
+  },
+  "private": false
+}
