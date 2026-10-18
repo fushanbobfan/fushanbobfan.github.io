@@ -68,6 +68,19 @@
           <p class="note">"Ahead" and "Behind" are the textbook shifts 1/(1 − M) and 1/(1 + M) along the line of motion. Ahead of a supersonic source nothing arrives at all.</p>
         </section>
 
+        <section aria-labelledby="h-air">
+          <h2 id="h-air">Air and listener</h2>
+          <label class="row" for="wind">Wind <output id="wind-out" for="wind"></output></label>
+          <input type="range" id="wind" min="-0.8" max="0.8" step="0.05" />
+          <label class="row" for="walk">Listener walks at <output id="walk-out" for="walk"></output></label>
+          <input type="range" id="walk" min="0" max="1.2" step="0.05" />
+          <dl class="readout">
+            <div><dt>Mach through the air</dt><dd id="air-mach">–</dd></div>
+            <div><dt>Listener speed</dt><dd id="walk-speed">–</dd></div>
+          </dl>
+          <p class="note">Wind is a fraction of the speed of sound, positive blowing right. It carries the rings along, so sound is slower upwind and faster downwind, and it is the source's speed through the air that decides whether there is a cone. The listener paces its row, turning at the edges.</p>
+        </section>
+
         <section aria-labelledby="h-presets">
           <h2 id="h-presets">Scenes</h2>
           <div class="actions" id="presets"></div>
