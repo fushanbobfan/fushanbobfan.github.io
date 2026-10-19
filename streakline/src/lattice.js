@@ -69,23 +69,31 @@ export function totals(lat) {
 // relaxing, with the simple first-order source w_i 3 (e_i . g) rho.
 export function collide(lat, omega, gx = 0, gy = 0) {
   const { n, f, solid, rho, ux, uy } = lat;
+  const w0 = 4 / 9, w1 = 1 / 9, w2 = 1 / 36;
+  const n2 = 2 * n, n3 = 3 * n, n4 = 4 * n, n5 = 5 * n, n6 = 6 * n, n7 = 7 * n, n8 = 8 * n;
   for (let c = 0; c < n; c++) {
     if (solid[c]) continue;
-    const f0 = f[c], f1 = f[n + c], f2 = f[2 * n + c], f3 = f[3 * n + c], f4 = f[4 * n + c];
-    const f5 = f[5 * n + c], f6 = f[6 * n + c], f7 = f[7 * n + c], f8 = f[8 * n + c];
+    const f0 = f[c], f1 = f[n + c], f2 = f[n2 + c], f3 = f[n3 + c], f4 = f[n4 + c];
+    const f5 = f[n5 + c], f6 = f[n6 + c], f7 = f[n7 + c], f8 = f[n8 + c];
     const r = f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
     const vx = (f1 - f3 + f5 - f6 - f7 + f8) / r;
     const vy = (f2 - f4 + f5 + f6 - f7 - f8) / r;
     rho[c] = r;
     ux[c] = vx;
     uy[c] = vy;
-    const uu = 1.5 * (vx * vx + vy * vy);
-    for (let i = 0; i < 9; i++) {
-      const eu = EX[i] * vx + EY[i] * vy;
-      const feq = W[i] * r * (1 + 3 * eu + 4.5 * eu * eu - uu);
-      const k = i * n + c;
-      f[k] += omega * (feq - f[k]) + 3 * W[i] * r * (EX[i] * gx + EY[i] * gy);
-    }
+    const base = 1 - 1.5 * (vx * vx + vy * vy);
+    const a = vx + vy, b = vy - vx;
+    const r1 = w1 * r, r2 = w2 * r;
+    const gxs = 3 * gx, gys = 3 * gy;
+    f[c] = f0 + omega * (w0 * r * base - f0);
+    f[n + c] = f1 + omega * (r1 * (base + 3 * vx + 4.5 * vx * vx) - f1) + r1 * gxs;
+    f[n2 + c] = f2 + omega * (r1 * (base + 3 * vy + 4.5 * vy * vy) - f2) + r1 * gys;
+    f[n3 + c] = f3 + omega * (r1 * (base - 3 * vx + 4.5 * vx * vx) - f3) - r1 * gxs;
+    f[n4 + c] = f4 + omega * (r1 * (base - 3 * vy + 4.5 * vy * vy) - f4) - r1 * gys;
+    f[n5 + c] = f5 + omega * (r2 * (base + 3 * a + 4.5 * a * a) - f5) + r2 * (gxs + gys);
+    f[n6 + c] = f6 + omega * (r2 * (base + 3 * b + 4.5 * b * b) - f6) + r2 * (gys - gxs);
+    f[n7 + c] = f7 + omega * (r2 * (base - 3 * a + 4.5 * a * a) - f7) - r2 * (gxs + gys);
+    f[n8 + c] = f8 + omega * (r2 * (base - 3 * b + 4.5 * b * b) - f8) - r2 * (gys - gxs);
   }
 }
 
@@ -96,7 +104,10 @@ export function collide(lat, omega, gx = 0, gy = 0) {
 // (halfway bounce-back), which puts a no-slip wall midway between the two.
 export function stream(lat) {
   const { nx, ny, n, f, next, solid } = lat;
+  const off = [];
+  for (let i = 0; i < 9; i++) off.push(-(EY[i] * nx + EX[i]));
   for (let y = 0; y < ny; y++) {
+    const edgeRow = y === 0 || y === ny - 1;
     for (let x = 0; x < nx; x++) {
       const c = y * nx + x;
       if (solid[c]) {
@@ -104,13 +115,20 @@ export function stream(lat) {
         continue;
       }
       next[c] = f[c];
-      for (let i = 1; i < 9; i++) {
-        let sx = x - EX[i];
-        let sy = y - EY[i];
-        if (sx < 0) sx += nx; else if (sx >= nx) sx -= nx;
-        if (sy < 0) sy += ny; else if (sy >= ny) sy -= ny;
-        const s = sy * nx + sx;
-        next[i * n + c] = solid[s] ? f[OPP[i] * n + c] : f[i * n + s];
+      if (edgeRow || x === 0 || x === nx - 1) {
+        for (let i = 1; i < 9; i++) {
+          let sx = x - EX[i];
+          let sy = y - EY[i];
+          if (sx < 0) sx += nx; else if (sx >= nx) sx -= nx;
+          if (sy < 0) sy += ny; else if (sy >= ny) sy -= ny;
+          const s = sy * nx + sx;
+          next[i * n + c] = solid[s] ? f[OPP[i] * n + c] : f[i * n + s];
+        }
+      } else {
+        for (let i = 1; i < 9; i++) {
+          const s = c + off[i];
+          next[i * n + c] = solid[s] ? f[OPP[i] * n + c] : f[i * n + s];
+        }
       }
     }
   }
