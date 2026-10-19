@@ -192,3 +192,61 @@ export function linkForce(lat, links) {
   }
   return [fx, fy];
 }
+
+// One tunnel step in a single pass: each fluid cell pulls its populations
+// (with bounce-back), takes the inlet or far-field equilibrium on those
+// edges, and collides, writing the post-collision values into the spare
+// buffer. The outlet column pulls as if it were its left neighbour, which is
+// the same as copying that neighbour after streaming. Starting from
+// post-collision populations this gives exactly stream, tunnelEdges, collide.
+export function advance(lat, omega, u) {
+  const { nx, ny, n, f, next, solid, rho, ux, uy } = lat;
+  const n2 = 2 * n, n3 = 3 * n, n4 = 4 * n, n5 = 5 * n, n6 = 6 * n, n7 = 7 * n, n8 = 8 * n;
+  const w0 = 4 / 9, w1 = 1 / 9, w2 = 1 / 36;
+  const pulled = new Float64Array(9);
+  const feq = new Float64Array(9);
+  for (let i = 0; i < 9; i++) feq[i] = equilibrium(i, 1, u, 0);
+  for (let y = 0; y < ny; y++) {
+    const held = y === 0 || y === ny - 1;
+    for (let x = 0; x < nx; x++) {
+      const c = y * nx + x;
+      if (solid[c]) {
+        for (let i = 0; i < 9; i++) next[i * n + c] = 0;
+        continue;
+      }
+      if (held || x === 0) {
+        for (let i = 0; i < 9; i++) pulled[i] = feq[i];
+      } else {
+        const px = x === nx - 1 ? nx - 2 : x;
+        const pc = y * nx + px;
+        pulled[0] = f[pc];
+        for (let i = 1; i < 9; i++) {
+          const s = pc - EY[i] * nx - EX[i];
+          pulled[i] = solid[s] ? f[OPP[i] * n + pc] : f[i * n + s];
+        }
+      }
+      const f0 = pulled[0], f1 = pulled[1], f2 = pulled[2], f3 = pulled[3], f4 = pulled[4];
+      const f5 = pulled[5], f6 = pulled[6], f7 = pulled[7], f8 = pulled[8];
+      const r = f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
+      const vx = (f1 - f3 + f5 - f6 - f7 + f8) / r;
+      const vy = (f2 - f4 + f5 + f6 - f7 - f8) / r;
+      rho[c] = r;
+      ux[c] = vx;
+      uy[c] = vy;
+      const base = 1 - 1.5 * (vx * vx + vy * vy);
+      const a = vx + vy, b = vy - vx;
+      const r1 = w1 * r, r2 = w2 * r;
+      next[c] = f0 + omega * (w0 * r * base - f0);
+      next[n + c] = f1 + omega * (r1 * (base + 3 * vx + 4.5 * vx * vx) - f1);
+      next[n2 + c] = f2 + omega * (r1 * (base + 3 * vy + 4.5 * vy * vy) - f2);
+      next[n3 + c] = f3 + omega * (r1 * (base - 3 * vx + 4.5 * vx * vx) - f3);
+      next[n4 + c] = f4 + omega * (r1 * (base - 3 * vy + 4.5 * vy * vy) - f4);
+      next[n5 + c] = f5 + omega * (r2 * (base + 3 * a + 4.5 * a * a) - f5);
+      next[n6 + c] = f6 + omega * (r2 * (base + 3 * b + 4.5 * b * b) - f6);
+      next[n7 + c] = f7 + omega * (r2 * (base - 3 * a + 4.5 * a * a) - f7);
+      next[n8 + c] = f8 + omega * (r2 * (base - 3 * b + 4.5 * b * b) - f8);
+    }
+  }
+  lat.f = next;
+  lat.next = f;
+}
