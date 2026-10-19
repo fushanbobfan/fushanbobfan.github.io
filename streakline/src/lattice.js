@@ -16,3 +16,75 @@ export function equilibrium(i, rho, ux, uy) {
   const uu = ux * ux + uy * uy;
   return W[i] * rho * (1 + 3 * eu + 4.5 * eu * eu - 1.5 * uu);
 }
+
+// A lattice of nx by ny cells. `solid` marks obstacle cells; rho, ux and uy
+// hold the moments from the last collision so the page can draw them.
+export function createLattice(nx, ny) {
+  const n = nx * ny;
+  return {
+    nx,
+    ny,
+    n,
+    f: new Float32Array(9 * n),
+    next: new Float32Array(9 * n),
+    solid: new Uint8Array(n),
+    rho: new Float32Array(n),
+    ux: new Float32Array(n),
+    uy: new Float32Array(n),
+  };
+}
+
+// Fill every fluid cell with the equilibrium for one density and velocity.
+export function fillUniform(lat, rho, ux, uy) {
+  const { n, f, solid } = lat;
+  const feq = [];
+  for (let i = 0; i < 9; i++) feq.push(equilibrium(i, rho, ux, uy));
+  for (let c = 0; c < n; c++) {
+    const s = solid[c];
+    for (let i = 0; i < 9; i++) f[i * n + c] = s ? 0 : feq[i];
+    lat.rho[c] = s ? 0 : rho;
+    lat.ux[c] = s ? 0 : ux;
+    lat.uy[c] = s ? 0 : uy;
+  }
+}
+
+// Total mass and momentum over the fluid cells.
+export function totals(lat) {
+  const { n, f, solid } = lat;
+  let m = 0, px = 0, py = 0;
+  for (let c = 0; c < n; c++) {
+    if (solid[c]) continue;
+    for (let i = 0; i < 9; i++) {
+      const v = f[i * n + c];
+      m += v;
+      px += v * EX[i];
+      py += v * EY[i];
+    }
+  }
+  return { mass: m, px, py };
+}
+
+// BGK collision: relax every fluid cell towards its local equilibrium with
+// rate omega = 1 / tau. A body force (gx, gy) per unit mass is added after
+// relaxing, with the simple first-order source w_i 3 (e_i . g) rho.
+export function collide(lat, omega, gx = 0, gy = 0) {
+  const { n, f, solid, rho, ux, uy } = lat;
+  for (let c = 0; c < n; c++) {
+    if (solid[c]) continue;
+    const f0 = f[c], f1 = f[n + c], f2 = f[2 * n + c], f3 = f[3 * n + c], f4 = f[4 * n + c];
+    const f5 = f[5 * n + c], f6 = f[6 * n + c], f7 = f[7 * n + c], f8 = f[8 * n + c];
+    const r = f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
+    const vx = (f1 - f3 + f5 - f6 - f7 + f8) / r;
+    const vy = (f2 - f4 + f5 + f6 - f7 - f8) / r;
+    rho[c] = r;
+    ux[c] = vx;
+    uy[c] = vy;
+    const uu = 1.5 * (vx * vx + vy * vy);
+    for (let i = 0; i < 9; i++) {
+      const eu = EX[i] * vx + EY[i] * vy;
+      const feq = W[i] * r * (1 + 3 * eu + 4.5 * eu * eu - uu);
+      const k = i * n + c;
+      f[k] += omega * (feq - f[k]) + 3 * W[i] * r * (EX[i] * gx + EY[i] * gy);
+    }
+  }
+}
