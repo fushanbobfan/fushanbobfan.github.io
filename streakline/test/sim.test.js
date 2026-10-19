@@ -24,7 +24,7 @@ test('a short run stays healthy and the steps add up to flow time', () => {
 test('a blown-up run is caught and restarted from the free stream', () => {
   const sim = createSim(clampSettings({ width: 200 }));
   step(sim, 5);
-  sim.lat.f[3 * sim.lat.n + 4000] = NaN;
+  sim.lat.f[3 * sim.lat.n + 40 * 200 + 120] = NaN;
   assert.equal(step(sim, 1), false);
   assert.equal(sim.restarts, 1);
   assert.equal(sim.steps, 0);
