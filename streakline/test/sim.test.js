@@ -54,3 +54,22 @@ test('changing the shape without restarting keeps painted walls and the flow', (
   assert.equal(sim.lat.solid[10 * 200 + 150], 1);
   assert.ok(step(sim, 20));
 });
+
+test('a run records drag and lift every few steps and resets clear them', async () => {
+  const { SAMPLE_EVERY, wakeReport, reset } = await import('../src/sim.js');
+  const sim = createSim(clampSettings({ width: 200 }));
+  step(sim, 400);
+  assert.equal(sim.history.count, 400 / SAMPLE_EVERY);
+  const r = wakeReport(sim);
+  assert.ok(r.cd > 0, `drag ${r.cd}`);
+  assert.equal(r.settling, true);
+  reset(sim);
+  assert.equal(sim.history.count, 0);
+});
+
+test('with no obstacle there are no links and nothing is recorded', () => {
+  const sim = createSim(clampSettings({ width: 200, shape: 'none' }));
+  step(sim, 50);
+  assert.equal(sim.links.length, 0);
+  assert.equal(sim.history.count, 0);
+});
