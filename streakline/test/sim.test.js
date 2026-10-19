@@ -24,14 +24,14 @@ test('a short run stays healthy and the steps add up to flow time', () => {
 test('a blown-up run is caught and restarted from the free stream', () => {
   const sim = createSim(clampSettings({ width: 200 }));
   step(sim, 5);
-  sim.lat.f[3 * sim.lat.n + 4000] = NaN;
+  sim.lat.f[3 * sim.lat.n + 40 * 200 + 120] = NaN;
   assert.equal(step(sim, 1), false);
   assert.equal(sim.restarts, 1);
   assert.equal(sim.steps, 0);
   assert.ok(Number.isFinite(totals(sim.lat).mass));
 });
 
-test('painted walls become solid, erasing frees them at rest, and the inlet column is left alone', () => {
+test('painted walls become solid, erasing frees them at rest, and the inlet and outlet columns are left alone', () => {
   const sim = createSim(clampSettings({ width: 200, shape: 'none' }));
   const c = 20 * 200 + 120;
   assert.ok(paintWalls(sim, 120, 20, 3, true));
@@ -40,6 +40,9 @@ test('painted walls become solid, erasing frees them at rest, and the inlet colu
   assert.equal(paintWalls(sim, 120, 20, 3, true), false);
   paintWalls(sim, 0, 40, 2, true);
   assert.equal(sim.lat.solid[40 * 200], 0);
+  paintWalls(sim, 199, 40, 2, true);
+  assert.equal(sim.lat.solid[40 * 200 + 198], 0);
+  assert.equal(sim.lat.solid[40 * 200 + 197], 1);
   assert.ok(paintWalls(sim, 120, 20, 3, false));
   assert.equal(sim.lat.solid[c], 0);
   assert.ok(Math.abs(sim.lat.f[c] - 4 / 9) < 1e-6);

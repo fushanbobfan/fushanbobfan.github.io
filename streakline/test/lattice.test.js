@@ -204,3 +204,28 @@ test('in a forced periodic box the steady force on the obstacle balances the pus
   assert.ok(Math.abs(F[0] - push) / push < 0.01, `${F[0]} vs ${push}`);
   assert.ok(Math.abs(F[1]) < 1e-3 * push);
 });
+
+test('the fused step matches stream, tunnel edges and collide done one after another', async () => {
+  const { createLattice, collide, stream, tunnelEdges, advance, fillUniform } = await import('../src/lattice.js');
+  const make = () => {
+    const lat = createLattice(23, 14);
+    for (let y = 5; y < 9; y++) for (let x = 6; x < 9; x++) lat.solid[y * 23 + x] = 1;
+    lat.solid[2 * 23 + 20] = 1; // a wall cell two columns from the outlet
+    fillUniform(lat, 1, 0.07, 0.01);
+    let seed = 11;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let k = 0; k < lat.f.length; k++) lat.f[k] *= 0.9 + 0.2 * rand();
+    return lat;
+  };
+  const a = make(), b = make();
+  for (let s = 0; s < 5; s++) {
+    stream(a);
+    tunnelEdges(a, 0.07);
+    collide(a, 1.6);
+    advance(b, 1.6, 0.07);
+  }
+  let worst = 0;
+  for (let k = 0; k < a.f.length; k++) worst = Math.max(worst, Math.abs(a.f[k] - b.f[k]));
+  assert.ok(worst < 1e-6, `largest difference ${worst}`);
+  for (let c = 0; c < a.n; c++) assert.ok(Math.abs(a.ux[c] - b.ux[c]) < 1e-6);
+});

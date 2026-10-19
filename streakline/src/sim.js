@@ -1,16 +1,9 @@
 // The wind tunnel: a lattice, an obstacle from the settings, walls painted
 // by hand, and the step loop with a guard that restarts a run that blows up.
+// Between steps the lattice holds post-collision populations, which is when
+// the force on the obstacle is read.
 
-import {
-  boundaryLinks,
-  collide,
-  createLattice,
-  equilibrium,
-  fillUniform,
-  linkForce,
-  stream,
-  tunnelEdges,
-} from './lattice.js';
+import { advance, boundaryLinks, createLattice, equilibrium, fillUniform, linkForce } from './lattice.js';
 import { rasterize } from './obstacles.js';
 import { analyse, clearHistory, coefficients, createHistory, record } from './shedding.js';
 import { gridHeight } from './settings.js';
@@ -113,15 +106,13 @@ export function step(sim, count = 1) {
   const { omega } = sim.relax;
   const U = sim.settings.speed;
   for (let k = 0; k < count; k++) {
-    collide(lat, omega);
-    if (sim.links.length && (sim.steps + 1) % SAMPLE_EVERY === 0) {
+    advance(lat, omega, U);
+    sim.steps++;
+    if (sim.links.length && sim.steps % SAMPLE_EVERY === 0) {
       sim.force = linkForce(lat, sim.links);
       const { cd, cl } = coefficients(sim.force[0], sim.force[1], U, sim.settings.size);
-      record(sim.history, sim.steps + 1, cd, cl);
+      record(sim.history, sim.steps, cd, cl);
     }
-    stream(lat);
-    tunnelEdges(lat, U);
-    sim.steps++;
   }
   if (!healthy(lat)) {
     sim.restarts++;
@@ -144,7 +135,9 @@ export function healthy(lat) {
 }
 
 // Paint or erase walls in a disc of radius r around (x, y). Returns whether
-// anything changed. Painting over the obstacle does nothing to it.
+// anything changed. Painting over the obstacle does nothing to it. The inlet
+// column and the last two columns stay open: the outlet copies its left
+// neighbour, which must not be a wall.
 export function paintWalls(sim, x, y, r, on) {
   const { nx, ny, walls, lat } = sim;
   const before = lat.solid.slice();
@@ -152,7 +145,7 @@ export function paintWalls(sim, x, y, r, on) {
   for (let j = Math.max(0, Math.floor(y - r)); j <= Math.min(ny - 1, Math.ceil(y + r)); j++) {
     for (let i = Math.max(0, Math.floor(x - r)); i <= Math.min(nx - 1, Math.ceil(x + r)); i++) {
       if ((i - x) ** 2 + (j - y) ** 2 > r * r) continue;
-      if (i === 0 || i === nx - 1) continue;
+      if (i === 0 || i >= nx - 2) continue;
       const c = j * nx + i;
       if (walls[c] !== (on ? 1 : 0)) {
         walls[c] = on ? 1 : 0;
