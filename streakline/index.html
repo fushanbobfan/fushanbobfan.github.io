@@ -86,6 +86,19 @@
           <p class="note" id="clamp-note">Re = U D / ν. The viscosity ν sets how fast the lattice relaxes; below τ = 0.51 the scheme goes unstable, so a Reynolds number too high for the obstacle size is capped there. A larger obstacle or a faster inflow reaches higher.</p>
         </section>
 
+        <section aria-labelledby="h-forces">
+          <h2 id="h-forces">Forces on the obstacle</h2>
+          <canvas id="forces" class="chart" role="img" aria-label="Drag and lift coefficients over the last 40 flow times: drag above, lift below"></canvas>
+          <p class="legend"><span class="key drag"></span> drag C<sub>d</sub> <span class="key lift"></span> lift C<sub>l</sub>, over the last 40 D/U</p>
+          <dl class="readout">
+            <div><dt>Mean drag C<sub>d</sub></dt><dd id="cd">–</dd></div>
+            <div><dt>Lift swing</dt><dd id="cl">–</dd></div>
+            <div><dt>Shedding period</dt><dd id="period">–</dd></div>
+            <div><dt>Strouhal number</dt><dd id="st">–</dd></div>
+          </dl>
+          <p class="note" id="wake-note">Forces come from the momentum the fluid hands the obstacle as it bounces off. Coefficients divide by ρU²D/2; the Strouhal number St = f D / U is the shedding frequency in flow units, read from the lift's swings and averaged over whole periods.</p>
+        </section>
+
         <section aria-labelledby="h-presets">
           <h2 id="h-presets">Scenes</h2>
           <div class="actions" id="presets"></div>
