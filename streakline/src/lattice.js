@@ -203,7 +203,6 @@ export function advance(lat, omega, u) {
   const { nx, ny, n, f, next, solid, rho, ux, uy } = lat;
   const n2 = 2 * n, n3 = 3 * n, n4 = 4 * n, n5 = 5 * n, n6 = 6 * n, n7 = 7 * n, n8 = 8 * n;
   const w0 = 4 / 9, w1 = 1 / 9, w2 = 1 / 36;
-  const pulled = new Float64Array(9);
   const feq = new Float64Array(9);
   for (let i = 0; i < 9; i++) feq[i] = equilibrium(i, 1, u, 0);
   for (let y = 0; y < ny; y++) {
@@ -214,19 +213,24 @@ export function advance(lat, omega, u) {
         for (let i = 0; i < 9; i++) next[i * n + c] = 0;
         continue;
       }
+      let f0, f1, f2, f3, f4, f5, f6, f7, f8;
       if (held || x === 0) {
-        for (let i = 0; i < 9; i++) pulled[i] = feq[i];
+        f0 = feq[0]; f1 = feq[1]; f2 = feq[2]; f3 = feq[3]; f4 = feq[4];
+        f5 = feq[5]; f6 = feq[6]; f7 = feq[7]; f8 = feq[8];
       } else {
-        const px = x === nx - 1 ? nx - 2 : x;
-        const pc = y * nx + px;
-        pulled[0] = f[pc];
-        for (let i = 1; i < 9; i++) {
-          const s = pc - EY[i] * nx - EX[i];
-          pulled[i] = solid[s] ? f[OPP[i] * n + pc] : f[i * n + s];
-        }
+        const p = x === nx - 1 ? c - 1 : c;
+        // Upstream of direction i is p - e_i; a solid one sends back this
+        // cell's own population in the opposite direction.
+        f0 = f[p];
+        f1 = solid[p - 1] ? f[n3 + p] : f[n + p - 1];
+        f2 = solid[p - nx] ? f[n4 + p] : f[n2 + p - nx];
+        f3 = solid[p + 1] ? f[n + p] : f[n3 + p + 1];
+        f4 = solid[p + nx] ? f[n2 + p] : f[n4 + p + nx];
+        f5 = solid[p - nx - 1] ? f[n7 + p] : f[n5 + p - nx - 1];
+        f6 = solid[p - nx + 1] ? f[n8 + p] : f[n6 + p - nx + 1];
+        f7 = solid[p + nx + 1] ? f[n5 + p] : f[n7 + p + nx + 1];
+        f8 = solid[p + nx - 1] ? f[n6 + p] : f[n8 + p + nx - 1];
       }
-      const f0 = pulled[0], f1 = pulled[1], f2 = pulled[2], f3 = pulled[3], f4 = pulled[4];
-      const f5 = pulled[5], f6 = pulled[6], f7 = pulled[7], f8 = pulled[8];
       const r = f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
       const vx = (f1 - f3 + f5 - f6 - f7 + f8) / r;
       const vy = (f2 - f4 + f5 + f6 - f7 - f8) / r;
