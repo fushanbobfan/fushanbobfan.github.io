@@ -106,7 +106,13 @@ zeroth and first moments of the nine populations.
   back the way it came (halfway bounce-back), which puts a no-slip wall midway
   between the solid cell and the fluid cell.
 - **Tunnel edges.** The inlet column and the top and bottom rows are held at
-  the free-stream equilibrium; the outlet column copies its neighbour.
+  the free-stream equilibrium; the outlet column copies its neighbour, so
+  walls cannot be drawn in the last two columns.
+- **One pass per step.** The tunnel runs streaming, the edges and the
+  collision as a single sweep that reads one buffer and writes the other. A
+  test checks it against the three operations done one after another. On a
+  desktop this roughly doubled the speed of the earlier collide-then-stream
+  loop (from about 14 to 27 million cell updates per second in Node).
 - **Start.** The run starts from the free stream with a small sideways nudge
   behind the obstacle, so the wake does not wait on rounding errors to break
   its symmetry.
@@ -141,7 +147,7 @@ textbook area, and the share-link round trip.
 
 | File | Contents |
 | --- | --- |
-| `src/lattice.js` | D2Q9 constants, equilibrium, collision, streaming, tunnel edges |
+| `src/lattice.js` | D2Q9 constants, equilibrium, collision, streaming, tunnel edges, the fused step and link forces |
 | `src/obstacles.js` | Cylinder, square, plate and NACA four-digit shapes, rasterized to cells |
 | `src/units.js` | Reynolds number to relaxation time, with the stability cap |
 | `src/field.js` | Vorticity, speed and interpolated velocity |
