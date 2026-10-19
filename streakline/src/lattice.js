@@ -88,3 +88,32 @@ export function collide(lat, omega, gx = 0, gy = 0) {
     }
   }
 }
+
+// Streaming by pulling: each fluid cell takes f_i from its upstream neighbour
+// x - e_i. Edges wrap around; boundaries that should not wrap are rewritten
+// afterwards by the tunnel boundary step. When the upstream cell is solid the
+// population that left this cell towards it comes straight back reversed
+// (halfway bounce-back), which puts a no-slip wall midway between the two.
+export function stream(lat) {
+  const { nx, ny, n, f, next, solid } = lat;
+  for (let y = 0; y < ny; y++) {
+    for (let x = 0; x < nx; x++) {
+      const c = y * nx + x;
+      if (solid[c]) {
+        for (let i = 0; i < 9; i++) next[i * n + c] = 0;
+        continue;
+      }
+      next[c] = f[c];
+      for (let i = 1; i < 9; i++) {
+        let sx = x - EX[i];
+        let sy = y - EY[i];
+        if (sx < 0) sx += nx; else if (sx >= nx) sx -= nx;
+        if (sy < 0) sy += ny; else if (sy >= ny) sy -= ny;
+        const s = sy * nx + sx;
+        next[i * n + c] = solid[s] ? f[OPP[i] * n + c] : f[i * n + s];
+      }
+    }
+  }
+  lat.f = next;
+  lat.next = f;
+}

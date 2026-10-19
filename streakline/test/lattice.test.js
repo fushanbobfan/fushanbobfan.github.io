@@ -74,3 +74,40 @@ test('a body force adds momentum g per unit mass each collision', async () => {
   close(t.px, 16 * 1e-4, 1e-7);
   close(t.py, -16 * 2e-4, 1e-7);
 });
+
+test('streaming moves each population one cell along its direction, wrapping at the edges', async () => {
+  const { createLattice, stream } = await import('../src/lattice.js');
+  const lat = createLattice(5, 4);
+  const at = (x, y) => y * lat.nx + x;
+  lat.f[1 * lat.n + at(4, 1)] = 1; // east, wraps to x = 0
+  lat.f[6 * lat.n + at(2, 3)] = 2; // north-west: x - 1, y + 1 wraps to y = 0
+  stream(lat);
+  assert.equal(lat.f[1 * lat.n + at(0, 1)], 1);
+  assert.equal(lat.f[6 * lat.n + at(1, 0)], 2);
+});
+
+test('a population heading into a solid cell comes back reversed', async () => {
+  const { createLattice, stream } = await import('../src/lattice.js');
+  const lat = createLattice(5, 3);
+  const at = (x, y) => y * lat.nx + x;
+  lat.solid[at(3, 1)] = 1;
+  lat.f[1 * lat.n + at(2, 1)] = 0.7; // east, into the wall
+  lat.f[5 * lat.n + at(2, 0)] = 0.4; // north-east, into the wall diagonally
+  stream(lat);
+  assert.ok(Math.abs(lat.f[3 * lat.n + at(2, 1)] - 0.7) < 1e-7);
+  assert.ok(Math.abs(lat.f[7 * lat.n + at(2, 0)] - 0.4) < 1e-7);
+});
+
+test('collide and stream keep total mass in a closed box with obstacles', async () => {
+  const { createLattice, collide, stream, fillUniform, totals } = await import('../src/lattice.js');
+  const lat = createLattice(24, 16);
+  for (let y = 5; y < 10; y++) for (let x = 8; x < 12; x++) lat.solid[y * lat.nx + x] = 1;
+  lat.solid[3 * lat.nx + 17] = 1;
+  fillUniform(lat, 1, 0.06, 0.02);
+  const m0 = totals(lat).mass;
+  for (let s = 0; s < 200; s++) {
+    collide(lat, 1.6);
+    stream(lat);
+  }
+  assert.ok(Math.abs(totals(lat).mass - m0) / m0 < 1e-5);
+});
