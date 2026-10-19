@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>streakline · a wind tunnel in the browser</title>
+    <meta name="description" content="A lattice Boltzmann fluid flows past a cylinder, a plate or a wing. Raise the Reynolds number and the wake starts to swing and shed a von Karman vortex street; draw your own walls and watch the flow find its way round them." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>streakline</h1>
+      <p class="subtitle">
+        Air enters on the left and flows past an obstacle. At low Reynolds numbers the flow closes up neatly behind it;
+        raise the number and the wake starts to swing from side to side, shedding eddies of alternating spin into a
+        vortex street. The dye lines are streaklines: everything ever released from one point near the inlet.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="canvas-wrap">
+          <canvas id="tunnel" tabindex="0" role="img" aria-label="The wind tunnel: the flow field around the obstacle, coloured by the chosen view, with dye streaklines. Drag to draw or erase walls."></canvas>
+        </div>
+        <p class="legend" id="legend"></p>
+        <div class="transport" role="group" aria-label="Playback">
+          <button type="button" id="play" aria-pressed="true">Pause</button>
+          <button type="button" id="restart">Restart</button>
+          <span class="tool" role="radiogroup" aria-label="Pointer tool">
+            <label class="check"><input type="radio" name="tool" value="draw" checked /> Draw walls</label>
+            <label class="check"><input type="radio" name="tool" value="erase" /> Erase</label>
+          </span>
+          <button type="button" id="clear-walls">Clear walls</button>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint">Drag across the tunnel to draw walls; hold Shift to erase. Space pauses, R restarts, V cycles the view.</p>
+      </section>
+
+      <aside class="panel">
+        <section aria-labelledby="h-obstacle">
+          <h2 id="h-obstacle">Obstacle</h2>
+          <label class="row" for="shape">Shape
+            <select id="shape">
+              <option value="cylinder">Cylinder</option>
+              <option value="square">Square</option>
+              <option value="plate">Flat plate</option>
+              <option value="airfoil">Wing section</option>
+              <option value="none">Nothing</option>
+            </select>
+          </label>
+          <label class="row" id="naca-row" for="naca">Profile
+            <select id="naca">
+              <option value="0012">NACA 0012 (symmetric)</option>
+              <option value="2412">NACA 2412</option>
+              <option value="4412">NACA 4412 (more camber)</option>
+              <option value="0024">NACA 0024 (thick)</option>
+            </select>
+          </label>
+          <label class="row" for="angle">Angle <output id="angle-out" for="angle"></output></label>
+          <input type="range" id="angle" min="-90" max="90" step="1" />
+          <label class="row" for="size">Size <output id="size-out" for="size"></output></label>
+          <input type="range" id="size" min="8" max="80" step="1" />
+          <p class="note">The size is the diameter, side, plate length or chord, in lattice cells, and it is the length in the Reynolds number. A positive angle raises the leading edge.</p>
+        </section>
+
+        <section aria-labelledby="h-flow">
+          <h2 id="h-flow">Flow</h2>
+          <label class="row" for="re">Reynolds number <output id="re-out" for="re"></output></label>
+          <input type="range" id="re" min="0" max="1000" step="1" />
+          <label class="row" for="speed">Inflow speed <output id="speed-out" for="speed"></output></label>
+          <input type="range" id="speed" min="0.03" max="0.15" step="0.01" />
+          <label class="row" for="width">Grid
+            <select id="width">
+              <option value="200">200 × 80</option>
+              <option value="300">300 × 120</option>
+              <option value="400">400 × 160</option>
+            </select>
+          </label>
+          <dl class="readout">
+            <div><dt>Running at</dt><dd id="re-run">–</dd></div>
+            <div><dt>Relaxation τ</dt><dd id="tau">–</dd></div>
+            <div><dt>Lattice Mach</dt><dd id="mach">–</dd></div>
+            <div><dt>Flow time</dt><dd id="time">–</dd></div>
+          </dl>
+          <p class="note" id="clamp-note">Re = U D / ν. The viscosity ν sets how fast the lattice relaxes; below τ = 0.51 the scheme goes unstable, so a Reynolds number too high for the obstacle size is capped there. A larger obstacle or a faster inflow reaches higher.</p>
+        </section>
+
+        <section aria-labelledby="h-presets">
+          <h2 id="h-presets">Scenes</h2>
+          <div class="actions" id="presets"></div>
+          <p class="note" id="preset-note"></p>
+        </section>
+
+        <section aria-labelledby="h-view">
+          <h2 id="h-view">View</h2>
+          <label class="row" for="view">Colour by
+            <select id="view">
+              <option value="curl">Vorticity</option>
+              <option value="speed">Speed</option>
+              <option value="pressure">Pressure</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="tracers" /> Streaklines</label>
+          <label class="row" for="rate">Steps per frame <output id="rate-out" for="rate"></output></label>
+          <input type="range" id="rate" min="1" max="40" step="1" />
+          <div class="actions">
+            <button type="button" id="share">Copy share link</button>
+            <button type="button" id="png">Save PNG</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <p>D2Q9 lattice Boltzmann with BGK collisions and bounce-back walls. Hand-drawn walls are not part of share links. <a href="https://github.com/fushanbobfan/streakline">Source</a></p>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
