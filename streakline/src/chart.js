@@ -1,11 +1,11 @@
 // Geometry for the force chart: value ranges that hold the data with a
 // little room and snap to tidy numbers, and the mapping to canvas points.
 
-// Smallest of 1, 2 or 5 times a power of ten that is at least x.
+// Smallest of 1, 2, 2.5 or 5 times a power of ten that is at least x.
 export function niceCeil(x) {
   if (!(x > 0)) return 0;
   const p = 10 ** Math.floor(Math.log10(x));
-  for (const m of [1, 2, 5, 10]) if (m * p >= x - 1e-12 * p) return m * p;
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= x - 1e-12 * p) return m * p;
   return 10 * p;
 }
 

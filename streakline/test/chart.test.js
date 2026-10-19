@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { niceCeil, liftRange, dragRange, toPoints } from '../src/chart.js';
 
-test('tidy ceilings step through 1, 2 and 5', () => {
+test('tidy ceilings step through 1, 2, 2.5 and 5', () => {
   assert.equal(niceCeil(0.7), 1);
   assert.equal(niceCeil(1.3), 2);
   assert.equal(niceCeil(3), 5);
   assert.equal(niceCeil(5), 5);
+  assert.equal(niceCeil(2.26), 2.5);
   assert.equal(niceCeil(0.031), 0.05);
   assert.equal(niceCeil(0), 0);
 });
