@@ -1,8 +1,18 @@
 // The wind tunnel: a lattice, an obstacle from the settings, walls painted
 // by hand, and the step loop with a guard that restarts a run that blows up.
 
-import { collide, createLattice, equilibrium, fillUniform, stream, tunnelEdges } from './lattice.js';
+import {
+  boundaryLinks,
+  collide,
+  createLattice,
+  equilibrium,
+  fillUniform,
+  linkForce,
+  stream,
+  tunnelEdges,
+} from './lattice.js';
 import { rasterize } from './obstacles.js';
+import { analyse, clearHistory, coefficients, createHistory, record } from './shedding.js';
 import { gridHeight } from './settings.js';
 import { relaxation } from './units.js';
 
@@ -21,6 +31,9 @@ export function createSim(settings) {
     steps: 0,
     restarts: 0,
     relax: null,
+    links: new Int32Array(0),
+    force: [0, 0],
+    history: createHistory(),
   };
   configure(sim, settings, { keepWalls: false });
   return sim;
@@ -47,9 +60,14 @@ export function configure(sim, settings, { keepWalls = true, restart = true } = 
   sim.relax = relaxation(settings.speed, settings.size, settings.re);
   const before = lat.solid.slice();
   rebuildSolid(sim);
+  sim.links = boundaryLinks(lat, sim.shapeMask);
+  clearHistory(sim.history);
   if (restart) reset(sim);
   else refill(sim, before);
 }
+
+// Forces are sampled every this many steps.
+export const SAMPLE_EVERY = 10;
 
 function rebuildSolid(sim) {
   const { lat, shapeMask, walls } = sim;
@@ -86,6 +104,8 @@ export function reset(sim) {
     }
   }
   sim.steps = 0;
+  sim.force = [0, 0];
+  clearHistory(sim.history);
 }
 
 export function step(sim, count = 1) {
@@ -94,6 +114,11 @@ export function step(sim, count = 1) {
   const U = sim.settings.speed;
   for (let k = 0; k < count; k++) {
     collide(lat, omega);
+    if (sim.links.length && (sim.steps + 1) % SAMPLE_EVERY === 0) {
+      sim.force = linkForce(lat, sim.links);
+      const { cd, cl } = coefficients(sim.force[0], sim.force[1], U, sim.settings.size);
+      record(sim.history, sim.steps + 1, cd, cl);
+    }
     stream(lat);
     tunnelEdges(lat, U);
     sim.steps++;
@@ -138,6 +163,8 @@ export function paintWalls(sim, x, y, r, on) {
   if (changed) {
     rebuildSolid(sim);
     refill(sim, before);
+    sim.links = boundaryLinks(lat, sim.shapeMask);
+    clearHistory(sim.history);
   }
   return changed;
 }
@@ -145,4 +172,15 @@ export function paintWalls(sim, x, y, r, on) {
 // Time in flow units: how many obstacle lengths the free stream has moved.
 export function flowTime(sim) {
   return (sim.steps * sim.settings.speed) / sim.settings.size;
+}
+
+// Drag, lift and shedding over the last `window` flow times. Early in a run
+// the wake is still forming, so `settling` stays true for the first
+// `settle` flow times.
+export function wakeReport(sim, { window = 40, settle = 25 } = {}) {
+  const { speed: U, size: D } = sim.settings;
+  const fromStep = sim.steps - (window * D) / U;
+  const r = analyse(sim.history, U, D, { fromStep });
+  if (!r) return null;
+  return { ...r, settling: flowTime(sim) < settle };
 }

@@ -1,5 +1,7 @@
 import { decodeSettings, encodeSettings, clampSettings, presetSettings, PRESETS } from './settings.js';
-import { createSim, configure, reset, step, paintWalls, flowTime } from './sim.js';
+import { createSim, configure, reset, step, paintWalls, flowTime, wakeReport } from './sim.js';
+import { samples } from './shedding.js';
+import { liftRange, dragRange, toPoints } from './chart.js';
 import { createTracers, rakeRows, release, advect, clearTracers } from './tracers.js';
 import { paintField, streakColour } from './render.js';
 import { mach, maxReynolds } from './units.js';
@@ -7,6 +9,9 @@ import { mach, maxReynolds } from './units.js';
 const $ = (id) => document.getElementById(id);
 const canvas = $('tunnel');
 const ctx = canvas.getContext('2d');
+const chart = $('forces');
+const chartCtx = chart.getContext('2d');
+const CHART_WINDOW = 40;
 
 let settings = decodeSettings(location.search);
 let sim = null;
@@ -22,6 +27,7 @@ let painting = null;
 let lastPaint = null;
 let presetNote = '';
 let stepTimes = [];
+let frames = 0;
 
 const RE_MIN = 10, RE_MAX = 2000;
 const reFromSlider = (v) => RE_MIN * (RE_MAX / RE_MIN) ** (v / 1000);
@@ -41,9 +47,79 @@ function build() {
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(1, Math.round(rect.width * dpr));
-  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  for (const c of [canvas, chart]) {
+    const rect = c.getBoundingClientRect();
+    c.width = Math.max(1, Math.round(rect.width * dpr));
+    c.height = Math.max(1, Math.round(rect.height * dpr));
+  }
+}
+
+function cssColour(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function drawForces() {
+  const W = chart.width, H = chart.height;
+  const dpr = W / chart.getBoundingClientRect().width || 1;
+  chartCtx.clearRect(0, 0, W, H);
+  const { speed: U, size: D } = settings;
+  const toFlow = U / D;
+  const now = sim.steps * toFlow;
+  const { step: st, cd, cl } = samples(sim.history, sim.steps - CHART_WINDOW / toFlow);
+  const t = st.map((s) => s * toFlow);
+  const span = [Math.max(0, now - CHART_WINDOW), Math.max(CHART_WINDOW, now)];
+  const pad = 34 * dpr, gap = 10 * dpr;
+  const half = (H - gap) / 2;
+  const boxes = [
+    { x: pad, y: 4 * dpr, w: W - pad - 6 * dpr, h: half - 8 * dpr, values: cd, range: dragRange(cd), colour: cssColour('--drag') },
+    { x: pad, y: half + gap, w: W - pad - 6 * dpr, h: half - 8 * dpr, values: cl, range: liftRange(cl), colour: cssColour('--lift') },
+  ];
+  chartCtx.font = `${11 * dpr}px system-ui, sans-serif`;
+  chartCtx.textAlign = 'right';
+  chartCtx.textBaseline = 'middle';
+  for (const b of boxes) {
+    chartCtx.strokeStyle = cssColour('--line');
+    chartCtx.lineWidth = dpr;
+    chartCtx.strokeRect(b.x, b.y, b.w, b.h);
+    chartCtx.fillStyle = cssColour('--muted');
+    chartCtx.fillText(String(b.range[1]), b.x - 4 * dpr, b.y + 6 * dpr);
+    chartCtx.fillText(String(b.range[0]), b.x - 4 * dpr, b.y + b.h - 6 * dpr);
+    if (b.range[0] < 0 && b.range[1] > 0) {
+      const y0 = b.y + b.h * (b.range[1] / (b.range[1] - b.range[0]));
+      chartCtx.setLineDash([3 * dpr, 3 * dpr]);
+      chartCtx.beginPath();
+      chartCtx.moveTo(b.x, y0);
+      chartCtx.lineTo(b.x + b.w, y0);
+      chartCtx.stroke();
+      chartCtx.setLineDash([]);
+    }
+    const pts = toPoints(t, b.values, b, span, b.range);
+    if (pts.length < 2) continue;
+    chartCtx.strokeStyle = b.colour;
+    chartCtx.lineWidth = 1.5 * dpr;
+    chartCtx.beginPath();
+    pts.forEach(([x, y], k) => (k ? chartCtx.lineTo(x, y) : chartCtx.moveTo(x, y)));
+    chartCtx.stroke();
+  }
+}
+
+function updateWake() {
+  const r = sim.links.length ? wakeReport(sim) : null;
+  const dash = '–';
+  if (!r) {
+    for (const id of ['cd', 'cl', 'period', 'st']) $(id).textContent = dash;
+    return;
+  }
+  const mark = r.settling ? ' (settling)' : '';
+  $('cd').textContent = `${r.cd.toFixed(2)}${mark}`;
+  $('cl').textContent = `±${r.clAmplitude.toFixed(2)}`;
+  if (r.shedding) {
+    $('period').textContent = `${((r.period * settings.speed) / settings.size).toFixed(2)} D/U`;
+    $('st').textContent = `${r.strouhal.toFixed(3)}${mark}`;
+  } else {
+    $('period').textContent = 'steady';
+    $('st').textContent = dash;
+  }
 }
 
 function apply(next, { restart = false } = {}) {
@@ -143,6 +219,10 @@ function frame() {
     }
   }
   draw();
+  if (++frames % 6 === 0) {
+    drawForces();
+    updateWake();
+  }
   requestAnimationFrame(frame);
 }
 
@@ -282,7 +362,10 @@ window.addEventListener('keydown', (ev) => {
     apply({ ...settings, view: VIEWS[(VIEWS.indexOf(settings.view) + 1) % VIEWS.length] });
   }
 });
-window.addEventListener('resize', resize);
+window.addEventListener('resize', () => {
+  resize();
+  drawForces();
+});
 
 build();
 syncControls();

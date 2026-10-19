@@ -42,6 +42,41 @@ near the inlet. A streakline is everything that ever passed through one point,
 which is what smoke in a real tunnel shows. In a steady flow it matches the
 streamline; in the vortex street it folds into the familiar rolled-up chain.
 
+## Forces and shedding
+
+The panel under the controls plots the drag and lift coefficients over the
+last 40 flow times (one flow time D/U is how long the stream takes to cover
+one obstacle length). Each coefficient is the force divided by ρU²D/2.
+
+The force is found by momentum exchange. With halfway bounce-back, every
+population that heads into the obstacle after a collision comes back
+reversed, so it hands the obstacle twice its momentum; summing 2 e_i f_i over
+the links between fluid and obstacle cells gives the force each step.
+Painted walls are not counted.
+
+When the lift swings, the page reads the shedding period from its upward
+crossings of the mean, gives the Strouhal number St = f D / U, and averages
+drag and lift over whole periods only. Readings carry "(settling)" for the
+first 25 flow times, while the wake is still forming.
+
+`npm run probe` runs the same tunnel without the page:
+
+```bash
+node scripts/probe.js --preset street --time 120
+```
+
+On the default 300 × 120 grid with a cylinder 20 cells across (so it blocks a
+sixth of the tunnel's height), 120 flow times give:
+
+| Re | Wake | Mean C<sub>d</sub> | Lift swing | St |
+| --- | --- | --- | --- | --- |
+| 30 | steady | 2.33 | 0 | – |
+| 100 | shedding | 1.75 | ±0.44 | 0.193 |
+| 150 | shedding | 1.72 | ±0.70 | 0.207 |
+
+These are numbers for this tunnel, with its close walls and a cylinder only
+20 cells across; they are not open-flow values.
+
 ## Scenes
 
 | Scene | What happens |
@@ -81,7 +116,9 @@ zeroth and first moments of the nine populations.
   step and dropped when it leaves the tunnel or lands inside a wall.
 
 The tests check the lattice symmetries and equilibrium moments, mass and
-momentum conservation, bounce-back, the parabolic Poiseuille profile in a
+momentum conservation, bounce-back, the momentum-exchange force against the
+total push on the fluid in a forced periodic box (within 1%), the shedding
+analysis on known signals, the parabolic Poiseuille profile in a
 forced channel (within 2% of the exact solution, which pins down both the
 viscosity formula and the wall position), the NACA 0012 outline against its
 textbook area, and the share-link round trip.
@@ -111,8 +148,11 @@ textbook area, and the share-link round trip.
 | `src/tracers.js` | Streakline dye: release, advection, removal |
 | `src/render.js` | Colour maps and the field image |
 | `src/settings.js` | Settings, limits, scenes and share links |
-| `src/sim.js` | The tunnel: obstacle, painted walls, stepping and the restart guard |
+| `src/shedding.js` | Drag and lift coefficients, their history, period and Strouhal number |
+| `src/chart.js` | Ranges and point mapping for the force chart |
+| `src/sim.js` | The tunnel: obstacle, painted walls, stepping, force sampling and the restart guard |
 | `src/main.js` | Page wiring |
+| `scripts/probe.js` | Headless runs that print drag, lift and the Strouhal number |
 
 ## Licence
 

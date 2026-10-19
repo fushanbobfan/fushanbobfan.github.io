@@ -6,6 +6,8 @@
   --line: #d6dae2;
   --accent: #1d5fd1;
   --accent-ink: #ffffff;
+  --drag: #1d5fd1;
+  --lift: #d0641e;
   color-scheme: light dark;
 }
 
@@ -18,6 +20,8 @@
     --line: #273042;
     --accent: #7fb0ff;
     --accent-ink: #0b1220;
+    --drag: #7fb0ff;
+    --lift: #ff9a5a;
   }
 }
 
@@ -212,6 +216,27 @@ output {
   margin: 0 6px;
   border-radius: 2px;
   vertical-align: middle;
+}
+
+.chart {
+  height: 170px;
+}
+
+.key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 2px 0 6px;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+.key.drag {
+  background: var(--drag);
+}
+
+.key.lift {
+  background: var(--lift);
 }
 
 [hidden] {

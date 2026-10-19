@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "serve": "node scripts/serve.js"
+    "serve": "node scripts/serve.js",
+    "probe": "node scripts/probe.js"
   },
   "keywords": [
     "lattice-boltzmann",
