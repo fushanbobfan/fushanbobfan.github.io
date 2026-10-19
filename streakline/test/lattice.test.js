@@ -111,3 +111,28 @@ test('collide and stream keep total mass in a closed box with obstacles', async 
   }
   assert.ok(Math.abs(totals(lat).mass - m0) / m0 < 1e-5);
 });
+
+test('a forced channel settles into the Poiseuille parabola with walls halfway out', async () => {
+  const { createLattice, collide, stream, fillUniform } = await import('../src/lattice.js');
+  const nx = 4, ny = 22, H = ny - 2;
+  const lat = createLattice(nx, ny);
+  for (let x = 0; x < nx; x++) {
+    lat.solid[x] = 1;
+    lat.solid[(ny - 1) * nx + x] = 1;
+  }
+  fillUniform(lat, 1, 0, 0);
+  const tau = 0.8, nu = (tau - 0.5) / 3, G = 4e-5;
+  for (let s = 0; s < 10000; s++) {
+    collide(lat, 1 / tau, G, 0);
+    stream(lat);
+  }
+  collide(lat, 1 / tau, G, 0);
+  const umax = (G * H * H) / (8 * nu);
+  let worst = 0;
+  for (let y = 1; y < ny - 1; y++) {
+    const exact = (G / (2 * nu)) * (y - 0.5) * (ny - 1.5 - y);
+    worst = Math.max(worst, Math.abs(lat.ux[y * nx + 1] - exact) / umax);
+    assert.ok(Math.abs(lat.uy[y * nx + 1]) < 1e-7);
+  }
+  assert.ok(worst < 0.02, `largest error ${(worst * 100).toFixed(2)}% of the peak`);
+});
