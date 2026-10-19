@@ -144,7 +144,9 @@ export function healthy(lat) {
 }
 
 // Paint or erase walls in a disc of radius r around (x, y). Returns whether
-// anything changed. Painting over the obstacle does nothing to it.
+// anything changed. Painting over the obstacle does nothing to it. The inlet
+// column and the last two columns stay open: the outlet copies its left
+// neighbour, which must not be a wall.
 export function paintWalls(sim, x, y, r, on) {
   const { nx, ny, walls, lat } = sim;
   const before = lat.solid.slice();
@@ -152,7 +154,7 @@ export function paintWalls(sim, x, y, r, on) {
   for (let j = Math.max(0, Math.floor(y - r)); j <= Math.min(ny - 1, Math.ceil(y + r)); j++) {
     for (let i = Math.max(0, Math.floor(x - r)); i <= Math.min(nx - 1, Math.ceil(x + r)); i++) {
       if ((i - x) ** 2 + (j - y) ** 2 > r * r) continue;
-      if (i === 0 || i === nx - 1) continue;
+      if (i === 0 || i >= nx - 2) continue;
       const c = j * nx + i;
       if (walls[c] !== (on ? 1 : 0)) {
         walls[c] = on ? 1 : 0;

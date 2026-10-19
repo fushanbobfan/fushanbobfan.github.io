@@ -31,7 +31,7 @@ test('a blown-up run is caught and restarted from the free stream', () => {
   assert.ok(Number.isFinite(totals(sim.lat).mass));
 });
 
-test('painted walls become solid, erasing frees them at rest, and the inlet column is left alone', () => {
+test('painted walls become solid, erasing frees them at rest, and the inlet and outlet columns are left alone', () => {
   const sim = createSim(clampSettings({ width: 200, shape: 'none' }));
   const c = 20 * 200 + 120;
   assert.ok(paintWalls(sim, 120, 20, 3, true));
@@ -40,6 +40,9 @@ test('painted walls become solid, erasing frees them at rest, and the inlet colu
   assert.equal(paintWalls(sim, 120, 20, 3, true), false);
   paintWalls(sim, 0, 40, 2, true);
   assert.equal(sim.lat.solid[40 * 200], 0);
+  paintWalls(sim, 199, 40, 2, true);
+  assert.equal(sim.lat.solid[40 * 200 + 198], 0);
+  assert.equal(sim.lat.solid[40 * 200 + 197], 1);
   assert.ok(paintWalls(sim, 120, 20, 3, false));
   assert.equal(sim.lat.solid[c], 0);
   assert.ok(Math.abs(sim.lat.f[c] - 4 / 9) < 1e-6);
