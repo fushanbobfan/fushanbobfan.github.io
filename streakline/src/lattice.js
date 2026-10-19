@@ -117,3 +117,27 @@ export function stream(lat) {
   lat.f = next;
   lat.next = f;
 }
+
+// Wind tunnel edges after streaming: the left column and the top and bottom
+// rows are held at the free-stream equilibrium (density 1, velocity u along
+// x), and the right column copies its left neighbour so the wake leaves
+// without reflecting much.
+export function tunnelEdges(lat, u) {
+  const { nx, ny, n, f, solid } = lat;
+  const feq = [];
+  for (let i = 0; i < 9; i++) feq.push(equilibrium(i, 1, u, 0));
+  const hold = (c) => {
+    if (solid[c]) return;
+    for (let i = 0; i < 9; i++) f[i * n + c] = feq[i];
+  };
+  for (let y = 0; y < ny; y++) {
+    hold(y * nx);
+    const c = y * nx + nx - 1;
+    if (solid[c]) continue;
+    for (let i = 0; i < 9; i++) f[i * n + c] = f[i * n + c - 1];
+  }
+  for (let x = 0; x < nx; x++) {
+    hold(x);
+    hold((ny - 1) * nx + x);
+  }
+}

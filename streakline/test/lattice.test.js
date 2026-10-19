@@ -136,3 +136,39 @@ test('a forced channel settles into the Poiseuille parabola with walls halfway o
   }
   assert.ok(worst < 0.02, `largest error ${(worst * 100).toFixed(2)}% of the peak`);
 });
+
+test('an empty tunnel keeps a uniform stream uniform', async () => {
+  const { createLattice, collide, stream, fillUniform, tunnelEdges } = await import('../src/lattice.js');
+  const lat = createLattice(30, 12);
+  fillUniform(lat, 1, 0.1, 0);
+  for (let s = 0; s < 100; s++) {
+    collide(lat, 1.7);
+    stream(lat);
+    tunnelEdges(lat, 0.1);
+  }
+  collide(lat, 1.7);
+  for (let c = 0; c < lat.n; c++) {
+    assert.ok(Math.abs(lat.ux[c] - 0.1) < 1e-5);
+    assert.ok(Math.abs(lat.uy[c]) < 1e-5);
+    assert.ok(Math.abs(lat.rho[c] - 1) < 1e-5);
+  }
+});
+
+test('a block in the tunnel slows the flow behind it and pushes it round the sides', async () => {
+  const { createLattice, collide, stream, fillUniform, tunnelEdges } = await import('../src/lattice.js');
+  const nx = 60, ny = 30;
+  const lat = createLattice(nx, ny);
+  for (let y = 12; y < 18; y++) for (let x = 15; x < 19; x++) lat.solid[y * nx + x] = 1;
+  fillUniform(lat, 1, 0.08, 0);
+  for (let s = 0; s < 600; s++) {
+    collide(lat, 1.5);
+    stream(lat);
+    tunnelEdges(lat, 0.08);
+  }
+  collide(lat, 1.5);
+  const behind = lat.ux[15 * nx + 21];
+  const side = lat.ux[9 * nx + 17];
+  assert.ok(behind < 0.04, `wake ${behind}`);
+  assert.ok(side > 0.08, `side ${side}`);
+  for (let c = 0; c < lat.n; c++) assert.ok(Number.isFinite(lat.rho[c]));
+});
