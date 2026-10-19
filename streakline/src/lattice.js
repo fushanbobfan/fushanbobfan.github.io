@@ -159,3 +159,36 @@ export function tunnelEdges(lat, u) {
     hold((ny - 1) * nx + x);
   }
 }
+
+// Links from fluid cells into the cells of `mask`: one entry per fluid cell c
+// and direction i with c + e_i inside the mask. Stored flat as [c, i, ...].
+export function boundaryLinks(lat, mask) {
+  const { nx, ny, solid } = lat;
+  const links = [];
+  for (let y = 1; y < ny - 1; y++) {
+    for (let x = 1; x < nx - 1; x++) {
+      const c = y * nx + x;
+      if (solid[c]) continue;
+      for (let i = 1; i < 9; i++) {
+        if (mask[(y + EY[i]) * nx + x + EX[i]]) links.push(c, i);
+      }
+    }
+  }
+  return Int32Array.from(links);
+}
+
+// Force the fluid exerts on a resting body, by momentum exchange: with
+// halfway bounce-back each post-collision population f_i that heads into the
+// body returns reversed, handing the body 2 e_i f_i. Call it between
+// collision and streaming.
+export function linkForce(lat, links) {
+  const { n, f } = lat;
+  let fx = 0, fy = 0;
+  for (let k = 0; k < links.length; k += 2) {
+    const i = links[k + 1];
+    const v = 2 * f[i * n + links[k]];
+    fx += v * EX[i];
+    fy += v * EY[i];
+  }
+  return [fx, fy];
+}

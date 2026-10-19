@@ -172,3 +172,35 @@ test('a block in the tunnel slows the flow behind it and pushes it round the sid
   assert.ok(side > 0.08, `side ${side}`);
   for (let c = 0; c < lat.n; c++) assert.ok(Number.isFinite(lat.rho[c]));
 });
+
+test('a fluid at rest pushes equally on every side of a block', async () => {
+  const { createLattice, fillUniform, boundaryLinks, linkForce } = await import('../src/lattice.js');
+  const lat = createLattice(12, 12);
+  for (let y = 4; y < 8; y++) for (let x = 4; x < 8; x++) lat.solid[y * 12 + x] = 1;
+  fillUniform(lat, 1, 0, 0);
+  const links = boundaryLinks(lat, lat.solid);
+  // 4 cells per face times 4 faces get the axis link; the diagonals add
+  // 6 per face (two from the corner cells) and one at each outer corner.
+  assert.equal(links.length / 2, 16 + 24 + 4);
+  const [fx, fy] = linkForce(lat, links);
+  assert.ok(Math.abs(fx) < 1e-7 && Math.abs(fy) < 1e-7);
+});
+
+test('in a forced periodic box the steady force on the obstacle balances the push on the fluid', async () => {
+  const { createLattice, collide, stream, fillUniform, boundaryLinks, linkForce, totals } = await import('../src/lattice.js');
+  const nx = 30, ny = 16;
+  const lat = createLattice(nx, ny);
+  for (let y = 5; y < 11; y++) for (let x = 12; x < 16; x++) lat.solid[y * nx + x] = 1;
+  fillUniform(lat, 1, 0, 0);
+  const links = boundaryLinks(lat, lat.solid);
+  const G = 2e-5;
+  let F = [0, 0];
+  for (let s = 0; s < 6000; s++) {
+    collide(lat, 1, G, 0);
+    F = linkForce(lat, links);
+    stream(lat);
+  }
+  const push = G * totals(lat).mass;
+  assert.ok(Math.abs(F[0] - push) / push < 0.01, `${F[0]} vs ${push}`);
+  assert.ok(Math.abs(F[1]) < 1e-3 * push);
+});
