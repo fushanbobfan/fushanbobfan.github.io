@@ -1,0 +1,25 @@
+{
+  "name": "streakline",
+  "version": "0.1.0",
+  "description": "A wind tunnel in the browser: a lattice Boltzmann fluid flows past a cylinder, a plate or an airfoil, and the wake rolls up into a von Karman vortex street.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "lattice-boltzmann",
+    "fluid-dynamics",
+    "vortex-street",
+    "wind-tunnel",
+    "physics",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/streakline.git"
+  },
+  "private": false
+}
