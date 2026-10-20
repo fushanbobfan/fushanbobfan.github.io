@@ -1,7 +1,7 @@
 {
   "name": "orbium",
   "version": "0.1.0",
-  "description": "Lenia in the browser: a continuous cellular automaton whose smooth rules grow gliding, spinning and dividing creatures.",
+  "description": "Lenia in the browser: a continuous cellular automaton whose smooth rules grow gliding and looping creatures.",
   "type": "module",
   "scripts": {
     "test": "node --test",
