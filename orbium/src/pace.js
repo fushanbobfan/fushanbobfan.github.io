@@ -1,5 +1,6 @@
 // Frame pacing: run up to `want` steps, but stop once the frame's time budget
-// is spent, so a large grid slows the simulation instead of freezing the page.
+// is spent, so on a large grid the simulation slows while the page stays
+// responsive.
 // At least one step always runs.
 
 export const FRAME_BUDGET_MS = 24;

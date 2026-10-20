@@ -65,8 +65,8 @@ export function fft1d(re, im, n, inverse = false, offset = 0, stride = 1) {
 }
 
 // Transforms columns x0..x1-1 of an n x n row-major grid together. Each
-// butterfly works on two whole row segments, so memory is read in order
-// instead of jumping a full row per element as a column-at-a-time pass does.
+// butterfly works on two whole row segments, so memory is read in order; a
+// column-at-a-time pass would jump a full row per element.
 export function fftColumns(re, im, n, inverse = false, x0 = 0, x1 = n) {
   if (!isPowerOfTwo(n)) throw new RangeError(`FFT length must be a power of two, got ${n}`);
   const { cos, sin, rev } = twiddles(n);
