@@ -5,6 +5,7 @@ import { soup, brush } from './seed.js';
 import { PALETTES, DIVERGING, buildLut, paint, viewRange } from './render.js';
 import { parseRings, formatRings } from './rules.js';
 import { normalize, toHash, fromHash, ruleOf } from './settings.js';
+import { runSteps, smoothStepTime } from './pace.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('world');
@@ -293,6 +294,9 @@ function savePng() {
 let frames = 0;
 let stepsDone = 0;
 let lastRate = performance.now();
+let msPerStep = 0;
+const clock = () => performance.now();
+const stepOnce = () => world.step();
 
 function readouts() {
   $('r-time').textContent = world.time.toFixed(1);
@@ -301,14 +305,15 @@ function readouts() {
 
 function frame(now) {
   if (playing) {
-    const n = Number($('speed').value);
-    for (let i = 0; i < n; i++) world.step();
-    stepsDone += n;
+    const ran = runSteps(Number($('speed').value), stepOnce, clock);
+    msPerStep = smoothStepTime(msPerStep, ran);
+    stepsDone += ran.done;
     draw();
   }
   if (++frames % 10 === 0) readouts();
   if (now - lastRate > 1000) {
     $('r-rate').textContent = String(Math.round((stepsDone * 1000) / (now - lastRate)));
+    $('r-cost').textContent = msPerStep > 0 ? msPerStep.toFixed(1) : '–';
     stepsDone = 0;
     lastRate = now;
   }
