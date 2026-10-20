@@ -31,6 +31,8 @@
         <div><dt>Mass</dt><dd id="r-mass">0</dd></div>
         <div><dt>Steps/s</dt><dd id="r-rate">0</dd></div>
         <div><dt>ms/step</dt><dd id="r-cost">–</dd></div>
+        <div><dt>Speed</dt><dd id="r-speed">–</dd></div>
+        <div><dt>Heading</dt><dd id="r-heading">–</dd></div>
       </dl>
     </section>
 
@@ -108,6 +110,8 @@
             <option value="ink">Ink</option>
           </select>
         </label>
+        <label class="chip"><input id="trail" type="checkbox" checked> Trail of the centre of mass</label>
+        <p class="note">Speed, heading and the trail follow the centre of mass of everything in the world, so they describe a creature best when it is alone.</p>
         <label>Grid
           <select id="size">
             <option value="128">128 × 128</option>
