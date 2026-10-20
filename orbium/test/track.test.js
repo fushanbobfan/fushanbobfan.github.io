@@ -67,3 +67,22 @@ test('a tracked Orbium glides at a steady speed', () => {
   assert.ok(lo > 1, `speed ${lo}`);
   assert.ok(hi / lo < 1.2, `speeds ${speeds.map((v) => v.toFixed(2)).join(', ')}`);
 });
+
+test('a glider placed a quarter turn clockwise heads a quarter turn clockwise', () => {
+  const s = speciesById('orbium');
+  const headings = [0, 1, 2, 3].map((turn) => {
+    const w = new World(128, speciesRule(s));
+    w.place(speciesPattern(s), 54, 54, { rotate: turn });
+    const t = new Tracker(128);
+    for (let i = 1; i <= 200; i++) {
+      w.step();
+      if (i % 5 === 0) t.push(w.time, w.centroid());
+    }
+    return t.motion(5).heading;
+  });
+  for (let k = 1; k < 4; k++) {
+    const turned = (((headings[0] - 90 * k) % 360) + 360) % 360;
+    const diff = Math.abs(((headings[k] - turned + 540) % 360) - 180);
+    assert.ok(diff < 3, `turn ${k}: heading ${headings[k].toFixed(1)}, expected ${turned.toFixed(1)}`);
+  }
+});

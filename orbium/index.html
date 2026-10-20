@@ -17,7 +17,7 @@
   <main class="layout">
     <section class="stage" aria-label="Lenia world">
       <canvas id="world" width="256" height="256" aria-describedby="stage-help"></canvas>
-      <p id="stage-help" class="help">Click or drag on the world to use the current tool. Space plays or pauses, S steps once, C clears.</p>
+      <p id="stage-help" class="help">Click or drag on the world to use the current tool. Space plays or pauses, S steps once, C clears, T turns the creature you place.</p>
       <div class="bar" role="group" aria-label="Playback">
         <button id="play" type="button" aria-pressed="true">Pause</button>
         <button id="step" type="button">Step</button>
@@ -65,6 +65,14 @@
           <label class="chip"><input type="radio" name="tool" value="paint"> Paint</label>
           <label class="chip"><input type="radio" name="tool" value="erase"> Erase</label>
         </div>
+        <label>Creature facing
+          <select id="turn">
+            <option value="0">As catalogued</option>
+            <option value="1">Turned 90° clockwise</option>
+            <option value="2">Turned 180°</option>
+            <option value="3">Turned 90° anticlockwise</option>
+          </select>
+        </label>
         <label>Brush radius <output id="brush-out">8</output>
           <input id="brush" type="range" min="2" max="40" value="8">
         </label>

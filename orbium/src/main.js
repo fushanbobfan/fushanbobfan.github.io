@@ -42,7 +42,9 @@ function makeWorld() {
 
 function placeSpecies(cx, cy) {
   const p = speciesPattern(species(), settings.scale);
-  world.place(p, Math.round(cx - p.width / 2), Math.round(cy - p.height / 2));
+  const turn = Number($('turn').value);
+  const [w, h] = turn % 2 ? [p.height, p.width] : [p.width, p.height];
+  world.place(p, Math.round(cx - w / 2), Math.round(cy - h / 2), { rotate: turn });
 }
 
 function loadAlone() {
@@ -250,6 +252,10 @@ function bindControls() {
       $('step').click();
     } else if (e.key === 'c' || e.key === 'C') {
       $('clear').click();
+    } else if (e.key === 't' || e.key === 'T') {
+      const turn = $('turn');
+      turn.value = String((Number(turn.value) + 1) % 4);
+      setStatus(`Placing creatures ${turn.selectedOptions[0].textContent.toLowerCase()}.`);
     }
   });
 }
