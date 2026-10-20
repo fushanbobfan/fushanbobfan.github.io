@@ -99,7 +99,9 @@ export function drawInspector(canvas, rule, potential) {
   ctx.fillText(endText, gBox.x + gBox.w - ctx.measureText(endText).width, axisY);
 
   const share = shareInBand(hist, u0, u1, mu, sigma);
+  const rings = rule.rings.length === 1 ? 'one ring' : `${rule.rings.length} rings`;
+  const kernel = `Kernel with ${rings}, radius ${rule.R}.`;
   return hist.total === 0
-    ? `Kernel with ${rule.rings.length} ring(s), radius ${rule.R}. The world is empty.`
-    : `Kernel with ${rule.rings.length} ring(s), radius ${rule.R}. ${Math.round(share * 100)}% of sensing cells sit in the growth band ${b0.toFixed(3)} to ${b1.toFixed(3)}.`;
+    ? `${kernel} The world is empty.`
+    : `${kernel} ${Math.round(share * 100)}% of sensing cells sit in the growth band ${b0.toFixed(3)} to ${b1.toFixed(3)}.`;
 }

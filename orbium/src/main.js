@@ -6,6 +6,7 @@ import { PALETTES, DIVERGING, buildLut, paint, viewRange } from './render.js';
 import { parseRings, formatRings } from './rules.js';
 import { normalize, toHash, fromHash, ruleOf } from './settings.js';
 import { runSteps, smoothStepTime } from './pace.js';
+import { drawInspector } from './inspector.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('world');
@@ -83,6 +84,11 @@ function draw() {
   ctx.putImageData(image, 0, 0);
 }
 
+function inspect() {
+  if (world.time === 0 || !playing) world.sense();
+  $('inspector-text').textContent = drawInspector($('inspector'), world.rule, world.potential);
+}
+
 // ---- controls ----
 
 function fillSpecies() {
@@ -117,11 +123,13 @@ function useSpeciesRule() {
   settings = normalize({ ...settings, R: r.R, T: r.T, mu: r.mu, sigma: r.sigma, rings: formatRings(r.rings) });
   world.setRule(ruleOf(settings));
   syncControls();
+  inspect();
 }
 
 function applyRule() {
   world.setRule(ruleOf(settings));
   if (!playing) draw();
+  inspect();
 }
 
 function setStatus(text) {
@@ -310,7 +318,10 @@ function frame(now) {
     stepsDone += ran.done;
     draw();
   }
-  if (++frames % 10 === 0) readouts();
+  if (++frames % 10 === 0) {
+    readouts();
+    inspect();
+  }
   if (now - lastRate > 1000) {
     $('r-rate').textContent = String(Math.round((stepsDone * 1000) / (now - lastRate)));
     $('r-cost').textContent = msPerStep > 0 ? msPerStep.toFixed(1) : '–';
@@ -327,4 +338,5 @@ bindPointer();
 start();
 setPlaying(playing);
 readouts();
+inspect();
 requestAnimationFrame(frame);
