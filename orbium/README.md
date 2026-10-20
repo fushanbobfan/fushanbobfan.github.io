@@ -44,6 +44,28 @@ its back.
 The convolution runs as a product of Fourier transforms on the torus, so
 every step costs the same whatever the kernel radius.
 
+## Speed
+
+A step is one forward transform of the cells, a product with the kernel's
+spectrum, and one inverse transform. Because the cells are real numbers, their
+spectrum mirrors itself: rows are transformed two at a time (one as the real
+part, one as the imaginary part) and only the left half of the columns is
+transformed, multiplied and transformed back. The column transforms run over
+whole rows at a time, so memory is read in order.
+
+`npm run bench` times a step at each grid size. On one Windows machine under Node 24:
+
+| Grid | Plain 2D FFT | Batched columns | Real-field convolver |
+| --- | --- | --- | --- |
+| 128 × 128 | 1.76 ms | 1.24 ms | 0.66 ms |
+| 256 × 256 | 6.39 ms | 3.98 ms | 2.76 ms |
+| 512 × 512 | 130 ms | 23.7 ms | 13.8 ms |
+
+The page runs up to 16 steps per animation frame but stops early once a frame
+has used 24 ms, so on a 512 grid the simulation runs slower while the page
+stays responsive. The
+readouts show the steps per second it reaches and the measured cost of a step.
+
 ## The page
 
 - **Creature**: pick a species and a scale. "Load alone" clears the world and
@@ -92,7 +114,8 @@ node scripts/probe.js kronium 1000 256 2
 
 | File | What it does |
 | --- | --- |
-| `src/fft.js` | Radix-2 complex FFT, 1D and 2D |
+| `src/fft.js` | Radix-2 complex FFT, 1D, batched columns and 2D |
+| `src/convolve.js` | Real-field convolution on half the spectrum |
 | `src/rules.js` | Kernel rings, growth function, ring-height parsing |
 | `src/world.js` | The torus, the step, placement, mass and centroid |
 | `src/rle.js` | Lenia's run-length pattern text |
@@ -101,6 +124,7 @@ node scripts/probe.js kronium 1000 256 2
 | `src/seed.js` | Seeded soups and the brush |
 | `src/render.js` | Colour maps and field painting |
 | `src/settings.js` | Settings and share links |
+| `src/pace.js` | Frame budget for playback |
 | `src/main.js` | The page |
 
 ## Credits
