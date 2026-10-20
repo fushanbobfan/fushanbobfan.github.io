@@ -72,18 +72,30 @@ readouts show the steps per second it reaches and the measured cost of a step.
   puts one in the middle; the scale multiplies both the pattern and R, so the
   creature behaves the same, only larger. "Random soup" scatters seeded noise
   patches under the current rule.
-- **Tool**: click the world to place the selected creature, or paint and
+- **Tool**: click the world to place the selected creature, facing as
+  catalogued or turned by a quarter, half or three-quarter turn, or paint and
   erase with a soft brush.
 - **Rule**: R, T, μ, σ and the ring heights change live, so you can see how
   far a creature tolerates a change to its rule. "Use the species' rule" puts
   the original back.
+- **Rule inspector**: above the sliders, the kernel's profile from centre to
+  rim, and the growth curve G(U) with its positive band shaded. Behind the
+  curve, a histogram (square-root scaled) of the U that every non-empty
+  neighbourhood senses right now, and below it the share of those cells that
+  sit in the growth band. Move μ and the band slides away from the values the
+  creature's cells sense.
 - **View**: the cells A, the sensed field U (drawn up to 2μ so the growth
   band sits mid-scale), or the growth G(U), blue where cells shrink and warm
   where they grow.
+- **Tracking**: speed (in cells and in kernel radii per time unit), heading
+  and a trail follow the centre of mass of everything in the world, unwrapped
+  across the edges. With one creature alone they describe that creature; any
+  edit to the world starts a new track.
 - **Keep**: a share link restores the species, scale, grid, rule, view and
   soup seed. PNG saves the current frame.
 
-Keys: Space plays or pauses, S steps once, C clears. With reduced motion
+Keys: Space plays or pauses, S steps once, C clears, T turns the creature
+you place. With reduced motion
 requested, the page opens paused.
 
 ## The creatures
@@ -125,6 +137,9 @@ node scripts/probe.js kronium 1000 256 2
 | `src/render.js` | Colour maps and field painting |
 | `src/settings.js` | Settings and share links |
 | `src/pace.js` | Frame budget for playback |
+| `src/chart.js` | Geometry for the rule inspector |
+| `src/inspector.js` | Draws the rule inspector |
+| `src/track.js` | Centre-of-mass tracking, speed and heading |
 | `src/main.js` | The page |
 
 ## Credits

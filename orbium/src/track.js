@@ -1,6 +1,6 @@
 // Follows the world's centre of mass through time. Positions are unwrapped
-// across the torus seam, so a creature that leaves the right edge keeps
-// counting distance instead of jumping back.
+// across the torus seam: a creature that leaves the right edge and comes back
+// on the left keeps adding to its distance.
 
 import { torusDelta } from './world.js';
 
