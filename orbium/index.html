@@ -17,7 +17,7 @@
   <main class="layout">
     <section class="stage" aria-label="Lenia world">
       <canvas id="world" width="256" height="256" aria-describedby="stage-help"></canvas>
-      <p id="stage-help" class="help">Click or drag on the world to use the current tool. Space plays or pauses, S steps once, C clears.</p>
+      <p id="stage-help" class="help">Click or drag on the world to use the current tool. Space plays or pauses, S steps once, C clears, T turns the creature you place.</p>
       <div class="bar" role="group" aria-label="Playback">
         <button id="play" type="button" aria-pressed="true">Pause</button>
         <button id="step" type="button">Step</button>
@@ -31,6 +31,8 @@
         <div><dt>Mass</dt><dd id="r-mass">0</dd></div>
         <div><dt>Steps/s</dt><dd id="r-rate">0</dd></div>
         <div><dt>ms/step</dt><dd id="r-cost">–</dd></div>
+        <div><dt>Speed</dt><dd id="r-speed">–</dd></div>
+        <div><dt>Heading</dt><dd id="r-heading">–</dd></div>
       </dl>
     </section>
 
@@ -63,6 +65,14 @@
           <label class="chip"><input type="radio" name="tool" value="paint"> Paint</label>
           <label class="chip"><input type="radio" name="tool" value="erase"> Erase</label>
         </div>
+        <label>Creature facing
+          <select id="turn">
+            <option value="0">As catalogued</option>
+            <option value="1">Turned 90° clockwise</option>
+            <option value="2">Turned 180°</option>
+            <option value="3">Turned 90° anticlockwise</option>
+          </select>
+        </label>
         <label>Brush radius <output id="brush-out">8</output>
           <input id="brush" type="range" min="2" max="40" value="8">
         </label>
@@ -70,6 +80,8 @@
 
       <fieldset>
         <legend>Rule</legend>
+        <canvas id="inspector" width="600" height="400" role="img" aria-labelledby="inspector-text"></canvas>
+        <p id="inspector-text" class="note"></p>
         <label>Kernel radius R <output id="R-out"></output>
           <input id="R" type="range" min="4" max="64" step="1">
         </label>
@@ -106,6 +118,8 @@
             <option value="ink">Ink</option>
           </select>
         </label>
+        <label class="chip"><input id="trail" type="checkbox" checked> Trail of the centre of mass</label>
+        <p class="note">Speed, heading and the trail follow the centre of mass of everything in the world, so they describe a creature best when it is alone.</p>
         <label>Grid
           <select id="size">
             <option value="128">128 × 128</option>

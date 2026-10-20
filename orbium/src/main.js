@@ -6,6 +6,8 @@ import { PALETTES, DIVERGING, buildLut, paint, viewRange } from './render.js';
 import { parseRings, formatRings } from './rules.js';
 import { normalize, toHash, fromHash, ruleOf } from './settings.js';
 import { runSteps, smoothStepTime } from './pace.js';
+import { drawInspector } from './inspector.js';
+import { Tracker, compass } from './track.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('world');
@@ -14,6 +16,7 @@ const ctx = canvas.getContext('2d');
 let settings = fromHash(location.hash);
 let world = null;
 let image = null;
+let tracker = null;
 let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 let tool = 'stamp';
 const luts = {};
@@ -34,15 +37,19 @@ function makeWorld() {
   world = new World(settings.size, ruleOf(settings));
   canvas.width = canvas.height = settings.size;
   image = ctx.createImageData(settings.size, settings.size);
+  tracker = new Tracker(settings.size);
 }
 
 function placeSpecies(cx, cy) {
   const p = speciesPattern(species(), settings.scale);
-  world.place(p, Math.round(cx - p.width / 2), Math.round(cy - p.height / 2));
+  const turn = Number($('turn').value);
+  const [w, h] = turn % 2 ? [p.height, p.width] : [p.width, p.height];
+  world.place(p, Math.round(cx - w / 2), Math.round(cy - h / 2), { rotate: turn });
 }
 
 function loadAlone() {
   world.clear();
+  tracker.reset();
   placeSpecies(settings.size / 2, settings.size / 2);
   settings.start = 'species';
   draw();
@@ -51,6 +58,7 @@ function loadAlone() {
 function loadSoup(newSeed) {
   if (newSeed) settings.seed = Math.floor(Math.random() * 2 ** 31);
   world.clear();
+  tracker.reset();
   const area = (settings.size / 256) ** 2;
   soup(world, { seed: settings.seed, count: Math.max(4, Math.round(10 * area)), size: 2 * settings.R });
   settings.start = 'soup';
@@ -81,6 +89,25 @@ function draw() {
   const [lo, hi] = viewRange(view, world.rule);
   paint(field, image.data, view === 'growth' ? divergingLut : lut(settings.palette), lo, hi);
   ctx.putImageData(image, 0, 0);
+  if ($('trail').checked) drawTrail();
+}
+
+function drawTrail() {
+  ctx.save();
+  ctx.lineWidth = Math.max(0.6, (0.6 * settings.size) / 256);
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = settings.palette === 'ink' ? 'rgba(194, 73, 29, 0.6)' : 'rgba(255, 255, 255, 0.4)';
+  for (const run of tracker.segments()) {
+    ctx.beginPath();
+    run.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function inspect() {
+  if (world.time === 0 || !playing) world.sense();
+  $('inspector-text').textContent = drawInspector($('inspector'), world.rule, world.potential);
 }
 
 // ---- controls ----
@@ -117,11 +144,13 @@ function useSpeciesRule() {
   settings = normalize({ ...settings, R: r.R, T: r.T, mu: r.mu, sigma: r.sigma, rings: formatRings(r.rings) });
   world.setRule(ruleOf(settings));
   syncControls();
+  inspect();
 }
 
 function applyRule() {
   world.setRule(ruleOf(settings));
   if (!playing) draw();
+  inspect();
 }
 
 function setStatus(text) {
@@ -146,6 +175,7 @@ function bindControls() {
   $('soup').addEventListener('click', () => loadSoup(true));
   $('clear').addEventListener('click', () => {
     world.clear();
+    tracker.reset();
     draw();
   });
   $('reset-rule').addEventListener('click', () => {
@@ -177,6 +207,7 @@ function bindControls() {
     settings.view = e.target.value;
     draw();
   });
+  $('trail').addEventListener('change', () => draw());
   $('palette').addEventListener('change', (e) => {
     settings.palette = e.target.value;
     draw();
@@ -199,6 +230,7 @@ function bindControls() {
   $('step').addEventListener('click', () => {
     setPlaying(false);
     world.step();
+    tracker.push(world.time, world.centroid());
     draw();
     readouts();
   });
@@ -220,6 +252,10 @@ function bindControls() {
       $('step').click();
     } else if (e.key === 'c' || e.key === 'C') {
       $('clear').click();
+    } else if (e.key === 't' || e.key === 'T') {
+      const turn = $('turn');
+      turn.value = String((Number(turn.value) + 1) % 4);
+      setStatus(`Placing creatures ${turn.selectedOptions[0].textContent.toLowerCase()}.`);
     }
   });
 }
@@ -239,6 +275,7 @@ function cellAt(e) {
 
 function applyTool(e, first) {
   const [x, y] = cellAt(e);
+  tracker.reset();
   if (tool === 'stamp') {
     if (first) placeSpecies(x, y);
   } else {
@@ -301,6 +338,9 @@ const stepOnce = () => world.step();
 function readouts() {
   $('r-time').textContent = world.time.toFixed(1);
   $('r-mass').textContent = world.mass().toFixed(0);
+  const m = tracker.motion();
+  $('r-speed').textContent = m ? `${m.speed.toFixed(1)} cells/t (${(m.speed / world.rule.R).toFixed(2)} R/t)` : '–';
+  $('r-heading').textContent = m && m.speed > 0.05 ? `${Math.round(m.heading)}° ${compass(m.heading)}` : '–';
 }
 
 function frame(now) {
@@ -308,9 +348,13 @@ function frame(now) {
     const ran = runSteps(Number($('speed').value), stepOnce, clock);
     msPerStep = smoothStepTime(msPerStep, ran);
     stepsDone += ran.done;
+    tracker.push(world.time, world.centroid());
     draw();
   }
-  if (++frames % 10 === 0) readouts();
+  if (++frames % 10 === 0) {
+    readouts();
+    inspect();
+  }
   if (now - lastRate > 1000) {
     $('r-rate').textContent = String(Math.round((stepsDone * 1000) / (now - lastRate)));
     $('r-cost').textContent = msPerStep > 0 ? msPerStep.toFixed(1) : '–';
@@ -327,4 +371,5 @@ bindPointer();
 start();
 setPlaying(playing);
 readouts();
+inspect();
 requestAnimationFrame(frame);

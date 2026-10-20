@@ -6,6 +6,8 @@
   --line: #ddd4c6;
   --accent: #c2491d;
   --focus: #1d6fc2;
+  --band: rgba(194, 73, 29, 0.14);
+  --bars: rgba(29, 111, 194, 0.45);
   color-scheme: light dark;
 }
 
@@ -18,6 +20,8 @@
     --line: #34303a;
     --accent: #f08a4b;
     --focus: #6fb3ff;
+    --band: rgba(240, 138, 75, 0.18);
+    --bars: rgba(111, 179, 255, 0.5);
   }
 }
 
@@ -61,6 +65,8 @@ a { color: var(--accent); }
   touch-action: none;
   cursor: crosshair;
 }
+
+#inspector { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; }
 
 .help, .note { color: var(--muted); font-size: 0.85rem; margin: 6px 0; }
 
