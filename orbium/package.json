@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test",
     "serve": "node scripts/serve.js",
-    "probe": "node scripts/probe.js"
+    "probe": "node scripts/probe.js",
+    "bench": "node scripts/bench.js"
   },
   "keywords": [
     "lenia",
