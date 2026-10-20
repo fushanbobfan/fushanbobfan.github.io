@@ -108,18 +108,31 @@ export class World {
   // Centre of mass on the torus, by averaging each axis as an angle.
   centroid() {
     const { n, cells } = this;
+    if (!this.cosTable) {
+      const k = (2 * Math.PI) / n;
+      this.cosTable = Float64Array.from({ length: n }, (_, i) => Math.cos(k * i));
+      this.sinTable = Float64Array.from({ length: n }, (_, i) => Math.sin(k * i));
+    }
+    const { cosTable: C, sinTable: S } = this;
     let cx = 0, sx = 0, cy = 0, sy = 0, m = 0;
-    const k = (2 * Math.PI) / n;
     for (let y = 0; y < n; y++) {
+      let row = 0, rc = 0, rs = 0;
+      const o = y * n;
       for (let x = 0; x < n; x++) {
-        const v = cells[y * n + x];
+        const v = cells[o + x];
         if (v === 0) continue;
-        cx += v * Math.cos(k * x); sx += v * Math.sin(k * x);
-        cy += v * Math.cos(k * y); sy += v * Math.sin(k * y);
-        m += v;
+        rc += v * C[x];
+        rs += v * S[x];
+        row += v;
       }
+      cx += rc;
+      sx += rs;
+      cy += row * C[y];
+      sy += row * S[y];
+      m += row;
     }
     if (m === 0) return null;
+    const k = (2 * Math.PI) / n;
     const wrap = (c, s) => (((Math.atan2(s, c) / k) % n) + n) % n;
     return { x: wrap(cx, sx), y: wrap(cy, sy) };
   }
