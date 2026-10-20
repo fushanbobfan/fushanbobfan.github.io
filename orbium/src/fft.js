@@ -64,10 +64,52 @@ export function fft1d(re, im, n, inverse = false, offset = 0, stride = 1) {
   }
 }
 
+// Transforms columns x0..x1-1 of an n x n row-major grid together. Each
+// butterfly works on two whole row segments, so memory is read in order
+// instead of jumping a full row per element as a column-at-a-time pass does.
+export function fftColumns(re, im, n, inverse = false, x0 = 0, x1 = n) {
+  if (!isPowerOfTwo(n)) throw new RangeError(`FFT length must be a power of two, got ${n}`);
+  const { cos, sin, rev } = twiddles(n);
+  for (let i = 0; i < n; i++) {
+    const j = rev[i];
+    if (j > i) {
+      const a = i * n;
+      const b = j * n;
+      for (let x = x0; x < x1; x++) {
+        let t = re[a + x]; re[a + x] = re[b + x]; re[b + x] = t;
+        t = im[a + x]; im[a + x] = im[b + x]; im[b + x] = t;
+      }
+    }
+  }
+  const sign = inverse ? 1 : -1;
+  for (let size = 2; size <= n; size *= 2) {
+    const half = size / 2;
+    const step = n / size;
+    for (let start = 0; start < n; start += size) {
+      for (let k = 0; k < half; k++) {
+        const wr = cos[k * step];
+        const wi = sign * sin[k * step];
+        const a = (start + k) * n;
+        const b = a + half * n;
+        for (let x = x0; x < x1; x++) {
+          const br = re[b + x];
+          const bi = im[b + x];
+          const xr = br * wr - bi * wi;
+          const xi = br * wi + bi * wr;
+          re[b + x] = re[a + x] - xr;
+          im[b + x] = im[a + x] - xi;
+          re[a + x] += xr;
+          im[a + x] += xi;
+        }
+      }
+    }
+  }
+}
+
 // 2D transform of an n x n grid stored row-major. The inverse divides by n * n.
 export function fft2d(re, im, n, inverse = false) {
   for (let y = 0; y < n; y++) fft1d(re, im, n, inverse, y * n, 1);
-  for (let x = 0; x < n; x++) fft1d(re, im, n, inverse, x, n);
+  fftColumns(re, im, n, inverse);
   if (inverse) {
     const scale = 1 / (n * n);
     for (let i = 0; i < n * n; i++) {

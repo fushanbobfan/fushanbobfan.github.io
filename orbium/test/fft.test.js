@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fft1d, fft2d, isPowerOfTwo } from '../src/fft.js';
+import { fft1d, fft2d, fftColumns, isPowerOfTwo } from '../src/fft.js';
 
 function dft(re, im) {
   const n = re.length;
@@ -62,4 +62,29 @@ test('2D transform of a single impulse is flat, and its DC term is the sum', () 
   const sum = g.reduce((s, v) => s + v, 0);
   fft2d(g, new Float64Array(n * n), n);
   assert.ok(Math.abs(g[0] - sum) < 1e-9);
+});
+
+test('batched columns match one column at a time, and a column range leaves the rest alone', () => {
+  const n = 16;
+  const re = Float64Array.from({ length: n * n }, (_, i) => Math.sin(i * 0.37));
+  const im = Float64Array.from({ length: n * n }, (_, i) => Math.cos(i * 0.11));
+  const wantRe = re.slice();
+  const wantIm = im.slice();
+  for (let x = 0; x < n; x++) fft1d(wantRe, wantIm, n, false, x, n);
+  const r1 = re.slice();
+  const i1 = im.slice();
+  fftColumns(r1, i1, n);
+  close(r1, wantRe);
+  close(i1, wantIm);
+  const r2 = re.slice();
+  const i2 = im.slice();
+  fftColumns(r2, i2, n, false, 3, 9);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const i = y * n + x;
+      const inside = x >= 3 && x < 9;
+      assert.ok(Math.abs(r2[i] - (inside ? wantRe[i] : re[i])) < 1e-9);
+      assert.ok(Math.abs(i2[i] - (inside ? wantIm[i] : im[i])) < 1e-9);
+    }
+  }
 });
