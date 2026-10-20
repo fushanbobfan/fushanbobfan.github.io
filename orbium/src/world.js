@@ -2,7 +2,8 @@
 // cell senses U = K * A (the kernel-weighted average of its neighbourhood,
 // computed as a product of Fourier transforms) and moves by dt * G(U).
 
-import { fft2d, isPowerOfTwo } from './fft.js';
+import { isPowerOfTwo } from './fft.js';
+import { RealConvolver } from './convolve.js';
 import { kernelShell, growth } from './rules.js';
 
 export const DEFAULT_RULE = Object.freeze({ R: 13, T: 10, mu: 0.15, sigma: 0.015, rings: [1] });
@@ -42,20 +43,14 @@ export class World {
     this.cells = new Float64Array(n * n);
     this.potential = new Float64Array(n * n);
     this.change = new Float64Array(n * n);
-    this.re = new Float64Array(n * n);
-    this.im = new Float64Array(n * n);
+    this.conv = new RealConvolver(n);
     this.time = 0;
     this.setRule(rule);
   }
 
   setRule(rule) {
     this.rule = validateRule(rule);
-    const { n } = this;
-    const kr = kernelGrid(n, this.rule.R, this.rule.rings);
-    const ki = new Float64Array(n * n);
-    fft2d(kr, ki, n);
-    this.kRe = kr;
-    this.kIm = ki;
+    this.conv.setKernel(kernelGrid(this.n, this.rule.R, this.rule.rings));
   }
 
   clear() {
@@ -67,19 +62,7 @@ export class World {
 
   // Fills this.potential with K * A.
   sense() {
-    const { n, re, im, kRe, kIm } = this;
-    re.set(this.cells);
-    im.fill(0);
-    fft2d(re, im, n);
-    for (let i = 0; i < n * n; i++) {
-      const a = re[i];
-      const b = im[i];
-      re[i] = a * kRe[i] - b * kIm[i];
-      im[i] = a * kIm[i] + b * kRe[i];
-    }
-    fft2d(re, im, n, true);
-    this.potential.set(re);
-    return this.potential;
+    return this.conv.convolve(this.cells, this.potential);
   }
 
   step() {
