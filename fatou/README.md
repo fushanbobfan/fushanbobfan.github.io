@@ -49,8 +49,8 @@ bounded component is eventually carried into one of them. A point has phase
 2*p*, &hellip;, which is read off from where the orbit meets the cycle: if
 z<sub>n</sub> is near z*<sub>k</sub>, the phase is (*k* &minus; *n*) mod *p*.
 For the rabbit this paints the three ears around each pinch point in three
-colours, and applying the map moves every colour one step on. Choose "coloured
-by period" to give the whole basin one colour instead.
+colours, and applying the map moves every colour one step on. With "coloured
+by period" the whole basin takes one colour.
 
 The readout reports what happens to the orbit of 0 at the chosen *c*:
 
