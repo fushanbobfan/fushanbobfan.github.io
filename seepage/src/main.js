@@ -1,0 +1,491 @@
+import { createLattice, openFraction } from './lattice.js';
+import { labelClusters, summarise } from './clusters.js';
+import { BOND_THRESHOLD, SITE_THRESHOLD, addTrial, createAccumulator, summariseSweep, sweepLattice, trialSeed } from './sweep.js';
+import { COLOURINGS, PALETTES, gridDimensions, paintBurn, paintGrid, siteAtPixel } from './render.js';
+import { burn, frontSizes } from './burn.js';
+import { TAU, fitSlope, sizeDistribution } from './distribution.js';
+import { SIZES, decode, encode, normalise } from './share.js';
+import { barsPath, histogram, linePath } from './chart.js';
+import { randomSeed } from './rng.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('grid');
+const ctx = canvas.getContext('2d');
+const buffer = document.createElement('canvas');
+const bufferCtx = buffer.getContext('2d');
+
+const PLOT = { width: 220, height: 140 };
+const SWEEP_BINS = 201;
+
+let settings = decode(location.hash);
+let lat = null;
+let own = null; // this grid's own threshold and largest-cluster curve
+let result = null;
+let stats = null;
+let hovered = -1;
+let frame = 0;
+let sweep = null;
+let fire = null; // { result, fronts, step, playing, timer }
+
+const fmt = (x, d = 3) => (Number.isFinite(x) ? x.toFixed(d) : '–');
+const pct = (x) => `${(100 * x).toFixed(1)}%`;
+const threshold = () => (settings.mode === 'site' ? SITE_THRESHOLD : BOND_THRESHOLD);
+
+function rebuild() {
+  lat = createLattice({ size: settings.size, mode: settings.mode, seed: settings.seed });
+  own = sweepLattice(lat, SWEEP_BINS);
+  hovered = -1;
+  relabel();
+}
+
+function relabel() {
+  result = labelClusters(lat, settings.p);
+  stats = summarise(result);
+  if (hovered >= result.clusters.length) hovered = -1;
+  if (fire) relight();
+  schedule();
+}
+
+function schedule() {
+  if (!frame) frame = requestAnimationFrame(draw);
+}
+
+function fitCanvas() {
+  const { width } = gridDimensions(lat);
+  const css = canvas.getBoundingClientRect().width || 600;
+  const k = Math.max(1, Math.floor((css * (window.devicePixelRatio || 1)) / width));
+  if (canvas.width !== width * k) {
+    canvas.width = width * k;
+    canvas.height = width * k;
+  }
+}
+
+function paintView(highlight) {
+  const palette = PALETTES[settings.palette];
+  if (fire) return paintBurn(lat, settings.p, fire.result, fire.step, { palette });
+  return paintGrid(lat, settings.p, result, { colouring: settings.colouring, palette, highlight });
+}
+
+function draw() {
+  frame = 0;
+  const img = paintView(hovered);
+  buffer.width = img.width;
+  buffer.height = img.height;
+  bufferCtx.putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+  fitCanvas();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(buffer, 0, 0, canvas.width, canvas.height);
+  showText();
+  drawChart();
+  drawSizes();
+}
+
+function describeSpan(s) {
+  if (s.spansVertical && s.spansHorizontal) return 'a cluster spans the grid both ways';
+  if (s.spansVertical) return 'a cluster joins top to bottom';
+  if (s.spansHorizontal) return 'a cluster joins left to right';
+  return 'no cluster spans the grid';
+}
+
+function showText() {
+  const s = stats;
+  const kind = settings.mode === 'site' ? 'site' : 'bond';
+  $('p-out').textContent = fmt(settings.p);
+  $('status').textContent =
+    `${lat.size} × ${lat.size} ${kind} grid at p = ${fmt(settings.p)}: ${s.count.toLocaleString()} clusters, ` +
+    `the largest holds ${pct(s.largestFraction)} of the ${settings.mode === 'site' ? 'cells' : 'sites'}; ${describeSpan(s)}.`;
+  canvas.setAttribute('aria-label', `Percolation grid. ${$('status').textContent}`);
+
+  const rows = [
+    [settings.mode === 'site' ? 'Open cells' : 'Open links', pct(openFraction(lat, settings.p))],
+    ['Clusters', s.count.toLocaleString()],
+    ['Largest cluster', `${s.largest.toLocaleString()} (${pct(s.largestFraction)})`],
+    ['Spanning', s.spans ? `yes, ${s.spanningSize.toLocaleString()} ${settings.mode === 'site' ? 'cells' : 'sites'}` : 'no'],
+    ['Mean finite cluster', fmt(s.meanFiniteSize, 1)],
+    ["This grid's threshold", fmt(own.threshold, 4)],
+    ['Infinite-grid threshold', settings.mode === 'site' ? '≈ 0.5927' : '1/2 exactly'],
+  ];
+  const dl = $('stats');
+  dl.replaceChildren(...rows.flatMap(([k, v]) => {
+    const dt = document.createElement('dt');
+    dt.textContent = k;
+    const dd = document.createElement('dd');
+    dd.textContent = v;
+    return [dt, dd];
+  }));
+
+  if (hovered >= 0) {
+    const c = result.clusters[hovered];
+    const where = c.spans ? ', spanning the grid' : '';
+    $('probe').textContent = `Cluster ${hovered + 1} of ${result.clusters.length}: ${c.size.toLocaleString()} ${settings.mode === 'site' ? 'cells' : 'sites'}${where}.`;
+  } else {
+    $('probe').textContent = 'Point at a cluster to see its size.';
+  }
+}
+
+function drawAxes() {
+  const g = $('chart-grid');
+  const ns = 'http://www.w3.org/2000/svg';
+  const parts = [];
+  const line = (x1, y1, x2, y2) => {
+    const el = document.createElementNS(ns, 'line');
+    Object.entries({ x1, y1, x2, y2, class: 'axis' }).forEach(([k, v]) => el.setAttribute(k, v));
+    parts.push(el);
+  };
+  const text = (x, y, s, anchor) => {
+    const el = document.createElementNS(ns, 'text');
+    Object.entries({ x, y, class: 'tick', 'text-anchor': anchor }).forEach(([k, v]) => el.setAttribute(k, v));
+    el.textContent = s;
+    parts.push(el);
+  };
+  line(30, 150, 250, 150);
+  line(30, 10, 30, 150);
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    text(30 + t * PLOT.width, 162, String(t), 'middle');
+    text(26, 153 - t * PLOT.height, String(t), 'end');
+  }
+  text(140, 170, 'p', 'middle');
+  g.replaceChildren(...parts);
+}
+
+function drawChart() {
+  const x = (p) => (p * PLOT.width).toFixed(1);
+  $('chart-p').setAttribute('x1', x(settings.p));
+  $('chart-p').setAttribute('x2', x(settings.p));
+  $('chart-pc').setAttribute('x1', x(threshold()));
+  $('chart-pc').setAttribute('x2', x(threshold()));
+  const ps = Array.from({ length: SWEEP_BINS }, (_, b) => b / (SWEEP_BINS - 1));
+  if (sweep && sweep.acc.trials) {
+    const s = summariseSweep(sweep.acc);
+    $('chart-span').setAttribute('d', linePath(s.p, s.spanning, PLOT));
+    $('chart-largest').setAttribute('d', linePath(s.p, s.largest, PLOT));
+    $('chart-hist').setAttribute('d', barsPath(histogram(sweep.acc.thresholds, 100), PLOT));
+  } else {
+    // Before any sweep, show this grid alone: a step at its threshold.
+    $('chart-span').setAttribute('d', linePath(ps, ps.map((p) => (own.threshold < p ? 1 : 0)), PLOT));
+    $('chart-largest').setAttribute('d', linePath(ps, Array.from(own.largest), PLOT));
+    $('chart-hist').setAttribute('d', '');
+  }
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+function svgEl(name, attrs, text) {
+  const el = document.createElementNS(SVG, name);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+// Log-log chart of n(s): x spans sizes 1 to L^2, y spans eight decades down from 1.
+let sizesDrawnFor = null;
+
+function drawSizes() {
+  if (sizesDrawnFor === result) return;
+  sizesDrawnFor = result;
+  const sites = result.label.length;
+  const pts = sizeDistribution(result.clusters, sites);
+  const xMax = Math.log10(sites);
+  const yMin = -9;
+  const yMax = 0;
+  const X = (s) => (Math.log10(s) / xMax) * PLOT.width;
+  const Y = (n) => ((yMax - Math.log10(n)) / (yMax - yMin)) * PLOT.height;
+
+  const axes = [svgEl('line', { x1: 30, y1: 150, x2: 250, y2: 150, class: 'axis' }), svgEl('line', { x1: 30, y1: 10, x2: 30, y2: 150, class: 'axis' })];
+  for (let e = 0; e <= Math.floor(xMax); e += xMax > 4 ? 2 : 1) {
+    axes.push(svgEl('text', { x: 30 + X(10 ** e), y: 162, class: 'tick', 'text-anchor': 'middle' }, `10${superscript(e)}`));
+  }
+  for (let e = yMax; e >= yMin; e -= 3) {
+    axes.push(svgEl('text', { x: 26, y: 13 + Y(10 ** e), class: 'tick', 'text-anchor': 'end' }, `10${superscript(e)}`));
+  }
+  axes.push(svgEl('text', { x: 140, y: 170, class: 'tick', 'text-anchor': 'middle' }, 'cluster size s'));
+  $('sizes-axes').replaceChildren(...axes);
+
+  const shown = pts.filter((pt) => Math.log10(pt.n) >= yMin);
+  $('sizes-points').replaceChildren(...shown.map((pt) => svgEl('circle', { cx: X(pt.s).toFixed(1), cy: Y(pt.n).toFixed(1), r: 2.5 })));
+  $('sizes-line').setAttribute('d', shown.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.s).toFixed(1)},${Y(pt.n).toFixed(1)}`).join(''));
+
+  // Reference line of slope -tau through the bin starting at size 8 (or the first bin).
+  const anchor = pts.find((pt) => pt.lo === 8) || pts[0];
+  if (anchor) {
+    const at = (s) => anchor.n * (s / anchor.s) ** -TAU;
+    const s1 = 1;
+    const s2 = Math.min(sites, 10 ** ((Math.log10(anchor.n) - yMin) / TAU + Math.log10(anchor.s)));
+    $('sizes-ref').setAttribute('d', `M${X(s1).toFixed(1)},${Y(at(s1)).toFixed(1)}L${X(s2).toFixed(1)},${Y(at(s2)).toFixed(1)}`);
+  } else {
+    $('sizes-ref').setAttribute('d', '');
+  }
+
+  const slope = fitSlope(pts, 8);
+  $('sizes-out').textContent = Number.isFinite(slope)
+    ? `Fitted slope from size 8 up: ${fmt(slope, 2).replace('-', '−')}. On an infinite grid at the threshold it is −187/91 ≈ −2.055; finite grids come out a little shallower, and away from the threshold the large clusters drop off faster.`
+    : 'Too few finite clusters of size 8 or more to fit a slope.';
+}
+
+function superscript(e) {
+  const digits = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  return (e < 0 ? '⁻' : '') + String(Math.abs(e)).split('').map((d) => digits[d]).join('');
+}
+
+function showSweep(done) {
+  const s = summariseSweep(sweep.acc);
+  const kind = sweep.mode === 'site' ? 'site' : 'bond';
+  const known = sweep.mode === 'site' ? '0.5927' : '0.5';
+  const state = done ? '' : ' (running)';
+  $('sweep-out').textContent =
+    `${s.trials} ${sweep.size} × ${sweep.size} ${kind} grids${state}: thresholds average ${fmt(s.mean, 4)} ± ${fmt(s.stderr, 4)} ` +
+    `(spread ${fmt(s.sd, 3)}); the infinite grid's is ${known}. Larger grids give a narrower spread and a sharper step.`;
+}
+
+function startSweep() {
+  stopSweep();
+  const trials = Number($('trials').value);
+  sweep = {
+    mode: settings.mode,
+    size: settings.size,
+    seed: randomSeed(),
+    trials,
+    next: 0,
+    acc: createAccumulator(SWEEP_BINS),
+    timer: 0,
+  };
+  $('sweep').disabled = true;
+  $('sweep-stop').disabled = false;
+  const step = () => {
+    const start = performance.now();
+    while (sweep.next < sweep.trials && performance.now() - start < 30) {
+      const grid = createLattice({ size: sweep.size, mode: sweep.mode, seed: trialSeed(sweep.seed, sweep.next) });
+      addTrial(sweep.acc, sweepLattice(grid, SWEEP_BINS));
+      sweep.next++;
+    }
+    const done = sweep.next >= sweep.trials;
+    showSweep(done);
+    drawChart();
+    if (done) finishSweep();
+    else sweep.timer = setTimeout(step, 0);
+  };
+  step();
+}
+
+function finishSweep() {
+  $('sweep').disabled = false;
+  $('sweep-stop').disabled = true;
+}
+
+function stopSweep() {
+  if (sweep && sweep.timer) {
+    clearTimeout(sweep.timer);
+    sweep.timer = 0;
+    showSweep(true);
+  }
+  finishSweep();
+}
+
+function clearSweep() {
+  stopSweep();
+  sweep = null;
+  $('sweep-out').textContent = '';
+}
+
+// Burning keeps going when p or the grid changes: the fire is relit on the new grid
+// and stays at the same step.
+function relight() {
+  fire.result = burn(lat, settings.p);
+  fire.fronts = frontSizes(fire.result.time, fire.result.steps);
+  fire.step = Math.min(fire.step, fire.result.steps);
+  syncBurn();
+}
+
+function startBurn() {
+  if (fire && fire.step < fire.result.steps) {
+    playBurn();
+    return;
+  }
+  fire = { result: null, fronts: [], step: 0, playing: false, timer: 0 };
+  relight();
+  fire.step = 0;
+  playBurn();
+}
+
+function playBurn() {
+  fire.playing = true;
+  const tick = () => {
+    if (!fire || !fire.playing) return;
+    fire.step = Math.min(fire.result.steps, fire.step + Number($('burn-speed').value));
+    syncBurn();
+    schedule();
+    if (fire.step >= fire.result.steps) pauseBurn();
+    else fire.timer = requestAnimationFrame(tick);
+  };
+  syncBurn();
+  fire.timer = requestAnimationFrame(tick);
+}
+
+function pauseBurn() {
+  if (!fire) return;
+  fire.playing = false;
+  cancelAnimationFrame(fire.timer);
+  syncBurn();
+}
+
+function clearBurn() {
+  if (fire) cancelAnimationFrame(fire.timer);
+  fire = null;
+  syncBurn();
+  schedule();
+}
+
+function syncBurn() {
+  const slider = $('burn-step');
+  $('burn-pause').disabled = !fire || !fire.playing;
+  $('burn-clear').disabled = !fire;
+  slider.disabled = !fire;
+  $('burn-start').textContent = fire && fire.step < fire.result.steps && !fire.playing ? 'Resume' : 'Light the top row';
+  if (!fire) {
+    slider.max = '0';
+    slider.value = '0';
+    $('burn-step-out').textContent = '';
+    $('burn-out').textContent = '';
+    return;
+  }
+  const { steps, crossed } = fire.result;
+  slider.max = String(steps);
+  slider.value = String(fire.step);
+  $('burn-step-out').textContent = `${fire.step} of ${steps}`;
+  const front = fire.fronts[fire.step] || 0;
+  const unit = (settings.mode === 'site' ? 'cell' : 'site') + (front === 1 ? '' : 's');
+  let line = `Step ${fire.step}: ${front.toLocaleString()} ${unit} catching. `;
+  if (crossed >= 0) {
+    line += fire.step >= crossed
+      ? `The fire reached the bottom at step ${crossed}, ${(crossed / (lat.size - 1)).toFixed(2)} times the straight-line distance.`
+      : 'It has not reached the bottom yet.';
+  } else if (fire.step >= steps) {
+    line += steps ? `It burnt out after ${steps} steps without reaching the bottom.` : 'Nothing on the top row is open.';
+  } else {
+    line += 'It has not reached the bottom yet.';
+  }
+  $('burn-out').textContent = line;
+}
+
+function saveHash() {
+  const hash = encode(settings);
+  history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
+}
+
+function update(patch) {
+  const before = settings;
+  settings = normalise({ ...settings, ...patch });
+  syncControls();
+  saveHash();
+  const gridChanged = before.mode !== settings.mode || before.size !== settings.size || before.seed !== settings.seed;
+  if (before.mode !== settings.mode || before.size !== settings.size) clearSweep();
+  if (gridChanged) rebuild();
+  else if (before.p !== settings.p) relabel();
+  else schedule();
+}
+
+function syncControls() {
+  document.querySelectorAll('input[name="mode"]').forEach((el) => { el.checked = el.value === settings.mode; });
+  $('size').value = String(settings.size);
+  $('seed').value = String(settings.seed);
+  $('p').value = String(settings.p);
+  $('colouring').value = settings.colouring;
+  $('palette').value = settings.palette;
+}
+
+function hoverAt(event) {
+  const rect = canvas.getBoundingClientRect();
+  const { width } = gridDimensions(lat);
+  const px = Math.floor(((event.clientX - rect.left) / rect.width) * width);
+  const py = Math.floor(((event.clientY - rect.top) / rect.height) * width);
+  const site = siteAtPixel(lat, px, py);
+  const k = site >= 0 ? result.label[site] : -1;
+  if (k !== hovered) {
+    hovered = k;
+    schedule();
+  }
+}
+
+function savePng() {
+  const { width } = gridDimensions(lat);
+  const k = Math.max(1, Math.ceil(1024 / width));
+  const out = document.createElement('canvas');
+  out.width = width * k;
+  out.height = width * k;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  const img = paintView(-1);
+  buffer.width = img.width;
+  buffer.height = img.height;
+  bufferCtx.putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+  octx.drawImage(buffer, 0, 0, out.width, out.height);
+  out.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `seepage-${settings.mode}-${settings.size}-p${fmt(settings.p)}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  schedule();
+}
+
+function bind() {
+  $('size').replaceChildren(...SIZES.map((n) => new Option(`${n} × ${n}`, String(n))));
+  document.querySelectorAll('input[name="mode"]').forEach((el) => {
+    el.addEventListener('change', () => update({ mode: el.value }));
+  });
+  $('size').addEventListener('change', () => update({ size: Number($('size').value) }));
+  $('seed').addEventListener('change', () => update({ seed: Number($('seed').value) }));
+  $('p').addEventListener('input', () => update({ p: Number($('p').value) }));
+  $('colouring').addEventListener('change', () => update({ colouring: $('colouring').value }));
+  $('palette').addEventListener('change', () => update({ palette: $('palette').value }));
+  $('reseed').addEventListener('click', () => update({ seed: randomSeed() }));
+  $('to-threshold').addEventListener('click', () => update({ p: Math.floor(own.threshold * 1000 + 1) / 1000 }));
+  $('sweep').addEventListener('click', startSweep);
+  $('sweep-stop').addEventListener('click', stopSweep);
+  $('save-png').addEventListener('click', savePng);
+  $('burn-start').addEventListener('click', startBurn);
+  $('burn-pause').addEventListener('click', pauseBurn);
+  $('burn-clear').addEventListener('click', clearBurn);
+  $('burn-step').addEventListener('input', () => {
+    if (!fire) return;
+    const step = Number($('burn-step').value);
+    pauseBurn();
+    fire.step = step;
+    syncBurn();
+    schedule();
+  });
+  $('copy-link').addEventListener('click', async () => {
+    saveHash();
+    try {
+      await navigator.clipboard.writeText(location.href);
+      $('copy-link').textContent = 'Copied';
+    } catch {
+      $('copy-link').textContent = 'Copy failed';
+    }
+    setTimeout(() => { $('copy-link').textContent = 'Copy link'; }, 1500);
+  });
+
+  canvas.addEventListener('pointermove', hoverAt);
+  canvas.addEventListener('pointerleave', () => { hovered = -1; schedule(); });
+  canvas.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? 0.01 : 0.001;
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') update({ p: settings.p + step });
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') update({ p: settings.p - step });
+    else if (key === 't') update({ p: Math.floor(own.threshold * 1000 + 1) / 1000 });
+    else if (key === 'n') update({ seed: randomSeed() });
+    else if (key === 'b') update({ mode: settings.mode === 'site' ? 'bond' : 'site' });
+    else if (key === 'f') (fire ? clearBurn() : startBurn());
+    else if (key === 'c') update({ colouring: COLOURINGS[(COLOURINGS.indexOf(settings.colouring) + 1) % COLOURINGS.length] });
+    else return;
+    event.preventDefault();
+  });
+  window.addEventListener('resize', schedule);
+  window.addEventListener('hashchange', () => update(decode(location.hash)));
+}
+
+bind();
+drawAxes();
+syncControls();
+rebuild();
