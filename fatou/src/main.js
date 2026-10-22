@@ -74,8 +74,9 @@ function restart(p) {
     lut,
     density: state.density,
     offset: state.offset,
+    cycle: p.julia ? cycle : null,
   };
-  p.job = { view, opts, pass: 0, row: 0, started: performance.now() };
+  p.job ={ view, opts, pass: 0, row: 0, started: performance.now() };
   showStatus(p, 'rendering');
   requestFrame();
 }
@@ -543,6 +544,8 @@ bindControls();
 syncControls();
 attachPointer(M);
 attachPointer(J);
+// the Julia picture needs the cycle before its first render
+updateReadout();
 new ResizeObserver(resize).observe(document.querySelector('.planes'));
 resize();
 updateReadout();
