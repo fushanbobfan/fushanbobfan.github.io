@@ -1,0 +1,25 @@
+{
+  "name": "quincunx",
+  "version": "0.1.0",
+  "description": "A Galton board in the browser: drop balls through rows of pegs and watch the bell curve build up, checked against the binomial and normal distributions.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "galton-board",
+    "binomial-distribution",
+    "central-limit-theorem",
+    "probability",
+    "simulation",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/quincunx.git"
+  },
+  "private": false
+}
