@@ -1,0 +1,25 @@
+{
+  "name": "jostle",
+  "version": "0.1.0",
+  "description": "A hard-disk gas in the browser: hundreds of elastic disks collide in a box, their speeds settle into the Maxwell-Boltzmann distribution, and the pressure on the walls follows the equation of state.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "kinetic-theory",
+    "maxwell-boltzmann",
+    "molecular-dynamics",
+    "hard-disks",
+    "physics",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/jostle.git"
+  },
+  "private": false
+}
