@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gravity Garden</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Gravity Garden</h1>
+    <p class="subtitle">An interactive playground for Newtonian gravity and orbital mechanics.</p>
+  </header>
+
+  <main>
+    <div class="stage-wrap">
+      <canvas id="stage" width="800" height="600" role="img" tabindex="0"
+        aria-label="Simulation of orbiting bodies under gravity. Press Enter or Space while focused here to drop a new body at a random point. Drag empty space to pan the view, drag a body to launch it, scroll to zoom."></canvas>
+      <canvas id="minimap" width="160" height="120" role="img"
+        aria-label="Overview of every body in the system, with a box marking the main view's currently visible area"></canvas>
+    </div>
+
+    <!-- Announces events that change the body count without a direct user action to
+         explain them (a collision merging bodies, removing the selected body), since a
+         screen reader user wouldn't otherwise notice the count, or the inspector panel
+         closing if the removed/merged body was selected, just by watching the canvas. -->
+    <p id="sim-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+
+    <section class="controls" aria-label="Simulation controls">
+      <div class="control-row">
+        <label for="preset">Scenario</label>
+        <select id="preset"></select>
+      </div>
+
+      <div class="control-row">
+        <button id="toggle-play" type="button" aria-pressed="false" aria-keyshortcuts="Space">Pause</button>
+        <button id="reset" type="button" aria-keyshortcuts="r">Reset</button>
+        <button id="undo" type="button" aria-keyshortcuts="u" disabled>Undo</button>
+        <button id="redo" type="button" aria-keyshortcuts="y" disabled>Redo</button>
+      </div>
+
+      <div class="control-row">
+        <button id="reset-view" type="button" aria-keyshortcuts="0">Reset view</button>
+        <button id="frame-bodies" type="button" aria-keyshortcuts="f">Frame all bodies</button>
+        <span id="zoom-value">1.0&times;</span>
+      </div>
+
+      <div class="control-row">
+        <button id="export-scenario" type="button">Export scenario</button>
+        <button id="import-scenario" type="button">Import scenario&hellip;</button>
+        <input id="import-scenario-file" type="file" accept="application/json,.json" hidden />
+        <button id="copy-share-link" type="button">Copy share link</button>
+        <button id="download-snapshot" type="button">Download snapshot</button>
+      </div>
+
+      <div class="control-row">
+        <label for="save-name" class="sr-only">Name for this browser save</label>
+        <input id="save-name" type="text" placeholder="Save name&hellip;" maxlength="60" />
+        <button id="save-scenario" type="button">Save in browser</button>
+      </div>
+
+      <div class="control-row">
+        <label for="saved-scenarios" class="sr-only">Saved scenarios</label>
+        <select id="saved-scenarios"><option value="">No saves yet</option></select>
+        <button id="load-scenario" type="button" disabled>Load</button>
+        <button id="delete-scenario" type="button" disabled>Delete</button>
+      </div>
+      <p class="stats" id="scenario-io-status" aria-live="polite"></p>
+
+      <div class="control-row">
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="0.1" max="3" step="0.1" value="1" />
+        <span id="speed-value">1.0&times;</span>
+      </div>
+
+      <div class="control-row">
+        <label for="gravity">Gravitational constant (G)</label>
+        <input id="gravity" type="range" min="0.1" max="5" step="0.1" value="1" />
+        <span id="gravity-value">1.0</span>
+      </div>
+
+      <div class="control-row">
+        <label for="softening">Softening length</label>
+        <input id="softening" type="range" min="0" max="10" step="0.1" value="4" />
+        <span id="softening-value">4.0</span>
+      </div>
+
+      <div class="control-row">
+        <label for="trails">
+          <input id="trails" type="checkbox" checked />
+          Show trails
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="trail-length">Trail length</label>
+        <input id="trail-length" type="range" min="20" max="1000" step="20" value="400" />
+        <span id="trail-length-value">400</span>
+      </div>
+
+      <div class="control-row">
+        <label for="show-diagnostics">
+          <input id="show-diagnostics" type="checkbox" checked />
+          Show conservation chart
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="predict">
+          <input id="predict" type="checkbox" />
+          Show predicted paths
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-velocity-vectors">
+          <input id="show-velocity-vectors" type="checkbox" />
+          Show velocity vectors
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-acceleration-vectors">
+          <input id="show-acceleration-vectors" type="checkbox" />
+          Show acceleration vectors
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-mass-labels">
+          <input id="show-mass-labels" type="checkbox" />
+          Show mass labels
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-minimap">
+          <input id="show-minimap" type="checkbox" checked />
+          Show minimap
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-center-of-mass">
+          <input id="show-center-of-mass" type="checkbox" />
+          Show center of mass
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="track-center-of-mass">
+          <input id="track-center-of-mass" type="checkbox" />
+          Track center of mass
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-lagrange-points">
+          <input id="show-lagrange-points" type="checkbox" />
+          Show Lagrange points
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label for="show-scale-bar">
+          <input id="show-scale-bar" type="checkbox" checked />
+          Show scale bar
+        </label>
+      </div>
+
+      <p class="hint">
+        Click empty space on the canvas, or focus it and press Enter/Space, to drop a new body.
+        Click an existing body, or press <kbd>[</kbd>/<kbd>]</kbd>, to inspect it, or drag it to
+        aim and launch it. Drag empty space to pan the view, or scroll to zoom.
+      </p>
+      <details class="shortcuts">
+        <summary>Keyboard shortcuts</summary>
+        <ul>
+          <li><kbd>Space</kbd> play / pause</li>
+          <li><kbd>R</kbd> reset the scenario</li>
+          <li><kbd>U</kbd> undo the last add, remove, launch, or mass edit</li>
+          <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> raise / lower speed</li>
+          <li><kbd>T</kbd> toggle trails</li>
+          <li><kbd>C</kbd> toggle the conservation chart</li>
+          <li><kbd>P</kbd> toggle predicted paths</li>
+          <li><kbd>V</kbd> toggle velocity vectors</li>
+          <li><kbd>A</kbd> toggle acceleration vectors</li>
+          <li><kbd>M</kbd> toggle the minimap</li>
+          <li><kbd>L</kbd> toggle the scale bar</li>
+          <li><kbd>N</kbd> toggle mass labels</li>
+          <li><kbd>G</kbd> toggle Lagrange points</li>
+          <li><kbd>Enter</kbd> / <kbd>Space</kbd> on the canvas: drop a body</li>
+          <li><kbd>[</kbd> / <kbd>]</kbd> select the previous / next body</li>
+          <li><kbd>Esc</kbd> deselect the current body</li>
+          <li><kbd>Delete</kbd> / <kbd>Backspace</kbd> remove the selected body</li>
+          <li><kbd>+</kbd> / <kbd>-</kbd> zoom in / out</li>
+          <li><kbd>0</kbd> reset the view</li>
+          <li><kbd>F</kbd> frame all bodies</li>
+          <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> pan left / right</li>
+          <li><kbd>Shift</kbd>+<kbd>&uarr;</kbd> / <kbd>Shift</kbd>+<kbd>&darr;</kbd> pan up / down</li>
+        </ul>
+      </details>
+      <p class="stats" id="stats" aria-live="polite"></p>
+
+      <div class="diagnostics-panel" id="diagnostics-panel">
+        <canvas id="diagnostics-chart" width="220" height="90" role="img"
+          aria-label="Energy and momentum drift from their starting values, over time"></canvas>
+        <p class="diagnostics-legend">
+          <span class="swatch energy"></span> energy drift
+          <span class="swatch momentum"></span> momentum drift
+        </p>
+        <p class="stats" id="diagnostics-readout" aria-live="polite"></p>
+      </div>
+
+      <div class="inspector-panel" id="inspector-panel" hidden>
+        <div class="inspector-header">
+          <span>Selected body</span>
+          <button id="deselect" type="button" aria-keyshortcuts="Escape">Deselect</button>
+        </div>
+        <p class="stats" id="inspector-readout" aria-live="polite"></p>
+        <div class="control-row">
+          <label for="mass-input">Mass</label>
+          <input id="mass-input" type="number" min="0.01" step="any" />
+        </div>
+        <div class="control-row">
+          <label for="color-input">Color</label>
+          <input id="color-input" type="color" />
+        </div>
+        <label for="follow-selected">
+          <input id="follow-selected" type="checkbox" />
+          Keep centered
+        </label>
+        <button id="remove-body" type="button" aria-keyshortcuts="Delete">Remove body</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Physics: velocity-Verlet integration of pairwise Newtonian gravity, softened at short range.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

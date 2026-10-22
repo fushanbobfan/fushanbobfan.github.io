@@ -1,0 +1,11 @@
+{
+  "name": "gravity-garden",
+  "version": "1.0.0",
+  "description": "An interactive N-body gravity simulator for exploring orbital mechanics in the browser.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "license": "MIT"
+}

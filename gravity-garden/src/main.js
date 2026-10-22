@@ -1,0 +1,1435 @@
+import {
+  stepSimulation,
+  totalEnergy,
+  totalMomentum,
+  mergeCollidingBodies,
+  centerOfMass,
+  computeAccelerations,
+} from "./physics.js";
+import { PRESETS, listPresetNames } from "./presets.js";
+import { createDiagnosticsHistory, resetDiagnosticsHistory, recordSample } from "./diagnostics.js";
+import { predictTrajectory } from "./trajectory.js";
+import { pickPrimaryPair, lagrangePoints } from "./lagrange.js";
+import { findBodyAtPoint, describeBody, adjacentBodyId, removeBody, parseMassInput } from "./inspector.js";
+import { serializeScenario, deserializeScenario } from "./scenario.js";
+import { createHistory, pushHistory, popHistory, canPop } from "./history.js";
+import {
+  listSavedScenarioNames,
+  saveScenarioToStorage,
+  loadScenarioFromStorage,
+  deleteScenarioFromStorage,
+} from "./storage.js";
+import { launchVelocityFrom } from "./launch.js";
+import { buildShareUrl, extractShareFragment, decodeScenarioFromFragment } from "./shareLink.js";
+import { describeMerge, describeRemoval } from "./announcements.js";
+import {
+  createViewport,
+  worldToScreen as vpWorldToScreen,
+  screenToWorld as vpScreenToWorld,
+  panBy,
+  zoomAt,
+  resetViewport,
+  touchDistance,
+  touchMidpoint,
+  frameBodies,
+} from "./viewport.js";
+import { computeMinimapTransform, worldToMinimapPoint, viewportRectOnMinimap } from "./minimap.js";
+import { computeScaleBar } from "./scaleBar.js";
+import { computeVelocityArrow } from "./velocityVectors.js";
+import { computeAccelerationArrow } from "./accelerationVectors.js";
+import { formatMassLabel, massLabelPosition } from "./massLabels.js";
+import { formatElapsedTime } from "./elapsedTime.js";
+
+const canvas = document.getElementById("stage");
+const ctx = canvas.getContext("2d");
+
+const presetSelect = document.getElementById("preset");
+const toggleBtn = document.getElementById("toggle-play");
+const resetBtn = document.getElementById("reset");
+const speedInput = document.getElementById("speed");
+const speedValue = document.getElementById("speed-value");
+const gravityInput = document.getElementById("gravity");
+const gravityValue = document.getElementById("gravity-value");
+const softeningInput = document.getElementById("softening");
+const softeningValue = document.getElementById("softening-value");
+const trailsCheckbox = document.getElementById("trails");
+const trailLengthInput = document.getElementById("trail-length");
+const trailLengthValue = document.getElementById("trail-length-value");
+const statsEl = document.getElementById("stats");
+const diagnosticsCheckbox = document.getElementById("show-diagnostics");
+const diagnosticsPanel = document.getElementById("diagnostics-panel");
+const diagnosticsChart = document.getElementById("diagnostics-chart");
+const diagnosticsCtx = diagnosticsChart.getContext("2d");
+const minimapCanvas = document.getElementById("minimap");
+const minimapCtx = minimapCanvas.getContext("2d");
+const showMinimapCheckbox = document.getElementById("show-minimap");
+const showCenterOfMassCheckbox = document.getElementById("show-center-of-mass");
+const showLagrangePointsCheckbox = document.getElementById("show-lagrange-points");
+const showScaleBarCheckbox = document.getElementById("show-scale-bar");
+const trackCenterOfMassCheckbox = document.getElementById("track-center-of-mass");
+const diagnosticsReadout = document.getElementById("diagnostics-readout");
+const predictCheckbox = document.getElementById("predict");
+const showVelocityVectorsCheckbox = document.getElementById("show-velocity-vectors");
+const showAccelerationVectorsCheckbox = document.getElementById("show-acceleration-vectors");
+const showMassLabelsCheckbox = document.getElementById("show-mass-labels");
+const inspectorPanel = document.getElementById("inspector-panel");
+const inspectorReadout = document.getElementById("inspector-readout");
+const massInput = document.getElementById("mass-input");
+const colorInput = document.getElementById("color-input");
+const deselectBtn = document.getElementById("deselect");
+const removeBodyBtn = document.getElementById("remove-body");
+const resetViewBtn = document.getElementById("reset-view");
+const frameBodiesBtn = document.getElementById("frame-bodies");
+const zoomValue = document.getElementById("zoom-value");
+const followCheckbox = document.getElementById("follow-selected");
+const exportBtn = document.getElementById("export-scenario");
+const importBtn = document.getElementById("import-scenario");
+const importFileInput = document.getElementById("import-scenario-file");
+const copyShareLinkBtn = document.getElementById("copy-share-link");
+const downloadSnapshotBtn = document.getElementById("download-snapshot");
+const scenarioIoStatus = document.getElementById("scenario-io-status");
+const saveNameInput = document.getElementById("save-name");
+const saveScenarioBtn = document.getElementById("save-scenario");
+const savedScenariosSelect = document.getElementById("saved-scenarios");
+const loadScenarioBtn = document.getElementById("load-scenario");
+const deleteScenarioBtn = document.getElementById("delete-scenario");
+const announcer = document.getElementById("sim-announcer");
+const undoBtn = document.getElementById("undo");
+const redoBtn = document.getElementById("redo");
+
+const UNDO_HISTORY_SIZE = 20;
+const PAN_STEP = 40;
+const BASE_DT = 0.05;
+const PREDICTION_STEPS = 150;
+// Recomputing every tick is cheap even for the largest preset, but throttling avoids
+// wasted work if someone clicks a burst of new bodies into the scene in one frame.
+const PREDICTION_RECOMPUTE_INTERVAL = 10;
+// Velocity arrows are scaled by sqrt(speed) * VELOCITY_ARROW_SCALE, then clamped between
+// VELOCITY_ARROW_MIN (so a near-stationary body still shows a visible marker) and
+// VELOCITY_ARROW_MAX (so a rogue flyby's closest-approach speed doesn't dwarf the scene) —
+// tuned against the built-in presets' typical orbital and flyby speeds.
+const VELOCITY_ARROW_SCALE = 10;
+const VELOCITY_ARROW_MIN = 8;
+const VELOCITY_ARROW_MAX = 100;
+// Acceleration arrows use the same sqrt-scale-then-clamp scheme. Accelerations in the presets
+// run much smaller in raw magnitude than speeds, so the base scale is larger; the min and max
+// match the velocity arrows so the two overlays read as the same kind of mark.
+const ACCEL_ARROW_SCALE = 40;
+const ACCEL_ARROW_MIN = 8;
+const ACCEL_ARROW_MAX = 100;
+
+let currentPresetKey = "sun-and-planets";
+let bodies = [];
+let G = 1;
+let softening = 4;
+let running = true;
+let speed = 1;
+let showTrails = true;
+let trailLength = 400;
+let showDiagnostics = true;
+let showPrediction = false;
+let showVelocityVectors = false;
+let showAccelerationVectors = false;
+let showMassLabels = false;
+let showMinimap = true;
+let showCenterOfMass = false;
+let showLagrangePoints = false;
+let showScaleBar = true;
+// Simulated seconds actually applied so far (the running sum of each tick's dt while playing),
+// not wall-clock time — pausing or scrubbing speed leaves this readout faithful to the
+// simulation rather than to how long the browser tab has been open.
+let elapsedSimTime = 0;
+let predictedPaths = [];
+let ticksSincePrediction = Infinity;
+let lastPredictedBodyCount = -1;
+let nextBodyId = 1;
+let selectedBodyId = null;
+let followSelected = false;
+let trackCenterOfMass = false;
+let viewport = createViewport();
+let undoHistory = createHistory(UNDO_HISTORY_SIZE);
+let redoHistory = createHistory(UNDO_HISTORY_SIZE);
+// While set, a mouse or touch drag that started on this body previews a launch velocity
+// (see the mousedown/touchstart handlers below) instead of panning the view.
+let aimingBodyId = null;
+let aimPointerWorld = null;
+const diagnosticsHistory = createDiagnosticsHistory();
+
+for (const key of listPresetNames()) {
+  const option = document.createElement("option");
+  option.value = key;
+  option.textContent = PRESETS[key].label;
+  presetSelect.appendChild(option);
+}
+presetSelect.value = currentPresetKey;
+
+// Keeps the G and softening sliders (and their readouts) in sync whenever those values
+// change from somewhere other than dragging the slider itself — loading a preset, resetting,
+// importing a file, or restoring an undo snapshot. Setting `.value` past a slider's min/max
+// clamps to that bound (a browser range input's native behavior), so an out-of-range imported
+// value is visually pinned at the extreme without altering the actual running G/softening.
+function updateGravityReadouts() {
+  gravityInput.value = G;
+  gravityValue.textContent = G.toFixed(1);
+  softeningInput.value = softening;
+  softeningValue.textContent = softening.toFixed(1);
+}
+
+// Clears both the undo and redo stacks — called around actions that replace the whole
+// scenario (loadPreset, applyScenario), since neither undoing nor redoing back into a
+// scenario the current one replaced would make sense.
+function resetUndoRedoHistory() {
+  undoHistory = createHistory(UNDO_HISTORY_SIZE);
+  redoHistory = createHistory(UNDO_HISTORY_SIZE);
+  updateUndoButton();
+  updateRedoButton();
+}
+
+function loadPreset(key) {
+  const preset = PRESETS[key];
+  currentPresetKey = key;
+  G = preset.G;
+  softening = preset.softening;
+  bodies = preset.build().map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  resetDiagnosticsHistory(diagnosticsHistory);
+  predictedPaths = [];
+  lastPredictedBodyCount = -1;
+  selectedBodyId = null;
+  elapsedSimTime = 0;
+  viewport = resetViewport();
+  resetUndoRedoHistory();
+  updateGravityReadouts();
+}
+
+function worldToScreen(x, y) {
+  return vpWorldToScreen(viewport, canvas.width, canvas.height, x, y);
+}
+
+function screenToWorld(sx, sy) {
+  return vpScreenToWorld(viewport, canvas.width, canvas.height, sx, sy);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (showTrails) {
+    for (const body of bodies) {
+      if (body.trail.length < 2) continue;
+      ctx.beginPath();
+      ctx.strokeStyle = body.color;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 1;
+      const start = worldToScreen(body.trail[0].x, body.trail[0].y);
+      ctx.moveTo(start.sx, start.sy);
+      for (let i = 1; i < body.trail.length; i++) {
+        const p = worldToScreen(body.trail[i].x, body.trail[i].y);
+        ctx.lineTo(p.sx, p.sy);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  if (showPrediction && predictedPaths.length === bodies.length) {
+    ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.5;
+    bodies.forEach((body, i) => {
+      const path = predictedPaths[i];
+      if (path.length < 2) return;
+      ctx.beginPath();
+      ctx.strokeStyle = body.color;
+      ctx.lineWidth = 1;
+      const start = worldToScreen(path[0].x, path[0].y);
+      ctx.moveTo(start.sx, start.sy);
+      for (let j = 1; j < path.length; j++) {
+        const p = worldToScreen(path[j].x, path[j].y);
+        ctx.lineTo(p.sx, p.sy);
+      }
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
+  }
+
+  for (const body of bodies) {
+    const { sx, sy } = worldToScreen(body.x, body.y);
+    const screenRadius = body.radius * viewport.zoom;
+    ctx.beginPath();
+    ctx.fillStyle = body.color;
+    ctx.arc(sx, sy, screenRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (body.id === selectedBodyId) {
+      ctx.beginPath();
+      ctx.strokeStyle = "#e8ecf4";
+      ctx.lineWidth = 1.5;
+      ctx.arc(sx, sy, screenRadius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  if (showAccelerationVectors) drawAccelerationVectors();
+
+  if (showVelocityVectors) drawVelocityVectors();
+
+  if (showMassLabels) drawMassLabels();
+
+  if (aimingBodyId !== null && aimPointerWorld) {
+    const body = bodies.find((b) => b.id === aimingBodyId);
+    if (body) drawAimLine(body);
+  }
+
+  if (showCenterOfMass && bodies.length > 0) drawCenterOfMass();
+
+  if (showLagrangePoints) drawLagrangePoints();
+
+  if (showScaleBar) drawScaleBar();
+
+  if (showMinimap) drawMinimap();
+}
+
+// A map-style scale bar in the main canvas's bottom-left corner, showing how many world units a
+// given screen length represents at the current zoom (via scaleBar.js's computeScaleBar) — a
+// visual reference alongside the numeric zoom readout for judging distances at a glance, since
+// "1.0x" alone doesn't say whether a body is one unit or one hundred units away.
+function drawScaleBar() {
+  const { worldLength, pixelLength } = computeScaleBar(viewport.zoom);
+  const margin = 16;
+  const y = canvas.height - margin;
+  const x0 = margin;
+  const x1 = x0 + pixelLength;
+  const tickHalf = 5;
+
+  ctx.save();
+  ctx.strokeStyle = "#e8ecf4";
+  ctx.fillStyle = "#e8ecf4";
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.85;
+
+  ctx.beginPath();
+  ctx.moveTo(x0, y);
+  ctx.lineTo(x1, y);
+  ctx.moveTo(x0, y - tickHalf);
+  ctx.lineTo(x0, y + tickHalf);
+  ctx.moveTo(x1, y - tickHalf);
+  ctx.lineTo(x1, y + tickHalf);
+  ctx.stroke();
+
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText(String(worldLength), (x0 + x1) / 2, y - tickHalf - 2);
+
+  ctx.restore();
+}
+
+// A small crosshair at the system's mass-weighted center — the point every body actually
+// orbits (or drifts around), rather than whichever body looks biggest. Most useful on presets
+// like Binary Star + Planet, where neither star literally orbits the other.
+function drawCenterOfMass() {
+  const com = centerOfMass(bodies);
+  const { sx, sy } = worldToScreen(com.x, com.y);
+  const radius = 8;
+
+  ctx.save();
+  ctx.strokeStyle = "#e8ecf4";
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.85;
+
+  ctx.beginPath();
+  ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(sx - radius, sy);
+  ctx.lineTo(sx + radius, sy);
+  ctx.moveTo(sx, sy - radius);
+  ctx.lineTo(sx, sy + radius);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Small labelled diamonds at the five Lagrange points of the two heaviest bodies (via
+// lagrange.js), recomputed from their current positions every frame so the markers ride along
+// with the pair as it orbits. Most telling on Trojan Asteroid, where the asteroid visibly
+// librates around L4, and on Binary Star + Planet, where L1 sits between the two stars.
+function drawLagrangePoints() {
+  const pair = pickPrimaryPair(bodies);
+  if (!pair) return;
+  const points = lagrangePoints(pair[0], pair[1]);
+  if (!points) return;
+
+  ctx.save();
+  ctx.strokeStyle = "#b8c1d9";
+  ctx.fillStyle = "#b8c1d9";
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.85;
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  const size = 5;
+  for (const [name, point] of Object.entries(points)) {
+    const { sx, sy } = worldToScreen(point.x, point.y);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - size);
+    ctx.lineTo(sx + size, sy);
+    ctx.lineTo(sx, sy + size);
+    ctx.lineTo(sx - size, sy);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fillText(name, sx + size + 3, sy);
+  }
+
+  ctx.restore();
+}
+
+// Draws every body at a fixed fit-to-bounds scale (via minimap.js, independent of the main
+// viewport's own pan/zoom), plus an outline of what the main view currently shows — a "you are
+// here" box that shrinks as the main view zooms in, so it's still useful when zoomed in tight
+// on one part of a spread-out system.
+function drawMinimap() {
+  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+  const transform = computeMinimapTransform(bodies, minimapCanvas.width, minimapCanvas.height);
+
+  for (const body of bodies) {
+    const { x, y } = worldToMinimapPoint(transform, body.x, body.y);
+    minimapCtx.beginPath();
+    minimapCtx.fillStyle = body.color;
+    minimapCtx.arc(x, y, Math.max(1.5, body.radius * transform.scale), 0, Math.PI * 2);
+    minimapCtx.fill();
+  }
+
+  const rect = viewportRectOnMinimap(transform, viewport, canvas.width, canvas.height);
+  minimapCtx.strokeStyle = "#e8ecf4";
+  minimapCtx.lineWidth = 1;
+  minimapCtx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+}
+
+// A dashed line from the grabbed body to the pointer, with a dot at the pointer end,
+// mirroring the dashed predicted-path styling used elsewhere so it reads as a preview
+// rather than something already part of the simulation.
+// Draws each body's current velocity as a solid arrow from its position, via
+// velocityVectors.js's computeVelocityArrow — sqrt-scaled and clamped so a slow orbiting body
+// and a fast rogue flyby both draw a legible (rather than invisible or scene-dominating)
+// arrow. Colored per body (like trails and predicted paths) rather than a single fixed color,
+// since the arrow's start already pins it to its body but a shared hue still helps pick a
+// specific one out of a cluster.
+function drawVelocityVectors() {
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  for (const body of bodies) {
+    const arrow = computeVelocityArrow(body, VELOCITY_ARROW_SCALE, VELOCITY_ARROW_MIN, VELOCITY_ARROW_MAX);
+    const from = worldToScreen(arrow.x1, arrow.y1);
+    const to = worldToScreen(arrow.x2, arrow.y2);
+    const angle = Math.atan2(to.sy - from.sy, to.sx - from.sx);
+
+    ctx.strokeStyle = body.color;
+    ctx.fillStyle = body.color;
+
+    ctx.beginPath();
+    ctx.moveTo(from.sx, from.sy);
+    ctx.lineTo(to.sx, to.sy);
+    ctx.stroke();
+
+    const headLength = 6;
+    ctx.beginPath();
+    ctx.moveTo(to.sx, to.sy);
+    ctx.lineTo(to.sx - headLength * Math.cos(angle - Math.PI / 6), to.sy - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(to.sx - headLength * Math.cos(angle + Math.PI / 6), to.sy - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Draws each body's net gravitational acceleration as a dashed arrow from its position, via
+// accelerationVectors.js's computeAccelerationArrow. The accelerations are the same ones the
+// integrator uses this frame (computeAccelerations with the live G and softening). Dashed
+// rather than solid so it reads as a force acting on the body, matching the dashed predicted
+// path and aim line, and so it stays distinct where it overlaps the solid velocity arrow.
+function drawAccelerationVectors() {
+  if (bodies.length === 0) return;
+  const acc = computeAccelerations(bodies, G, softening);
+
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const arrow = computeAccelerationArrow(
+      body,
+      acc[i].ax,
+      acc[i].ay,
+      ACCEL_ARROW_SCALE,
+      ACCEL_ARROW_MIN,
+      ACCEL_ARROW_MAX,
+    );
+    const from = worldToScreen(arrow.x1, arrow.y1);
+    const to = worldToScreen(arrow.x2, arrow.y2);
+    const angle = Math.atan2(to.sy - from.sy, to.sx - from.sx);
+
+    ctx.strokeStyle = body.color;
+    ctx.fillStyle = body.color;
+
+    ctx.beginPath();
+    ctx.moveTo(from.sx, from.sy);
+    ctx.lineTo(to.sx, to.sy);
+    ctx.stroke();
+
+    // Solid arrowhead, even though the shaft is dashed, so the direction still reads cleanly.
+    ctx.save();
+    ctx.setLineDash([]);
+    const headLength = 6;
+    ctx.beginPath();
+    ctx.moveTo(to.sx, to.sy);
+    ctx.lineTo(to.sx - headLength * Math.cos(angle - Math.PI / 6), to.sy - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(to.sx - headLength * Math.cos(angle + Math.PI / 6), to.sy - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// Draws each body's mass as a small text label just below it, via massLabels.js's
+// formatMassLabel/massLabelPosition — a way to read every body's mass at a glance without
+// selecting each one in turn to open the inspector panel. Abbreviated ("20k" rather than
+// "20000") and anchored below the body so it stays legible in a dense cluster.
+function drawMassLabels() {
+  ctx.save();
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#e8ecf4";
+  ctx.globalAlpha = 0.85;
+  for (const body of bodies) {
+    const { sx, sy } = worldToScreen(body.x, body.y);
+    const screenRadius = body.radius * viewport.zoom;
+    const pos = massLabelPosition(sx, sy, screenRadius);
+    ctx.fillText(formatMassLabel(body.mass), pos.x, pos.y);
+  }
+  ctx.restore();
+}
+
+function drawAimLine(body) {
+  const from = worldToScreen(body.x, body.y);
+  const to = worldToScreen(aimPointerWorld.x, aimPointerWorld.y);
+
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = "#e8ecf4";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(from.sx, from.sy);
+  ctx.lineTo(to.sx, to.sy);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#e8ecf4";
+  ctx.beginPath();
+  ctx.arc(to.sx, to.sy, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawTrace(samples, key, color, scale) {
+  if (samples.length < 2) return;
+  const w = diagnosticsChart.width;
+  const h = diagnosticsChart.height;
+  const midY = h / 2;
+
+  diagnosticsCtx.beginPath();
+  diagnosticsCtx.strokeStyle = color;
+  diagnosticsCtx.lineWidth = 1.5;
+  samples.forEach((sample, i) => {
+    const x = (i / (diagnosticsHistory.maxLength - 1)) * w;
+    const y = midY - (sample[key] / scale) * midY;
+    if (i === 0) diagnosticsCtx.moveTo(x, y);
+    else diagnosticsCtx.lineTo(x, y);
+  });
+  diagnosticsCtx.stroke();
+}
+
+function drawDiagnostics() {
+  const w = diagnosticsChart.width;
+  const h = diagnosticsChart.height;
+  diagnosticsCtx.clearRect(0, 0, w, h);
+
+  // Zero line, since "no drift" is the whole point of the chart.
+  diagnosticsCtx.strokeStyle = "#232a3d";
+  diagnosticsCtx.lineWidth = 1;
+  diagnosticsCtx.beginPath();
+  diagnosticsCtx.moveTo(0, h / 2);
+  diagnosticsCtx.lineTo(w, h / 2);
+  diagnosticsCtx.stroke();
+
+  const samples = diagnosticsHistory.samples;
+  if (samples.length === 0) return;
+
+  // Auto-scale each trace to its own largest magnitude so slow drift is still visible,
+  // with a small floor so a perfectly flat trace doesn't divide by zero.
+  const energyScale = Math.max(...samples.map((s) => Math.abs(s.energyDriftPct)), 1e-6);
+  const momentumScale = Math.max(...samples.map((s) => Math.abs(s.momentumDrift)), 1e-6);
+
+  drawTrace(samples, "energyDriftPct", "#f8961e", energyScale);
+  drawTrace(samples, "momentumDrift", "#4cc9f0", momentumScale);
+}
+
+function updateInspectorPanel() {
+  const selected = bodies.find((b) => b.id === selectedBodyId);
+  inspectorPanel.hidden = !selected;
+  if (!selected) return;
+
+  const info = describeBody(selected);
+  inspectorReadout.textContent =
+    `position: (${info.x.toFixed(1)}, ${info.y.toFixed(1)})\n` +
+    `speed: ${info.speed.toFixed(2)}\n` +
+    `kinetic energy: ${info.kineticEnergy.toFixed(1)}`;
+
+  // Leave the field alone while the user is actively editing it, so a tick landing between
+  // keystrokes doesn't stomp on a value they haven't finished typing yet.
+  if (document.activeElement !== massInput) {
+    massInput.value = info.mass;
+  }
+  if (document.activeElement !== colorInput) {
+    colorInput.value = selected.color;
+  }
+}
+
+function tick() {
+  if (running) {
+    const dt = BASE_DT * speed;
+    elapsedSimTime += dt;
+    stepSimulation(bodies, dt, G, softening);
+    const countBeforeMerge = bodies.length;
+    bodies = mergeCollidingBodies(bodies);
+    const mergeAnnouncement = describeMerge(countBeforeMerge, bodies.length);
+    if (mergeAnnouncement) announcer.textContent = mergeAnnouncement;
+
+    // Merging fuses two bodies into a new one with no id of its own, so a
+    // selection pointed at either parent no longer resolves to anything.
+    if (selectedBodyId !== null && !bodies.some((b) => b.id === selectedBodyId)) {
+      selectedBodyId = null;
+    }
+
+    for (const body of bodies) {
+      if (showTrails) {
+        body.trail.push({ x: body.x, y: body.y });
+        while (body.trail.length > trailLength) body.trail.shift();
+      } else if (body.trail.length) {
+        body.trail.length = 0;
+      }
+    }
+
+    const energy = totalEnergy(bodies, G, softening);
+    const { px, py } = totalMomentum(bodies);
+    const sample = recordSample(diagnosticsHistory, energy, Math.hypot(px, py));
+
+    if (showDiagnostics) {
+      diagnosticsReadout.textContent =
+        `energy drift: ${sample.energyDriftPct.toFixed(2)}%\n` +
+        `momentum drift: ${sample.momentumDrift.toFixed(3)}`;
+    }
+  }
+
+  if (showPrediction) {
+    ticksSincePrediction++;
+    if (bodies.length !== lastPredictedBodyCount || ticksSincePrediction >= PREDICTION_RECOMPUTE_INTERVAL) {
+      predictedPaths = predictTrajectory(bodies, PREDICTION_STEPS, BASE_DT * speed, G, softening);
+      lastPredictedBodyCount = bodies.length;
+      ticksSincePrediction = 0;
+    }
+  }
+
+  if (followSelected && selectedBodyId !== null) {
+    const selected = bodies.find((b) => b.id === selectedBodyId);
+    if (selected) viewport = { ...viewport, panX: selected.x, panY: selected.y };
+  } else if (trackCenterOfMass && bodies.length > 0) {
+    const com = centerOfMass(bodies);
+    viewport = { ...viewport, panX: com.x, panY: com.y };
+  }
+
+  updateInspectorPanel();
+  draw();
+  if (showDiagnostics) drawDiagnostics();
+  statsEl.textContent =
+    `bodies: ${bodies.length}\n` +
+    `energy: ${totalEnergy(bodies, G, softening).toFixed(1)}\n` +
+    `elapsed: ${formatElapsedTime(elapsedSimTime)}`;
+
+  requestAnimationFrame(tick);
+}
+
+presetSelect.addEventListener("change", () => {
+  loadPreset(presetSelect.value);
+});
+
+toggleBtn.addEventListener("click", () => {
+  running = !running;
+  toggleBtn.textContent = running ? "Pause" : "Play";
+  toggleBtn.setAttribute("aria-pressed", String(!running));
+});
+
+resetBtn.addEventListener("click", () => {
+  loadPreset(currentPresetKey);
+});
+
+speedInput.addEventListener("input", () => {
+  speed = Number(speedInput.value);
+  speedValue.textContent = `${speed.toFixed(1)}×`;
+});
+
+gravityInput.addEventListener("input", () => {
+  G = Number(gravityInput.value);
+  gravityValue.textContent = G.toFixed(1);
+});
+
+softeningInput.addEventListener("input", () => {
+  softening = Number(softeningInput.value);
+  softeningValue.textContent = softening.toFixed(1);
+});
+
+trailsCheckbox.addEventListener("change", () => {
+  showTrails = trailsCheckbox.checked;
+});
+
+trailLengthInput.addEventListener("input", () => {
+  trailLength = Number(trailLengthInput.value);
+  trailLengthValue.textContent = trailLength;
+});
+
+diagnosticsCheckbox.addEventListener("change", () => {
+  showDiagnostics = diagnosticsCheckbox.checked;
+  diagnosticsPanel.hidden = !showDiagnostics;
+});
+
+predictCheckbox.addEventListener("change", () => {
+  showPrediction = predictCheckbox.checked;
+  ticksSincePrediction = Infinity;
+});
+
+showVelocityVectorsCheckbox.addEventListener("change", () => {
+  showVelocityVectors = showVelocityVectorsCheckbox.checked;
+});
+
+showAccelerationVectorsCheckbox.addEventListener("change", () => {
+  showAccelerationVectors = showAccelerationVectorsCheckbox.checked;
+});
+
+showMassLabelsCheckbox.addEventListener("change", () => {
+  showMassLabels = showMassLabelsCheckbox.checked;
+});
+
+showMinimapCheckbox.addEventListener("change", () => {
+  showMinimap = showMinimapCheckbox.checked;
+  minimapCanvas.hidden = !showMinimap;
+});
+
+showCenterOfMassCheckbox.addEventListener("change", () => {
+  showCenterOfMass = showCenterOfMassCheckbox.checked;
+});
+
+showLagrangePointsCheckbox.addEventListener("change", () => {
+  showLagrangePoints = showLagrangePointsCheckbox.checked;
+});
+
+showScaleBarCheckbox.addEventListener("change", () => {
+  showScaleBar = showScaleBarCheckbox.checked;
+});
+
+// "Keep centered" (follow the selected body) and "Track center of mass" both drive the
+// viewport's pan every tick, so turning one on turns the other off — otherwise whichever ran
+// last in tick() would silently win, and the unchecked box would look on but do nothing.
+followCheckbox.addEventListener("change", () => {
+  followSelected = followCheckbox.checked;
+  if (followSelected) {
+    trackCenterOfMass = false;
+    trackCenterOfMassCheckbox.checked = false;
+  }
+});
+
+trackCenterOfMassCheckbox.addEventListener("change", () => {
+  trackCenterOfMass = trackCenterOfMassCheckbox.checked;
+  if (trackCenterOfMass) {
+    followSelected = false;
+    followCheckbox.checked = false;
+  }
+});
+
+deselectBtn.addEventListener("click", () => {
+  selectedBodyId = null;
+});
+
+// Records the current bodies/G/softening (reusing scenario.js's serialization, so undo
+// doesn't need its own notion of what a "state" is) before a discrete, reversible action —
+// adding, removing, launching, or editing a body's mass or color. Skipped around actions that
+// replace the whole scenario (loadPreset, applyScenario), which clear both stacks instead via
+// resetUndoRedoHistory: undoing back into a scenario the current one replaced would restore
+// bodies from a different simulation. A fresh action also discards any pending redo history —
+// once it diverges from what was undone, redoing back to it would restore a state the action
+// just replaced.
+function snapshotForUndo() {
+  undoHistory = pushHistory(undoHistory, serializeScenario({ bodies, G, softening, viewport }));
+  redoHistory = createHistory(UNDO_HISTORY_SIZE);
+  updateUndoButton();
+  updateRedoButton();
+}
+
+function updateUndoButton() {
+  undoBtn.disabled = !canPop(undoHistory);
+}
+
+function updateRedoButton() {
+  redoBtn.disabled = !canPop(redoHistory);
+}
+
+function undo() {
+  const { snapshot, history: after } = popHistory(undoHistory);
+  if (!snapshot) return;
+  undoHistory = after;
+  redoHistory = pushHistory(redoHistory, serializeScenario({ bodies, G, softening, viewport }));
+  const restored = deserializeScenario(snapshot);
+  G = restored.G;
+  softening = restored.softening;
+  bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  selectedBodyId = null;
+  updateUndoButton();
+  updateRedoButton();
+  updateGravityReadouts();
+}
+
+function redo() {
+  const { snapshot, history: after } = popHistory(redoHistory);
+  if (!snapshot) return;
+  redoHistory = after;
+  undoHistory = pushHistory(undoHistory, serializeScenario({ bodies, G, softening, viewport }));
+  const restored = deserializeScenario(snapshot);
+  G = restored.G;
+  softening = restored.softening;
+  bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  selectedBodyId = null;
+  updateUndoButton();
+  updateRedoButton();
+  updateGravityReadouts();
+}
+
+undoBtn.addEventListener("click", undo);
+redoBtn.addEventListener("click", redo);
+
+function removeSelectedBody() {
+  if (selectedBodyId == null) return;
+  snapshotForUndo();
+  bodies = removeBody(bodies, selectedBodyId);
+  selectedBodyId = null;
+  announcer.textContent = describeRemoval(bodies.length);
+}
+
+removeBodyBtn.addEventListener("click", removeSelectedBody);
+
+// Fires on blur/Enter rather than every keystroke, so a value like "150" doesn't get rejected
+// (or momentarily applied) partway through typing it.
+massInput.addEventListener("change", () => {
+  const body = bodies.find((b) => b.id === selectedBodyId);
+  if (!body) return;
+  const mass = parseMassInput(massInput.value);
+  if (mass === null) {
+    massInput.value = body.mass;
+    return;
+  }
+  snapshotForUndo();
+  body.mass = mass;
+});
+
+// Fires once the color picker closes rather than on every drag across its gradient, so
+// undo gets one snapshot per color choice instead of one per intermediate hue.
+colorInput.addEventListener("change", () => {
+  const body = bodies.find((b) => b.id === selectedBodyId);
+  if (!body) return;
+  snapshotForUndo();
+  body.color = colorInput.value;
+});
+
+function updateZoomReadout() {
+  zoomValue.textContent = `${viewport.zoom.toFixed(1)}×`;
+}
+
+resetViewBtn.addEventListener("click", () => {
+  viewport = resetViewport();
+  updateZoomReadout();
+});
+
+// Framing all bodies would otherwise be immediately undone by "keep centered" or "track center
+// of mass" re-panning on the very next tick, so this turns both off first, the same way
+// manualPanBy does for a drag or arrow-key pan.
+frameBodiesBtn.addEventListener("click", () => {
+  followSelected = false;
+  followCheckbox.checked = false;
+  trackCenterOfMass = false;
+  trackCenterOfMassCheckbox.checked = false;
+  viewport = frameBodies(bodies, canvas.width, canvas.height);
+  updateZoomReadout();
+});
+
+exportBtn.addEventListener("click", () => {
+  const snapshot = serializeScenario({ bodies, G, softening, viewport });
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "gravity-garden-scenario.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  scenarioIoStatus.textContent = `Exported ${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}.`;
+});
+
+importBtn.addEventListener("click", () => {
+  importFileInput.click();
+});
+
+// A plain PNG of the current view, for sharing a still moment (a tight binary, a mid-collision
+// merge, a slingshot in progress) somewhere a live simulation or a JSON scenario file can't go.
+// Captures only the main stage, not the minimap or diagnostics chart — those are supplementary
+// readouts, not the view being shared.
+downloadSnapshotBtn.addEventListener("click", () => {
+  const link = document.createElement("a");
+  link.href = canvas.toDataURL("image/png");
+  link.download = `gravity-garden-${currentPresetKey}.png`;
+  link.click();
+  scenarioIoStatus.textContent = "Downloaded a snapshot of the current view.";
+});
+
+// Replaces the running simulation with a validated scenario (from an imported file or a
+// local save), shared by both since they only differ in where the raw JSON came from.
+function applyScenario(restored) {
+  G = restored.G;
+  softening = restored.softening;
+  bodies = restored.bodies.map((b) => ({ ...b, trail: [], id: nextBodyId++ }));
+  viewport = restored.viewport;
+  resetDiagnosticsHistory(diagnosticsHistory);
+  predictedPaths = [];
+  lastPredictedBodyCount = -1;
+  selectedBodyId = null;
+  elapsedSimTime = 0;
+  resetUndoRedoHistory();
+  updateZoomReadout();
+  updateGravityReadouts();
+}
+
+importFileInput.addEventListener("change", () => {
+  const file = importFileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      applyScenario(deserializeScenario(JSON.parse(reader.result)));
+      scenarioIoStatus.textContent = `Imported ${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}.`;
+    } catch (err) {
+      scenarioIoStatus.textContent = `Import failed: ${err.message}`;
+    }
+  };
+  reader.onerror = () => {
+    scenarioIoStatus.textContent = "Import failed: could not read the file.";
+  };
+  reader.readAsText(file);
+
+  // Reset so choosing the same file again still fires a "change" event.
+  importFileInput.value = "";
+});
+
+copyShareLinkBtn.addEventListener("click", async () => {
+  const url = buildShareUrl({ bodies, G, softening, viewport }, window.location.href);
+  try {
+    await navigator.clipboard.writeText(url);
+    scenarioIoStatus.textContent = "Share link copied to clipboard.";
+  } catch {
+    // Clipboard access can be denied (permissions, insecure context, older browsers); fall
+    // back to putting the link itself in the status line so it can still be copied by hand.
+    scenarioIoStatus.textContent = `Copy this link to share: ${url}`;
+  }
+});
+
+// Repopulates the saved-scenarios dropdown from storage, preserving the previous
+// selection if it still exists, and enables/disables Load and Delete accordingly.
+function refreshSavedScenariosList(selectName) {
+  const names = listSavedScenarioNames(window.localStorage);
+  savedScenariosSelect.innerHTML = "";
+
+  if (names.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No saves yet";
+    savedScenariosSelect.appendChild(option);
+  } else {
+    for (const name of names) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      savedScenariosSelect.appendChild(option);
+    }
+    if (selectName && names.includes(selectName)) {
+      savedScenariosSelect.value = selectName;
+    }
+  }
+
+  loadScenarioBtn.disabled = names.length === 0;
+  deleteScenarioBtn.disabled = names.length === 0;
+}
+
+saveScenarioBtn.addEventListener("click", () => {
+  try {
+    const name = saveNameInput.value;
+    saveScenarioToStorage(window.localStorage, name, serializeScenario({ bodies, G, softening, viewport }));
+    scenarioIoStatus.textContent = `Saved "${name.trim()}" in this browser.`;
+    saveNameInput.value = "";
+    refreshSavedScenariosList(name.trim());
+  } catch (err) {
+    scenarioIoStatus.textContent = `Save failed: ${err.message}`;
+  }
+});
+
+loadScenarioBtn.addEventListener("click", () => {
+  const name = savedScenariosSelect.value;
+  if (!name) return;
+  try {
+    applyScenario(deserializeScenario(loadScenarioFromStorage(window.localStorage, name)));
+    scenarioIoStatus.textContent = `Loaded "${name}" (${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}).`;
+  } catch (err) {
+    scenarioIoStatus.textContent = `Load failed: ${err.message}`;
+  }
+});
+
+deleteScenarioBtn.addEventListener("click", () => {
+  const name = savedScenariosSelect.value;
+  if (!name) return;
+  deleteScenarioFromStorage(window.localStorage, name);
+  scenarioIoStatus.textContent = `Deleted "${name}".`;
+  refreshSavedScenariosList();
+});
+
+refreshSavedScenariosList();
+
+// If the page was opened from a share link, load the scenario it encodes over the default
+// preset. Runs after the rest of the scenario I/O wiring above so applyScenario is ready, and
+// clears the hash afterward so refreshing the page doesn't reapply it over further edits.
+const shareFragment = extractShareFragment(window.location.hash);
+if (shareFragment !== null) {
+  try {
+    applyScenario(decodeScenarioFromFragment(shareFragment));
+    scenarioIoStatus.textContent = `Loaded shared scenario (${bodies.length} ${bodies.length === 1 ? "body" : "bodies"}).`;
+  } catch (err) {
+    scenarioIoStatus.textContent = `Share link failed: ${err.message}`;
+  }
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}
+
+function addBodyAt(x, y) {
+  snapshotForUndo();
+  bodies.push({
+    mass: 40,
+    x,
+    y,
+    vx: 0,
+    vy: 0,
+    radius: 5,
+    color: "#f8961e",
+    trail: [],
+    id: nextBodyId++,
+  });
+}
+
+function selectBody(id) {
+  selectedBodyId = selectedBodyId === id ? null : id;
+}
+
+const DRAG_THRESHOLD = 4;
+let isPointerDown = false;
+let dragMoved = false;
+let lastDragPoint = null;
+
+let isTouchDown = false;
+let touchDragMoved = false;
+let lastTouchPoint = null;
+let pinching = false;
+let lastPinchDistance = null;
+
+function canvasScale() {
+  const rect = canvas.getBoundingClientRect();
+  return { rect, scaleX: canvas.width / rect.width, scaleY: canvas.height / rect.height };
+}
+
+// Manual panning and "keep centered" both drive the same viewport, and would
+// otherwise fight each other every tick, so taking the wheel manually turns
+// auto-follow back off.
+function manualPanBy(dxScreen, dyScreen) {
+  if (followSelected) {
+    followSelected = false;
+    followCheckbox.checked = false;
+  }
+  if (trackCenterOfMass) {
+    trackCenterOfMass = false;
+    trackCenterOfMassCheckbox.checked = false;
+  }
+  viewport = panBy(viewport, dxScreen, dyScreen);
+}
+
+// Converts a client-space point (from a mouse or touch event) to world coordinates.
+function clientPointToWorld(clientX, clientY) {
+  const { rect, scaleX, scaleY } = canvasScale();
+  const sx = (clientX - rect.left) * scaleX;
+  const sy = (clientY - rect.top) * scaleY;
+  return screenToWorld(sx, sy);
+}
+
+canvas.addEventListener("mousedown", (event) => {
+  isPointerDown = true;
+  dragMoved = false;
+  lastDragPoint = { x: event.clientX, y: event.clientY };
+
+  // Starting the drag on an existing body aims a launch instead of panning the view,
+  // so grabbing a body always affects that body rather than whatever's under the
+  // pointer when the drag ends.
+  const { x, y } = clientPointToWorld(event.clientX, event.clientY);
+  const hit = findBodyAtPoint(bodies, x, y);
+  aimingBodyId = hit ? hit.id : null;
+});
+
+window.addEventListener("mousemove", (event) => {
+  if (!isPointerDown) return;
+  const dx = event.clientX - lastDragPoint.x;
+  const dy = event.clientY - lastDragPoint.y;
+  if (!dragMoved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
+  dragMoved = true;
+  lastDragPoint = { x: event.clientX, y: event.clientY };
+
+  if (aimingBodyId !== null) {
+    aimPointerWorld = clientPointToWorld(event.clientX, event.clientY);
+    canvas.classList.add("aiming");
+    return;
+  }
+
+  const { scaleX, scaleY } = canvasScale();
+  manualPanBy(dx * scaleX, dy * scaleY);
+  canvas.classList.add("panning");
+});
+
+window.addEventListener("mouseup", () => {
+  applyAimedLaunch(dragMoved);
+  isPointerDown = false;
+  canvas.classList.remove("panning");
+  canvas.classList.remove("aiming");
+});
+
+// If the drag that's ending was an aim (not a plain click/tap), sets the grabbed body's
+// velocity from where it was released and selects it so the inspector reflects the new
+// speed immediately. A click or tap that never crossed the drag threshold leaves `moved`
+// false, so it falls through to tapAt's normal select/drop handling instead. `moved` is
+// passed in rather than read from module state because mouse and touch track it in
+// separate flags (dragMoved vs. touchDragMoved).
+function applyAimedLaunch(moved) {
+  if (aimingBodyId === null || !moved || !aimPointerWorld) {
+    aimingBodyId = null;
+    aimPointerWorld = null;
+    return;
+  }
+
+  const body = bodies.find((b) => b.id === aimingBodyId);
+  if (body) {
+    snapshotForUndo();
+    const { vx, vy } = launchVelocityFrom(body.x, body.y, aimPointerWorld.x, aimPointerWorld.y);
+    body.vx = vx;
+    body.vy = vy;
+    selectedBodyId = body.id;
+  }
+
+  aimingBodyId = null;
+  aimPointerWorld = null;
+}
+
+// Shared by mouse clicks and touch taps: selects the body under the point,
+// or drops a new one if the point is empty space.
+function tapAt(clientX, clientY) {
+  const { x, y } = clientPointToWorld(clientX, clientY);
+
+  const hit = findBodyAtPoint(bodies, x, y);
+  if (hit) {
+    selectBody(hit.id);
+  } else {
+    addBodyAt(x, y);
+  }
+}
+
+canvas.addEventListener("click", (event) => {
+  // A click that ended a drag pans the view; it shouldn't also select or
+  // drop a body under the pointer's final position.
+  if (dragMoved) {
+    dragMoved = false;
+    return;
+  }
+
+  tapAt(event.clientX, event.clientY);
+});
+
+canvas.addEventListener(
+  "wheel",
+  (event) => {
+    event.preventDefault();
+    const { rect, scaleX, scaleY } = canvasScale();
+    const sx = (event.clientX - rect.left) * scaleX;
+    const sy = (event.clientY - rect.top) * scaleY;
+    const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+    viewport = zoomAt(viewport, canvas.width, canvas.height, sx, sy, factor);
+    updateZoomReadout();
+  },
+  { passive: false }
+);
+
+function touchPoint(touch) {
+  return { x: touch.clientX, y: touch.clientY };
+}
+
+// One finger pans and taps (mirroring mousedown/mousemove/click); two fingers pinch-zoom
+// around their midpoint (mirroring wheel). `{ passive: false }` plus preventDefault keeps
+// the browser from scrolling the page or firing synthetic mouse events for the same
+// gesture, since #stage already sets `touch-action: none`.
+canvas.addEventListener(
+  "touchstart",
+  (event) => {
+    event.preventDefault();
+    if (event.touches.length === 1) {
+      isTouchDown = true;
+      touchDragMoved = false;
+      pinching = false;
+      lastTouchPoint = touchPoint(event.touches[0]);
+
+      const { x, y } = clientPointToWorld(lastTouchPoint.x, lastTouchPoint.y);
+      const hit = findBodyAtPoint(bodies, x, y);
+      aimingBodyId = hit ? hit.id : null;
+    } else if (event.touches.length === 2) {
+      isTouchDown = false;
+      pinching = true;
+      aimingBodyId = null;
+      aimPointerWorld = null;
+      lastPinchDistance = touchDistance(touchPoint(event.touches[0]), touchPoint(event.touches[1]));
+    }
+  },
+  { passive: false }
+);
+
+canvas.addEventListener(
+  "touchmove",
+  (event) => {
+    event.preventDefault();
+    if (pinching && event.touches.length >= 2) {
+      const a = touchPoint(event.touches[0]);
+      const b = touchPoint(event.touches[1]);
+      const distance = touchDistance(a, b);
+      const mid = touchMidpoint(a, b);
+      const { rect, scaleX, scaleY } = canvasScale();
+      const sx = (mid.x - rect.left) * scaleX;
+      const sy = (mid.y - rect.top) * scaleY;
+      viewport = zoomAt(viewport, canvas.width, canvas.height, sx, sy, distance / lastPinchDistance);
+      updateZoomReadout();
+      lastPinchDistance = distance;
+    } else if (isTouchDown && event.touches.length === 1) {
+      const point = touchPoint(event.touches[0]);
+      const dx = point.x - lastTouchPoint.x;
+      const dy = point.y - lastTouchPoint.y;
+      if (!touchDragMoved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
+      touchDragMoved = true;
+      lastTouchPoint = point;
+
+      if (aimingBodyId !== null) {
+        aimPointerWorld = clientPointToWorld(point.x, point.y);
+        canvas.classList.add("aiming");
+        return;
+      }
+
+      const { scaleX, scaleY } = canvasScale();
+      manualPanBy(dx * scaleX, dy * scaleY);
+      canvas.classList.add("panning");
+    }
+  },
+  { passive: false }
+);
+
+function endTouch(event) {
+  event.preventDefault();
+  // A single touch that never moved past the drag threshold is a tap; drop or select a
+  // body at it. A pinch ending, or a pan/aim that already moved, isn't a tap.
+  if (isTouchDown && !touchDragMoved && !pinching && event.changedTouches.length > 0) {
+    const point = touchPoint(event.changedTouches[0]);
+    tapAt(point.x, point.y);
+  }
+  applyAimedLaunch(touchDragMoved);
+
+  // Lifting one finger of a two-finger pinch, or ending a pan early, just ends the
+  // current gesture rather than trying to hand off into the other mode mid-touch.
+  isTouchDown = false;
+  touchDragMoved = false;
+  pinching = false;
+  lastTouchPoint = null;
+  canvas.classList.remove("panning");
+  canvas.classList.remove("aiming");
+}
+
+canvas.addEventListener("touchend", endTouch, { passive: false });
+canvas.addEventListener("touchcancel", endTouch, { passive: false });
+
+// Dropping a body by clicking the canvas has no keyboard equivalent otherwise, so Enter/Space
+// on the focused canvas drops one at a random point within its bounds. Stops the event from
+// reaching the document-level shortcut handler below, since Space is also the play/pause key.
+canvas.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  event.stopPropagation();
+  const { x, y } = screenToWorld(Math.random() * canvas.width, Math.random() * canvas.height);
+  addBodyAt(x, y);
+});
+
+const FORM_CONTROL_TAGS = new Set(["INPUT", "SELECT", "TEXTAREA", "BUTTON"]);
+
+// Global shortcuts for the transport controls, so the simulation can be driven without a
+// mouse. Skipped while a form control has focus so arrow keys keep working on the speed
+// slider and Enter/Space keep working on buttons and the canvas handler above.
+document.addEventListener("keydown", (event) => {
+  if (FORM_CONTROL_TAGS.has(document.activeElement?.tagName)) return;
+
+  switch (event.key) {
+    case " ":
+      event.preventDefault();
+      toggleBtn.click();
+      break;
+    case "r":
+    case "R":
+      resetBtn.click();
+      break;
+    case "f":
+    case "F":
+      frameBodiesBtn.click();
+      break;
+    case "u":
+    case "U":
+      undoBtn.click();
+      break;
+    case "y":
+    case "Y":
+      redoBtn.click();
+      break;
+    case "t":
+    case "T":
+      trailsCheckbox.checked = !trailsCheckbox.checked;
+      trailsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "c":
+    case "C":
+      diagnosticsCheckbox.checked = !diagnosticsCheckbox.checked;
+      diagnosticsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "p":
+    case "P":
+      predictCheckbox.checked = !predictCheckbox.checked;
+      predictCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "v":
+    case "V":
+      showVelocityVectorsCheckbox.checked = !showVelocityVectorsCheckbox.checked;
+      showVelocityVectorsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "a":
+    case "A":
+      showAccelerationVectorsCheckbox.checked = !showAccelerationVectorsCheckbox.checked;
+      showAccelerationVectorsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "m":
+    case "M":
+      showMinimapCheckbox.checked = !showMinimapCheckbox.checked;
+      showMinimapCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "b":
+    case "B":
+      showCenterOfMassCheckbox.checked = !showCenterOfMassCheckbox.checked;
+      showCenterOfMassCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "l":
+    case "L":
+      showScaleBarCheckbox.checked = !showScaleBarCheckbox.checked;
+      showScaleBarCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "g":
+    case "G":
+      showLagrangePointsCheckbox.checked = !showLagrangePointsCheckbox.checked;
+      showLagrangePointsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "n":
+    case "N":
+      showMassLabelsCheckbox.checked = !showMassLabelsCheckbox.checked;
+      showMassLabelsCheckbox.dispatchEvent(new Event("change"));
+      break;
+    case "]":
+      selectedBodyId = adjacentBodyId(bodies, selectedBodyId, 1);
+      break;
+    case "[":
+      selectedBodyId = adjacentBodyId(bodies, selectedBodyId, -1);
+      break;
+    case "Escape":
+      selectedBodyId = null;
+      break;
+    case "Delete":
+    case "Backspace":
+      // Backspace's default action is "navigate back" outside a text field, which would
+      // otherwise leave the page when removing a body with nothing focused.
+      event.preventDefault();
+      removeSelectedBody();
+      break;
+    case "ArrowUp":
+      event.preventDefault();
+      if (event.shiftKey) {
+        manualPanBy(0, PAN_STEP);
+      } else {
+        speedInput.value = Math.min(Number(speedInput.max), speed + 0.1).toFixed(1);
+        speedInput.dispatchEvent(new Event("input"));
+      }
+      break;
+    case "ArrowDown":
+      event.preventDefault();
+      if (event.shiftKey) {
+        manualPanBy(0, -PAN_STEP);
+      } else {
+        speedInput.value = Math.max(Number(speedInput.min), speed - 0.1).toFixed(1);
+        speedInput.dispatchEvent(new Event("input"));
+      }
+      break;
+    case "ArrowLeft":
+      event.preventDefault();
+      manualPanBy(PAN_STEP, 0);
+      break;
+    case "ArrowRight":
+      event.preventDefault();
+      manualPanBy(-PAN_STEP, 0);
+      break;
+    case "+":
+    case "=":
+      viewport = zoomAt(viewport, canvas.width, canvas.height, canvas.width / 2, canvas.height / 2, 1.2);
+      updateZoomReadout();
+      break;
+    case "-":
+      viewport = zoomAt(viewport, canvas.width, canvas.height, canvas.width / 2, canvas.height / 2, 1 / 1.2);
+      updateZoomReadout();
+      break;
+    case "0":
+      viewport = resetViewport();
+      updateZoomReadout();
+      break;
+    default:
+      break;
+  }
+});
+
+loadPreset(currentPresetKey);
+updateZoomReadout();
+requestAnimationFrame(tick);
