@@ -1,0 +1,27 @@
+{
+  "name": "prismatic",
+  "version": "0.1.0",
+  "description": "A 2D optics bench in the browser: trace light through prisms, lenses and mirrors.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "optics",
+    "ray-tracing",
+    "refraction",
+    "snell",
+    "fresnel",
+    "physics",
+    "simulation",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/prismatic.git"
+  },
+  "private": false
+}
