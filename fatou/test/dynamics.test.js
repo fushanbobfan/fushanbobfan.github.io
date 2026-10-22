@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   sample, orbit, inMainCardioid, inPeriod2Bulb,
-  ESCAPED, SMOOTH, DISTANCE, PERIOD, SAMPLE_SIZE,
+  ESCAPED, SMOOTH, DISTANCE, PERIOD, STEPS, LAST_X, LAST_Y, SAMPLE_SIZE,
 } from '../src/dynamics.js';
 
 const out = new Float64Array(SAMPLE_SIZE);
@@ -81,6 +81,14 @@ test('Julia sampling uses z0 as the variable', () => {
   assert.ok(d <= 0.5 && d >= 0.5 / 4, `distance ${d} from 1.5 to the unit circle`);
   // for c = -1 the basin around 0 settles on the 2-cycle {0, -1}
   assert.equal(s(0.1, 0.1, -1, 0)[PERIOD], 2);
+});
+
+test('a settled orbit records where and when it met its cycle', () => {
+  // z0 = -1 under c = -1: -1, 0, -1 returns to the saved start after 2 steps
+  const s = Array.from(sample(out, -1, 0, -1, 0, 100, true));
+  assert.equal(s[PERIOD], 2);
+  assert.equal(s[STEPS], 2);
+  assert.deepEqual([s[LAST_X], s[LAST_Y]], [-1, 0]);
 });
 
 test('orbit stops after leaving the radius and keeps the escaping point', () => {

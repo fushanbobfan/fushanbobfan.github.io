@@ -1,5 +1,5 @@
 // Page state and its share-link form, e.g.
-//   #c=-0.12,0.74&m=-0.75,0,3.2&j=0,0,3.6&it=0&pal=ember&col=bands&int=period&den=1&off=0
+//   #c=-0.12,0.74&m=-0.75,0,3.2&j=0,0,3.6&it=0&pal=ember&col=bands&int=phase&den=1&off=0
 // Views are stored as centre and width in the plane so a link looks the same
 // on any screen. Anything missing or out of range falls back to the default.
 
@@ -12,13 +12,13 @@ export const DEFAULTS = {
   iterations: 0, // 0 = follow the zoom depth
   palette: 'ember',
   colouring: 'bands',
-  interior: 'period',
+  interior: 'phase',
   density: 1,
   offset: 0,
 };
 
 const COLOURINGS = ['bands', 'boundary'];
-const INTERIORS = ['period', 'dark'];
+const INTERIORS = ['phase', 'period', 'dark'];
 
 function numbers(text, count) {
   if (typeof text !== 'string') return null;

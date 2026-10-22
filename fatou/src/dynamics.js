@@ -13,7 +13,10 @@ export const ESCAPED = 0; // 1 if the orbit left the bailout disk, else 0
 export const SMOOTH = 1; // continuous escape count (escaped points only)
 export const DISTANCE = 2; // distance estimate to the set (escaped points only)
 export const PERIOD = 3; // period of the cycle the orbit settled on, 0 if unknown
-export const SAMPLE_SIZE = 4;
+export const STEPS = 4; // when PERIOD > 0: the n at which the cycle was detected
+export const LAST_X = 5; // when PERIOD > 0: z_n, a point on the cycle
+export const LAST_Y = 6;
+export const SAMPLE_SIZE = 7;
 
 // Points in the main cardioid or the period-2 disk never escape, and they are
 // a large part of the default view, so they are answered without iterating.
@@ -44,6 +47,9 @@ export function sample(out, zx, zy, cx, cy, maxIter, julia) {
   out[SMOOTH] = 0;
   out[DISTANCE] = 0;
   out[PERIOD] = 0;
+  out[STEPS] = 0;
+  out[LAST_X] = zx;
+  out[LAST_Y] = zy;
 
   let x = zx;
   let y = zy;
@@ -80,6 +86,9 @@ export function sample(out, zx, zy, cx, cy, maxIter, julia) {
     const ey = y - sy;
     if (ex * ex + ey * ey < eps * eps) {
       out[PERIOD] = sinceSave;
+      out[STEPS] = n + 1;
+      out[LAST_X] = x;
+      out[LAST_Y] = y;
       return out;
     }
     if (sinceSave === saveAt) {

@@ -38,8 +38,19 @@ Inside the Mandelbrot set, most points belong to a *hyperbolic component*: a
 region where the orbit of 0 is drawn into an attracting cycle of a fixed
 length, the component's period. The main cardioid has period 1, the large
 disk to its left period 2, and every bulb and every small copy of the set has
-its own. With "Inside: coloured by period" the components are painted by that
-period, in both pictures.
+its own. In the parameter plane the components are painted by that period.
+
+In the dynamical plane the default ("by period; Julia basin by phase")
+colours the bounded Fatou components by their *phase*. An attracting cycle
+z*<sub>0</sub> &rarr; &hellip; &rarr; z*<sub>p&minus;1</sub> has one component
+around each cycle point, and the map carries each onto the next; every other
+bounded component is eventually carried into one of them. A point has phase
+*j* when its orbit is in the component of z*<sub>j</sub> at times 0, *p*,
+2*p*, &hellip;, which is read off from where the orbit meets the cycle: if
+z<sub>n</sub> is near z*<sub>k</sub>, the phase is (*k* &minus; *n*) mod *p*.
+For the rabbit this paints the three ears around each pinch point in three
+colours, and applying the map moves every colour one step on. With "coloured
+by period" the whole basin takes one colour.
 
 The readout reports what happens to the orbit of 0 at the chosen *c*:
 
@@ -126,6 +137,7 @@ canvas's full resolution once it has finished refining.
 | `src/dynamics.js` | escape time, smooth count, distance estimate, periodicity check, orbits |
 | `src/cycle.js` | attracting cycle and multiplier of the critical orbit; component centres by Newton's method |
 | `src/bulbs.js` | the p/q bulbs of the main cardioid: roots, normals, checked centres |
+| `src/basin.js` | the phase of a starting point in the attracting basin |
 | `src/view.js` | pixel &harr; plane mapping, zoom about a point, pan, precision limit, iteration budget |
 | `src/palette.js` | cyclic gradients and period colours |
 | `src/render.js` | sample to colour, row-range rendering into an RGBA buffer |

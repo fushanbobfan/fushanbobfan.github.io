@@ -28,6 +28,8 @@ test('settings survive a round trip at full precision', () => {
 test('bad or out-of-range values fall back one by one', () => {
   const s = decodeSettings('#c=nope&m=0,0,-1&j=0,0&it=2.5&pal=neon&col=x&int=y&den=50&off=2');
   assert.deepEqual(s, DEFAULTS);
+  assert.equal(decodeSettings('#int=period').interior, 'period');
+  assert.equal(decodeSettings('#int=phase').interior, 'phase');
   const t = decodeSettings('#c=0.25,0&pal=moss&off=0.5');
   assert.deepEqual(t.c, [0.25, 0]);
   assert.equal(t.palette, 'moss');

@@ -3,9 +3,10 @@
 
 import {
   sample, inMainCardioid, inPeriod2Bulb,
-  ESCAPED, SMOOTH, DISTANCE, PERIOD, SAMPLE_SIZE,
+  ESCAPED, SMOOTH, DISTANCE, PERIOD, STEPS, LAST_X, LAST_Y, SAMPLE_SIZE,
 } from './dynamics.js';
 import { lutIndex, periodColour } from './palette.js';
+import { phaseOf } from './basin.js';
 
 const DARK = [6, 6, 10];
 
@@ -25,7 +26,12 @@ export function shadeSample(s, opts, pixel, rgb) {
     rgb[2] = opts.lut[i + 2] * k;
     return rgb;
   }
-  const c = opts.interior === 'period' ? periodColour(s[PERIOD]) : DARK;
+  let c = DARK;
+  if (opts.interior === 'phase' && opts.cycle && s[PERIOD] === opts.cycle.period) {
+    c = periodColour(1 + phaseOf(opts.cycle.points, s[STEPS], s[LAST_X], s[LAST_Y]));
+  } else if (opts.interior !== 'dark') {
+    c = periodColour(s[PERIOD]);
+  }
   rgb[0] = c[0];
   rgb[1] = c[1];
   rgb[2] = c[2];
