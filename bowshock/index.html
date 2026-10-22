@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bowshock · the Doppler effect and the Mach cone</title>
+    <meta name="description" content="A moving source sends out circular crests and a listener hears the shifted pitch. Push the source past the speed of sound and the crests pile up into a Mach cone: silence ahead, a boom at the edge, and two copies of the sound behind it, one of them backwards." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>bowshock</h1>
+      <p class="subtitle">
+        Each ring is one beat of the source's tone, spreading at the speed of sound from where the source was when it
+        left. A moving source crowds its rings ahead and spaces them out behind, so the listener hears the pitch fall
+        as it goes by. Past Mach 1 the source outruns its own rings, and they pile up into a cone that sweeps over the
+        listener as a boom.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="canvas-wrap">
+          <canvas id="world" tabindex="0" role="img" aria-label="The moving source, its sound crests, the listener and the Mach cone. Drag to move the listener; arrow keys move it too."></canvas>
+        </div>
+        <div class="transport" role="group" aria-label="Playback">
+          <button type="button" id="play" aria-pressed="true">Pause</button>
+          <button type="button" id="restart">Restart</button>
+          <button type="button" id="sound" aria-pressed="false">Sound on</button>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="hint">Drag the green ring to move the listener. With "Follow the pointer", drag anywhere else to steer the source. Space pauses, R restarts, M toggles sound.</p>
+      </section>
+
+      <aside class="panel">
+        <section aria-labelledby="h-heard">
+          <h2 id="h-heard">What the listener hears</h2>
+          <canvas id="pitch" class="chart" role="img" aria-label="Pitch heard by the listener over the last ten seconds, as a multiple of the emitted pitch on a log scale"></canvas>
+          <p class="legend"><span class="key up"></span> higher <span class="key down"></span> lower <span class="key back"></span> heard backwards</p>
+          <dl class="readout">
+            <div><dt>Images</dt><dd id="count">–</dd></div>
+            <div><dt>Pitch now</dt><dd id="ratios">–</dd></div>
+            <div><dt>Delay</dt><dd id="delay">–</dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="h-mic">
+          <h2 id="h-mic">Microphone</h2>
+          <canvas id="mic" class="chart short" role="img" aria-label="Pressure at the listener over the last four seconds, with booms marked by dashed red lines"></canvas>
+          <dl class="readout">
+            <div><dt>Booms, last 10 s</dt><dd id="booms">–</dd></div>
+            <div><dt>Last boom</dt><dd id="last-boom">–</dd></div>
+          </dl>
+          <p class="note">The pressure the listener's ear would record: one sine per image, each at the phase it left with. A boom, marked in red here and on the pitch chart, is the moment two images are born together at the edge of the cone.</p>
+        </section>
+
+        <section aria-labelledby="h-source">
+          <h2 id="h-source">Source</h2>
+          <label class="row" for="path">Path
+            <select id="path">
+              <option value="line">Straight pass</option>
+              <option value="circle">Circle</option>
+              <option value="drag">Follow the pointer</option>
+              <option value="still">Standing still</option>
+            </select>
+          </label>
+          <label class="row" for="mach">Mach number <output id="mach-out" for="mach"></output></label>
+          <input type="range" id="mach" min="0" max="2.5" step="0.05" />
+          <label class="row" for="rate">Tone (rings per second) <output id="rate-out" for="rate"></output></label>
+          <input type="range" id="rate" min="0.5" max="6" step="0.5" />
+          <dl class="readout">
+            <div><dt>Speed</dt><dd id="speed">–</dd></div>
+            <div><dt>Ahead</dt><dd id="ahead">–</dd></div>
+            <div><dt>Behind</dt><dd id="behind">–</dd></div>
+            <div><dt>Mach angle</dt><dd id="angle">–</dd></div>
+          </dl>
+          <p class="note">"Ahead" and "Behind" are the shifts heard at rest along the line of motion: 1/(1 − M) and 1/(1 + M) in still air, (c + w)/(c + w − v) in a wind w. Ahead of a source that outruns its sound nothing arrives at all.</p>
+        </section>
+
+        <section aria-labelledby="h-air">
+          <h2 id="h-air">Air and listener</h2>
+          <label class="row" for="wind">Wind <output id="wind-out" for="wind"></output></label>
+          <input type="range" id="wind" min="-0.8" max="0.8" step="0.05" />
+          <label class="row" for="walk">Listener walks at <output id="walk-out" for="walk"></output></label>
+          <input type="range" id="walk" min="0" max="1.2" step="0.05" />
+          <dl class="readout">
+            <div><dt>Mach through the air</dt><dd id="air-mach">–</dd></div>
+            <div><dt>Listener speed</dt><dd id="walk-speed">–</dd></div>
+          </dl>
+          <p class="note">Wind is a fraction of the speed of sound, positive blowing right. It carries the rings along, so sound is slower upwind and faster downwind, and it is the source's speed through the air that decides whether there is a cone. The listener paces its row, turning at the edges.</p>
+        </section>
+
+        <section aria-labelledby="h-presets">
+          <h2 id="h-presets">Scenes</h2>
+          <div class="actions" id="presets"></div>
+        </section>
+
+        <section aria-labelledby="h-view">
+          <h2 id="h-view">View</h2>
+          <label class="check"><input type="checkbox" id="tint" /> Tint rings by pitch shift</label>
+          <label class="check"><input type="checkbox" id="cone" /> Mach cone on the straight pass</label>
+          <div class="actions">
+            <button type="button" id="share">Copy share link</button>
+            <button type="button" id="png">Save PNG</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <p>Sound travels at 25 units per second through still air; the box is 160 by 100 units. <a href="https://github.com/fushanbobfan/bowshock">Source</a></p>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
