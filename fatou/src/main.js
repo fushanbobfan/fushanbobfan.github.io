@@ -5,7 +5,8 @@ import { makeView, toComplex, toPixel, zoomAt, panBy, precisionLimited, suggeste
 import { renderRows } from './render.js';
 import { PALETTES, buildLut } from './palette.js';
 import { orbit, sample, SAMPLE_SIZE, ESCAPED, SMOOTH } from './dynamics.js';
-import { attractingCycle } from './cycle.js';
+import { attractingCycle, nucleus } from './cycle.js';
+import { fractions, bulbNucleus, bulbRadiusEstimate } from './bulbs.js';
 import { PLACES, findPlace } from './places.js';
 import { DEFAULTS, encodeSettings, decodeSettings } from './settings.js';
 
@@ -232,6 +233,40 @@ function updateReadout() {
   }
 }
 
+// Moves c to the centre of the hyperbolic component it lies in, where the
+// critical point is itself periodic.
+function snapToCentre() {
+  const button = $('snap');
+  const flash = (text) => {
+    button.textContent = text;
+    setTimeout(() => { button.textContent = "Move c to its component's centre"; }, 1800);
+  };
+  if (!cycle) {
+    flash('c has no attracting cycle');
+    return;
+  }
+  const n = nucleus(state.c[0], state.c[1], cycle.period);
+  const check = n && attractingCycle(n.re, n.im);
+  if (!check || check.period !== cycle.period) {
+    flash('Newton did not converge here');
+    return;
+  }
+  setC(n.re, n.im);
+  flash(`centre of a period-${cycle.period} component`);
+}
+
+function goToBulb(p, q) {
+  const n = bulbNucleus(p, q);
+  if (!n) return;
+  const r = bulbRadiusEstimate(p, q);
+  state.mview = [n.re, n.im, Math.max(12 * r, 0.002)];
+  state.jview = DEFAULTS.jview.slice();
+  $('place').value = '';
+  $('place-note').textContent = `The ${p}/${q} bulb, period ${q}. In its Julia set ${q} arms meet at the fixed point, and each step of the map turns them ${p}/${q} of a turn.`;
+  restart(M);
+  setC(n.re, n.im);
+}
+
 function setC(x, y) {
   state.c = [x, y];
   updateReadout();
@@ -330,6 +365,8 @@ document.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
   if (key === 'f') {
     $('follow').checked = !$('follow').checked;
+  } else if (key === 'n') {
+    snapToCentre();
   } else if (key === 'b') {
     state.colouring = state.colouring === 'bands' ? 'boundary' : 'bands';
     syncControls();
@@ -381,6 +418,7 @@ function resetViews() {
 function bindControls() {
   for (const name of Object.keys(PALETTES)) $('palette').add(new Option(name, name));
   for (const place of PLACES) $('place').add(new Option(place.name, place.id));
+  for (const [p, q] of fractions(10)) $('bulb').add(new Option(`${p}/${q} (period ${q})`, `${p}/${q}`));
 
   $('iterations').addEventListener('change', (e) => {
     state.iterations = Number(e.target.value);
@@ -413,11 +451,18 @@ function bindControls() {
     const place = findPlace(e.target.value);
     $('place-note').textContent = place ? place.note : '';
     if (!place) return;
+    $('bulb').value = '';
     state.mview = place.view.slice();
     state.jview = DEFAULTS.jview.slice();
     restart(M);
     setC(place.c[0], place.c[1]);
   });
+  $('bulb').addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    const [p, q] = e.target.value.split('/').map(Number);
+    goToBulb(p, q);
+  });
+  $('snap').addEventListener('click', snapToCentre);
   $('reset').addEventListener('click', resetViews);
   $('share').addEventListener('click', async () => {
     saveHashNow();

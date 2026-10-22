@@ -158,6 +158,11 @@ button:hover, select:hover {
   border-color: #4a4a60;
 }
 
+button.wide {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
