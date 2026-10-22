@@ -1,0 +1,689 @@
+// Page wiring: settings, pointer and keyboard editing, and redraws.
+
+import { fieldAt, potentialAt, potentialGrid, totalCharge } from './field.js';
+import { traceAll, lineTally } from './lines.js';
+import { contourLevels, potentialRange, marchingSquares } from './contours.js';
+import { findNullPoints } from './neutral.js';
+import { gaussReport, outwardSigns } from './gauss.js';
+import { makeParticle, advance, energyDrift } from './particle.js';
+import { SCENES, SCENE_ORDER, sceneCharges } from './scenes.js';
+import { RANGES, LAYERS, MAX_CHARGES, CHARGE, clampSettings, clampCharge, toHash, fromHash, defaults } from './params.js';
+import {
+  makeView,
+  paintPotential,
+  drawFieldLines,
+  drawContours,
+  drawCharges,
+  drawNulls,
+  drawProbe,
+  drawGaussSurface,
+  drawParticles,
+  drawAim,
+  AIM_SCALE,
+  TEST_COLORS,
+  chargeRadius,
+  formatNumber,
+} from './render.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('plot');
+const ctx = canvas.getContext('2d');
+
+const MODE_NOTES = {
+  point: 'Point charges in space, seen in the plane through them. Field falls off as 1/r²; the line picture is a slice, so line counts only roughly follow the charge.',
+  line: 'Charged rods crossing the page. Field falls off as 1/r and Gauss’s law holds in the plane, so the number of lines on a charge is a true measure of its flux.',
+};
+
+let settings = fromHash(location.hash);
+let selected = -1;
+let newSign = 1;
+let newSize = 1;
+let drag = null; // { kind: 'charge' | 'move' | 'resize', index, dx, dy, pointerId }
+let probe = null; // world point under the pointer
+let view = makeView(16, 9);
+let picture = null; // computed layers for the current settings and size
+let pending = false;
+let particles = [];
+let testSign = 1;
+let launchMode = false;
+let aim = null; // { x, y, vx, vy, pointerId } while a launch is being aimed
+let simSpeed = 3;
+let running = false;
+let lastFrame = 0;
+
+const MAX_PARTICLES = 12;
+
+// --- computation -------------------------------------------------------------
+
+function compute() {
+  const { charges, mode } = settings;
+  const box = { x0: view.x0, x1: view.x1, y0: view.y0, y1: view.y1 };
+  // One potential sample per few pixels is plenty for shading and contours.
+  const nx = Math.max(32, Math.round(view.width / 4));
+  const ny = Math.max(18, Math.round(view.height / 4));
+  const grid = charges.length ? potentialGrid(charges, mode, box, nx, ny) : new Float64Array(nx * ny);
+  const { lo, hi } = potentialRange(grid);
+  const contours = contourLevels(settings.step, lo, hi).map((level) => ({ level, segs: marchingSquares(grid, nx, ny, level) }));
+  // Lines may wander well beyond the view before they count as escaped.
+  const wide = { x0: box.x0 * 6, x1: box.x1 * 6, y0: box.y0 * 6, y1: box.y1 * 6 };
+  const lines = traceAll(charges, mode, wide, { density: settings.density });
+  const nulls = findNullPoints(charges, mode, box);
+  const colorScale = Math.max(Math.abs(lo), Math.abs(hi), settings.step) * 0.6;
+  const image = new ImageData(nx, ny);
+  paintPotential(image, grid, nx, ny, colorScale);
+  const gauss = settings.gauss.on
+    ? { report: gaussReport(charges, mode, settings.gauss), signs: outwardSigns(charges, settings.gauss, mode) }
+    : null;
+  picture = { box, nx, ny, contours, lines, nulls, gauss, image, bitmap: null };
+  createImageBitmap(image).then((bitmap) => {
+    if (picture && picture.image === image) {
+      picture.bitmap = bitmap;
+      draw();
+    }
+  });
+}
+
+// --- drawing -----------------------------------------------------------------
+
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0b0f17';
+  ctx.fillRect(0, 0, view.width, view.height);
+  if (!picture) return;
+  const { layers } = settings;
+  if (layers.potential && picture.bitmap) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(picture.bitmap, 0, 0, view.width, view.height);
+  }
+  if (layers.contours) drawContours(ctx, view, picture.contours, picture.box, picture.nx, picture.ny);
+  if (layers.lines) drawFieldLines(ctx, view, picture.lines);
+  if (layers.nulls) drawNulls(ctx, view, picture.nulls);
+  if (picture.gauss) drawGaussSurface(ctx, view, settings.gauss, picture.gauss.signs);
+  drawParticles(ctx, view, particles);
+  if (aim) drawAim(ctx, view, aim, testSign > 0 ? TEST_COLORS.positive : TEST_COLORS.negative);
+  drawCharges(ctx, view, settings.charges, selected);
+  if (probe && !drag && !aim) {
+    const [ex, ey] = fieldAt(settings.charges, settings.mode, probe[0], probe[1]);
+    drawProbe(ctx, view, probe[0], probe[1], ex, ey);
+  }
+}
+
+function refresh({ recompute = true, hash = true } = {}) {
+  if (recompute) {
+    picture = null;
+    // The field under the test charges changed, so their energy is measured afresh.
+    for (const p of particles) p.energy0 = null;
+  }
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => {
+    pending = false;
+    if (!picture) compute();
+    draw();
+    updateText();
+    if (hash) history.replaceState(null, '', '#' + toHash(settings));
+  });
+}
+
+// --- text --------------------------------------------------------------------
+
+const signed = (q) => (q > 0 ? '+' : q < 0 ? '−' : '') + String(Math.abs(Number(q.toFixed(2))));
+
+function updateText() {
+  const { charges } = settings;
+  const { net } = totalCharge(charges);
+  const n = charges.length;
+  const parts = [n === 1 ? '1 charge' : `${n} charges`];
+  if (n) parts.push(`net ${signed(net)}`);
+  if (picture) {
+    const nulls = picture.nulls.length;
+    parts.push(nulls === 1 ? '1 null point in view' : `${nulls} null points in view`);
+  }
+  $('status').textContent = parts.join(' · ');
+  $('tally').textContent = tallyText();
+  $('gauss-text').textContent = gaussText();
+  updateTestText();
+  updateProbeText();
+  updateSelectionControls();
+}
+
+// Names a group of charges briefly: each one if there are few, else a count.
+function describeGroup(group) {
+  if (group.length === 1) return `the ${signed(group[0].q)}`;
+  if (group.length <= 3) return `the ${group.map((c) => signed(c.q)).join(', ')}`;
+  return `the ${group.length} ${group[0].q > 0 ? 'positive' : 'negative'} charges`;
+}
+
+function tallyText() {
+  if (!picture || !picture.lines.length) return '';
+  const { charges } = settings;
+  const { ends, open, stalled } = lineTally(picture.lines, charges.length);
+  const seeded = new Set(picture.lines.map((l) => l.source));
+  const sources = charges.filter((_, i) => seeded.has(i));
+  const others = charges.map((c, i) => ({ c, k: ends[i] })).filter((_, i) => !seeded.has(i));
+  const out = sources[0].q > 0;
+  // Verb agreeing with a count: 1 ends, 2 end.
+  const v = (n, plural) => `${n} ${n === 1 ? plural.replace(/^\w+/, (w) => w + 's') : plural}`;
+  const verb = out ? 'leave' : 'arrive at';
+  const parts = [];
+  if (others.length && others.length <= 3) {
+    for (const { c, k } of others) parts.push(`${v(k, out ? 'end on' : 'start from')} the ${signed(c.q)}`);
+  } else if (others.length) {
+    const k = others.reduce((sum, o) => sum + o.k, 0);
+    parts.push(`${v(k, out ? 'end on' : 'start from')} ${describeGroup(others.map((o) => o.c))}`);
+  }
+  if (open) parts.push(`${v(open, out ? 'run off to' : 'come in from')} infinity`);
+  if (stalled) parts.push(`${v(stalled, 'stop at')} a null point`);
+  return `${picture.lines.length} lines ${verb} ${describeGroup(sources)}: ${parts.join(', ')}.`;
+}
+
+function gaussText() {
+  if (!picture?.gauss) return '';
+  const { flux, factor, enclosed, inside, fluxOutside, near } = picture.gauss.report;
+  const unit = settings.mode === 'line' ? '2π' : '4π';
+  const what = settings.mode === 'line' ? 'through the loop' : 'out of the sphere whose equator is drawn';
+  const held = inside === 0 ? 'no charge' : `${inside === 1 ? '1 charge' : `${inside} charges`} totalling ${signed(enclosed)}`;
+  // Quadrature leaves rounding dust where the exact answer is zero.
+  const show = (v) => formatNumber(Math.abs(v) < 1e-9 ? 0 : v);
+  let text = `Flux ${what}: ${show(flux)} = ${unit} × ${show(flux / factor)}. Inside: ${held}. Charges outside contribute ${show(fluxOutside)}.`;
+  if (near) text += ' A charge sits on the surface, so the flux there is ill-defined and the numbers are not reliable.';
+  return text;
+}
+
+function updateTestText() {
+  $('clear-tests').disabled = particles.length === 0;
+  if (!particles.length) {
+    $('test-text').textContent = '';
+    return;
+  }
+  const moving = particles.filter((p) => p.alive).length;
+  const captured = particles.filter((p) => p.fate === 'captured').length;
+  const escaped = particles.filter((p) => p.fate === 'escaped').length;
+  const parts = [`${moving} moving`];
+  if (captured) parts.push(`${captured} captured by a charge`);
+  if (escaped) parts.push(`${escaped} gone off the picture`);
+  const newest = particles[particles.length - 1];
+  let text = `Test charges: ${parts.join(', ')}.`;
+  if (newest.alive && newest.energy0 !== null) {
+    const drift = energyDrift(newest, settings.charges, settings.mode);
+    const pct = Math.abs(drift) < 5e-7 ? '0.0000' : (drift * 100).toFixed(4).replace('-', '−');
+    text += ` Newest: time ${newest.t.toFixed(1)}, energy change ${pct}%.`;
+  }
+  $('test-text').textContent = text;
+}
+
+function updateProbeText() {
+  const el = $('probe');
+  if (!probe) return;
+  const [x, y] = probe;
+  const { charges, mode } = settings;
+  const v = potentialAt(charges, mode, x, y);
+  const [ex, ey] = fieldAt(charges, mode, x, y);
+  const m = Math.hypot(ex, ey);
+  const deg = Math.round((Math.atan2(ey, ex) * 180) / Math.PI);
+  el.textContent = `At (${formatNumber(x)}, ${formatNumber(y)}): potential V = ${formatNumber(v)}, field |E| = ${formatNumber(m)}` + (m > 0 ? `, pointing ${String(deg).replace('-', '−')}°` : '');
+}
+
+function updateSelectionControls() {
+  const c = settings.charges[selected];
+  $('flip').disabled = !c;
+  $('remove').disabled = !c;
+  $('size-label').textContent = c ? 'Size of the selected charge' : 'Size of new charges';
+  const size = c ? Math.abs(c.q) : newSize;
+  $('size').value = String(size);
+  $('size-out').textContent = c ? signed(c.q) : String(size);
+  $('gauss-centre').disabled = !c;
+  $('orbit').disabled = !c;
+}
+
+// --- test charges --------------------------------------------------------------
+
+function addParticle(p) {
+  particles.push(p);
+  if (particles.length > MAX_PARTICLES) particles.shift();
+  startRunning();
+}
+
+function startRunning() {
+  if (running) return;
+  running = true;
+  lastFrame = performance.now();
+  requestAnimationFrame(tick);
+}
+
+let textTimer = 0;
+
+function tick(now) {
+  const elapsed = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+  const bounds = { x0: view.x0 * 3, x1: view.x1 * 3, y0: view.y0 * 3, y1: view.y1 * 3 };
+  for (const p of particles) advance(settings.charges, settings.mode, p, elapsed * simSpeed, bounds);
+  draw();
+  textTimer += elapsed;
+  if (textTimer > 0.25 || !particles.some((p) => p.alive)) {
+    textTimer = 0;
+    updateTestText();
+  }
+  running = particles.some((p) => p.alive);
+  if (running) requestAnimationFrame(tick);
+}
+
+function setLaunchMode(on) {
+  launchMode = on;
+  $('launch').setAttribute('aria-pressed', String(on));
+  canvas.classList.toggle('launching', on);
+}
+
+// Starts a test charge of the opposite sign on a circular orbit around the
+// selected charge, as if that charge were alone.
+function orbitSelected() {
+  const c = settings.charges[selected];
+  if (!c) return;
+  const r = 1.2 + 0.3 * Math.sqrt(Math.abs(c.q));
+  const q = -Math.sign(c.q);
+  // q Q / r^2 = v^2 / r for points, q Q / r = v^2 / r for lines.
+  const v = settings.mode === 'line' ? Math.sqrt(Math.abs(c.q)) : Math.sqrt(Math.abs(c.q) / r);
+  addParticle(makeParticle(c.x + r, c.y, 0, v, q));
+  updateTestText();
+}
+
+// --- editing -----------------------------------------------------------------
+
+function edited() {
+  settings = clampSettings(settings);
+  refresh();
+}
+
+function chargeAt(px, py) {
+  for (let i = settings.charges.length - 1; i >= 0; i--) {
+    const c = settings.charges[i];
+    const [sx, sy] = view.toScreen(c.x, c.y);
+    if (Math.hypot(px - sx, py - sy) <= chargeRadius(c.q) + 3) return i;
+  }
+  return -1;
+}
+
+// Which part of the Gaussian surface is under a screen point, if any.
+function surfacePartAt(px, py) {
+  const g = settings.gauss;
+  if (!g.on) return null;
+  const [cx, cy] = view.toScreen(g.x, g.y);
+  if (Math.abs(px - cx) <= 8 && Math.abs(py - cy) <= 8) return 'move';
+  if (Math.abs(Math.hypot(px - cx, py - cy) - g.r * view.scale) <= 7) return 'resize';
+  return null;
+}
+
+function removeCharge(i) {
+  if (i < 0) return;
+  settings.charges.splice(i, 1);
+  selected = -1;
+  edited();
+}
+
+function select(i) {
+  selected = i;
+  refresh({ recompute: false, hash: false });
+}
+
+function localPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+canvas.addEventListener('pointerdown', (e) => {
+  const [px, py] = localPoint(e);
+  const hit = chargeAt(px, py);
+  if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+    removeCharge(hit);
+    return;
+  }
+  if (e.button !== 0) return;
+  canvas.focus();
+  const part = hit < 0 ? surfacePartAt(px, py) : null;
+  if (launchMode && hit < 0 && !part) {
+    const [x, y] = view.toWorld(px, py);
+    aim = { x, y, vx: 0, vy: 0, pointerId: e.pointerId };
+    canvas.setPointerCapture(e.pointerId);
+    refresh({ recompute: false, hash: false });
+    return;
+  }
+  if (part) {
+    const [cx, cy] = view.toScreen(settings.gauss.x, settings.gauss.y);
+    drag = { kind: part, dx: px - cx, dy: py - cy, pointerId: e.pointerId };
+    canvas.setPointerCapture(e.pointerId);
+    canvas.classList.add('dragging');
+    return;
+  }
+  let index = hit;
+  if (index < 0) {
+    if (settings.charges.length >= MAX_CHARGES) {
+      $('status').textContent = `At most ${MAX_CHARGES} charges.`;
+      return;
+    }
+    const [x, y] = view.toWorld(px, py);
+    const c = clampCharge({ x, y, q: newSign * newSize });
+    if (!c) return;
+    settings.charges.push(c);
+    index = settings.charges.length - 1;
+    edited();
+  }
+  const c = settings.charges[index];
+  const [sx, sy] = view.toScreen(c.x, c.y);
+  drag = { kind: 'charge', index, dx: px - sx, dy: py - sy, pointerId: e.pointerId };
+  selected = index;
+  canvas.setPointerCapture(e.pointerId);
+  canvas.classList.add('dragging');
+  refresh({ recompute: false, hash: false });
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  const [px, py] = localPoint(e);
+  if (aim && e.pointerId === aim.pointerId) {
+    const [x, y] = view.toWorld(px, py);
+    aim.vx = (x - aim.x) / AIM_SCALE;
+    aim.vy = (y - aim.y) / AIM_SCALE;
+    refresh({ recompute: false, hash: false });
+    return;
+  }
+  if (drag && e.pointerId === drag.pointerId && drag.kind !== 'charge') {
+    const g = settings.gauss;
+    if (drag.kind === 'move') {
+      const [x, y] = view.toWorld(px - drag.dx, py - drag.dy);
+      Object.assign(g, { x, y });
+    } else {
+      const [x, y] = view.toWorld(px, py);
+      g.r = Math.hypot(x - g.x, y - g.y);
+    }
+    settings = clampSettings(settings);
+    syncGaussControls();
+    refresh({ hash: false });
+    return;
+  }
+  if (drag && e.pointerId === drag.pointerId) {
+    const [x, y] = view.toWorld(px - drag.dx, py - drag.dy);
+    const c = clampCharge({ x, y, q: settings.charges[drag.index].q });
+    settings.charges[drag.index] = c;
+    refresh({ hash: false });
+    return;
+  }
+  probe = view.toWorld(px, py);
+  canvas.classList.toggle('over-charge', chargeAt(px, py) >= 0 || surfacePartAt(px, py) !== null);
+  refresh({ recompute: false, hash: false });
+});
+
+function endDrag(e) {
+  if (aim && e.pointerId === aim.pointerId) {
+    if (e.type === 'pointerup') addParticle(makeParticle(aim.x, aim.y, aim.vx, aim.vy, testSign));
+    aim = null;
+    refresh({ recompute: false, hash: false });
+    return;
+  }
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  drag = null;
+  canvas.classList.remove('dragging');
+  edited();
+}
+
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('pointerleave', () => {
+  if (drag) return;
+  probe = null;
+  refresh({ recompute: false, hash: false });
+});
+
+function nudge(dx, dy) {
+  const c = settings.charges[selected];
+  if (!c) return;
+  settings.charges[selected] = clampCharge({ x: c.x + dx, y: c.y + dy, q: c.q }) ?? c;
+  edited();
+}
+
+function resize(delta) {
+  const c = settings.charges[selected];
+  if (!c) {
+    newSize = Math.min(CHARGE.max, Math.max(CHARGE.min, newSize + delta));
+    updateSelectionControls();
+    return;
+  }
+  const mag = Math.min(CHARGE.max, Math.max(CHARGE.min, Math.abs(c.q) + delta));
+  c.q = Math.sign(c.q) * mag;
+  edited();
+}
+
+function flip() {
+  const c = settings.charges[selected];
+  if (!c) return;
+  c.q = -c.q;
+  edited();
+}
+
+canvas.addEventListener('keydown', (e) => {
+  const big = e.shiftKey ? 0.5 : 0.1;
+  const moves = { ArrowLeft: [-big, 0], ArrowRight: [big, 0], ArrowUp: [0, big], ArrowDown: [0, -big] };
+  if (moves[e.key] && selected >= 0) {
+    nudge(...moves[e.key]);
+  } else if (e.key === '[') {
+    resize(-CHARGE.step);
+  } else if (e.key === ']') {
+    resize(CHARGE.step);
+  } else if (e.key === 'f' || e.key === 'F') {
+    flip();
+  } else if (e.key === 'Delete' || e.key === 'Backspace') {
+    removeCharge(selected);
+  } else if (e.key === '.') {
+    const n = settings.charges.length;
+    if (n) select((selected + 1) % n);
+  } else if (e.key === 'Escape') {
+    select(-1);
+  } else if (e.key === 'l' || e.key === 'L') {
+    setLaunchMode(!launchMode);
+  } else if (e.key === 'o' || e.key === 'O') {
+    orbitSelected();
+  } else if (e.key === 'g' || e.key === 'G') {
+    settings.gauss.on = !settings.gauss.on;
+    syncGaussControls();
+    edited();
+  } else if (e.key === 'm' || e.key === 'M') {
+    settings.mode = settings.mode === 'point' ? 'line' : 'point';
+    syncControls();
+    edited();
+  } else {
+    return;
+  }
+  e.preventDefault();
+});
+
+// --- controls ----------------------------------------------------------------
+
+function setupSlider(id, key) {
+  const input = $(id);
+  const r = RANGES[key];
+  input.min = r.min;
+  input.max = r.max;
+  input.step = r.step;
+  input.addEventListener('input', () => {
+    settings[key] = Number(input.value);
+    edited();
+    $(`${id}-out`).textContent = String(settings[key]);
+  });
+}
+
+function syncGaussControls() {
+  const g = settings.gauss;
+  $('gauss-on').checked = g.on;
+  $('radius').value = g.r;
+  $('radius-out').textContent = String(g.r);
+  $('radius').disabled = !g.on;
+}
+
+function syncControls() {
+  syncGaussControls();
+  $('scene').value = settings.scene;
+  $('note').textContent = SCENES[settings.scene].note;
+  for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === settings.mode;
+  $('mode-note').textContent = MODE_NOTES[settings.mode];
+  for (const key of ['density', 'step']) {
+    $(key).value = settings[key];
+    $(`${key}-out`).textContent = String(settings[key]);
+  }
+  for (const k of Object.keys(LAYERS)) $(`layer-${k}`).checked = settings.layers[k];
+}
+
+for (const name of SCENE_ORDER) {
+  const opt = document.createElement('option');
+  opt.value = name;
+  opt.textContent = SCENES[name].label;
+  $('scene').append(opt);
+}
+
+$('scene').addEventListener('change', () => {
+  const keep = settings;
+  settings = defaults($('scene').value);
+  settings.mode = keep.mode;
+  settings.density = keep.density;
+  settings.step = keep.step;
+  settings.layers = keep.layers;
+  settings.gauss = keep.gauss;
+  selected = -1;
+  syncControls();
+  edited();
+});
+
+for (const r of document.querySelectorAll('input[name="mode"]')) {
+  r.addEventListener('change', () => {
+    settings.mode = r.value;
+    syncControls();
+    edited();
+  });
+}
+
+for (const r of document.querySelectorAll('input[name="sign"]')) {
+  r.addEventListener('change', () => {
+    newSign = Number(r.value);
+  });
+}
+
+$('size').addEventListener('input', () => {
+  const v = Number($('size').value);
+  const c = settings.charges[selected];
+  if (c) {
+    c.q = Math.sign(c.q) * v;
+    edited();
+  } else {
+    newSize = v;
+    updateSelectionControls();
+  }
+});
+
+$('flip').addEventListener('click', flip);
+$('remove').addEventListener('click', () => removeCharge(selected));
+
+$('reset').addEventListener('click', () => {
+  settings.charges = sceneCharges(settings.scene);
+  selected = -1;
+  edited();
+});
+
+$('clear').addEventListener('click', () => {
+  settings.charges = [];
+  selected = -1;
+  edited();
+});
+
+setupSlider('density', 'density');
+setupSlider('step', 'step');
+
+$('radius').min = RANGES.radius.min;
+$('radius').max = RANGES.radius.max;
+$('radius').step = RANGES.radius.step;
+$('radius').addEventListener('input', () => {
+  settings.gauss.r = Number($('radius').value);
+  syncGaussControls();
+  edited();
+});
+
+for (const r of document.querySelectorAll('input[name="test-sign"]')) {
+  r.addEventListener('change', () => {
+    testSign = Number(r.value);
+  });
+}
+
+$('launch').addEventListener('click', () => setLaunchMode(!launchMode));
+$('orbit').addEventListener('click', orbitSelected);
+$('clear-tests').addEventListener('click', () => {
+  particles = [];
+  refresh({ recompute: false, hash: false });
+});
+$('speed').addEventListener('input', () => {
+  simSpeed = Number($('speed').value);
+  $('speed-out').textContent = String(simSpeed);
+});
+
+$('gauss-on').addEventListener('change', () => {
+  settings.gauss.on = $('gauss-on').checked;
+  syncGaussControls();
+  edited();
+});
+
+$('gauss-centre').addEventListener('click', () => {
+  const c = settings.charges[selected];
+  if (!c) return;
+  Object.assign(settings.gauss, { on: true, x: c.x, y: c.y });
+  syncGaussControls();
+  edited();
+});
+
+for (const k of Object.keys(LAYERS)) {
+  $(`layer-${k}`).addEventListener('change', (e) => {
+    settings.layers[k] = e.target.checked;
+    refresh({ recompute: false });
+  });
+}
+
+$('share').addEventListener('click', async () => {
+  const url = `${location.href.split('#')[0]}#${toHash(settings)}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    $('status').textContent = 'Link copied.';
+  } catch {
+    $('status').textContent = url;
+  }
+});
+
+$('png').addEventListener('click', () => {
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `fieldlines-${settings.scene}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+});
+
+window.addEventListener('hashchange', () => {
+  if (location.hash.slice(1) === toHash(settings)) return;
+  settings = fromHash(location.hash);
+  selected = -1;
+  syncControls();
+  refresh({ hash: false });
+});
+
+// --- size ----------------------------------------------------------------------
+
+function fit() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  view = makeView(rect.width, rect.height);
+  refresh({ hash: false });
+}
+
+new ResizeObserver(fit).observe(canvas.parentElement);
+syncControls();
+fit();
