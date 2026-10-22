@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Harmonograph</title>
+  <meta name="description" content="A browser harmonograph: damped pendulums steer a pen and trace slowly decaying Lissajous figures you can tune, share and export." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Harmonograph</h1>
+    <p class="subtitle">Damped pendulums steer a pen across the paper. Tune their swings and watch the figure wind in.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Drawing">
+      <div class="paper-wrap">
+        <canvas id="paper" role="img" aria-label="Harmonograph drawing"></canvas>
+        <canvas id="pen" aria-hidden="true"></canvas>
+      </div>
+      <div class="stage-bar">
+        <p id="status" class="status" aria-live="polite"></p>
+        <div class="buttons">
+          <button id="pause" type="button">Pause</button>
+          <button id="replay" type="button">Replay</button>
+          <button id="finish" type="button">Finish</button>
+        </div>
+      </div>
+
+      <section class="gallery" aria-labelledby="gallery-title">
+        <div class="gallery-head">
+          <h2 id="gallery-title">Gallery</h2>
+          <button id="save-gallery" type="button">Save to gallery</button>
+          <span id="gallery-note" class="hint" aria-live="polite"></span>
+        </div>
+        <p id="gallery-empty" class="hint">Designs you save stay in this browser. Nothing saved yet.</p>
+        <ul id="gallery-list" class="gallery-list"></ul>
+      </section>
+    </section>
+
+    <section class="controls" aria-label="Drawing controls">
+      <div class="control-row">
+        <label for="preset">Preset</label>
+        <select id="preset"></select>
+        <p id="preset-description" class="hint"></p>
+      </div>
+
+      <div class="control-row inline">
+        <button id="surprise" type="button">Surprise me</button>
+        <span id="seed" class="hint"></span>
+      </div>
+
+      <div class="control-row">
+        <label for="palette">Paper and ink</label>
+        <select id="palette"></select>
+      </div>
+
+      <div class="control-row">
+        <label for="line-width">Line width <output id="line-width-value" for="line-width">0.6</output></label>
+        <input id="line-width" type="range" min="0.2" max="4" step="0.1" value="0.6" />
+      </div>
+
+      <div class="control-row">
+        <label for="speed">Drawing speed <output id="speed-value" for="speed">4×</output></label>
+        <input id="speed" type="range" min="0" max="6" step="1" value="2" />
+      </div>
+
+      <fieldset class="ratio">
+        <legend>Frequency ratio</legend>
+        <p id="ratio-readout" class="readout" aria-live="polite"></p>
+        <div class="control-row">
+          <label for="ratio-target">Retune x : y to</label>
+          <select id="ratio-target">
+            <option value="">Keep current</option>
+            <option value="1:1">1:1</option>
+            <option value="1:2">1:2</option>
+            <option value="2:1">2:1</option>
+            <option value="2:3">2:3</option>
+            <option value="3:2">3:2</option>
+            <option value="3:4">3:4</option>
+            <option value="4:3">4:3</option>
+            <option value="4:5">4:5</option>
+            <option value="5:4">5:4</option>
+            <option value="5:6">5:6</option>
+            <option value="6:5">6:5</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label for="detune">Detune <output id="detune-value" for="detune">+0.10%</output></label>
+          <input id="detune" type="range" min="-1" max="1" step="0.02" value="0.1" />
+        </div>
+        <p class="hint">An exact ratio retraces one closed figure; a small detune makes it turn as it shrinks.</p>
+      </fieldset>
+
+      <fieldset class="pendulums">
+        <legend>Pendulums</legend>
+        <div id="pendulum-list"></div>
+        <button id="add-pendulum" type="button">Add pendulum</button>
+      </fieldset>
+
+      <div class="control-row inline">
+        <button id="save-png" type="button">Save PNG</button>
+        <button id="save-svg" type="button">Save SVG</button>
+        <button id="copy-link" type="button">Copy link</button>
+      </div>
+
+      <p class="hint keys">Keys: <kbd>Space</kbd> pause · <kbd>R</kbd> replay · <kbd>F</kbd> finish · <kbd>N</kbd> surprise me</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      A harmonograph hangs a pen and a drawing table from pendulums. Each pendulum
+      swings as <em>A</em>·sin(2π<em>f t</em> + φ)·e<sup>−<em>d t</em></sup>; the pen
+      follows the sum. Frequencies near a whole-number ratio make closed Lissajous
+      figures, the tiny mismatch makes them turn, and friction draws them inward.
+    </p>
+  </footer>
+
+  <template id="pendulum-template">
+    <div class="pendulum">
+      <div class="pendulum-head">
+        <label>Swing
+          <select data-field="axis">
+            <option value="x">Horizontal</option>
+            <option value="y">Vertical</option>
+            <option value="rotary">Rotary</option>
+          </select>
+        </label>
+        <button type="button" data-action="remove" class="remove">Remove</button>
+      </div>
+      <label>Amplitude <output data-out="amp"></output>
+        <input data-field="amp" type="range" min="0" max="1" step="0.01" />
+      </label>
+      <label>Frequency <output data-out="freq"></output>
+        <input data-field="freq" type="range" min="0.1" max="12" step="0.001" />
+      </label>
+      <label>Phase <output data-out="phase"></output>
+        <input data-field="phase" type="range" min="-3.1416" max="3.1416" step="0.01" />
+      </label>
+      <label>Damping <output data-out="damp"></output>
+        <input data-field="damp" type="range" min="0" max="0.2" step="0.001" />
+      </label>
+    </div>
+  </template>
+
+  <template id="gallery-template">
+    <li class="gallery-item">
+      <button type="button" class="gallery-load" data-action="load">
+        <canvas width="96" height="96" aria-hidden="true"></canvas>
+        <span class="gallery-name"></span>
+      </button>
+      <button type="button" class="gallery-remove" data-action="remove">Delete</button>
+    </li>
+  </template>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
