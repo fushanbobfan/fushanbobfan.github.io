@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>phantomjam</title>
+  <meta name="description" content="An interactive traffic-jam lab: watch phantom jams appear out of nowhere on a ring road, read them off a space-time diagram and map the flow-density curve yourself." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>phantomjam</h1>
+    <p class="subtitle">Cars on a ring road, three rules each. Watch a jam appear from nothing and roll backwards against the traffic.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Traffic stage">
+      <div class="panels">
+        <canvas id="ring" width="520" height="520" aria-label="Ring road with cars coloured by speed. Click a car to make it brake.">
+          Your browser does not support the canvas element.
+        </canvas>
+        <div class="spacetime-wrap">
+          <canvas id="spacetime" width="400" height="520" role="img"
+            aria-label="Space-time diagram: each row is one step of the road, newest at the bottom, cars coloured by speed"></canvas>
+          <p class="caption">Space–time: road across, time downwards. Jams are the red bands drifting left.</p>
+        </div>
+      </div>
+      <div class="stage-bar">
+        <p id="status" class="status" aria-live="polite"></p>
+      </div>
+      <canvas id="diagram" class="chart" width="920" height="220" role="img"
+        aria-label="Flow against density chart: measured points, the live reading and the deterministic reference triangle"></canvas>
+      <p class="caption">Flow–density diagram. Dashed triangle: the no-dawdling model. Dots: what this road has actually carried at each density.</p>
+    </section>
+
+    <section class="controls" aria-label="Simulation controls">
+      <div class="control-row">
+        <label for="preset">Regime</label>
+        <select id="preset"></select>
+        <p id="preset-description" class="hint"></p>
+      </div>
+
+      <div class="control-row">
+        <label for="density">Density <output id="density-value" for="density">0.14</output></label>
+        <input id="density" type="range" min="0" max="1" step="0.01" value="0.14" />
+        <p class="hint">Cars per cell. Changing it adds or removes cars without disturbing the rest.</p>
+      </div>
+
+      <div class="control-row">
+        <label for="vmax">Speed limit <output id="vmax-value" for="vmax">5</output></label>
+        <input id="vmax" type="range" min="1" max="9" step="1" value="5" />
+      </div>
+
+      <div class="control-row">
+        <label for="slow">Dawdling <output id="slow-value" for="slow">0.30</output></label>
+        <input id="slow" type="range" min="0" max="1" step="0.01" value="0.3" />
+        <p class="hint">Chance per step that a driver eases off by one cell per step for no reason.</p>
+      </div>
+
+      <div class="control-row">
+        <label for="cells">Road length <output id="cells-value" for="cells">200</output></label>
+        <input id="cells" type="range" min="50" max="500" step="10" value="200" />
+        <p class="hint">Cells around the ring. Changing it rebuilds the road.</p>
+      </div>
+
+      <div class="control-row">
+        <label for="speed">Speed <output id="speed-value" for="speed">1 step/frame</output></label>
+        <input id="speed" type="range" min="1" max="10" step="1" value="1" />
+      </div>
+
+      <div class="control-row button-row">
+        <button id="pause" type="button" aria-pressed="false">Pause</button>
+        <button id="step" type="button">Step</button>
+      </div>
+      <div class="control-row button-row">
+        <button id="reset" type="button">Reset road</button>
+        <button id="brake" type="button">Brake a car</button>
+      </div>
+      <div class="control-row button-row">
+        <button id="sweep" type="button" aria-pressed="false">Sweep density</button>
+        <button id="clear-diagram" type="button">Clear diagram</button>
+      </div>
+
+      <p class="hint">
+        Click a car on the ring to make it brake. <strong>Sweep density</strong> walks the density from 0.02 to 0.98,
+        holding each value long enough to measure the flow, and fills in the diagram.
+        Shortcuts: <kbd>Space</kbd> pause, <kbd>.</kbd> step, <kbd>B</kbd> brake a car, <kbd>R</kbd> reset,
+        <kbd>D</kbd> sweep, <kbd>[</kbd>/<kbd>]</kbd> previous or next regime.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      This is the Nagel–Schreckenberg model (1992). Every step, each car speeds up by one, slows to the gap in front,
+      and with the dawdling probability drops one notch for no reason; then everyone moves at once. That single random
+      hesitation is enough: below a critical density it is absorbed, above it the follower brakes harder than the leader
+      did and a jam is born, drifting upstream while the cars that caused it drive off. Flow peaks at the critical
+      density, so adding cars to a busy road carries fewer of them past any point.
+    </p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

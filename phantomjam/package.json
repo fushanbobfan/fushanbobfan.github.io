@@ -1,0 +1,26 @@
+{
+  "name": "phantomjam",
+  "version": "0.1.0",
+  "description": "An interactive traffic-jam lab: watch phantom jams appear out of nowhere on a ring road, read them off a space-time diagram and map the flow-density curve yourself.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "traffic",
+    "cellular-automaton",
+    "nagel-schreckenberg",
+    "simulation",
+    "visualization",
+    "canvas",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/phantomjam.git"
+  },
+  "private": false
+}
