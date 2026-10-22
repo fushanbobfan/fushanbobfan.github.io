@@ -4,6 +4,7 @@ import { renderRows, shadeSample, samplePoint } from '../src/render.js';
 import { fitView, toPixel } from '../src/view.js';
 import { PALETTES, buildLut, periodColour } from '../src/palette.js';
 import { SAMPLE_SIZE, ESCAPED, PERIOD, SMOOTH, DISTANCE } from '../src/dynamics.js';
+import { attractingCycle } from '../src/cycle.js';
 
 const lut = buildLut(PALETTES.ember);
 const base = { julia: false, c: [0, 0], maxIter: 300, colouring: 'bands', interior: 'period', lut, density: 1, offset: 0 };
@@ -70,6 +71,28 @@ test('boundary colouring darkens points within a pixel or two of the set', () =>
   const sum = (c) => c[0] + c[1] + c[2];
   assert.ok(sum(near) < sum(far) * 0.5);
   assert.deepEqual(far, shadeSample(s, { ...opts, colouring: 'bands' }, 0.01, [0, 0, 0]));
+});
+
+test('phase colouring paints the two basilica components differently', () => {
+  const c = [-1, 0];
+  const cycle = attractingCycle(...c);
+  const opts = { ...base, julia: true, c, interior: 'phase', cycle };
+  const out = new Float64Array(SAMPLE_SIZE);
+  const colourAt = (x, y) => shadeSample(samplePoint(out, x, y, opts), opts, 0.01, [0, 0, 0]).slice();
+  const a = colourAt(0.05, 0.05);
+  const b = colourAt(-1.05, 0.03);
+  assert.notDeepEqual(a, b);
+  assert.deepEqual(colourAt(-0.03, -0.06), a);
+  // with interior 'period' the whole basin shares one colour
+  const p = { ...opts, interior: 'period' };
+  assert.deepEqual(shadeSample(samplePoint(out, 0.05, 0.05, p), p, 0.01, [0, 0, 0]).slice(),
+    shadeSample(samplePoint(out, -1.05, 0.03, p), p, 0.01, [0, 0, 0]).slice());
+});
+
+test('phase colouring without a cycle falls back to the period', () => {
+  const s = new Float64Array(SAMPLE_SIZE);
+  s[PERIOD] = 4;
+  assert.deepEqual(shadeSample(s, { ...base, interior: 'phase' }, 0.01, [0, 0, 0]), periodColour(4));
 });
 
 test('dark interior ignores the period', () => {
