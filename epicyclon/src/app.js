@@ -1,0 +1,711 @@
+import { dft, topTerms } from './dft.js';
+import { chainPoints, tracePath } from './epicycles.js';
+import { resample } from './resample.js';
+import { SHAPES } from './shapes.js';
+import { drawScene, drawSpectrum, readColors } from './render.js';
+import { attachDrawing } from './ui.js';
+import { encodeState, decodeState } from './share.js';
+import { spectrumBars, dominantFrequency } from './spectrum.js';
+import { curveToSvg } from './svg.js';
+import { curveToAnimatedSvg } from './animatedSvg.js';
+import { rasterPlan } from './raster.js';
+import { svgToPoints, fitToSpan } from './svgImport.js';
+import { traceImage } from './imageTrace.js';
+import { stereoSamples, encodeWav } from './wav.js';
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+
+const spectrumCanvas = document.getElementById('spectrum');
+const sctx = spectrumCanvas ? spectrumCanvas.getContext('2d') : null;
+const spectrumCaption = document.getElementById('spectrumCaption');
+
+/** Most bars worth drawing before the strip turns to mush. */
+const MAX_SPECTRUM_BARS = 128;
+
+const state = {
+  /** resampled source path in canvas-centered coordinates */
+  path: [],
+  /** all DFT terms for the current path, amplitude order preserved by index */
+  terms: [],
+  /** terms actually drawn this frame */
+  active: [],
+  trace: [],
+  t: 0,
+  playing: true,
+  speed: 1,
+  termCount: 64,
+  sampleCount: 512,
+  currentShape: 'star',
+  /** raw stroke being drawn right now, empty when idle */
+  draft: [],
+  show: { circles: true, chain: true, input: false },
+  colors: readColors(canvas),
+  viewW: canvas.width,
+  viewH: canvas.height,
+  specW: spectrumCanvas ? spectrumCanvas.width : 0,
+  specH: spectrumCanvas ? spectrumCanvas.height : 0,
+};
+
+const LOOP_SECONDS = 6;
+
+const reduceMotion =
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+
+function announce(message) {
+  const status = document.getElementById('status');
+  if (status) status.textContent = message;
+}
+
+/** Thin a polyline to at most `max` evenly spaced points, keeping the ends. */
+function decimate(points, max) {
+  if (points.length <= max) return points;
+  const out = [];
+  const stride = (points.length - 1) / (max - 1);
+  for (let i = 0; i < max; i++) out.push(points[Math.round(i * stride)]);
+  return out;
+}
+
+/** Encode the on-screen state as a permalink hash body. */
+function currentPermalink() {
+  return encodeState({
+    shape: state.currentShape,
+    path: state.currentShape ? null : decimate(state.path, 160),
+    termCount: state.termCount,
+    speed: state.speed,
+    show: state.show,
+  });
+}
+
+let hashTimer = 0;
+/** Fold the current state into the URL hash without touching history depth. */
+function scheduleHashUpdate() {
+  clearTimeout(hashTimer);
+  hashTimer = setTimeout(() => {
+    const body = currentPermalink();
+    try {
+      window.history.replaceState(null, '', `#${body}`);
+    } catch {
+      window.location.hash = body;
+    }
+  }, 250);
+}
+
+function setPath(points) {
+  state.path = points;
+  state.terms = dft(points);
+  state.t = 0;
+  state.trace = [];
+  refreshActiveTerms();
+}
+
+function refreshActiveTerms() {
+  state.active = topTerms(state.terms, state.termCount);
+  syncStaticTrace();
+  renderSpectrum();
+}
+
+/** Repaint the magnitude-spectrum strip and its caption. */
+function renderSpectrum() {
+  if (!sctx) return;
+  const bars = spectrumBars(state.active, Math.min(state.termCount, MAX_SPECTRUM_BARS));
+  drawSpectrum(sctx, bars, {
+    colors: state.colors,
+    width: state.specW,
+    height: state.specH,
+  });
+  if (spectrumCaption) {
+    if (bars.length === 0) {
+      spectrumCaption.textContent = 'Spectrum: no terms yet — draw or pick a shape.';
+    } else {
+      const dom = dominantFrequency(state.active);
+      const shown =
+        state.termCount > MAX_SPECTRUM_BARS ? ` (largest ${bars.length} shown)` : '';
+      spectrumCaption.textContent =
+        `Spectrum: ${bars.length} terms${shown}, ` +
+        `dominant frequency ${dom} cycle${Math.abs(dom) === 1 ? '' : 's'} per loop.`;
+    }
+  }
+}
+
+/**
+ * When the viewer prefers reduced motion, show the finished curve as a still
+ * image instead of animating a pen around it.
+ */
+function syncStaticTrace() {
+  if (reduceMotion && reduceMotion.matches && state.active.length) {
+    state.trace = tracePath(state.active, 720);
+    state.t = 0;
+  }
+}
+
+function loadShape(name) {
+  const def = SHAPES[name];
+  if (!def) return;
+  state.currentShape = name;
+  const span = Math.min(state.viewW, state.viewH) * 0.62;
+  const raw = def.generate(320, span);
+  setPath(resample(raw, state.sampleCount, { closed: true }));
+}
+
+/** Adopt a freehand stroke (raw centered points) as the traced path. */
+function useStroke(rawPoints) {
+  if (!rawPoints || rawPoints.length < 3) return;
+  state.currentShape = null;
+  setPath(resample(rawPoints, state.sampleCount, { closed: true }));
+}
+
+/** How many trace points make one full loop at the current speed. */
+function traceBudget() {
+  return Math.max(120, Math.round((LOOP_SECONDS * 60) / Math.max(state.speed, 0.05)));
+}
+
+function step(dtSeconds) {
+  if (state.playing && state.active.length > 0) {
+    state.t = (state.t + (dtSeconds / LOOP_SECONDS) * state.speed) % 1;
+  }
+}
+
+function render() {
+  const chain = state.active.length ? chainPoints(state.active, state.t) : [];
+  const tip = chain[chain.length - 1];
+  if (tip && state.playing) {
+    state.trace.push({ x: tip.x, y: tip.y });
+    const budget = traceBudget();
+    while (state.trace.length > budget) state.trace.shift();
+  }
+  drawScene(
+    ctx,
+    { chain, trace: state.trace, input: state.path, draft: state.draft },
+    {
+      showCircles: state.show.circles,
+      showChain: state.show.chain,
+      showInput: state.show.input,
+      colors: state.colors,
+      width: state.viewW,
+      height: state.viewH,
+    },
+  );
+}
+
+/** Advance the simulation by `dtSeconds` and repaint once. */
+function tick(dtSeconds) {
+  step(dtSeconds);
+  render();
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 1 / 20);
+  last = now;
+  tick(dt);
+  requestAnimationFrame(frame);
+}
+
+function fitCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  const changed = w !== state.viewW || h !== state.viewH;
+  state.viewW = w;
+  state.viewH = h;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  state.colors = readColors(canvas);
+  fitSpectrum(dpr);
+  return changed;
+}
+
+/** Match the spectrum canvas backing store to its rendered size. */
+function fitSpectrum(dpr = window.devicePixelRatio || 1) {
+  if (!spectrumCanvas || !sctx) return;
+  const rect = spectrumCanvas.getBoundingClientRect();
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  state.specW = w;
+  state.specH = h;
+  spectrumCanvas.width = w * dpr;
+  spectrumCanvas.height = h * dpr;
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function initPresetMenu() {
+  const select = document.getElementById('shape');
+  for (const [name, def] of Object.entries(SHAPES)) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = def.label;
+    select.appendChild(opt);
+  }
+  select.value = state.currentShape;
+}
+
+// --- wiring ---------------------------------------------------------------
+
+const hint = document.getElementById('hint');
+const shapeSelect = document.getElementById('shape');
+
+const playPause = document.getElementById('playPause');
+
+function setPlaying(next) {
+  state.playing = next;
+  playPause.textContent = next ? 'Pause' : 'Play';
+  playPause.setAttribute('aria-pressed', String(!next));
+  announce(next ? 'Playing' : 'Paused');
+  if (!next) syncStaticTrace();
+}
+
+playPause.addEventListener('click', () => setPlaying(!state.playing));
+
+canvas.addEventListener('keydown', (ev) => {
+  if (ev.key === ' ' || ev.key === 'Enter') {
+    ev.preventDefault();
+    setPlaying(!state.playing);
+  } else if (ev.key === 'r' || ev.key === 'R') {
+    ev.preventDefault();
+    clearBtn?.click();
+  }
+});
+
+const $ = (id) => document.getElementById(id);
+
+const termsInput = $('terms');
+const termsOut = $('termsOut');
+if (termsInput) {
+  termsInput.max = String(state.sampleCount / 2);
+  termsInput.value = String(state.termCount);
+  termsOut.textContent = String(state.termCount);
+  termsInput.addEventListener('input', () => {
+    state.termCount = Number(termsInput.value);
+    termsOut.textContent = termsInput.value;
+    state.trace = [];
+    refreshActiveTerms();
+    announce(`${state.termCount} circles`);
+    scheduleHashUpdate();
+  });
+}
+
+const speedInput = $('speed');
+const speedOut = $('speedOut');
+if (speedInput) {
+  speedInput.value = String(state.speed);
+  speedOut.textContent = `${state.speed.toFixed(2)}×`;
+  speedInput.addEventListener('input', () => {
+    state.speed = Number(speedInput.value);
+    speedOut.textContent = `${state.speed.toFixed(2)}×`;
+    scheduleHashUpdate();
+  });
+}
+
+const toggleMap = {
+  showCircles: 'circles',
+  showChain: 'chain',
+  showInput: 'input',
+};
+for (const [id, key] of Object.entries(toggleMap)) {
+  const box = $(id);
+  if (!box) continue;
+  box.checked = state.show[key];
+  box.addEventListener('change', () => {
+    state.show[key] = box.checked;
+    render();
+    scheduleHashUpdate();
+  });
+}
+
+/** Push the current control-bearing state into the DOM inputs and outputs. */
+function syncControls() {
+  if (termsInput) {
+    termsInput.value = String(state.termCount);
+    termsOut.textContent = String(state.termCount);
+  }
+  if (speedInput) {
+    speedInput.value = String(state.speed);
+    speedOut.textContent = `${state.speed.toFixed(2)}×`;
+  }
+  for (const [id, key] of Object.entries(toggleMap)) {
+    const box = $(id);
+    if (box) box.checked = state.show[key];
+  }
+  if (shapeSelect) shapeSelect.value = state.currentShape || '';
+}
+
+/**
+ * If the URL hash carries a permalink, adopt it: restore the layer toggles,
+ * term count and speed, then load either the named preset or the saved
+ * stroke. Returns true when a permalink was applied.
+ */
+function restoreFromHash() {
+  const decoded = decodeState(window.location.hash);
+  if (!decoded) return false;
+
+  state.termCount = decoded.termCount;
+  state.speed = decoded.speed;
+  state.show = { ...state.show, ...decoded.show };
+
+  if (decoded.path && decoded.path.length >= 3) {
+    state.currentShape = null;
+    useStroke(decoded.path);
+    if (hint) hint.textContent = 'Shared stroke loaded. Adjust the circle count to taste.';
+  } else if (decoded.shape && SHAPES[decoded.shape]) {
+    loadShape(decoded.shape);
+    if (hint) hint.textContent = 'Or draw your own shape on the canvas.';
+  } else {
+    return false;
+  }
+
+  syncControls();
+  return true;
+}
+
+const clearBtn = $('clear');
+if (clearBtn) {
+  clearBtn.addEventListener('click', () => {
+    state.path = [];
+    state.terms = [];
+    state.active = [];
+    state.trace = [];
+    state.draft = [];
+    state.currentShape = null;
+    if (shapeSelect) shapeSelect.value = '';
+    if (hint) hint.textContent = 'Draw a shape here with your mouse or finger.';
+    render();
+    renderSpectrum();
+    clearTimeout(hashTimer);
+    try {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch {
+      window.location.hash = '';
+    }
+  });
+}
+
+/** Points along the reconstructed curve, at plotter-friendly resolution. */
+function reconstructedCurve() {
+  return state.active.length ? tracePath(state.active, 1200) : [];
+}
+
+const downloadSvgBtn = $('downloadSvg');
+if (downloadSvgBtn) {
+  downloadSvgBtn.addEventListener('click', () => {
+    const curve = reconstructedCurve();
+    if (curve.length < 2) {
+      announce('Nothing to export yet — draw or pick a shape first.');
+      return;
+    }
+    const svg = curveToSvg(curve, {
+      stroke: state.colors.trace || '#2f6fed',
+      strokeWidth: 2,
+      title: `epicyclon — ${state.currentShape || 'drawing'}, ${state.active.length} circles`,
+    });
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `epicyclon-${state.currentShape || 'drawing'}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    announce(`Exported an SVG of the curve with ${state.active.length} circles.`);
+  });
+}
+
+const downloadAnimatedSvgBtn = $('downloadAnimatedSvg');
+if (downloadAnimatedSvgBtn) {
+  downloadAnimatedSvgBtn.addEventListener('click', () => {
+    const curve = reconstructedCurve();
+    if (curve.length < 2) {
+      announce('Nothing to export yet — draw or pick a shape first.');
+      return;
+    }
+    const svg = curveToAnimatedSvg(curve, {
+      stroke: state.colors.trace || '#2f6fed',
+      strokeWidth: 2,
+      // Matches the same loop duration the live canvas is currently animating at, so the
+      // downloaded file replays at the speed it was drawn.
+      durationSeconds: LOOP_SECONDS / Math.max(state.speed, 0.05),
+      title: `epicyclon — ${state.currentShape || 'drawing'}, ${state.active.length} circles (animated)`,
+    });
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `epicyclon-${state.currentShape || 'drawing'}-animated.svg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    announce(`Exported an animated SVG of the curve with ${state.active.length} circles.`);
+  });
+}
+
+/** Paint a raster plan onto a fresh offscreen canvas and return it. */
+function planToCanvas(plan) {
+  const out = document.createElement('canvas');
+  out.width = plan.width;
+  out.height = plan.height;
+  const octx = out.getContext('2d');
+  if (plan.background) {
+    octx.fillStyle = plan.background;
+    octx.fillRect(0, 0, plan.width, plan.height);
+  }
+  const pts = plan.polyline;
+  if (pts.length >= 2) {
+    octx.strokeStyle = plan.stroke;
+    octx.lineWidth = plan.strokeWidth;
+    octx.lineJoin = 'round';
+    octx.lineCap = 'round';
+    octx.beginPath();
+    octx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) octx.lineTo(pts[i].x, pts[i].y);
+    if (plan.closed) octx.closePath();
+    octx.stroke();
+  }
+  return out;
+}
+
+const downloadPngBtn = $('downloadPng');
+if (downloadPngBtn) {
+  downloadPngBtn.addEventListener('click', () => {
+    const curve = reconstructedCurve();
+    if (curve.length < 2) {
+      announce('Nothing to export yet — draw or pick a shape first.');
+      return;
+    }
+    const plan = rasterPlan(curve, {
+      pixelRatio: window.devicePixelRatio || 1,
+      background: state.colors.canvasBg || '#ffffff',
+      stroke: state.colors.trace || '#2f6fed',
+      strokeWidth: 2,
+    });
+    planToCanvas(plan).toBlob((blob) => {
+      if (!blob) {
+        announce('PNG export failed in this browser.');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `epicyclon-${state.currentShape || 'drawing'}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      announce(
+        `Exported a ${plan.width}×${plan.height} PNG of the curve with ` +
+          `${state.active.length} circles.`,
+      );
+    }, 'image/png');
+  });
+}
+
+const downloadWavBtn = $('downloadWav');
+if (downloadWavBtn) {
+  downloadWavBtn.addEventListener('click', () => {
+    if (!state.active.length) {
+      announce('Nothing to export yet — draw or pick a shape first.');
+      return;
+    }
+    const signal = stereoSamples(state.active, { durationSeconds: 6, loopsPerSecond: 1 });
+    const bytes = encodeWav(signal);
+    const blob = new Blob([bytes], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `epicyclon-${state.currentShape || 'drawing'}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    announce(
+      `Exported 6 seconds of audio: the left channel traces x, the right traces y — play it ` +
+        `through an oscilloscope in X-Y mode to redraw the curve.`,
+    );
+  });
+}
+
+const importSvgBtn = $('importSvg');
+const importSvgFile = $('importSvgFile');
+if (importSvgBtn && importSvgFile) {
+  importSvgBtn.addEventListener('click', () => importSvgFile.click());
+  importSvgFile.addEventListener('change', async () => {
+    const file = importSvgFile.files && importSvgFile.files[0];
+    importSvgFile.value = '';
+    if (!file) return;
+
+    let text;
+    try {
+      text = await file.text();
+    } catch {
+      announce('Could not read that file.');
+      return;
+    }
+
+    const raw = svgToPoints(text);
+    if (raw.length < 3) {
+      announce('No usable path found in that SVG.');
+      return;
+    }
+
+    const span = Math.min(state.viewW, state.viewH) * 0.62;
+    useStroke(fitToSpan(raw, span));
+    if (shapeSelect) shapeSelect.value = '';
+    if (hint) hint.textContent = 'SVG imported. Adjust the circle count to taste.';
+    announce(`Imported an SVG path with ${state.active.length} circles.`);
+    scheduleHashUpdate();
+  });
+}
+
+// Longest side the traced bitmap is downscaled to before thresholding: enough
+// detail for a clean silhouette, few enough pixels that tracing is instant.
+const TRACE_MAX_SIDE = 400;
+
+/** Decode an image file and return its pixels, downscaled to TRACE_MAX_SIDE. */
+async function imageFileToPixels(file) {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, TRACE_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const ctx = off.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h);
+  } finally {
+    bitmap.close();
+  }
+}
+
+const traceImageBtn = $('traceImage');
+const traceImageFile = $('traceImageFile');
+if (traceImageBtn && traceImageFile) {
+  traceImageBtn.addEventListener('click', () => traceImageFile.click());
+  traceImageFile.addEventListener('change', async () => {
+    const file = traceImageFile.files && traceImageFile.files[0];
+    traceImageFile.value = '';
+    if (!file) return;
+
+    let pixels;
+    try {
+      pixels = await imageFileToPixels(file);
+    } catch {
+      announce('Could not decode that image.');
+      return;
+    }
+
+    const raw = traceImage(pixels);
+    if (raw.length < 3) {
+      announce('No shape found in that image. Try one with a single dark shape on a light background.');
+      return;
+    }
+
+    const span = Math.min(state.viewW, state.viewH) * 0.62;
+    useStroke(fitToSpan(raw, span));
+    if (shapeSelect) shapeSelect.value = '';
+    if (hint) hint.textContent = 'Image traced. Adjust the circle count to taste.';
+    announce(`Traced an image outline with ${state.active.length} circles.`);
+    scheduleHashUpdate();
+  });
+}
+
+const copyLinkBtn = $('copyLink');
+if (copyLinkBtn) {
+  copyLinkBtn.addEventListener('click', async () => {
+    const url = `${window.location.origin}${window.location.pathname}#${currentPermalink()}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      announce('Link copied to the clipboard');
+      copyLinkBtn.textContent = 'Copied';
+      setTimeout(() => {
+        copyLinkBtn.textContent = 'Copy link';
+      }, 1200);
+    } catch {
+      window.prompt('Copy this link', url);
+    }
+  });
+}
+
+// Track the real rendered size instead of guessing at load time.
+if (typeof ResizeObserver !== 'undefined') {
+  const ro = new ResizeObserver(() => {
+    if (fitCanvas() && state.currentShape && state.path.length) {
+      loadShape(state.currentShape);
+    }
+    renderSpectrum();
+  });
+  ro.observe(canvas);
+  if (spectrumCanvas) ro.observe(spectrumCanvas);
+}
+
+window.addEventListener('resize', () => {
+  fitCanvas();
+  renderSpectrum();
+});
+
+if (shapeSelect) {
+  shapeSelect.addEventListener('change', () => {
+    const name = shapeSelect.value;
+    if (name && SHAPES[name]) {
+      loadShape(name);
+      if (hint) hint.textContent = 'Or draw your own shape on the canvas.';
+      announce(`${SHAPES[name].label} loaded`);
+      scheduleHashUpdate();
+    }
+  });
+}
+
+attachDrawing(canvas, {
+  getView: () => ({ w: state.viewW, h: state.viewH }),
+  onBegin: () => {
+    state.draft = [];
+    state.trace = [];
+    state.active = [];
+  },
+  onPoint: (pt) => {
+    state.draft.push(pt);
+    render();
+  },
+  onCommit: (points) => {
+    state.draft = [];
+    useStroke(points);
+    if (shapeSelect) shapeSelect.value = '';
+    if (hint) hint.textContent = 'Nice. Adjust the circle count to sharpen or smooth it.';
+    announce(`Traced a stroke of ${points.length} points with ${state.active.length} circles`);
+    scheduleHashUpdate();
+  },
+});
+
+if (window.matchMedia) {
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', () => {
+      state.colors = readColors(canvas);
+      renderSpectrum();
+    });
+}
+
+// --- boot ---------------------------------------------------------------
+
+fitCanvas();
+initPresetMenu();
+if (!restoreFromHash()) {
+  loadShape(state.currentShape);
+}
+
+if (reduceMotion && reduceMotion.matches) {
+  setPlaying(false);
+}
+if (reduceMotion) {
+  reduceMotion.addEventListener('change', (e) => {
+    if (e.matches) setPlaying(false);
+  });
+}
+
+requestAnimationFrame(frame);
+
+export { state, loadShape, tick };

@@ -1,0 +1,206 @@
+# epicyclon
+
+Draw a shape with your mouse or finger, and watch a chain of rotating circles
+(epicycles) retrace it. The path is decomposed with a discrete Fourier
+transform; each circle is one frequency component, spinning at a constant rate
+with a fixed radius and starting angle.
+
+**Live demo:** https://fushanbobfan.github.io/epicyclon/
+
+It runs entirely in the browser with no build step and no dependencies. The
+math core is plain ES modules and is covered by a Node test suite.
+
+## Quick start
+
+Open `index.html` in a browser, or serve the folder:
+
+```bash
+npm run serve
+# then visit http://localhost:8080
+```
+
+The dev server is a ~40-line dependency-free static file server; any other
+static server works too.
+
+## Controls
+
+| Control | Effect |
+| --- | --- |
+| Draw on the canvas | Replace the traced path with your own closed stroke |
+| Example shape | Load a built-in shape (circle, square, star, heart, Lissajous, infinity) |
+| Circles | How many Fourier terms to keep, largest amplitude first |
+| Speed | Loop rate, from a still frame up to 3x |
+| Circles / Radii / Original path | Toggle each drawn layer |
+| Pause / Play | Freeze or resume the animation |
+| Clear | Empty the canvas to draw again |
+| Copy link | Put a permalink to the current view on the clipboard |
+| Download SVG | Save the reconstructed curve as a standalone vector file |
+| Download animated SVG | Save the curve as a self-contained SVG that loops the pen motion on its own |
+| Download PNG | Save the reconstructed curve as a bitmap image |
+| Download audio | Save the curve as a stereo WAV file — play it through an oscilloscope in X-Y mode to redraw it (see below) |
+| Import SVG&hellip; | Trace an SVG file's path instead of drawing or picking a preset |
+
+Below the canvas, a magnitude-spectrum strip shows the kept terms as bars,
+tallest first, so you can watch amplitude fall off as circles are added; its
+caption calls out the dominant frequency.
+
+Keyboard: focus the canvas, then press <kbd>Space</kbd> to play or pause and
+<kbd>R</kbd> to reset. Control changes are announced through a polite live
+region, and when the browser reports `prefers-reduced-motion` the finished
+curve is shown as a still image instead of an animated pen.
+
+## Sharing a view
+
+**Copy link** encodes the whole view into the URL hash: the source curve
+(a named preset, or your stroke rounded to whole pixels), the circle count,
+the speed, and which layers are visible. Opening that link restores the view;
+the hash also updates in place as you change controls, so a browser bookmark
+captures wherever you left off. A shared stroke is resampled on load, so the
+link stays a few kilobytes even for a detailed drawing.
+
+## Downloading a vector copy
+
+**Download SVG** samples the epicycle chain around one full loop and writes the
+resulting curve as a single-`<path>` SVG document — no stylesheet, font, or
+script. The `viewBox` is fitted to the drawing with a small uniform margin, the
+stroke picks up the current theme's trace color, and the `<title>` records the
+source shape and circle count. Fewer circles export a smoother curve; more sharpen
+the corners, exactly as on screen. The file opens in any vector editor and is
+suitable for a pen plotter.
+
+## Downloading an animated vector copy
+
+**Download SVG** freezes the curve; **Download animated SVG** keeps it moving.
+[`src/animatedSvg.js`](src/animatedSvg.js) reuses the exact same bounds/padding/precision
+framing as the static export, then adds a small dot driven by SMIL's `<animateMotion>` along
+the identical path data the guide curve (drawn faint, so the moving dot reads as the focal
+point) already uses — same start point, same direction, and, since the path is closed, a
+seamless loop with no jump when it wraps around. `dur` is set from the same loop-duration math
+the live canvas animation already uses, scaled by the current **Speed** setting, so the file
+replays at whatever speed it was exported at. The whole thing is self-contained SVG+SMIL: no
+external script, stylesheet, or JavaScript runtime needed to see it move — it animates on its
+own the moment it's opened in a browser or any other SVG-aware viewer.
+
+## Downloading a raster copy
+
+**Download PNG** paints the same reconstructed curve onto an offscreen canvas
+and saves it as a PNG. The bitmap is fitted to the drawing with a uniform
+margin, then scaled by the display's device pixel ratio so the line stays
+crisp on a high-DPI screen; the longest edge is capped so a large drawing can
+never request a gigapixel image. The page color and stroke follow the current
+light or dark theme. As with the SVG, fewer circles give a smoother curve and
+more sharpen the corners. Use this when you want an image to drop straight
+into a document or a chat rather than a vector file to edit.
+
+## Downloading a stereo audio copy
+
+SVG and PNG both draw the curve; **Download audio** plays it instead.
+[`src/wav.js`](src/wav.js) samples the pen position at audio rate and writes it
+as a two-channel WAV file — the left channel is `x(t)`, the right is `y(t)` —
+the same signal an oscilloscope running in X-Y mode (or "oscilloscope music"
+software emulating one) turns back into the curve on its own screen, tracing
+out the shape from sound instead of a stylus.
+
+Both axes share one scale factor, measured once from a dense one-loop trace of
+the curve and reused for every audio-rate sample: the curve is periodic, so its
+bounds are the same on every loop, and scaling `x` and `y` by the same amount
+(rather than independently stretching each to fill \[-1, 1]) keeps the shape's
+aspect ratio intact on the oscilloscope the way it already is on the canvas. A
+small padding fraction keeps the signal just short of the full ±1 range so it
+doesn't ride the raw clip point. `encodeWav` then writes the standard 44-byte
+PCM header (format, channel count, sample rate, bit depth) followed by the
+interleaved 16-bit samples — no compression, no external library, openable in
+any audio editor or player.
+
+## Importing an SVG
+
+**Import SVG&hellip;** is the reverse of **Download SVG**: pick a local `.svg` file and its
+path becomes the traced curve, the same as drawing a stroke or picking an example shape. Every
+`<path>` element is parsed and, when a file has more than one (or more than one subpath within
+one `M`&hellip;`Z`&hellip;`M`&hellip;`Z` string), the one with the largest bounding box is used —
+so a small decorative dot or a background rectangle drawn as a path doesn't win over the actual
+artwork. The path's `M`/`L`/`H`/`V`/`C`/`S`/`Q`/`T`/`A`/`Z` commands are supported, both absolute
+and relative; curves and arcs alike are flattened to short line segments before resampling, the
+same as a freehand stroke. The imported path is recentered and scaled to fit the canvas the same
+way a built-in example shape is, so its original position and size in the source file don't
+matter.
+
+## Tracing an image
+
+**Trace image&hellip;** does for a bitmap what **Import SVG&hellip;** does for vector art: pick a
+PNG, JPEG, GIF, WebP or BMP and the outline of the main shape in it becomes the traced curve.
+It works best on a single solid shape against a plain background — a logo, a silhouette, a
+letter, a hand-drawn blob photographed on white paper.
+
+The image is downscaled to at most 400 pixels on its longest side and thresholded into a
+foreground mask. If the image has any transparent pixels, opacity decides what is foreground;
+otherwise dark pixels do, unless the border of the image is mostly dark, in which case the
+light pixels are taken to be the shape instead. Only the largest connected blob is kept, so
+specks, noise and a second smaller shape are ignored. Its boundary is then walked pixel by
+pixel and simplified (Ramer–Douglas–Peucker, one pixel of tolerance) so the curve follows the
+shape's real corners and curves rather than a staircase of pixel edges. The result is
+recentered and scaled to fit the canvas exactly like an imported SVG. Holes inside the shape
+are not traced — only the outer silhouette is.
+
+## Tests
+
+```bash
+npm test
+```
+
+The suite (`node --test`) covers the pure logic: the DFT and its
+reconstruction guarantee, the epicycle evaluation, arc-length resampling, the
+example-shape generators, the permalink encode/decode round trip, the spectrum
+reduction, the SVG export (path data, viewBox fitting, escaping, and
+degenerate inputs), the animated SVG export (identical framing to the static
+export, the animated dot's motion path matching the guide path's `d`
+attribute exactly, duration/pen-radius configuration and their fallbacks for
+invalid values, and the same escaping/degenerate-input properties), the PNG
+export plan (bounds fitting, device scaling,
+size caps, and degenerate inputs), the SVG import (path-command parsing,
+curve flattening, subpath selection, and centering/scaling), the image tracing
+(luminance and alpha thresholding, the auto-invert border heuristic, largest-blob
+selection, boundary walking on rectangles, lines, discs and edge-touching shapes,
+and Douglas–Peucker simplification of open and closed outlines), and the WAV
+export (sample count, the [-1, 1] range, aspect-preserving uniform scaling on
+a near-degenerate curve, periodicity, loop-rate scaling, and the PCM header
+and sample encoding, including a round trip back to the exact int16 values).
+It has no dependencies.
+
+## How it works
+
+1. The drawn stroke is resampled to a fixed number of evenly spaced points
+   along its arc length, so playback speed is uniform.
+2. Each point becomes a complex number `x + iy`. The DFT turns those samples
+   into a set of terms, each with a frequency, amplitude, and phase.
+3. Terms are sorted by amplitude. Keeping the largest `k` of them gives a
+   smooth approximation; adding more terms sharpens the corners.
+4. At time `t`, term `n` contributes a vector of length `amp` rotating at
+   `freq` cycles per loop, offset by `phase`. Summing the vectors tip-to-tail
+   gives the pen position; the partial sums are the circle centers.
+
+## Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `src/dft.js` | Forward DFT and term extraction |
+| `src/epicycles.js` | Evaluate the epicycle chain at a given time |
+| `src/resample.js` | Arc-length resampling of a polyline |
+| `src/shapes.js` | Built-in parametric example shapes |
+| `src/render.js` | Canvas drawing helpers and theme color lookup |
+| `src/spectrum.js` | Reduce a term set to magnitude-spectrum bars |
+| `src/svg.js` | Build a standalone SVG document from a traced curve |
+| `src/animatedSvg.js` | Build a standalone, self-animating SVG that traces the curve on a loop |
+| `src/raster.js` | Plan a PNG export: fit, scale, and cap the bitmap |
+| `src/svgImport.js` | Parse an SVG path into a traceable, centered polyline |
+| `src/imageTrace.js` | Threshold a bitmap, keep its largest blob and trace its outline |
+| `src/wav.js` | Sample the curve as stereo audio and encode it as a WAV file |
+| `src/share.js` | Encode and decode the permalink hash |
+| `src/app.js` | State, animation loop, and control wiring |
+| `src/ui.js` | Pointer drawing capture |
+| `scripts/serve.js` | Dependency-free static dev server |
+| `test/` | Node test suite for the math core |
+
+## License
+
+MIT
