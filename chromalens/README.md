@@ -1,0 +1,390 @@
+# Chromalens
+
+An interactive color-vision-deficiency simulator, built with plain HTML5 canvas and vanilla
+JavaScript — no build step, no dependencies.
+
+**Live demo:** https://fushanbobfan.github.io/chromalens/
+
+Upload an image (or use the built-in sample) and see it the way protanopia, deuteranopia,
+tritanopia, or full color blindness would render it, at any severity from unaffected to full.
+
+## Running it
+
+Any static file server works, since the page is loaded as ES modules over HTTP (opening
+`index.html` directly via `file://` will not load the modules). For example:
+
+```bash
+npx serve .
+# or
+python -m http.server 8000
+```
+
+Then open the printed URL in a browser.
+
+## Controls
+
+- **Color vision deficiency** — protanopia, deuteranopia, tritanopia (the three dichromacies),
+  or achromatopsia (full color blindness).
+- **Severity** — 0% (the original, unaffected image) to 100% (full deficiency), linearly
+  interpolated.
+- **Simulated view** — **Simulated colors** shows what the deficiency looks like directly.
+  **Change heatmap** instead colors each pixel by *how much* it changed (black = no change, up
+  through red, to yellow = the most change), which works on any image — the confusion score
+  below only scores the sample's four known pairs, but the heatmap highlights every part of an
+  uploaded photo that loses contrast, without needing to know what colors it contains ahead of
+  time. **Daltonized (corrected colors)** goes the other direction: instead of showing what the
+  deficiency looks like, it recolors the image to be easier to tell apart *for* someone with
+  that deficiency (see below). Unavailable for achromatopsia, since full color blindness leaves
+  no unaffected channel to push corrected color into.
+- **Upload an image&hellip;** — process your own image. Everything happens in your browser;
+  nothing is ever sent anywhere.
+- **Use sample image** — reload the built-in sample: a full hue gradient plus swatch pairs
+  people commonly confuse under each deficiency (reds and greens, blues and yellows). Its
+  **confusion score** readout quantifies exactly how much each pair's distinguishability drops
+  under the current deficiency and severity (see below); switching to your own uploaded image
+  instead shows a **palette confusion score** for that photo's own dominant colors (see below).
+- **Download simulated image** — save the currently displayed simulation (whichever view mode
+  is active) as a PNG, named after the deficiency, severity, and view mode that produced it.
+- **Copy share link** — copy a URL that reproduces the current deficiency, severity, view mode,
+  and compare-all/severity-sweep panel states on the sample image (see below).
+- **Compare all deficiencies** — toggle a row of thumbnails showing the current image under
+  every deficiency at once, at the current severity (see below).
+- **Download comparison grid** — save that same set of per-deficiency thumbnails as a single
+  labeled PNG (see below), whether or not the on-screen row is currently toggled open.
+- **Sweep severities** — toggle a row of thumbnails showing the current image under the
+  currently selected deficiency at 0%, 25%, 50%, 75%, and 100% severity at once (see below).
+- **Download severity sweep** — save that same severity progression as a single labeled PNG
+  (see below), whether or not the on-screen row is currently toggled open.
+- **Click either image** — inspect the exact pixel clicked: its original color, its currently
+  displayed color, and the distance between them (see below). Both images are also keyboard
+  operable: focus one and use the arrow keys to aim a visible cursor (hold <kbd>Shift</kbd> for
+  a single-pixel step instead of the normal 10px one), then <kbd>Enter</kbd> or <kbd>Space</kbd>
+  to inspect wherever it's sitting.
+- **Accessible palette size / Generate palette** — build a palette of N colors chosen to stay
+  distinguishable from each other under every simulated deficiency, for picking chart or UI
+  colors ahead of time (see below). **Copy hex codes** copies the generated palette to the
+  clipboard, one hex code per line. **Copy CSS variables** copies the same palette formatted as
+  a `:root { --chroma-1: #...; }` block, ready to paste into a stylesheet (see below).
+  **Download palette** saves the same palette as a single labeled PNG of its swatches.
+- **Check an existing palette** — paste a list of hex codes and **Check palette** scores every
+  pair by its worst-case separation under all four simulated deficiencies, lists the closest
+  pairs first, and names the deficiency limiting each (see below). The other direction from the
+  generator: it grades a palette you already have instead of building a new one. When pairs
+  fail, **Suggest fixes** proposes the smallest nudges that make the palette pass, and **Use
+  repaired palette** writes them back into the box and re-checks (see below).
+- **Foreground color / on background** — pick two colors and **Check contrast** reports their
+  WCAG 2.x contrast ratio and which of the four standard pass/fail thresholds it clears (see
+  below). A different question from every check above: not how confusable two colors become
+  under a deficiency, but whether either one is legible against the other at all.
+
+## Confusion score
+
+The sample image's four swatch pairs each pair a color from one side of a well-known confusion
+(red/green, blue/yellow) with the other. For each pair, `colorDistance` (a straight-line RGB
+distance — not perceptually uniform, but a consistent enough yardstick for a relative
+comparison) is computed on the original colors and again after running both through the current
+deficiency and severity; the percentage drop between the two is the "confusion score" for that
+pair. It's a rough, per-pair number rather than a rigorous perceptual metric, but it turns "the
+image looks different now" into something a little more concrete.
+
+## Palette confusion score
+
+The sample's four swatch pairs are hand-picked so there's always a fixed, known set of "pairs"
+to score — but an arbitrary uploaded photo has no such fixed pairs. [`src/palette.js`](src/palette.js)
+closes that gap: `extractPalette` groups every opaque pixel into a coarse color bucket (3 bits
+per channel) and returns the handful of buckets with the most pixels, each reported as the true
+average color within it — a full k-means clustering isn't necessary for "which few colors
+actually dominate this image." `findConfusablePairs` then runs the same before/after
+`colorDistance` comparison the sample's confusion score uses, over every pair in that palette,
+and keeps the worst (biggest-drop) ones. The result is the same kind of readout as the sample's
+confusion score, just computed over colors the photo actually contains instead of ones chosen
+in advance — and, unlike the sample's score, it doesn't vary with daltonize mode, since
+re-daltonizing an extracted palette would be scoring a correction nobody applied to the image.
+
+## Compare all deficiencies
+
+The other view modes answer "what does this one deficiency look like at this severity?" —
+useful once you already know which one you're checking, but it means comparing two
+deficiencies means switching the dropdown back and forth and trusting memory for what the
+first one looked like. [`src/compareAll.js`](src/compareAll.js) instead runs
+`simulateImageData` (see below) once per deficiency against the same source pixels and returns
+all four results together, so **Compare all deficiencies** can lay them out side by side in one
+glance. It always shows plain simulated colors — not the heatmap or daltonized view — since the
+question it answers ("how does this deficiency differ from that one?") is about comparing
+deficiencies against each other, not comparing view modes. The grid re-renders live as the
+severity slider moves, and is hidden and cleared whenever a new image loads, since a stale set
+of thumbnails at the old image's dimensions would be actively misleading.
+
+## Sweep severities
+
+Compare all deficiencies fixes the severity and varies the deficiency; **Sweep severities** does
+the opposite — it fixes the deficiency (whichever one is currently selected) and varies the
+severity, running [`src/severitySweep.js`](src/severitySweep.js)'s `sweepSeverities` (a thin
+wrapper around the same `simulateImageData` compareAll.js uses, just called once per severity
+instead of once per deficiency) to show the gradual 0%→100% progression as a single row of
+thumbnails instead of only the one point the severity slider happens to be sitting at. Like
+Compare all deficiencies it always shows plain simulated colors, re-renders live as the
+deficiency dropdown changes (its own severity slider changes don't affect it — it already shows
+every severity), and is hidden and cleared whenever a new image loads.
+
+## Downloading a comparison grid
+
+The on-screen compare-all and severity-sweep rows are useful for a quick look, but there's no
+way to save "all four deficiencies" or "the whole severity progression" as a single image the
+way **Download simulated image** saves one view — until now every thumbnail would need
+saving individually. **Download comparison grid** and **Download severity sweep** compose their
+row's thumbnails onto one offscreen canvas instead: each labeled with the deficiency name or
+severity percentage, arranged by [`src/gridLayout.js`](src/gridLayout.js)'s `computeGridLayout`
+into a roughly square grid (four deficiencies become 2x2; the default five severities become
+3 columns with a short second row) rather than one very wide strip, then downloaded as a single
+PNG the same way `downloadBtn` already turns a canvas into a file. Like the download buttons for a
+single view, these don't require the matching on-screen row to be toggled open first — they
+recompute the same underlying `compareAllDeficiencies`/`sweepSeverities` results independently
+of what's currently visible. `computeGridLayout`'s column/row math has no DOM dependency and is
+tested on its own; only the actual thumbnail compositing lives in `main.js`.
+
+## Share links
+
+**Copy share link** encodes the deficiency, severity, view mode, and whether the compare-all or
+severity-sweep panels are open into the URL hash — the same idea gravity-garden, pathlight, and
+epicyclon each use for their own share links, adapted to what this project actually has state
+for. The difference from those three: an uploaded photo can't be packed into a URL the way a
+scenario, grid, or drawn path can, so a chromalens share link never carries the image itself.
+Opening one always applies its settings to the built-in sample image — main.js is what decides
+that, not [`src/shareLink.js`](src/shareLink.js), which only encodes and decodes the settings
+and has no idea an image exists at all. That keeps the module trivially testable (plain
+`URLSearchParams`, no canvas or DOM), and keeps the door open for a future version that finds
+some other way to reference an uploaded image, without touching this format.
+
+A malformed or unrelated hash — a stray fragment left over from something else, or a link typed
+by hand — is treated the same as no hash at all rather than surfaced as an error: opening the
+page with nothing to restore is the overwhelmingly common case, not a broken link.
+
+## Pixel inspector
+
+The confusion score and palette confusion score both answer "how confusable are these colors in
+general" — for the sample's four hand-picked pairs, or for a handful of colors extracted from
+the whole photo — but neither can tell you about one specific point someone's actually looking
+at. [`src/pixelInspector.js`](src/pixelInspector.js) closes that gap: clicking either canvas
+reads that exact `(x, y)` back from both the original and currently displayed image data and
+reports each as a hex color, plus the same `colorDistance` the confusion scores use, so a single
+picked pixel's own drop reads on the same scale as the rest of the app. It re-runs automatically
+whenever the deficiency, view mode, or severity changes, so the readout tracks whatever's
+currently selected instead of going stale after the first click, and clears whenever a new image
+loads, since the old pixel coordinates may not even be in bounds of the new one.
+
+A click's page coordinates are converted to canvas pixel coordinates by scaling against
+`getBoundingClientRect()` — canvases render at `max-width: 100%; height: auto`, so on a narrow
+viewport the on-screen size can be smaller than the canvas's actual pixel resolution. Without
+that scaling step, a click near the edge of a shrunk canvas would read back a pixel from well
+past its real edge.
+
+A mouse click aims and inspects in one motion; a keyboard has no equivalent to hovering
+somewhere before committing, so each canvas gets its own remembered cursor position instead,
+moved with the arrow keys and only inspected on <kbd>Enter</kbd>/<kbd>Space</kbd> — the same
+"aim, then act" shape a click gets for free. A small dot in the corresponding `.pixel-cursor`
+element, positioned in percentages of the canvas's on-screen box (so it tracks the right pixel
+whether or not the canvas is CSS-scaled), shows sighted keyboard users where it currently is;
+the `aria-live` region the inspector result lands in already announces the outcome to a screen
+reader without any extra wiring. Switching to a new image resets both cursors the same way it
+clears the click-driven inspector, since either canvas may now be a different size.
+
+## Accessible palette generator
+
+The confusion score and palette confusion score both answer "how bad is *this* existing set of
+colors" — useful for checking a photo or a hand-picked pair after the fact, but no help choosing
+colors in the first place, before anyone's picked pairs to compare. [`src/paletteGenerator.js`](src/paletteGenerator.js)
+goes the other direction: `generateAccessiblePalette(count)` builds a palette of `count` colors
+meant to stay distinguishable under every deficiency this app simulates, not just to unaffected
+vision — a starting point for a chart legend or UI color set, rather than a checker for one
+that's already been chosen.
+
+It works from a fixed, deterministic grid of candidate colors in HSL space (a dozen-degree hue
+step at a couple of mid-range saturation and lightness levels each — not random sampling, so the
+same `count` always returns the same palette) and greedily grows the palette by maximin
+selection: starting from a fixed first candidate, each subsequent color is whichever remaining
+candidate maximizes its *worst-case* distance to every color already chosen, where "worst-case"
+is the smallest `colorDistance` across the original pair and the same pair run through every
+simulated deficiency at full severity. A palette is only as distinguishable as its least
+distinguishable view, so that worst-case measure — not just the original-color distance the
+maximin search would otherwise optimize — is what actually drives which candidate gets picked at
+each step. Like the rest of the color modules, it has no DOM dependency and reuses `cvd.js`'s
+`simulateColor` and `colorDistance` rather than duplicating either.
+
+**Download palette** reuses [`src/gridLayout.js`](src/gridLayout.js)'s `computeGridLayout` —
+the same grid math behind **Download comparison grid** and **Download severity sweep** — to lay
+out one flat-color swatch per palette entry instead of a simulated-image thumbnail, each labeled
+with its own hex code, and saves the result as a single PNG. **Copy hex codes** already covers a
+plain-text export; this is the same palette as an image, for pasting straight into a design tool
+or attaching to a message instead of retyping hex codes by hand.
+
+**Copy CSS variables** covers a third export shape, for a palette destined straight for a
+stylesheet rather than a design tool or a list of codes: [`src/paletteExport.js`](src/paletteExport.js)'s
+`paletteToCssVariables` formats the same generated palette as a `:root { --chroma-1: #...; }`
+block of CSS custom properties, one declaration per color in order, so it can be pasted directly
+into a project's CSS instead of hand-writing each `--variable-name: #hex;` line from the hex-code
+export. Like the rest of this project's color and formatting modules it has no DOM dependency
+and is unit-tested on its own; only the actual clipboard write lives in `main.js`, and falls back
+to showing the CSS text in the status line the same way **Copy hex codes** does if clipboard
+access is denied.
+
+## Checking an existing palette
+
+The generator answers "give me colors that will hold up"; [`src/paletteCheck.js`](src/paletteCheck.js)
+answers "will *these* hold up" for a palette that already exists — a chart legend, a brand set,
+map categories. `parseHexList` pulls hex codes out of a free-form string (whitespace-, comma-,
+or semicolon-separated, with or without `#`, 3- or 6-digit), reporting anything it can't parse
+rather than dropping it silently. `scorePalette` then runs the same worst-case-distance measure
+`paletteGenerator.js` uses — the minimum `colorDistance` across the original pair and every
+deficiency at full severity — over every unordered pair, sorts them closest-first, marks each
+against the shared `SAFE_DISTANCE` floor of 40, and records which view (a deficiency, or the
+original colors themselves) is the one pulling each pair together. The panel shows the closest
+pairs as swatch rows with that limiting view named, so a failing palette points straight at the
+pair and the deficiency to fix. Like the other color modules it has no DOM dependency and is
+unit-tested directly.
+
+## Repairing a palette
+
+Checking tells you which pairs fail; it doesn't tell you what to change. Regenerating from
+scratch isn't always an option either — a brand set or an established chart legend has to stay
+recognisable. [`src/paletteRepair.js`](src/paletteRepair.js)'s `repairPalette` sits between the
+two: it moves as few colors as possible, each as little as possible, until every pair clears the
+same `SAFE_DISTANCE` floor the checker grades against. Each round takes the currently worst pair,
+moves whichever member is involved in more failing pairs (on a tie, the later one, so the front
+of the palette — where the primary color usually sits — is disturbed last), and replaces it with
+the color in a fixed HSL neighbourhood (hue ±60° in 10° steps, saturation ±30, lightness ±30)
+that clears the floor against every other color while staying closest to the original. If
+nothing in the neighbourhood clears, the candidate with the most clearance is taken so the next
+round can build on it; the loop is bounded, so a palette too crowded to fix is reported as still
+failing rather than looped on forever. The panel lists each moved color before and after with
+its shift, and colors that were never in a failing pair are guaranteed untouched. Like the other
+color modules it has no DOM dependency and is unit-tested directly.
+
+## Text contrast
+
+Every check so far asks a version of the same question: how confusable do two colors become
+*under a simulated deficiency*. [`src/contrast.js`](src/contrast.js) asks a different one —
+whether a foreground and background are legible *at all*, deficiency aside — the WCAG 2.x
+contrast ratio question this project's own footer already points elsewhere for. `relativeLuminance`
+linearizes each sRGB channel out of its gamma encoding and combines them with the same
+green-dominant perceptual weights (`0.2126`/`0.7152`/`0.0722`) `cvd.js`'s achromatopsia conversion
+uses, for the same reason: the eye's luminance response depends far more on green light than red
+or blue. `contrastRatio` is `(lighter + 0.05) / (darker + 0.05)` between two colors' luminances —
+always at least 1 (identical colors) and at most 21 (pure black against pure white) — and
+`wcagRating` reports which of the four standard thresholds it clears: AA and AAA, each at normal
+text size and the more permissive large-text size. Contrast ratio and the confusion scores
+measure genuinely different things, not just different scales for the same idea: a pair can be
+high-contrast in luminance while still simulating as visually similar under a deficiency (two
+saturated colors of matched lightness but confusable hue), or the reverse (two colors a dichromacy
+barely changes, but which were never far apart in luminance to begin with). Like the other color
+modules, `contrast.js` has no DOM dependency and is unit-tested directly, against exact reference
+values (black-on-white is exactly 21) rather than only relative comparisons.
+
+## Change heatmap
+
+[`src/heatmap.js`](src/heatmap.js) maps a `colorDistance` magnitude to a black → red → yellow
+color, capped at a magnitude of 150 (chosen well below the theoretical maximum of ~441, since
+most real color confusions are far subtler than a full black/white swap — capping lower keeps
+an ordinary photo from reading as mostly black). Where the confusion score only knows how to
+score the sample image's four fixed pairs, the heatmap works on *any* image: **Simulated
+view: Change heatmap** replaces each pixel's simulated color with its own change magnitude,
+turning "these two specific colors get harder to tell apart" into "here's where in this exact
+photo contrast is being lost" for a photo whose colors nobody hand-picked in advance.
+
+## Daltonization
+
+Where every other view mode simulates a deficiency, `daltonize` in [`src/cvd.js`](src/cvd.js)
+does the opposite: it recolors an image to be *more* distinguishable for someone with one of the
+three dichromacies, using the classic error-redistribution approach (Fidaner, Lin & Ozguven,
+2005), adapted to run directly on this project's RGB matrices instead of a full LMS color-space
+conversion. For each pixel, it simulates the deficiency, treats the difference from the original
+as color information that deficiency discards, and pushes that difference into channels the
+deficiency doesn't collapse — blue (and green) for protanopia and deuteranopia, which both
+confuse red and green; red and green for tritanopia, which confuses blue and yellow instead.
+
+It's a per-pixel heuristic, not a guarantee: the 0-255 clamp can absorb the whole correction for
+colors already near black, white, or a channel extreme, so a handful of pairs see little
+improvement even though most see a substantial one. In daltonize mode, the confusion score panel
+reflects this directly — instead of scoring how much the *simulated* image collapses each
+sample pair, it scores how much of the original separation a viewer with the deficiency would
+still see after the image is daltonized.
+
+## The simulation
+
+[`src/cvd.js`](src/cvd.js) implements the color transforms as plain functions on `{r, g, b}`
+triples (0-255), with no DOM or canvas dependency, so the color math itself is unit-tested
+without needing a browser. The three dichromacy matrices are the widely used approximation for
+simulating protanopia, deuteranopia, and tritanopia — the same family of matrices behind, e.g.,
+browser devtools' "emulate vision deficiencies" tooling. Not colorimetrically exact (a full
+physiological model needs linear-light color space conversions this project skips for
+simplicity), but a fast, well-established approximation appropriate for an educational tool.
+Every matrix's rows sum to exactly 1, so a neutral gray always maps to itself: these
+deficiencies affect hue discrimination, not overall brightness.
+
+Achromatopsia (full color blindness) instead converts toward grayscale using perceptual luma
+weights (ITU-R BT.709 — green is weighted far more heavily than red or blue, matching how much
+more strongly the eye's luminance response depends on green light).
+
+**Severity** works the same way for both: it's a linear interpolation between the original
+color and the fully simulated one, a standard-enough approximation of anomalous trichromacy
+(partial deficiency) that doesn't require a full model of how far each affected cone's
+sensitivity has actually shifted.
+
+[`src/simulateImage.js`](src/simulateImage.js) runs `cvd.js`'s per-pixel functions over a whole
+RGBA buffer, returning a new buffer rather than mutating the input — both `main.js`'s two-canvas
+view and `compareAll.js`'s four-way comparison build on this one loop instead of duplicating it.
+
+[`src/main.js`](src/main.js) draws the source image onto a canvas, reads it back with
+`getImageData`, runs every pixel through `simulateImage.js`, and writes the result to a second
+canvas with `putImageData` — the simulation itself never touches the DOM directly. Images larger than 480px
+in either dimension are scaled down first, both for performance (a few hundred thousand pixels
+processed synchronously is instant; a few million isn't) and so the two canvases fit
+side by side without scrolling.
+
+## Development
+
+```bash
+npm test
+```
+
+Tests use Node's built-in test runner (`node:test`) and check the color math's invariants:
+severity 0 is a no-op, severity 1 leaves neutral gray unchanged, each dichromacy measurably
+collapses the distance between the specific colors it's named for confusing (red/green for
+protanopia and deuteranopia, blue/yellow for tritanopia), achromatopsia converges to a true
+gray with the expected per-channel luminance weighting, and `daltonize` measurably recovers
+distance for a representative pair per dichromacy that plain simulation collapses.
+`palette.js` is tested separately: bucket grouping and true-color averaging, ignoring fully
+transparent pixels, respecting `maxColors`, and `findConfusablePairs` sorting worst-first and
+matching a known red/green confusion under protanopia. `pixelInspector.js` is tested
+separately too: hex formatting (zero-padding, uppercase), zero distance for identical colors, a
+known-distance pair, and that each side's original `r`/`g`/`b` fields survive alongside the
+added hex. `paletteGenerator.js` is tested for returning exactly the requested color count,
+rejecting a non-positive/non-integer/too-large count, determinism across repeated calls, no
+repeated colors, well-formed hex output, and that every pair in a generated palette clears a
+worst-case-distance floor across every simulated deficiency. `paletteCheck.js` is tested for
+parsing mixed separators, missing `#`, and 3-digit shorthand, collecting unparseable tokens,
+tolerating empty/non-string input, worst-case separation never exceeding the plain distance and
+blaming a red/green pair on a red/green deficiency, and `scorePalette` ranking pairs worst-first,
+flagging near-duplicates while clearing well-spread sets, honoring a threshold override, and
+handling fewer than two colors. `contrast.js` is tested for exact reference values (black
+against white is exactly 21, a color against itself is exactly 1), order-independence, staying
+within the theoretical `[1, 21]` range across a fuzz set of random color pairs, luminance
+weighting green above red above blue, monotonically increasing luminance, and `wcagRating`
+reporting each of the four thresholds independently right at its own boundary. `shareLink.js` is
+tested for round-tripping every setting through `buildShareUrl`/`decodeSettingsFromHash`,
+rounding severity to a whole percent, omitting the compare/sweep flags when both are off,
+replacing an existing hash on the base URL, and `decodeSettingsFromHash` returning `null` rather
+than throwing for an empty hash, an unrelated hash, an unrecognized deficiency or view mode, or
+an out-of-range or non-numeric severity. `paletteExport.js` is tested separately: wrapping
+declarations in a `:root` block, numbering variables from 1 in palette order, honoring a custom
+prefix, returning a valid empty block for an empty palette, and ignoring any fields on each
+color besides `hex`. `paletteRepair.js` is tested for `rgbToHsl` inverting the generator's
+`hslToRgb`, failing fixtures coming back clear, near-duplicate blues being pulled apart, colors
+outside any failing pair staying untouched, each change recording its original, replacement and
+shift in palette order, an already-clear palette coming back unchanged in zero rounds,
+determinism without mutating the input, a stricter floor never producing a closer worst pair
+than a looser one, `maxRounds` bounding the work, and fewer than two colors returning as-is.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

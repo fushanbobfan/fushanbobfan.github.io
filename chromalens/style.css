@@ -1,0 +1,399 @@
+:root {
+  color-scheme: dark;
+  --bg: #100e17;
+  --panel: #1c1826;
+  --text: #ece9f4;
+  --muted: #948da3;
+  --accent: #c77dff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+header {
+  text-align: center;
+  max-width: 640px;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.8rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 1100px;
+}
+
+.controls {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 0 0 280px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+button,
+.file-label {
+  background: var(--accent);
+  color: #1a0033;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+button:hover,
+.file-label:hover {
+  filter: brightness(1.1);
+}
+
+select,
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+input[type="file"] {
+  color: var(--muted);
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.status {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.9rem;
+}
+
+.confusion-score {
+  font-size: 0.85rem;
+}
+
+.confusion-score p {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+}
+
+.confusion-score ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.confusion-score .swatch {
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  border-radius: 50%;
+  margin-right: 0.15rem;
+  border: 1px solid var(--muted);
+  vertical-align: -0.05em;
+}
+
+.pixel-inspector {
+  font-size: 0.85rem;
+}
+
+.pixel-inspector p {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+}
+
+.pixel-inspector dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  row-gap: 0.15rem;
+}
+
+.pixel-inspector dt {
+  color: var(--muted);
+}
+
+.pixel-inspector dd {
+  margin: 0;
+}
+
+.pixel-inspector .swatch {
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  border: 1px solid var(--muted);
+  vertical-align: -0.05em;
+}
+
+#palette-count {
+  width: 3.5em;
+}
+
+.palette-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.palette-swatches figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.palette-swatches .swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--muted);
+}
+
+.palette-swatches figcaption {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+#palette-check-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.palette-check {
+  font-size: 0.85rem;
+}
+
+.palette-check p {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+}
+
+.palette-check ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  list-style: none;
+}
+
+.palette-check li {
+  margin-bottom: 0.15rem;
+}
+
+.palette-repair:not(:empty) {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--muted);
+}
+
+.palette-repair button {
+  margin-top: 0.25rem;
+}
+
+.palette-check .swatch {
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  border-radius: 50%;
+  margin-right: 0.15rem;
+  border: 1px solid var(--muted);
+  vertical-align: -0.05em;
+}
+
+input[type="color"] {
+  width: 2.4em;
+  height: 1.8em;
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.contrast-check {
+  font-size: 0.85rem;
+}
+
+.contrast-check p {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+}
+
+.contrast-check .contrast-ratio {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.contrast-check dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  row-gap: 0.15rem;
+}
+
+.contrast-check dt {
+  color: var(--muted);
+}
+
+.contrast-check dd {
+  margin: 0;
+}
+
+.contrast-check .pass {
+  color: #7ee787;
+}
+
+.contrast-check .fail {
+  color: #ff7b72;
+}
+
+.contrast-check .preview {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--muted);
+}
+
+.canvases {
+  flex: 1 1 480px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.canvases figure {
+  margin: 0;
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.canvases figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+canvas {
+  max-width: 100%;
+  height: auto;
+  background: #05060a;
+  border: 1px solid #2b2740;
+  border-radius: 8px;
+}
+
+#original,
+#simulated {
+  cursor: crosshair;
+}
+
+#original:focus-visible,
+#simulated:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* line-height: 0 removes the small gap a canvas's inline baseline otherwise leaves below it,
+   so the wrap sizes exactly to the (possibly CSS-scaled) canvas for the cursor's percentage
+   positioning to line up against. */
+.canvas-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+
+/* Positioned in percentages of the wrap, which is sized exactly to the canvas, so the dot
+   lines up with the right image pixel whether or not `max-width: 100%` has scaled the canvas
+   down from its native resolution. */
+.pixel-cursor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #000, 0 0 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.compare-all-grid,
+.severity-sweep-grid {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.compare-all-grid figure,
+.severity-sweep-grid figure {
+  margin: 0;
+  flex: 1 1 180px;
+  min-width: 0;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.compare-all-grid figcaption,
+.severity-sweep-grid figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+  max-width: 640px;
+}

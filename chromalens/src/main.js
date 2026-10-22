@@ -1,0 +1,935 @@
+import { daltonize, listDichromacies, colorDistance, hexToRgb } from "./cvd.js";
+import { heatmapColor } from "./heatmap.js";
+import { simulateColor } from "./simulateImage.js";
+import { compareAllDeficiencies } from "./compareAll.js";
+import { sweepSeverities } from "./severitySweep.js";
+import { extractPalette, findConfusablePairs } from "./palette.js";
+import { generateAccessiblePalette } from "./paletteGenerator.js";
+import { parseHexList, scorePalette } from "./paletteCheck.js";
+import { repairPalette } from "./paletteRepair.js";
+import { paletteToCssVariables } from "./paletteExport.js";
+import { describePixel } from "./pixelInspector.js";
+import { computeGridLayout } from "./gridLayout.js";
+import { contrastRatio, wcagRating } from "./contrast.js";
+import { buildShareUrl, decodeSettingsFromHash } from "./shareLink.js";
+
+const MAX_DIMENSION = 480;
+const SAMPLE_WIDTH = 480;
+const SAMPLE_HEIGHT = 240;
+
+// Shared between drawing the sample image and scoring how confusable each pair becomes — a
+// single source of truth for "what colors does the sample actually contain".
+const SAMPLE_SWATCH_PAIRS = [
+  ["#e63946", "#2a9d8f"],
+  ["#ff595e", "#8ac926"],
+  ["#ffca3a", "#1982c4"],
+  ["#6a4c93", "#f9c74f"],
+];
+
+const originalCanvas = document.getElementById("original");
+const simulatedCanvas = document.getElementById("simulated");
+const originalCtx = originalCanvas.getContext("2d");
+const simulatedCtx = simulatedCanvas.getContext("2d");
+const originalCursorEl = document.getElementById("original-cursor");
+const simulatedCursorEl = document.getElementById("simulated-cursor");
+const deficiencySelect = document.getElementById("deficiency");
+const viewModeSelect = document.getElementById("view-mode");
+const severityInput = document.getElementById("severity");
+const severityValue = document.getElementById("severity-value");
+const fileInput = document.getElementById("image-file");
+const useSampleBtn = document.getElementById("use-sample");
+const downloadBtn = document.getElementById("download-simulated");
+const copyShareLinkBtn = document.getElementById("copy-share-link");
+const compareAllBtn = document.getElementById("compare-all");
+const compareAllGrid = document.getElementById("compare-all-grid");
+const downloadCompareAllBtn = document.getElementById("download-compare-all");
+const severitySweepBtn = document.getElementById("severity-sweep");
+const severitySweepGrid = document.getElementById("severity-sweep-grid");
+const downloadSeveritySweepBtn = document.getElementById("download-severity-sweep");
+const paletteCountInput = document.getElementById("palette-count");
+const generatePaletteBtn = document.getElementById("generate-palette");
+const copyPaletteBtn = document.getElementById("copy-palette");
+const copyPaletteCssBtn = document.getElementById("copy-palette-css");
+const downloadPaletteBtn = document.getElementById("download-palette");
+const paletteGeneratorEl = document.getElementById("palette-generator");
+const paletteCheckInput = document.getElementById("palette-check-input");
+const checkPaletteBtn = document.getElementById("check-palette");
+const paletteCheckResultEl = document.getElementById("palette-check-result");
+const repairPaletteBtn = document.getElementById("repair-palette");
+const paletteRepairResultEl = document.getElementById("palette-repair-result");
+const contrastFgInput = document.getElementById("contrast-fg");
+const contrastBgInput = document.getElementById("contrast-bg");
+const checkContrastBtn = document.getElementById("check-contrast");
+const contrastCheckResultEl = document.getElementById("contrast-check-result");
+const statusEl = document.getElementById("status");
+const confusionScoreEl = document.getElementById("confusion-score");
+const pixelInspectorEl = document.getElementById("pixel-inspector");
+const simulatedCaptionEl = document.getElementById("simulated-caption");
+const daltonizeOption = viewModeSelect.querySelector('option[value="daltonize"]');
+
+let showingSample = true;
+let compareAllVisible = false;
+let severitySweepVisible = false;
+let generatedPalette = null; // last palette from generateAccessiblePalette, or null before one's been made
+let pickedPixel = null; // {x, y} in canvas pixel coordinates, or null if nothing's been picked yet
+
+// Mouse users pick a pixel by clicking directly on it; keyboard users instead move a cursor
+// with the arrow keys and pick with Enter/Space, so each canvas needs its own remembered
+// position (unlike pickedPixel, which is shared since a click on either canvas inspects the
+// same underlying (x, y) on both). Coarse steps cover a 480px-wide image in a handful of
+// keystrokes; holding Shift switches to single-pixel steps for lining up on something exact.
+const COARSE_STEP = 10;
+const FINE_STEP = 1;
+const keyboardCursors = {
+  original: { canvas: originalCanvas, el: originalCursorEl, x: null, y: null },
+  simulated: { canvas: simulatedCanvas, el: simulatedCursorEl, x: null, y: null },
+};
+
+// Achromatopsia collapses every channel to the same gray, leaving no unaffected channel for
+// daltonize to redistribute lost color into — so daltonization only applies to the three
+// dichromacies, not achromatopsia.
+function canDaltonize(deficiency) {
+  return deficiency !== "achromatopsia";
+}
+
+function populateDeficiencyOptions() {
+  for (const name of listDichromacies()) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    deficiencySelect.appendChild(option);
+  }
+  const achromatopsia = document.createElement("option");
+  achromatopsia.value = "achromatopsia";
+  achromatopsia.textContent = "Achromatopsia (full color blindness)";
+  deficiencySelect.appendChild(achromatopsia);
+}
+
+// A hue gradient plus swatch pairs commonly confused under each deficiency (red/green,
+// blue/yellow), generated entirely in canvas rather than bundling an image file — no
+// licensing questions, and it's immediately meaningful without anyone uploading their own photo.
+function drawSampleImage(ctx, width, height) {
+  const gradient = ctx.createLinearGradient(0, 0, width, 0);
+  const hues = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360];
+  hues.forEach((hue, i) => gradient.addColorStop(i / (hues.length - 1), `hsl(${hue}, 90%, 55%)`));
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height * 0.4);
+
+  const swatchWidth = width / SAMPLE_SWATCH_PAIRS.length;
+  const swatchHeight = height * 0.6;
+  SAMPLE_SWATCH_PAIRS.forEach(([left, right], i) => {
+    ctx.fillStyle = left;
+    ctx.fillRect(i * swatchWidth, height * 0.4, swatchWidth / 2, swatchHeight);
+    ctx.fillStyle = right;
+    ctx.fillRect(i * swatchWidth + swatchWidth / 2, height * 0.4, swatchWidth / 2, swatchHeight);
+  });
+}
+
+function fitDimensions(width, height, maxDimension) {
+  if (width <= maxDimension && height <= maxDimension) return { width, height };
+  const scale = maxDimension / Math.max(width, height);
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+}
+
+function setCanvasSize(width, height) {
+  originalCanvas.width = width;
+  originalCanvas.height = height;
+  simulatedCanvas.width = width;
+  simulatedCanvas.height = height;
+}
+
+// A new image invalidates any thumbnails compare-all already drew for the previous one
+// (wrong dimensions, wrong colors) — hide it rather than leave stale thumbnails on screen.
+function hideCompareAll() {
+  compareAllVisible = false;
+  compareAllGrid.hidden = true;
+  compareAllGrid.innerHTML = "";
+  compareAllBtn.setAttribute("aria-expanded", "false");
+}
+
+// Same reasoning as hideCompareAll: a new image's severity sweep would show the wrong photo
+// entirely, not just the wrong deficiency, so it's hidden rather than left stale on screen.
+function hideSeveritySweep() {
+  severitySweepVisible = false;
+  severitySweepGrid.hidden = true;
+  severitySweepGrid.innerHTML = "";
+  severitySweepBtn.setAttribute("aria-expanded", "false");
+}
+
+// A new image invalidates any previously picked pixel the same way it invalidates compare-all's
+// thumbnails — the old (x, y) may not even be in bounds of the new image, let alone show a
+// color anyone asked about.
+function clearPixelInspector() {
+  pickedPixel = null;
+  pixelInspectorEl.innerHTML = "";
+}
+
+// A new image also invalidates any keyboard cursor position from the previous one — same
+// reasoning as clearPixelInspector, plus the old (x, y) may now be out of bounds if the new
+// image is smaller.
+function resetKeyboardCursors() {
+  for (const key of Object.keys(keyboardCursors)) {
+    const cursor = keyboardCursors[key];
+    cursor.x = null;
+    cursor.y = null;
+    cursor.el.hidden = true;
+  }
+}
+
+// Placed in percentages of the canvas-wrap, which is sized exactly to the canvas's own
+// (possibly CSS-scaled) on-screen box, so the dot tracks the right image pixel regardless of
+// whether `max-width: 100%` has shrunk the canvas below its native resolution.
+function renderKeyboardCursor(key) {
+  const cursor = keyboardCursors[key];
+  if (cursor.x === null) return;
+  const { width, height } = cursor.canvas;
+  cursor.el.hidden = false;
+  cursor.el.style.left = `${((cursor.x + 0.5) / width) * 100}%`;
+  cursor.el.style.top = `${((cursor.y + 0.5) / height) * 100}%`;
+}
+
+// Arrow keys move this canvas's own keyboard cursor without picking a pixel yet, so a keyboard
+// user can line it up before committing with Enter/Space — the same two-step "aim, then act"
+// shape the mouse gets for free from hovering before clicking.
+function moveKeyboardCursor(key, dx, dy) {
+  const cursor = keyboardCursors[key];
+  const { width, height } = cursor.canvas;
+  if (width === 0 || height === 0) return;
+  const startX = cursor.x === null ? Math.floor(width / 2) : cursor.x;
+  const startY = cursor.y === null ? Math.floor(height / 2) : cursor.y;
+  cursor.x = Math.min(width - 1, Math.max(0, startX + dx));
+  cursor.y = Math.min(height - 1, Math.max(0, startY + dy));
+  renderKeyboardCursor(key);
+}
+
+function loadSample() {
+  showingSample = true;
+  setCanvasSize(SAMPLE_WIDTH, SAMPLE_HEIGHT);
+  drawSampleImage(originalCtx, SAMPLE_WIDTH, SAMPLE_HEIGHT);
+  applySimulation();
+  hideCompareAll();
+  hideSeveritySweep();
+  clearPixelInspector();
+  resetKeyboardCursors();
+  statusEl.textContent = "Showing the built-in sample image.";
+}
+
+function loadImageFile(file) {
+  showingSample = false;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const { width, height } = fitDimensions(img.naturalWidth, img.naturalHeight, MAX_DIMENSION);
+    setCanvasSize(width, height);
+    originalCtx.drawImage(img, 0, 0, width, height);
+    applySimulation();
+    hideCompareAll();
+    hideSeveritySweep();
+    clearPixelInspector();
+    resetKeyboardCursors();
+    statusEl.textContent = `Showing "${file.name}".`;
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => {
+    statusEl.textContent = `Couldn't load "${file.name}" as an image.`;
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+const VIEW_MODE_CAPTIONS = {
+  simulated: "Simulated",
+  heatmap: "Simulated",
+  daltonize: "Daltonized",
+};
+
+// Disallows selecting "Daltonized" for achromatopsia (see canDaltonize) — falls back to
+// "Simulated colors" if it was already selected when the deficiency changed to achromatopsia.
+function updateViewModeAvailability(deficiency) {
+  const allowed = canDaltonize(deficiency);
+  daltonizeOption.disabled = !allowed;
+  if (!allowed && viewModeSelect.value === "daltonize") {
+    viewModeSelect.value = "simulated";
+  }
+}
+
+function applySimulation() {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) return;
+
+  const imageData = originalCtx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const deficiency = deficiencySelect.value;
+  const severity = Number(severityInput.value) / 100;
+  updateViewModeAvailability(deficiency);
+  const mode = viewModeSelect.value;
+  simulatedCaptionEl.textContent = VIEW_MODE_CAPTIONS[mode];
+
+  for (let i = 0; i < data.length; i += 4) {
+    const original = { r: data[i], g: data[i + 1], b: data[i + 2] };
+    let result;
+    if (mode === "daltonize") {
+      result = daltonize(deficiency, original.r, original.g, original.b, severity);
+    } else {
+      const simulated = simulateColor(deficiency, original.r, original.g, original.b, severity);
+      result = mode === "heatmap" ? heatmapColor(colorDistance(original, simulated)) : simulated;
+    }
+    data[i] = result.r;
+    data[i + 1] = result.g;
+    data[i + 2] = result.b;
+    // Alpha (data[i + 3]) is left untouched — a vision deficiency doesn't change transparency.
+  }
+
+  simulatedCtx.putImageData(imageData, 0, 0);
+  updateConfusionScore(deficiency, severity, mode);
+  if (pickedPixel) updatePixelInspector(pickedPixel);
+}
+
+// Quantifies exactly how much harder pairs of colors are to tell apart under the current
+// deficiency and severity. For the sample image, scores its four fixed, hand-picked swatch
+// pairs (see SAMPLE_SWATCH_PAIRS). For an uploaded photo, which has no such fixed pairs, scores
+// the worst pairs among a small palette extracted from whatever colors the photo actually
+// contains instead (see updatePaletteConfusionScore). In daltonize mode, scores what a viewer
+// with the deficiency would see after daltonizing instead — the same "how far apart do these
+// end up" comparison, just measured on the corrected colors so it reflects how much of the
+// original distinguishability the correction actually restores.
+function updateConfusionScore(deficiency, severity, mode) {
+  if (!showingSample) {
+    updatePaletteConfusionScore(deficiency, severity);
+    return;
+  }
+
+  const isDaltonize = mode === "daltonize";
+  const items = SAMPLE_SWATCH_PAIRS.map(([leftHex, rightHex], i) => {
+    const left = hexToRgb(leftHex);
+    const right = hexToRgb(rightHex);
+    const before = colorDistance(left, right);
+    const [viewedLeft, viewedRight] = isDaltonize
+      ? [daltonize(deficiency, left.r, left.g, left.b, severity), daltonize(deficiency, right.r, right.g, right.b, severity)]
+      : [left, right];
+    const after = colorDistance(
+      simulateColor(deficiency, viewedLeft.r, viewedLeft.g, viewedLeft.b, severity),
+      simulateColor(deficiency, viewedRight.r, viewedRight.g, viewedRight.b, severity)
+    );
+    const percentOfOriginal = before === 0 ? 100 : Math.round((after / before) * 100);
+    const description = isDaltonize
+      ? `recovered to ${percentOfOriginal}% of the original separation`
+      : `distinguishability down ${100 - percentOfOriginal}%`;
+    return `<li>Pair ${i + 1}: ${description}</li>`;
+  });
+
+  const label = isDaltonize ? "Confusion score after daltonizing" : "Confusion score";
+  confusionScoreEl.innerHTML = `<p>${label}</p><ul>${items.join("")}</ul>`;
+}
+
+// Extracts a small palette of dominant colors from the uploaded image (see palette.js) and
+// reports its worst pairs — the same before/after colorDistance comparison as the sample's
+// fixed swatch pairs, just run over colors the photo itself actually contains instead of ones
+// chosen in advance. Always plain simulated confusability, regardless of view mode: daltonize's
+// "recovered separation" framing is specific to the sample's daltonize/cvd.js pipeline, and
+// re-daltonizing an extracted palette would score a correction nobody applied to this image.
+function updatePaletteConfusionScore(deficiency, severity) {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) {
+    confusionScoreEl.innerHTML = "";
+    return;
+  }
+
+  const { data } = originalCtx.getImageData(0, 0, width, height);
+  const palette = extractPalette(data);
+  const pairs = findConfusablePairs(palette, deficiency, severity);
+  if (pairs.length === 0) {
+    confusionScoreEl.innerHTML = "";
+    return;
+  }
+
+  const items = pairs.map(({ a, b, drop }) => {
+    const swatch = (c) => `<span class="swatch" style="background:rgb(${c.r},${c.g},${c.b})"></span>`;
+    return `<li>${swatch(a)}${swatch(b)} distinguishability down ${Math.round(drop)}%</li>`;
+  });
+  confusionScoreEl.innerHTML = `<p>Palette confusion score</p><ul>${items.join("")}</ul>`;
+}
+
+// Reads the same (x, y) back from both canvases and reports how that one pixel's color changed
+// — the confusion scores above answer "how confusable are these colors in general", but only
+// for the sample's four fixed pairs or an extracted palette; this answers "what does this exact
+// point in the image look like" for anywhere a user actually clicks. Re-run from applySimulation
+// whenever the deficiency, view mode, or severity changes, so the readout tracks the current
+// settings instead of going stale after the first click.
+function updatePixelInspector({ x, y }) {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) return;
+
+  const [origR, origG, origB] = originalCtx.getImageData(x, y, 1, 1).data;
+  const [dispR, dispG, dispB] = simulatedCtx.getImageData(x, y, 1, 1).data;
+  const { original, displayed, distance } = describePixel(
+    { r: origR, g: origG, b: origB },
+    { r: dispR, g: dispG, b: dispB }
+  );
+
+  const swatch = (c) => `<span class="swatch" style="background:${c.hex}"></span>`;
+  pixelInspectorEl.innerHTML = `
+    <p>Picked pixel (row ${y + 1}, column ${x + 1})</p>
+    <dl>
+      <dt>Original</dt>
+      <dd>${swatch(original)}${original.hex}</dd>
+      <dt>Displayed</dt>
+      <dd>${swatch(displayed)}${displayed.hex}</dd>
+      <dt>Distance</dt>
+      <dd>${distance.toFixed(1)}</dd>
+    </dl>`;
+}
+
+// Converts a click's page coordinates into canvas pixel coordinates, accounting for the CSS
+// `max-width: 100%; height: auto` scaling that shrinks the canvas's on-screen size below its
+// actual pixel resolution on narrow viewports — without this, a click near the right edge of a
+// scaled-down canvas would read back a pixel from well past the real edge.
+function canvasPixelFromEvent(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.floor((event.clientX - rect.left) * scaleX);
+  const y = Math.floor((event.clientY - rect.top) * scaleY);
+  return {
+    x: Math.min(canvas.width - 1, Math.max(0, x)),
+    y: Math.min(canvas.height - 1, Math.max(0, y)),
+  };
+}
+
+function pickPixelAt(event, canvas) {
+  const { width, height } = canvas;
+  if (width === 0 || height === 0) return;
+  pickedPixel = canvasPixelFromEvent(event, canvas);
+  updatePixelInspector(pickedPixel);
+}
+
+// Shows the current image under every deficiency at once, at the current severity, always in
+// plain "simulated colors" (not daltonize/heatmap — those describe a view mode, not a
+// deficiency, so mixing them into a deficiency comparison would answer a different question
+// than the one this view is for).
+function renderCompareAll() {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) return;
+
+  const { data } = originalCtx.getImageData(0, 0, width, height);
+  const severity = Number(severityInput.value) / 100;
+  const results = compareAllDeficiencies(data, severity);
+
+  compareAllGrid.innerHTML = "";
+  for (const { name, data: simulatedData } of results) {
+    const figure = document.createElement("figure");
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", `The image as simulated for ${name}`);
+    canvas.getContext("2d").putImageData(new ImageData(simulatedData, width, height), 0, 0);
+
+    const caption = document.createElement("figcaption");
+    caption.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+
+    figure.append(canvas, caption);
+    compareAllGrid.appendChild(figure);
+  }
+}
+
+// Shows the current image under the currently selected deficiency at several severities at
+// once, from unaffected to full, always in plain "simulated colors" for the same reason
+// renderCompareAll is: daltonize/heatmap describe a view mode, not a deficiency-and-severity
+// combination, so mixing them in would answer a different question than this view is for.
+function renderSeveritySweep() {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) return;
+
+  const { data } = originalCtx.getImageData(0, 0, width, height);
+  const results = sweepSeverities(data, deficiencySelect.value);
+
+  severitySweepGrid.innerHTML = "";
+  for (const { severity, data: simulatedData } of results) {
+    const figure = document.createElement("figure");
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.setAttribute("role", "img");
+    const percent = Math.round(severity * 100);
+    canvas.setAttribute("aria-label", `The image at ${percent}% severity`);
+    canvas.getContext("2d").putImageData(new ImageData(simulatedData, width, height), 0, 0);
+
+    const caption = document.createElement("figcaption");
+    caption.textContent = `${percent}%`;
+
+    figure.append(canvas, caption);
+    severitySweepGrid.appendChild(figure);
+  }
+}
+
+// Composes a set of same-size labeled thumbnails (compare-all's four deficiencies, or a
+// severity sweep's several percentages) onto one offscreen canvas via gridLayout.js, and
+// triggers a PNG download of the result — the same download-a-link pattern downloadBtn already
+// uses for a single image, just for a whole comparison at once so no one has to save each
+// thumbnail separately and reassemble them elsewhere.
+function downloadGrid(cells, width, height, filename) {
+  const layout = computeGridLayout(cells.length, width, height);
+  if (layout.width === 0 || layout.height === 0) return;
+
+  const gridCanvas = document.createElement("canvas");
+  gridCanvas.width = layout.width;
+  gridCanvas.height = layout.height;
+  const gridCtx = gridCanvas.getContext("2d");
+
+  gridCtx.fillStyle = "#100e17";
+  gridCtx.fillRect(0, 0, gridCanvas.width, gridCanvas.height);
+  gridCtx.fillStyle = "#ece9f4";
+  gridCtx.font = "16px sans-serif";
+  gridCtx.textAlign = "center";
+  gridCtx.textBaseline = "middle";
+
+  cells.forEach(({ label, data }, i) => {
+    const { x, y, labelY } = layout.positions[i];
+    const cellCanvas = document.createElement("canvas");
+    cellCanvas.width = width;
+    cellCanvas.height = height;
+    cellCanvas.getContext("2d").putImageData(new ImageData(data, width, height), 0, 0);
+    gridCtx.drawImage(cellCanvas, x, y);
+    gridCtx.fillText(label, x + width / 2, labelY);
+  });
+
+  const link = document.createElement("a");
+  link.href = gridCanvas.toDataURL("image/png");
+  link.download = filename;
+  link.click();
+}
+
+// Renders the palette generated by "Generate palette" as a row of labeled swatches — the same
+// swatch-plus-hex presentation the confusion score and pixel inspector already use elsewhere on
+// the page, so a picked-for-distinguishability color reads the same way as one just described.
+function renderGeneratedPalette(palette) {
+  const swatches = palette
+    .map((c) => `<figure><span class="swatch" style="background:${c.hex}"></span><figcaption>${c.hex}</figcaption></figure>`)
+    .join("");
+  paletteGeneratorEl.innerHTML = `<div class="palette-swatches">${swatches}</div>`;
+}
+
+generatePaletteBtn.addEventListener("click", () => {
+  const count = Number(paletteCountInput.value);
+  try {
+    generatedPalette = generateAccessiblePalette(count);
+  } catch (error) {
+    generatedPalette = null;
+    paletteGeneratorEl.innerHTML = "";
+    copyPaletteBtn.disabled = true;
+    copyPaletteCssBtn.disabled = true;
+    downloadPaletteBtn.disabled = true;
+    statusEl.textContent = error.message;
+    return;
+  }
+  renderGeneratedPalette(generatedPalette);
+  copyPaletteBtn.disabled = false;
+  copyPaletteCssBtn.disabled = false;
+  downloadPaletteBtn.disabled = false;
+});
+
+copyPaletteBtn.addEventListener("click", async () => {
+  if (!generatedPalette) return;
+  const hexList = generatedPalette.map((c) => c.hex).join("\n");
+  try {
+    await navigator.clipboard.writeText(hexList);
+    statusEl.textContent = "Palette hex codes copied to clipboard.";
+  } catch {
+    // Clipboard access can be denied (permissions, insecure context, older browsers); fall
+    // back to putting the codes themselves in the status line so they can still be copied by hand.
+    statusEl.textContent = `Copy these hex codes: ${generatedPalette.map((c) => c.hex).join(", ")}`;
+  }
+});
+
+// The same plain-text export as "Copy hex codes", just formatted via paletteExport.js's
+// paletteToCssVariables so the palette can be pasted straight into a stylesheet as custom
+// properties instead of retyped by hand from a list of hex codes.
+copyPaletteCssBtn.addEventListener("click", async () => {
+  if (!generatedPalette) return;
+  const css = paletteToCssVariables(generatedPalette);
+  try {
+    await navigator.clipboard.writeText(css);
+    statusEl.textContent = "Palette CSS variables copied to clipboard.";
+  } catch {
+    statusEl.textContent = `Copy these CSS variables:\n${css}`;
+  }
+});
+
+// Composes the generated palette's swatches onto one offscreen canvas via gridLayout.js — the
+// same labeled-grid approach downloadGrid uses for compare-all and the severity sweep, just with
+// each cell a flat color fill instead of a simulated-image thumbnail — so the palette can be
+// shared or referenced as a single image alongside "Copy hex codes"' plain-text export.
+function downloadPalette() {
+  if (!generatedPalette) return;
+  const swatchSize = 96;
+  const layout = computeGridLayout(generatedPalette.length, swatchSize, swatchSize);
+  if (layout.width === 0 || layout.height === 0) return;
+
+  const gridCanvas = document.createElement("canvas");
+  gridCanvas.width = layout.width;
+  gridCanvas.height = layout.height;
+  const gridCtx = gridCanvas.getContext("2d");
+
+  gridCtx.fillStyle = "#100e17";
+  gridCtx.fillRect(0, 0, gridCanvas.width, gridCanvas.height);
+  gridCtx.font = "16px sans-serif";
+  gridCtx.textAlign = "center";
+  gridCtx.textBaseline = "middle";
+
+  generatedPalette.forEach((color, i) => {
+    const { x, y, labelY } = layout.positions[i];
+    gridCtx.fillStyle = color.hex;
+    gridCtx.fillRect(x, y, swatchSize, swatchSize);
+    gridCtx.fillStyle = "#ece9f4";
+    gridCtx.fillText(color.hex, x + swatchSize / 2, labelY);
+  });
+
+  const link = document.createElement("a");
+  link.href = gridCanvas.toDataURL("image/png");
+  link.download = `chromalens-palette-${generatedPalette.length}.png`;
+  link.click();
+}
+
+downloadPaletteBtn.addEventListener("click", downloadPalette);
+
+// The generator builds a palette that clears the worst-case-distance floor; this checks one the
+// user already has against the same floor (see paletteCheck.js), listing the closest pairs
+// first and naming the deficiency that limits each. Swatch-plus-hex rows match the confusion
+// score and pixel inspector's presentation elsewhere on the page.
+const MAX_CHECK_PAIRS_SHOWN = 8;
+
+function titleCase(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function renderPaletteCheck(text) {
+  const { colors, invalid } = parseHexList(text);
+  paletteCheckResultEl.innerHTML = "";
+
+  paletteRepairResultEl.innerHTML = "";
+  repairPaletteBtn.disabled = true;
+
+  if (colors.length < 2) {
+    const p = document.createElement("p");
+    p.textContent =
+      colors.length === 0
+        ? "Enter at least two hex colors to check."
+        : "Only one color read — enter at least two to compare.";
+    paletteCheckResultEl.appendChild(p);
+    if (invalid.length > 0) paletteCheckResultEl.appendChild(invalidNote(invalid));
+    return;
+  }
+
+  const { pairs, safeDistance, allClear } = scorePalette(colors);
+  const failing = pairs.filter((pair) => !pair.safe);
+  repairPaletteBtn.disabled = allClear;
+
+  const summary = document.createElement("p");
+  summary.textContent = allClear
+    ? `All ${pairs.length} pairs stay at least ${safeDistance} apart under every simulated deficiency.`
+    : `${failing.length} of ${pairs.length} pairs fall below the ${safeDistance}-unit floor. Closest first:`;
+  paletteCheckResultEl.appendChild(summary);
+
+  const shown = (allClear ? pairs : failing).slice(0, MAX_CHECK_PAIRS_SHOWN);
+  const list = document.createElement("ul");
+  for (const pair of shown) {
+    const li = document.createElement("li");
+    const limit =
+      pair.limitedBy === "original"
+        ? "already this close without any deficiency"
+        : `limited by ${titleCase(pair.limitedBy)}`;
+    li.innerHTML =
+      `<span class="swatch" style="background:${pair.a.hex}"></span>${pair.a.hex} ` +
+      `<span class="swatch" style="background:${pair.b.hex}"></span>${pair.b.hex} ` +
+      `— ${Math.round(pair.distance)}, ${limit}`;
+    list.appendChild(li);
+  }
+  paletteCheckResultEl.appendChild(list);
+
+  if (!allClear && failing.length > shown.length) {
+    const more = document.createElement("p");
+    more.className = "hint";
+    more.textContent = `+${failing.length - shown.length} more below the floor.`;
+    paletteCheckResultEl.appendChild(more);
+  }
+
+  if (invalid.length > 0) paletteCheckResultEl.appendChild(invalidNote(invalid));
+}
+
+function invalidNote(invalid) {
+  const note = document.createElement("p");
+  note.className = "hint";
+  note.textContent = `Ignored ${invalid.length} unrecognized token${
+    invalid.length === 1 ? "" : "s"
+  }: ${invalid.join(", ")}`;
+  return note;
+}
+
+checkPaletteBtn.addEventListener("click", () => renderPaletteCheck(paletteCheckInput.value));
+
+// The check names the pairs that fail; this proposes the fix (see paletteRepair.js): the fewest
+// colors nudged the least distance until every pair clears the same floor. Each moved color is
+// shown before and after with its shift, and "Use repaired palette" writes the result back into
+// the textarea and re-checks it, so the round trip ends in the same readout as a hand edit would.
+function renderPaletteRepair(text) {
+  const { colors } = parseHexList(text);
+  paletteRepairResultEl.innerHTML = "";
+  if (colors.length < 2) return;
+
+  const { colors: repaired, changes, allClear } = repairPalette(colors);
+
+  const summary = document.createElement("p");
+  if (changes.length === 0) {
+    summary.textContent = "Nothing to change — every pair already clears the floor.";
+    paletteRepairResultEl.appendChild(summary);
+    return;
+  }
+  summary.textContent = allClear
+    ? `Moving ${changes.length} of ${colors.length} colors clears every pair:`
+    : `Moved ${changes.length} of ${colors.length} colors; some pairs still fall short, so a larger change or a different palette is needed:`;
+  paletteRepairResultEl.appendChild(summary);
+
+  const list = document.createElement("ul");
+  for (const change of changes) {
+    const li = document.createElement("li");
+    li.innerHTML =
+      `<span class="swatch" style="background:${change.from.hex}"></span>${change.from.hex} → ` +
+      `<span class="swatch" style="background:${change.to.hex}"></span>${change.to.hex} ` +
+      `— moved ${Math.round(change.shift)}`;
+    list.appendChild(li);
+  }
+  paletteRepairResultEl.appendChild(list);
+
+  const actions = document.createElement("p");
+  const useBtn = document.createElement("button");
+  useBtn.type = "button";
+  useBtn.textContent = "Use repaired palette";
+  useBtn.addEventListener("click", () => {
+    paletteCheckInput.value = repaired.map((c) => c.hex).join(" ");
+    renderPaletteCheck(paletteCheckInput.value);
+    statusEl.textContent = "Repaired palette written back and re-checked.";
+  });
+  actions.appendChild(useBtn);
+  paletteRepairResultEl.appendChild(actions);
+}
+
+repairPaletteBtn.addEventListener("click", () => renderPaletteRepair(paletteCheckInput.value));
+
+// A different question from every check above: not "how confusable do these colors become
+// under a deficiency" but "is this foreground legible against this background for anyone,"
+// per the WCAG 2.x contrast-ratio thresholds. `<input type="color">` always yields a valid
+// 6-digit hex, so there's no invalid-input case to report here the way palette checking has.
+function renderContrastCheck(fgHex, bgHex) {
+  const fg = hexToRgb(fgHex);
+  const bg = hexToRgb(bgHex);
+  const ratio = contrastRatio(fg, bg);
+  const rating = wcagRating(ratio);
+
+  contrastCheckResultEl.innerHTML = "";
+
+  const summary = document.createElement("p");
+  summary.innerHTML = `Contrast ratio: <span class="contrast-ratio">${ratio.toFixed(2)}:1</span>`;
+  contrastCheckResultEl.appendChild(summary);
+
+  const dl = document.createElement("dl");
+  const rows = [
+    ["AA, normal text (4.5:1)", rating.aaNormal],
+    ["AA, large text (3:1)", rating.aaLarge],
+    ["AAA, normal text (7:1)", rating.aaaNormal],
+    ["AAA, large text (4.5:1)", rating.aaaLarge],
+  ];
+  for (const [label, passes] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.className = passes ? "pass" : "fail";
+    dd.textContent = passes ? "Pass" : "Fail";
+    dl.appendChild(dt);
+    dl.appendChild(dd);
+  }
+  contrastCheckResultEl.appendChild(dl);
+
+  const preview = document.createElement("p");
+  preview.className = "preview";
+  preview.style.background = bgHex;
+  preview.style.color = fgHex;
+  preview.textContent = "Sample text at this size";
+  contrastCheckResultEl.appendChild(preview);
+}
+
+checkContrastBtn.addEventListener("click", () =>
+  renderContrastCheck(contrastFgInput.value, contrastBgInput.value),
+);
+
+downloadCompareAllBtn.addEventListener("click", () => {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) return;
+
+  const { data } = originalCtx.getImageData(0, 0, width, height);
+  const severity = Number(severityInput.value) / 100;
+  const results = compareAllDeficiencies(data, severity);
+  const cells = results.map(({ name, data: simulatedData }) => ({
+    label: name.charAt(0).toUpperCase() + name.slice(1),
+    data: simulatedData,
+  }));
+  downloadGrid(cells, width, height, `chromalens-compare-all-${Math.round(severity * 100)}pct.png`);
+});
+
+downloadSeveritySweepBtn.addEventListener("click", () => {
+  const { width, height } = originalCanvas;
+  if (width === 0 || height === 0) return;
+
+  const { data } = originalCtx.getImageData(0, 0, width, height);
+  const deficiency = deficiencySelect.value;
+  const results = sweepSeverities(data, deficiency);
+  const cells = results.map(({ severity, data: simulatedData }) => ({
+    label: `${Math.round(severity * 100)}%`,
+    data: simulatedData,
+  }));
+  downloadGrid(cells, width, height, `chromalens-severity-sweep-${deficiency}.png`);
+});
+
+deficiencySelect.addEventListener("change", () => {
+  applySimulation();
+  if (severitySweepVisible) renderSeveritySweep();
+});
+viewModeSelect.addEventListener("change", applySimulation);
+
+severityInput.addEventListener("input", () => {
+  severityValue.textContent = `${severityInput.value}%`;
+  applySimulation();
+  if (compareAllVisible) renderCompareAll();
+});
+
+compareAllBtn.addEventListener("click", () => {
+  compareAllVisible = !compareAllVisible;
+  compareAllGrid.hidden = !compareAllVisible;
+  compareAllBtn.setAttribute("aria-expanded", String(compareAllVisible));
+  if (compareAllVisible) renderCompareAll();
+});
+
+severitySweepBtn.addEventListener("click", () => {
+  severitySweepVisible = !severitySweepVisible;
+  severitySweepGrid.hidden = !severitySweepVisible;
+  severitySweepBtn.setAttribute("aria-expanded", String(severitySweepVisible));
+  if (severitySweepVisible) renderSeveritySweep();
+});
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (file) loadImageFile(file);
+});
+
+useSampleBtn.addEventListener("click", loadSample);
+
+originalCanvas.addEventListener("click", (event) => pickPixelAt(event, originalCanvas));
+simulatedCanvas.addEventListener("click", (event) => pickPixelAt(event, simulatedCanvas));
+
+// Arrow keys aim this canvas's own keyboard cursor (Shift for a single-pixel step instead of
+// the normal coarse one); Enter/Space picks whatever pixel it's currently sitting on, the same
+// inspection a mouse click triggers immediately. preventDefault on the arrow keys stops them
+// from also scrolling the page while aiming.
+function attachKeyboardInspector(canvas, key) {
+  canvas.addEventListener("keydown", (event) => {
+    const step = event.shiftKey ? FINE_STEP : COARSE_STEP;
+    switch (event.key) {
+      case "ArrowUp":
+        event.preventDefault();
+        moveKeyboardCursor(key, 0, -step);
+        break;
+      case "ArrowDown":
+        event.preventDefault();
+        moveKeyboardCursor(key, 0, step);
+        break;
+      case "ArrowLeft":
+        event.preventDefault();
+        moveKeyboardCursor(key, -step, 0);
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        moveKeyboardCursor(key, step, 0);
+        break;
+      case "Enter":
+      case " ": {
+        event.preventDefault();
+        const cursor = keyboardCursors[key];
+        if (cursor.x === null) moveKeyboardCursor(key, 0, 0); // first press: aim before picking
+        pickedPixel = { x: cursor.x, y: cursor.y };
+        updatePixelInspector(pickedPixel);
+        break;
+      }
+      default:
+        break;
+    }
+  });
+
+  canvas.addEventListener("focus", () => renderKeyboardCursor(key));
+  canvas.addEventListener("blur", () => {
+    keyboardCursors[key].el.hidden = true;
+  });
+}
+
+attachKeyboardInspector(originalCanvas, "original");
+attachKeyboardInspector(simulatedCanvas, "simulated");
+
+downloadBtn.addEventListener("click", () => {
+  const deficiency = deficiencySelect.value;
+  const severity = severityInput.value;
+  const mode = viewModeSelect.value;
+  const link = document.createElement("a");
+  link.href = simulatedCanvas.toDataURL("image/png");
+  link.download = `chromalens-${deficiency}-${severity}pct-${mode}.png`;
+  link.click();
+});
+
+copyShareLinkBtn.addEventListener("click", async () => {
+  const url = buildShareUrl(
+    {
+      deficiency: deficiencySelect.value,
+      severity: Number(severityInput.value) / 100,
+      viewMode: viewModeSelect.value,
+      compareAll: compareAllVisible,
+      severitySweep: severitySweepVisible,
+    },
+    window.location.href,
+  );
+  try {
+    await navigator.clipboard.writeText(url);
+    statusEl.textContent = "Share link copied to clipboard.";
+  } catch {
+    // Clipboard access can be denied (permissions, insecure context, older browsers); fall
+    // back to putting the link itself in the status line so it can still be copied by hand.
+    statusEl.textContent = `Copy this link to share: ${url}`;
+  }
+});
+
+populateDeficiencyOptions();
+loadSample();
+
+// If the page was opened from a share link, apply the settings it encodes over the sample
+// image — there's no uploaded photo to carry, so a share link always means the sample. Runs
+// after loadSample so it overrides the defaults rather than being overridden by them, and
+// clears the hash afterward so refreshing the page doesn't reapply it over further changes.
+const sharedSettings = decodeSettingsFromHash(window.location.hash);
+if (sharedSettings !== null) {
+  deficiencySelect.value = sharedSettings.deficiency;
+  severityInput.value = String(Math.round(sharedSettings.severity * 100));
+  severityValue.textContent = `${severityInput.value}%`;
+  viewModeSelect.value = sharedSettings.viewMode;
+  applySimulation();
+  if (sharedSettings.compareAll) {
+    compareAllVisible = true;
+    compareAllGrid.hidden = false;
+    compareAllBtn.setAttribute("aria-expanded", "true");
+    renderCompareAll();
+  }
+  if (sharedSettings.severitySweep) {
+    severitySweepVisible = true;
+    severitySweepGrid.hidden = false;
+    severitySweepBtn.setAttribute("aria-expanded", "true");
+    renderSeveritySweep();
+  }
+  statusEl.textContent = "Loaded shared view settings on the sample image.";
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}

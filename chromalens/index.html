@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chromalens</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Chromalens</h1>
+    <p class="subtitle">See an image the way a color vision deficiency would.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Simulation controls">
+      <div class="control-row">
+        <label for="deficiency">Color vision deficiency</label>
+        <select id="deficiency"></select>
+      </div>
+
+      <div class="control-row">
+        <label for="view-mode">Simulated view</label>
+        <select id="view-mode">
+          <option value="simulated">Simulated colors</option>
+          <option value="heatmap">Change heatmap</option>
+          <option value="daltonize">Daltonized (corrected colors)</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label for="severity">Severity</label>
+        <input id="severity" type="range" min="0" max="100" step="5" value="100" />
+        <span id="severity-value">100%</span>
+      </div>
+
+      <div class="control-row">
+        <label for="image-file" class="file-label">Upload an image&hellip;</label>
+        <input id="image-file" type="file" accept="image/*" />
+      </div>
+
+      <div class="control-row">
+        <button id="use-sample" type="button">Use sample image</button>
+        <button id="download-simulated" type="button">Download simulated image</button>
+        <button id="copy-share-link" type="button">Copy share link</button>
+      </div>
+
+      <div class="control-row">
+        <button id="compare-all" type="button" aria-expanded="false" aria-controls="compare-all-grid">
+          Compare all deficiencies
+        </button>
+        <button id="download-compare-all" type="button">Download comparison grid</button>
+      </div>
+
+      <div class="control-row">
+        <button id="severity-sweep" type="button" aria-expanded="false" aria-controls="severity-sweep-grid">
+          Sweep severities
+        </button>
+        <button id="download-severity-sweep" type="button">Download severity sweep</button>
+      </div>
+
+      <div class="control-row">
+        <label for="palette-count">Accessible palette size</label>
+        <input id="palette-count" type="number" min="2" max="12" value="5" />
+        <button id="generate-palette" type="button">Generate palette</button>
+      </div>
+      <div class="control-row">
+        <button id="copy-palette" type="button" disabled>Copy hex codes</button>
+        <button id="copy-palette-css" type="button" disabled>Copy CSS variables</button>
+        <button id="download-palette" type="button" disabled>Download palette</button>
+      </div>
+      <div class="palette-generator" id="palette-generator" aria-live="polite"></div>
+
+      <div class="control-row">
+        <label for="palette-check-input">Check an existing palette</label>
+      </div>
+      <div class="control-row">
+        <textarea
+          id="palette-check-input"
+          rows="3"
+          placeholder="Paste hex codes, e.g. #1f77b4 #ff7f0e #2ca02c"
+          aria-describedby="palette-check-hint"
+        ></textarea>
+      </div>
+      <div class="control-row">
+        <button id="check-palette" type="button">Check palette</button>
+        <button id="repair-palette" type="button" disabled>Suggest fixes</button>
+      </div>
+      <p id="palette-check-hint" class="hint">
+        Scores every pair of colors in a palette you already have by its worst-case separation
+        across all four simulated deficiencies, worst pair first, and names the one that limits
+        each. When pairs fail, <strong>Suggest fixes</strong> nudges the fewest colors the least
+        distance until every pair clears the floor.
+      </p>
+      <div class="palette-check" id="palette-check-result" aria-live="polite"></div>
+      <div class="palette-check palette-repair" id="palette-repair-result" aria-live="polite"></div>
+
+      <div class="control-row">
+        <label for="contrast-fg">Foreground color</label>
+        <input id="contrast-fg" type="color" value="#000000" />
+        <label for="contrast-bg">on background</label>
+        <input id="contrast-bg" type="color" value="#ffffff" />
+        <button id="check-contrast" type="button">Check contrast</button>
+      </div>
+      <p id="contrast-hint" class="hint">
+        Checks the WCAG 2.x contrast ratio between a foreground and background color — legibility
+        for anyone, independent of any simulated deficiency above. A color pair can score well
+        here and still be a poor pick under a deficiency, or the reverse, since contrast ratio
+        measures luminance while the confusion scores above measure hue and saturation.
+      </p>
+      <div class="contrast-check" id="contrast-check-result" aria-live="polite"></div>
+
+      <p class="hint">
+        Images are processed entirely in your browser — nothing is uploaded anywhere. The
+        sample image pairs colors people often confuse under each deficiency (reds and greens,
+        blues and yellows) alongside a full hue gradient. Click either image to inspect that
+        exact pixel's original and displayed color (see below).
+      </p>
+
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="confusion-score" id="confusion-score" aria-live="polite"></div>
+      <div class="pixel-inspector" id="pixel-inspector" aria-live="polite"></div>
+    </section>
+
+    <div class="canvases">
+      <figure>
+        <figcaption>Original</figcaption>
+        <div class="canvas-wrap">
+          <canvas id="original" tabindex="0" role="img" aria-label="The original, unmodified image. Click a point, or focus this image and use the arrow keys plus Enter or Space, to inspect that pixel's color."></canvas>
+          <div class="pixel-cursor" id="original-cursor" hidden></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption id="simulated-caption">Simulated</figcaption>
+        <div class="canvas-wrap">
+          <canvas id="simulated" tabindex="0" role="img" aria-label="The image as simulated for the selected color vision deficiency and severity. Click a point, or focus this image and use the arrow keys plus Enter or Space, to inspect that pixel's color."></canvas>
+          <div class="pixel-cursor" id="simulated-cursor" hidden></div>
+        </div>
+      </figure>
+    </div>
+
+    <section class="compare-all-grid" id="compare-all-grid" hidden aria-label="Simulated colors under every color vision deficiency"></section>
+    <section class="severity-sweep-grid" id="severity-sweep-grid" hidden aria-label="Simulated colors for the selected deficiency across every severity"></section>
+  </main>
+
+  <footer>
+    <p>Deficiency simulation is an approximation, not a substitute for testing with real users. The contrast checker above implements the actual WCAG 2.x formula.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
