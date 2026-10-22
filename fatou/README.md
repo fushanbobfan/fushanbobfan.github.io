@@ -50,6 +50,23 @@ The readout reports what happens to the orbit of 0 at the chosen *c*:
 | Multiplier | &lambda; = &prod; 2*z*<sub>i</sub> over the cycle; \|&lambda;\| runs from 0 at the component's centre to 1 on its edge, and its angle is the internal angle |
 | Julia set | connected or dust |
 
+### Bulbs and centres
+
+Each hyperbolic component has a centre, its *nucleus*, where 0 is itself
+periodic and &lambda; = 0. **Move c to its component's centre** (or
+<kbd>N</kbd>) finds it with Newton's method on f<sub>c</sub><sup>p</sup>(0) = 0
+in *c*, starting from the current *c* and using the period the readout found.
+
+The main cardioid carries a bulb at every rational internal angle *p*/*q*: the
+bulb is rooted at e<sup>2&pi;i*t*</sup>/2 &minus; e<sup>4&pi;i*t*</sup>/4 with
+*t* = *p*/*q*, and its period is *q*. The **Bulb** menu lists every reduced
+*p*/*q* with *q* &le; 10. Its centre is found by Newton's method aimed one
+estimated radius (sin(&pi;*p*/*q*)/*q*&sup2;) out from the root along the
+cardioid's normal, and checked by confirming the period is still *q* halfway
+back to the root. In the Julia set of a *p*/*q* bulb, *q* arms meet at the
+fixed point and each step of the map turns them *p*/*q* of a turn; the orbit
+of 0 visits the arms in that order.
+
 ## How it is computed
 
 - **Escape time.** Orbits are followed until |*z*| > 1000. The large bailout
@@ -89,7 +106,8 @@ The readout reports what happens to the orbit of 0 at the chosen *c*:
 | Arrow keys, + and &minus; | pan and zoom the focused plane | same |
 | Enter | choose the centre of the view as *c* | |
 
-Anywhere on the page: <kbd>F</kbd> toggles follow, <kbd>B</kbd> toggles
+Anywhere on the page: <kbd>F</kbd> toggles follow, <kbd>N</kbd> moves *c* to
+the centre of its component, <kbd>B</kbd> toggles
 boundary lines, <kbd>P</kbd> cycles palettes, <kbd>R</kbd> resets both views.
 
 The **Place** menu jumps to named parameters: the basilica, Douady's rabbit,
@@ -107,6 +125,7 @@ canvas's full resolution once it has finished refining.
 | --- | --- |
 | `src/dynamics.js` | escape time, smooth count, distance estimate, periodicity check, orbits |
 | `src/cycle.js` | attracting cycle and multiplier of the critical orbit; component centres by Newton's method |
+| `src/bulbs.js` | the p/q bulbs of the main cardioid: roots, normals, checked centres |
 | `src/view.js` | pixel &harr; plane mapping, zoom about a point, pan, precision limit, iteration budget |
 | `src/palette.js` | cyclic gradients and period colours |
 | `src/render.js` | sample to colour, row-range rendering into an RGBA buffer |
