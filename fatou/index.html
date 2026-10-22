@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>fatou: the Mandelbrot set and its Julia sets</title>
+  <meta name="description" content="Pick a parameter in the Mandelbrot set, see its Julia set beside it, follow the critical orbit and the cycle it settles on.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>fatou</h1>
+    <p>Left: every parameter <i>c</i>. Right: the Julia set of the <i>c</i> you pick, with the orbit of 0 under <i>z</i> &rarr; <i>z</i>&sup2; + <i>c</i>.</p>
+  </header>
+
+  <main>
+    <section class="planes">
+      <figure class="plane">
+        <figcaption>Parameter plane <span class="hint">click to pick c &middot; drag to pan &middot; wheel to zoom</span></figcaption>
+        <div class="stack" id="m-stack">
+          <canvas id="m-canvas" aria-label="Mandelbrot set"></canvas>
+          <canvas id="m-overlay" class="overlay" tabindex="0" aria-label="Parameter plane, click to choose c"></canvas>
+        </div>
+        <p class="status" id="m-status"></p>
+      </figure>
+      <figure class="plane">
+        <figcaption>Dynamical plane <span class="hint">hover to trace any orbit &middot; drag to pan &middot; wheel to zoom</span></figcaption>
+        <div class="stack" id="j-stack">
+          <canvas id="j-canvas" aria-label="Julia set of the chosen c"></canvas>
+          <canvas id="j-overlay" class="overlay" tabindex="0" aria-label="Dynamical plane"></canvas>
+        </div>
+        <p class="status" id="j-status"></p>
+      </figure>
+    </section>
+
+    <aside class="panel">
+      <section>
+        <h2>Parameter</h2>
+        <dl class="readout">
+          <dt>c</dt><dd id="r-c"></dd>
+          <dt>Orbit of 0</dt><dd id="r-fate"></dd>
+          <dt>Cycle</dt><dd id="r-cycle"></dd>
+          <dt>Multiplier</dt><dd id="r-mult"></dd>
+          <dt>Julia set</dt><dd id="r-julia"></dd>
+        </dl>
+        <label class="row"><input type="checkbox" id="follow"> c follows the pointer</label>
+        <label>Place
+          <select id="place">
+            <option value="">choose a place&hellip;</option>
+          </select>
+        </label>
+        <p class="note" id="place-note"></p>
+      </section>
+
+      <section>
+        <h2>Picture</h2>
+        <label>Iterations
+          <select id="iterations">
+            <option value="0">follow the zoom</option>
+            <option value="250">250</option>
+            <option value="1000">1000</option>
+            <option value="4000">4000</option>
+            <option value="16000">16000</option>
+          </select>
+        </label>
+        <label>Outside
+          <select id="colouring">
+            <option value="bands">smooth bands</option>
+            <option value="boundary">bands with boundary lines</option>
+          </select>
+        </label>
+        <label>Inside
+          <select id="interior">
+            <option value="period">coloured by period</option>
+            <option value="dark">dark</option>
+          </select>
+        </label>
+        <label>Palette
+          <select id="palette"></select>
+        </label>
+        <label>Band density <output id="density-out"></output>
+          <input type="range" id="density" min="0.1" max="10" step="0.1">
+        </label>
+        <label>Colour offset <output id="offset-out"></output>
+          <input type="range" id="offset" min="0" max="1" step="0.01">
+        </label>
+      </section>
+
+      <section class="buttons">
+        <button id="reset">Reset views</button>
+        <button id="share">Copy share link</button>
+        <button id="png-m">Save parameter PNG</button>
+        <button id="png-j">Save Julia PNG</button>
+      </section>
+      <p class="keys">Keys: <kbd>F</kbd> follow &middot; <kbd>B</kbd> boundary lines &middot; <kbd>P</kbd> next palette &middot; <kbd>R</kbd> reset</p>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
