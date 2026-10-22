@@ -1,0 +1,25 @@
+{
+  "name": "fatou",
+  "version": "0.1.0",
+  "description": "The Mandelbrot set and its Julia sets side by side: pick a parameter, watch its orbit, and see which cycle it settles into.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "mandelbrot",
+    "julia-set",
+    "fractal",
+    "complex-dynamics",
+    "visualization",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/fatou.git"
+  },
+  "private": false
+}
