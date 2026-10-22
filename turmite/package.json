@@ -1,0 +1,24 @@
+{
+  "name": "turmite",
+  "version": "0.1.0",
+  "description": "Langton's ant and its relatives in the browser: one simple turning rule, long stretches of chaos, and the highways, squares and triangles that come out of it.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "langtons-ant",
+    "turmite",
+    "cellular-automaton",
+    "emergence",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/turmite.git"
+  },
+  "private": false
+}
