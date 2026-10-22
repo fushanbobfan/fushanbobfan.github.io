@@ -1,0 +1,24 @@
+{
+  "name": "plasmodium",
+  "version": "0.1.0",
+  "description": "A slime mould in the browser: thousands of particles that sense, turn, step and leave a trail grow into transport networks between food.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "physarum",
+    "slime-mould",
+    "agent-based-model",
+    "emergence",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fushanbobfan/plasmodium.git"
+  },
+  "private": false
+}
