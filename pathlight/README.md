@@ -1,0 +1,420 @@
+# Pathlight
+
+An interactive pathfinding visualizer for grid search algorithms, built with plain HTML and
+vanilla JavaScript — no build step, no dependencies.
+
+**Live demo:** https://fushanbobfan.github.io/pathlight/
+
+Draw walls, place a start and an end, and watch a search algorithm explore the grid one cell
+at a time before tracing the path it found.
+
+## Running it
+
+Any static file server works, since the page is loaded as ES modules over HTTP (opening
+`index.html` directly via `file://` will not load the modules). For example:
+
+```bash
+npx serve .
+# or
+python -m http.server 8000
+```
+
+Then open the printed URL in a browser.
+
+## Controls
+
+- **Algorithm** — choose which search algorithm to run.
+- **Run** — search from the current start to the current end, animating the exploration order
+  and then the path it found.
+- **Clear path** — remove the last run's highlighting without touching the walls or terrain.
+- **Clear walls & terrain** — remove every wall and reset every cell's weight, keeping the
+  current start, end, and any highlighting.
+- **Generate maze** — replace the grid with a freshly generated, always-solvable maze (see
+  below), moving the start and end to its two opposite corners.
+- **Generate terrain** — scatter randomized weighted-terrain patches across every empty cell
+  (see below), leaving existing walls, the start, and the end untouched.
+- **Compare all algorithms** — run every algorithm against the current grid at once (no
+  animation) and show each one's cells explored, steps, total cost, and efficiency in a table
+  (see below). Cleared automatically whenever the walls or terrain change, so it never shows
+  numbers from a grid that no longer exists.
+- **Download comparison CSV** — save the current comparison table as a CSV file (see below).
+  Disabled in effect until **Compare all algorithms** has run at least once since the grid last
+  changed — clicking it first instead reports that a comparison is needed.
+- **Show flow field** — overlay every cell with an arrow pointing one step along its cheapest
+  route to the end, tinted from warm (close) to cool (far) by that cost, with cells that cannot
+  reach the end hatched (see below). Stays on while you draw, so each wall or patch of terrain
+  visibly bends the arrows around it.
+- **Undo** — reverse the last wall/terrain edit, start/end placement, or **Clear walls &
+  terrain** (see below).
+- **Redo** — reapply the last edit **Undo** reversed (see below).
+- **Save grid** — download the current walls, weighted terrain, start, and end as a JSON file.
+- **Load grid&hellip;** — restore a grid from a previously saved JSON file (see below).
+- **Copy share link** — copy a URL encoding the current grid to the clipboard (see below).
+- **Place start&hellip; / Place end&hellip;** — arm placement mode, then click any cell to move
+  that marker there. Placing one marker on top of the other isn't prevented — the algorithm
+  simply reports the trivial single-cell path.
+- **Draw walls / Draw weighted terrain** — pick which tool click-drag applies to empty cells
+  (see below).
+- **Animation delay** — milliseconds paused between each revealed cell; set it to 0 for an
+  instant result.
+- **Step through last run** — drag to jump straight to any point in the last run, from nothing
+  revealed to the full path, without waiting for or replaying the animation (see below).
+- **Click or drag across empty cells** — draw with the active tool. Click or drag across cells
+  already drawn on — erase back to plain empty. The very first cell touched in a drag decides
+  whether the whole drag draws or erases, so dragging back over cells you already toggled
+  doesn't immediately flip them back. Touch works the same way as a mouse drag.
+- **Keyboard** — the grid is a single Tab stop; once focused, arrow keys move between cells and
+  <kbd>Enter</kbd>/<kbd>Space</kbd> activates the focused one (drawing, erasing, or placing the
+  start/end, exactly like a click — dragging has no keyboard equivalent, so weighted terrain and
+  walls can only be drawn one cell at a time this way).
+
+## Algorithms
+
+| Algorithm | Guarantee | Accounts for weighted terrain? |
+| --- | --- | --- |
+| Breadth-First Search | Fewest steps | No — every step costs the same regardless of terrain |
+| Depth-First Search | None | No — every step costs the same regardless of terrain |
+| Dijkstra's Algorithm | Cheapest total cost | Yes |
+| A* Search | Cheapest total cost, usually exploring far fewer cells | Yes |
+| Weighted A* Search | Cost within 2x of the cheapest, usually exploring fewer cells than A* | Yes |
+| Greedy Best-First Search | None | No |
+| Bidirectional Search | Fewest steps | No — every step costs the same regardless of terrain |
+| Bidirectional Dijkstra | Cheapest total cost | Yes |
+| Fringe Search | Cheapest total cost | Yes |
+| Iterative Deepening A* | Cheapest total cost | Yes |
+
+[`src/algorithms/bfs.js`](src/algorithms/bfs.js) explores the grid one ring of distance at a
+time, so the first time it reaches the end is guaranteed to be via the fewest possible steps —
+but it has no notion of a step costing more than one, so it walks straight through weighted
+terrain as if it were plain empty ground.
+
+[`src/algorithms/dfs.js`](src/algorithms/dfs.js) swaps BFS's queue for a stack, so instead of
+expanding outward in even rings it dives down one branch as far as it can before backtracking.
+That single-branch commitment costs it every guarantee BFS has: the first route it finds to the
+end is whichever branch it happened to try first, which can be far longer than the shortest one
+— on the very open 5x5 grid used in this project's own tests, it finds a path more than twice
+the optimal length. It's included for contrast, not because it's a good way to find a path; a
+maze with a long, misleading branch near the start is the clearest way to see the difference
+from BFS's steadier, ring-by-ring search.
+
+[`src/algorithms/dijkstra.js`](src/algorithms/dijkstra.js) instead always expands whichever
+frontier cell has the cheapest cost-so-far, so it correctly detours around expensive terrain
+for a cheaper overall route, at the cost of potentially exploring more cells than BFS to reach
+the same distance.
+
+[`src/algorithms/astar.js`](src/algorithms/astar.js) is Dijkstra plus a Manhattan-distance
+heuristic that biases exploration toward the end instead of expanding outward evenly in every
+direction — same optimality guarantee as Dijkstra (the heuristic never overestimates the true
+remaining cost, as long as every cell's weight is at least 1), usually for a small fraction of
+the cells visited.
+
+[`src/algorithms/weightedAstar.js`](src/algorithms/weightedAstar.js) is A* with its heuristic
+multiplied by a constant weight greater than 1 (2 by default). Inflating the heuristic makes the
+frontier push harder toward the end, so the search usually expands noticeably fewer cells than
+plain A* — but it can lock onto a route before a cheaper detour turns up, so the path is no
+longer guaranteed shortest, only *bounded*: with weight `w` and an admissible base heuristic,
+the path costs at most `w` times the true optimum. At `w = 1` it is exactly A*; as `w` grows it
+slides toward greedy best-first search. **Compare all algorithms** on a terrain-weighted grid
+usually shows it landing on the same cost as Dijkstra and A* while visiting a fraction of the
+cells.
+
+[`src/algorithms/greedy.js`](src/algorithms/greedy.js) drops A*'s cost-so-far term entirely,
+expanding purely by which frontier cell looks closest to the end — fast, and often good enough,
+but with no optimality guarantee at all: a heuristic pointing straight at a dead end will walk
+it in before ever considering a detour that was actually shorter. On an open grid with nothing
+to route around it usually still finds the shortest path (there's no wrong direction to be
+lured toward), which is exactly when it shines — visiting a small fraction of the cells
+Dijkstra or even A* would.
+
+[`src/algorithms/bidirectional.js`](src/algorithms/bidirectional.js) runs BFS outward from the
+start and, at the same time, from the end, one full ring of distance at a time, stopping the
+instant a cell discovered by one side turns out to already be discovered by the other. Like
+plain BFS it has no notion of a step costing more than one, so it shares BFS's fewest-steps
+guarantee and its blindness to weighted terrain — but two circles of radius D/2 meeting in the
+middle tend to cover far less area than BFS's single circle of radius D, especially when start
+and end aren't tucked into opposite corners forcing both searches to hug the grid's edges. The
+path itself is assembled from two halves at the meeting cell: the route back to the start via
+the forward search's `cameFrom` chain, followed by the route on to the end via the backward
+search's own chain.
+
+[`src/algorithms/bidirectionalDijkstra.js`](src/algorithms/bidirectionalDijkstra.js) is that
+same meet-in-the-middle idea with Dijkstra's cost accounting instead of BFS's: it runs
+Dijkstra outward from the start and inward from the end, so unlike the plain bidirectional
+search it detours around weighted terrain for the genuinely cheapest route. The forward search
+pays the weight of every cell it steps *into*; the backward search, walking from the end, pays
+the weight of every cell it steps *out of* — so for any cell on a route the two distances sum
+to exactly that route's forward cost, with nothing double-counted. It stops once the cheapest
+key still waiting in the forward frontier plus the cheapest still in the backward frontier is
+no less than the best start-to-end cost already connected: past that point no unexplored path
+can beat it, so that cost is provably optimal. On an open grid it settles noticeably fewer
+cells than one-directional Dijkstra for the same cheapest-cost guarantee — the two half-size
+explored regions again cover less area than one full-size one.
+
+[`src/algorithms/fringeSearch.js`](src/algorithms/fringeSearch.js) reaches A*'s exact optimality
+guarantee — cheapest total cost, using the same Manhattan-distance heuristic — through a
+different mechanism entirely. Instead of a priority queue that always pops the cheapest frontier
+node next, it keeps an unordered "fringe" list and repeatedly sweeps it at a rising cost
+threshold: whatever is within the current threshold gets expanded, and whatever isn't just stays
+in the list for the next, higher-threshold sweep. That list is the key difference from a naive
+iterative-deepening search: a node already reached keeps its place in it (or is moved, never
+duplicated) as cheaper routes to it turn up, so nothing already settled is ever recomputed from
+scratch the way restarting a fresh depth-first search on every threshold rise would force it to
+be. **Compare all algorithms** typically shows it settling a similar number of cells to A*, since
+both are exploring toward the same optimal cost — the difference is in how each one decides what
+to expand next, not how much ground either one ultimately covers.
+
+[`src/algorithms/idaStar.js`](src/algorithms/idaStar.js) is the naive iterative-deepening search
+fringe search's own docs describe above, included so that contrast is something you can actually
+run rather than just read about. It reaches the same optimal-cost guarantee through a depth-first
+search bounded by a rising f-cost threshold, using only as much memory as the current path — no
+open or closed set at all — but nothing it settles on one threshold sweep carries over to the
+next, so it restarts from the root and re-walks whatever it already expanded every time the
+threshold rises. On a grid with many distinct terrain costs that re-walking can blow up badly: a
+generated maze with random per-cell weights was observed driving it well past a million node
+visits (and a Node heap limit) on a grid smaller than this project's own default board. A hard
+cap (`MAX_EXPANSIONS`, 200,000 node visits) stops it well short of that, reporting that it gave up
+rather than hanging or silently claiming no path exists. **Compare all algorithms** typically
+shows it settling far more cells than every other optimal-cost algorithm on anything but a small
+or lightly weighted grid — the point isn't that it's a good choice, it's seeing exactly what a
+persistent fringe (or an open/closed set) buys you by watching a search that has neither.
+
+All ten return both the order cells were explored in (what the animation reveals step by
+step) and the reconstructed path, so the UI doesn't need to know anything about how the search
+itself works — except iterative deepening A*, which can also report that it gave up before
+reaching either one; **Run** shows that outcome immediately instead of animating the hundreds of
+thousands of cells it can visit before doing so, and **Compare all algorithms** shows "gave up" in
+place of a step or cost figure for that row.
+
+The table above is an abstract guarantee; [`src/compare.js`](src/compare.js) makes it concrete
+by running all ten algorithms against whatever grid is actually on screen and reporting their
+real cells-explored, step, cost, and efficiency numbers side by side — **Compare all
+algorithms** shows the guarantees actually holding (or not) for a specific maze, rather than
+asking you to take the table on faith.
+
+**Efficiency** is the reconstructed path's length divided by how many cells the search
+explored — 100% means nothing was explored in vain, and a low percentage means most of the
+search's work never ended up on the final route. BFS and Dijkstra, which expand outward evenly
+in every direction until they happen to reach the end, typically land far below 100% on an open
+grid; A*, greedy, fringe search, and iterative deepening A*, which push directly toward the end,
+often land at or near 100% when nothing forces a detour. It's computed from numbers `compare.js`
+already has (`path.length / visitedOrder.length`) rather than anything new the algorithms need
+to report, with one exception: bidirectional Dijkstra's early-stopping rule (see
+[`src/algorithms/bidirectionalDijkstra.js`](src/algorithms/bidirectionalDijkstra.js)) can settle
+on a path through a cell it only ever reached by relaxation from a neighbor, never formally
+popped off either frontier and counted into its cells-explored total — so its efficiency can
+read *above* 100%, which is correct rather than a rounding artifact.
+
+**Download comparison CSV** turns that same table into a file, for pulling a maze's numbers
+into a spreadsheet instead of reading them off the page. [`src/csvExport.js`](src/csvExport.js)'s
+`compareResultsToCsv` formats `compareAlgorithms`' results as CSV text — quoting and escaping
+any field that needs it per RFC 4180, though none of the built-in algorithm names actually do —
+kept just as DOM-free as `compare.js` itself, so the formatting is tested without a browser. The
+button downloads whatever the last **Compare all algorithms** run produced; it doesn't re-run
+the comparison itself, and reports that one is needed first if none has run yet since the grid
+last changed.
+
+## Stepping through a run
+
+An algorithm actually finishes in an instant — **Run**'s animation is a staged reveal of a
+result that already exists, one visited cell (then, once every visited cell is shown, one path
+cell) at a time. [`src/frames.js`](src/frames.js) exposes that same staged reveal as a pure
+function of a single number: given how many cells have been revealed so far, `frameState`
+returns exactly which visited and path cells should be showing.
+
+Once a run finishes, the **Step through last run** slider lets you scrub through that same
+sequence directly — drag it back to see the grid at cell 50 of the search, or straight to the
+end, without waiting for or replaying the animation. It moves on its own during **Run** too,
+doubling as a progress bar for the live animation. Changing anything the highlighting depends
+on — clearing the path, redrawing walls or terrain, generating a new maze, or loading a
+different grid — forgets the last run and disables the slider, since scrubbing through a run
+that no longer matches what's on screen would be misleading.
+
+## Maze generation
+
+[`src/maze.js`](src/maze.js) offers two standard maze generation algorithms, chosen with the
+**Maze algorithm** dropdown next to **Generate maze**. Both only ever carve even-indexed rows
+and columns into passages — the odd ones in between start (and, unless a carve happens to link
+through them, stay) walls — so either produces a "perfect" maze: exactly one path between any
+two passages, with no cycles and no isolated, unreachable rooms. Each takes its random source as
+a parameter rather than calling `Math.random` directly, so it can be tested deterministically
+with a seeded generator.
+
+**Recursive Backtracker** is a randomized depth-first search: starting from the top-left corner,
+it repeatedly carves into a random unvisited neighboring passage two cells away, backtracking
+when a cell has none left, until every reachable passage has been visited. Always extending the
+most recently carved cell gives it long, winding corridors with relatively few branch points.
+
+**Randomized Prim's** instead grows the maze outward evenly: at each step it picks a uniformly
+random edge off the frontier of cells adjacent to the maze so far (rather than always the most
+recent branch) and carves it if it reaches new ground. The result is a visibly different
+texture — many short dead ends branching off a broadly and evenly grown region — while keeping
+the same perfect-maze connectivity guarantee.
+
+**Randomized Kruskal's** takes a third approach: every even cell starts as its own disjoint
+passage, and the walls between adjacent even cells are considered in random order, carving (and
+merging the two cells' sets, via a union-find) whenever they don't already belong to the same
+one. Unlike the other two, growth isn't anchored to a single starting cell or frontier — many
+separate passages merge into one maze at once, giving a texture with shorter, more evenly
+scattered dead ends than either. Considering a connected graph's edges in any order this way
+always yields a spanning tree, so it's still a "perfect" maze with the same connectivity
+guarantee.
+
+**Generate maze** replaces the whole grid with one of these (clearing existing walls and
+weighted terrain along with it) and moves the start and end to the two corners farthest apart on
+the even-cell grid, so the generated maze is always solvable end to end.
+
+## Terrain generation
+
+[`src/terrain.js`](src/terrain.js) scatters a handful of random "seed" points across the grid,
+each assigned its own random cost, then gives every cell the cost of its nearest seed
+(Manhattan distance) — a coarse Voronoi partition that produces natural-looking patches of
+cheap and costly terrain instead of the flat single-value weighted-terrain brush. Like the maze
+generator, its random source is a parameter rather than a direct call to `Math.random`, so it's
+tested deterministically with a seeded generator. **Generate terrain** only touches cells that
+are currently empty, so it layers terrain onto whatever walls are already on the grid — hand-
+drawn or from **Generate maze** — instead of overwriting them, and leaves the start and end at
+their default weight.
+
+## Undo and redo
+
+Drawing a wall in the wrong spot, misplacing the start or end, clearing walls and terrain, or
+generating a new terrain layer is otherwise permanent the instant it happens.
+[`src/history.js`](src/history.js) is a small, DOM-free bounded stack of opaque snapshots —
+pushed before each of those actions, using the same `serializeGrid` saving and loading already
+relies on, so undo needed no grid-format logic of its own. **Undo** pops the most recent
+snapshot and restores it with `deserializeGrid`, the same path a loaded file or share link
+takes. The undo stack holds the last 20 edits and is cleared whenever the whole grid is replaced
+from an external or generated source — **Generate maze**, **Load grid&hellip;**, or opening a
+share link — since undoing into a grid the current one replaced would restore walls from an
+unrelated layout. A single click or a whole drag stroke across many cells counts as one undo
+step, not one per cell, so reversing a stroke never takes more than one **Undo**.
+
+**Redo** reverses an **Undo** the same way **Undo** reverses an edit: `main.js` keeps a second
+`history.js` stack for it, and every undo pushes the grid it's about to replace onto that redo
+stack before restoring the earlier snapshot — so redoing steps forward through exactly the
+edits undo just stepped back through. Making a fresh edit after an undo clears the redo stack
+rather than leaving it in place, since the edit has now diverged from the timeline redo would
+otherwise return to; redoing into it would silently discard the new edit.
+
+## Saving and loading grids
+
+[`src/serialize.js`](src/serialize.js) converts a grid to a plain JSON-compatible shape —
+dimensions plus each cell's type and weight — and back, so a maze or hand-drawn layout can be
+downloaded and reopened later instead of being redrawn from scratch every session. Loading
+back in validates the file rather than trusting it: dimensions must match the app's fixed grid
+size, every cell needs a recognized type and a positive, finite weight, and there can be at
+most one start and one end. Anything that fails validation — a hand-edited file, one saved from
+a differently-sized grid, or just corrupted JSON — is rejected with a specific error message
+shown in the status line, rather than loading a partially broken grid.
+
+## Flow field
+
+Every search here answers the question for one start: "how do I get from *here* to the end?"
+[`src/flowField.js`](src/flowField.js) answers it for every cell at once. `computeFlowField`
+runs Dijkstra backwards from the end over the whole grid, using the same orthogonal `neighbors`
+and the same rule that entering a cell costs that cell's weight, and records for each cell its
+cheapest cost-to-go and the neighbor to step to next. Following the arrows from any cell walks
+exactly the route a forward Dijkstra from that cell would find, at exactly the same cost — the
+tests check this against `dijkstra` from every cell of a walled, weighted grid. It is the classic
+structure for steering many agents toward one goal without a search per agent, and it is also a
+direct picture of the "true remaining cost" that A*'s heuristic is only estimating: where the
+arrows bend around a wall or a patch of terrain is where Manhattan distance is most wrong.
+
+**Show flow field** draws the arrow into each cell, tints the cell by its cost relative to the
+farthest reachable one, and hatches cells the end can't be reached from; each cell's label
+gains its cost and direction so the field reads through a screen reader too. The field is cached
+against the current grid object — every edit already replaces the grid rather than mutating it —
+and recomputed on the next render after a change, so a single wall stroke redraws the whole
+overlay rather than just the edited cell. Path and visited highlighting from a run sit on top of
+the tint but keep their arrows, so you can compare what an algorithm actually explored with
+where the field would have sent it.
+
+## Share links
+
+[`src/shareLink.js`](src/shareLink.js) packs a grid into a URL instead of a downloaded file,
+for handing a hand-drawn maze or terrain layout to someone else with a link rather than an
+attachment. It builds on the same `serializeGrid`/`deserializeGrid` pair "Save grid" and "Load
+grid&hellip;" already use — share links only own turning that snapshot into (and back out of) a
+URL-safe string, not the grid format itself — so a share link gets the same size and cell
+validation, and the same descriptive rejection of malformed data, as a hand-edited import file.
+The encoded grid lives in the URL's hash rather than a query parameter, since a hash is never
+sent to the server, keeping the whole exchange client-side. Opening a share link consumes it
+once: the grid loads on startup and the hash is then cleared from the address bar, so refreshing
+the page afterward continues from whatever the grid has since been edited to, instead of
+resetting back to the shared layout.
+
+## The grid model
+
+[`src/grid.js`](src/grid.js) is a plain 2D array of `{ type, weight }` cells, kept free of any
+DOM or canvas dependency so it can be built, mutated, and searched in tests without a browser.
+Movement is orthogonal only (no diagonals), a rule every algorithm built on `neighbors` shares,
+so "fewest steps" and "cheapest path" mean the same kind of step no matter which one runs.
+`setNodeType` moves the start or end rather than creating a second one if either already exists
+elsewhere on the grid; `setNodeWeight` changes a cell's cost independently of its type, so
+clearing a wall back to empty doesn't erase whatever weight the ground underneath had.
+
+## Keyboard navigation
+
+The grid uses a roving `tabindex` (the standard keyboard pattern for a grid of same-role
+cells): exactly one cell is a Tab stop at a time, so tabbing into the grid always lands
+somewhere sensible and arrow keys move that one focus point instead of requiring Tab to step
+through all 450 cells individually. Clicking a cell moves the roving focus there too, so
+switching between mouse and keyboard mid-session picks up from wherever you last interacted
+rather than jumping back to a stale position. The grid's cells aren't wrapped in `role="row"`
+elements — the CSS grid layout is a flat list of cells, and adding row wrappers would need
+`display: contents` to keep the visual layout intact, with inconsistent screen reader support
+for a flat grid/gridcell hierarchy either way — so each cell's own label spells out its row and
+column rather than relying on structure alone to convey position.
+
+## Development
+
+```bash
+npm test
+```
+
+Tests use Node's built-in test runner (`node:test`) and check the grid model's invariants
+(bounds, wall-avoidance, single start/end, independent weight tracking) and each algorithm's
+correctness — shortest path length, routing around walls, reporting unreachable when fully
+walled off, and (for Dijkstra and A*) preferring a longer route over cheap terrain to a shorter
+one through expensive terrain. DFS is tested separately for the same routing/unreachable
+invariants minus a shortest-path guarantee, plus a concrete grid (empirically verified, not
+derived) where its path is longer than BFS's — demonstrating the lack of a guarantee rather than
+just asserting it. Weighted A* is tested separately: matching A* exactly at weight 1,
+staying orthogonally contiguous, routing around walls, reporting unreachable, keeping its path
+cost within `weight x optimum`, exploring no more cells as the weight rises, determinism, and
+falling back to the default weight for a nonsense value. Bidirectional Dijkstra is tested
+separately too: routing around walls and expensive terrain, reporting unreachable, matching
+one-directional Dijkstra's exact path cost across a large fuzz set of random weighted grids,
+producing a contiguous start-to-end path, matching BFS's length on an unweighted grid, and
+settling fewer cells than one-directional Dijkstra on an open grid. Fringe Search is tested
+separately: routing around walls, reporting unreachable, matching A*'s path length on an
+unweighted open grid, preferring a longer detour over expensive terrain the same way Dijkstra
+does, matching Dijkstra's exact path cost across a large fuzz set of random weighted grids, and
+settling a bounded number of cells on a long mixed-cost corridor rather than the unbounded
+blow-up a naive iterative-deepening search suffers there. Iterative Deepening A* is tested
+separately: the same routing, unreachable, and Dijkstra-cost-matching correctness properties as
+Fringe Search, plus two properties specific to giving up — visiting at least as many cells as
+Fringe Search on the same mixed-cost corridor, and aborting within its expansion cap (rather than
+hanging, the way it will if that cap is ever removed) on a full-size weighted maze reused from
+Fringe Search's own bounded-expansion fixture. `compare.js` is tested
+separately: every algorithm but DFS agreeing on an open grid (DFS still finds *a* path, just not
+necessarily the shortest one), all ten correctly reporting unreachable (with a null efficiency)
+together, Dijkstra/A* finding a cheaper cost than BFS/greedy once terrain is weighted, every
+algorithm but bidirectional Dijkstra reporting exactly 100% efficiency on a grid too small to
+explore off its only possible path, and bidirectional Dijkstra's efficiency exceeding 100% on
+that same grid for the reason described above.
+`serialize.js` is tested for an exact
+round trip through an edited grid, and for rejecting every way a loaded file can be invalid
+(wrong dimensions, malformed cells, unknown types, bad weights, duplicate start/end).
+`history.js` is tested separately: push/pop order (last-in-first-out), popping an empty history,
+discarding the oldest snapshot once the stack's `maxSize` is exceeded, and that `pushHistory`
+doesn't mutate the history passed in. `flowField.js` is tested for zero cost at the end,
+Manhattan-distance costs on an open unit grid, every arrow pointing to an orthogonal neighbor
+with strictly lower cost by exactly that neighbor's weight, walls and sealed-off regions being
+unreachable with no arrow, following the arrows from every cell of a walled and weighted grid
+reproducing forward Dijkstra's cost, arrows detouring around expensive terrain, and `followFlow`
+terminating on a looping field.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pathlight</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Pathlight</h1>
+    <p class="subtitle">An interactive pathfinding visualizer for grid search algorithms.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Visualizer controls">
+      <div class="control-row">
+        <label for="algorithm">Algorithm</label>
+        <select id="algorithm">
+          <option value="bfs">Breadth-First Search</option>
+          <option value="dfs">Depth-First Search</option>
+          <option value="dijkstra">Dijkstra's Algorithm</option>
+          <option value="astar">A* Search</option>
+          <option value="weighted-astar">Weighted A* Search</option>
+          <option value="greedy">Greedy Best-First Search</option>
+          <option value="bidirectional">Bidirectional Search</option>
+          <option value="bidirectional-dijkstra">Bidirectional Dijkstra</option>
+          <option value="fringe">Fringe Search</option>
+          <option value="ida-star">Iterative Deepening A*</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <button id="run" type="button">Run</button>
+        <button id="clear-path" type="button">Clear path</button>
+        <button id="clear-walls" type="button">Clear walls &amp; terrain</button>
+        <label for="maze-algorithm">Maze algorithm</label>
+        <select id="maze-algorithm">
+          <option value="backtracker">Recursive Backtracker</option>
+          <option value="prim">Randomized Prim's</option>
+          <option value="kruskal">Randomized Kruskal's</option>
+        </select>
+        <button id="generate-maze" type="button">Generate maze</button>
+        <button id="generate-terrain" type="button">Generate terrain</button>
+        <button id="undo" type="button" disabled>Undo</button>
+        <button id="redo" type="button" disabled>Redo</button>
+      </div>
+
+      <div class="control-row">
+        <button id="compare" type="button">Compare all algorithms</button>
+        <button id="download-comparison-csv" type="button">Download comparison CSV</button>
+        <button id="flow-field" type="button" aria-pressed="false">Show flow field</button>
+      </div>
+
+      <div class="control-row">
+        <button id="save-grid" type="button">Save grid</button>
+        <label for="load-grid" class="file-label">Load grid&hellip;</label>
+        <input id="load-grid" type="file" accept="application/json,.json" />
+        <button id="copy-share-link" type="button">Copy share link</button>
+      </div>
+
+      <div class="control-row">
+        <button id="set-start" type="button" aria-pressed="false">Place start&hellip;</button>
+        <button id="set-end" type="button" aria-pressed="false">Place end&hellip;</button>
+      </div>
+
+      <div class="control-row" role="group" aria-label="Drawing tool">
+        <button id="brush-wall" type="button" aria-pressed="true">Draw walls</button>
+        <button id="brush-weight" type="button" aria-pressed="false">Draw weighted terrain</button>
+      </div>
+
+      <div class="control-row">
+        <label for="speed">Animation delay</label>
+        <input id="speed" type="range" min="0" max="100" step="5" value="20" />
+        <span id="speed-value">20ms</span>
+      </div>
+
+      <div class="control-row">
+        <label for="scrub">Step through last run</label>
+        <input id="scrub" type="range" min="0" max="0" value="0" disabled />
+        <span id="scrub-value">no run yet</span>
+      </div>
+
+      <p class="hint">
+        Click or drag across empty cells to draw with the active tool (walls, or weighted
+        terrain that costs more to cross); click a cell already drawn on to erase it. Use
+        <strong>Place start&hellip;</strong> / <strong>Place end&hellip;</strong>, then click a
+        cell, to move either marker. Breadth-First Search, Depth-First Search, and Bidirectional
+        Search treat every step as equally costly, so they ignore weighted terrain entirely —
+        Dijkstra and A* are the ones that route around it. The grid is keyboard-operable too: focus it and use the arrow keys to move,
+        <kbd>Enter</kbd> or <kbd>Space</kbd> to draw, erase, or place on the focused cell.
+        <strong>Undo</strong> reverses the last wall/terrain edit, start/end placement, or clear
+        (see below).
+      </p>
+
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="comparison" id="comparison" aria-live="polite"></div>
+    </section>
+
+    <div class="grid" id="grid" role="grid" aria-label="Pathfinding grid"></div>
+  </main>
+
+  <footer>
+    <p>Grid search visualized step by step, from the algorithm's own exploration order.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

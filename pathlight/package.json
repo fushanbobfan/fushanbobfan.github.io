@@ -1,0 +1,10 @@
+{
+  "name": "pathlight",
+  "version": "1.0.0",
+  "description": "An interactive pathfinding visualizer for grid search algorithms.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

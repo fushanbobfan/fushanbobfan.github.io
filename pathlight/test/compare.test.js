@@ -1,0 +1,109 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createGrid, setNodeWeight } from "../src/grid.js";
+import { compareAlgorithms, pathCost } from "../src/compare.js";
+
+test("compareAlgorithms returns all ten algorithms in a stable order", () => {
+  const grid = createGrid(3, 3);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 2, col: 2 });
+  assert.deepEqual(
+    results.map((r) => r.key),
+    ["bfs", "dfs", "dijkstra", "astar", "weighted-astar", "greedy", "bidirectional", "bidirectional-dijkstra", "fringe", "ida-star"]
+  );
+});
+
+test("every algorithm but dfs agrees on step count for an open unweighted grid", () => {
+  const grid = createGrid(5, 5);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 4, col: 4 });
+  for (const result of results) {
+    if (result.key === "dfs") continue;
+    assert.equal(result.found, true, `${result.label} should find a path`);
+    assert.equal(result.steps, 8, `${result.label} should take the Manhattan-distance 8 steps`);
+    assert.equal(result.cost, 8, `${result.label} should pay unit cost per step on an unweighted grid`);
+  }
+});
+
+test("dfs still finds a path on an open grid, but offers no shortest-steps guarantee", () => {
+  // 8 is the Manhattan-distance floor no grid path can beat; dfs is free to do worse.
+  const grid = createGrid(5, 5);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 4, col: 4 });
+  const dfsResult = results.find((r) => r.key === "dfs");
+  assert.equal(dfsResult.found, true);
+  assert.ok(dfsResult.steps >= 8);
+});
+
+test("compareAlgorithms reports found: false and null steps/cost/efficiency for every algorithm when unreachable", () => {
+  const grid = createGrid(3, 3);
+  grid[0][1] = { type: "wall", weight: 1 };
+  grid[1][0] = { type: "wall", weight: 1 };
+  grid[1][1] = { type: "wall", weight: 1 };
+  const results = compareAlgorithms(grid, { row: 2, col: 2 }, { row: 0, col: 0 });
+  for (const result of results) {
+    assert.equal(result.found, false, `${result.label} should report unreachable`);
+    assert.equal(result.steps, null);
+    assert.equal(result.cost, null);
+    assert.equal(result.efficiency, null);
+  }
+});
+
+test("compareAlgorithms reports efficiency of 1 when a search couldn't possibly have explored anything off the path", () => {
+  // A 1x4 grid has exactly four cells total, all of them on the only possible route from one
+  // end to the other, so no algorithm has anywhere else to explore — except bidirectional
+  // Dijkstra, covered separately below.
+  const grid = createGrid(1, 4);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 0, col: 3 });
+  for (const result of results) {
+    assert.equal(result.found, true, `${result.label} should find the only possible path`);
+    if (result.key === "bidirectional-dijkstra") continue;
+    assert.equal(result.efficiency, 1, `${result.label} should not report exploring anything off the path`);
+  }
+});
+
+test("compareAlgorithms' efficiency can exceed 1 for bidirectional Dijkstra, whose early stop can settle on a path through a cell it only ever reached by relaxation", () => {
+  // bidirectionalDijkstra.js's termination check can fire as soon as a connecting cell is
+  // relaxed from a neighbor, before that cell is ever popped off either frontier and counted
+  // into visitedOrder — so the reconstructed path can be one cell longer than visitedCount.
+  const grid = createGrid(1, 4);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 0, col: 3 });
+  const result = results.find((r) => r.key === "bidirectional-dijkstra");
+  assert.ok(result.found);
+  assert.ok(result.efficiency > 1, "the connecting cell was relaxed, not settled, so it's absent from visitedCount");
+});
+
+test("compareAlgorithms reports a lower efficiency for a search that explores more of an open grid than its path uses", () => {
+  const grid = createGrid(5, 5);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 4, col: 4 });
+  const bfsResult = results.find((r) => r.key === "bfs");
+  assert.ok(bfsResult.efficiency > 0 && bfsResult.efficiency < 1, "bfs should explore some cells that aren't on its final path");
+  assert.equal(bfsResult.efficiency, bfsResult.steps === null ? null : (bfsResult.steps + 1) / bfsResult.visitedCount);
+});
+
+test("dijkstra and astar find a cheaper path cost than bfs and greedy when terrain is weighted", () => {
+  // A straight row is the fewest-steps route, but its middle cell is expensive; a detour
+  // through row 1 costs less overall despite visiting more cells.
+  let grid = createGrid(2, 5);
+  grid = setNodeWeight(grid, 0, 2, 100);
+  const results = compareAlgorithms(grid, { row: 0, col: 0 }, { row: 0, col: 4 });
+  const byKey = Object.fromEntries(results.map((r) => [r.key, r]));
+
+  assert.equal(byKey.bfs.steps, 4, "bfs ignores weight and takes the straight-line step count");
+  assert.ok(byKey.dijkstra.cost < byKey.bfs.cost, "dijkstra should find a cheaper total cost than bfs's straight line");
+  assert.ok(byKey.astar.cost < byKey.bfs.cost, "astar should find a cheaper total cost than bfs's straight line");
+  assert.equal(byKey.dijkstra.cost, byKey.astar.cost, "dijkstra and astar should agree on the optimal cost");
+});
+
+test("pathCost sums every cell's weight except the first", () => {
+  let grid = createGrid(1, 4);
+  grid = setNodeWeight(grid, 0, 0, 999); // the start's own weight must not count
+  grid = setNodeWeight(grid, 0, 1, 5);
+  grid = setNodeWeight(grid, 0, 3, 100);
+  const path = [0, 1, 2, 3].map((col) => ({ row: 0, col }));
+  // Cost is grid[0][1].weight + grid[0][2].weight + grid[0][3].weight = 5 + 1 + 100.
+  assert.equal(pathCost(grid, path), 106);
+});
+
+test("pathCost is 0 for a path with zero or one cells", () => {
+  const grid = createGrid(3, 3);
+  assert.equal(pathCost(grid, []), 0);
+  assert.equal(pathCost(grid, [{ row: 1, col: 1 }]), 0);
+});
