@@ -1,0 +1,22 @@
+{
+  "name": "cycloid",
+  "version": "0.1.0",
+  "description": "A brachistochrone race in the browser: beads slide along a straight ramp, a circular arc, a parabola, the cycloid and a curve you draw, and the cycloid always wins.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "brachistochrone",
+    "tautochrone",
+    "cycloid",
+    "physics",
+    "calculus-of-variations",
+    "visualization",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
