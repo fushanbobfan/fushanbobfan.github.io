@@ -69,8 +69,8 @@ and its bead slides back and forth forever.
   increases from 0 to infinity as *t* runs over (0, 2&pi;), so bisection finds
   the end parameter &theta; and then r. On the cycloid the parameter advances at
   the steady rate &radic;(g/r), so the descent takes &theta;&radic;(r/g); the
-  readout shows this value and the tests check the 400-piece polyline against
-  it.
+  readout shows this value beside the raced time on the 400-piece polyline,
+  and the tests check a finer polyline against it to 0.02%.
 - **Turning back.** If a track rises above A, the bead stops where it regains
   A's height. Frictionless motion is reversible, so it retraces its path and
   the motion repeats with twice that time as its period.
