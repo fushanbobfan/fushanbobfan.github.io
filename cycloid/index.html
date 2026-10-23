@@ -16,14 +16,19 @@
 
   <main>
     <figure class="stage">
-      <figcaption>Track <span class="hint">drag B to move it &middot; draw anywhere else to lay your own track &middot; arrow keys move B</span></figcaption>
+      <figcaption><span id="caption">Track</span> <span class="hint" id="hint">drag B to move it &middot; draw anywhere else to lay your own track &middot; arrow keys move B</span></figcaption>
       <canvas id="stage" tabindex="0" aria-label="Race track from A to B. Arrow keys move B, space releases the beads."></canvas>
       <p class="status" id="status"></p>
     </figure>
 
     <aside class="panel">
+      <div class="modes" role="group" aria-label="Experiment">
+        <button id="mode-race" aria-pressed="true">Fastest descent</button>
+        <button id="mode-bowl" aria-pressed="false">Equal time</button>
+      </div>
+
       <section>
-        <h2>Race</h2>
+        <h2>Release</h2>
         <div class="buttons">
           <button id="release" class="primary">Release <kbd>Space</kbd></button>
           <button id="reset">Reset <kbd>R</kbd></button>
@@ -39,19 +44,34 @@
         <p class="clock">t = <span id="clock">0.000</span> s</p>
       </section>
 
-      <section>
+      <section data-mode="race">
         <h2>Tracks</h2>
         <ul class="tracks" id="tracks"></ul>
         <button id="clear-drawn" class="wide">Clear my track <kbd>C</kbd></button>
       </section>
 
+      <section data-mode="bowl" hidden>
+        <h2>Bowl</h2>
+        <label>Shape
+          <select id="bowl-kind">
+            <option value="cycloid">cycloid</option>
+            <option value="circle">circle, same curvature at the bottom</option>
+          </select>
+        </label>
+        <p class="note">Click the bowl to place a bead (up to six).</p>
+        <div class="buttons">
+          <button id="bowl-default">Four beads</button>
+          <button id="bowl-clear">Clear beads <kbd>C</kbd></button>
+        </div>
+      </section>
+
       <section>
         <h2>Results</h2>
         <table class="results">
-          <thead><tr><th>Track</th><th>Time</th><th>vs cycloid</th></tr></thead>
+          <thead id="results-head"><tr><th>Track</th><th>Time</th><th>vs cycloid</th></tr></thead>
           <tbody id="results" aria-live="polite"></tbody>
         </table>
-        <dl class="readout">
+        <dl class="readout" data-mode="race">
           <dt>B</dt><dd id="r-b"></dd>
           <dt>Cycloid</dt><dd id="r-cycloid"></dd>
           <dt>Exact time</dt><dd id="r-exact"></dd>
