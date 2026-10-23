@@ -55,6 +55,11 @@ the quickest way there. The note under the results says how far it dips.
 | Straight ramp | the chord AB |
 | My track | A, then the stroke you draw, then B |
 
+With **Show the wheel** on, the race also draws the wheel that generates the
+cycloid, rolling along the underside of the line through A with the cycloid's
+bead fixed to its rim. The wheel rolls at the steady speed &radic;(*gr*) while the
+bead on its rim speeds up, and it stops when the bead reaches B.
+
 Drag B (or focus the track and use the arrow keys, with shift for small
 steps) and every track is rebuilt through it. Drawing anywhere else lays a new
 track of your own; a track that climbs above A somewhere cannot be finished,
@@ -117,7 +122,7 @@ table shows the raced time beside the exact one for every bead.
 | File | Contents |
 | --- | --- |
 | `src/motion.js` | arrival times along a polyline, position at any time, turning back |
-| `src/curves.js` | the cycloid through B and its exact time, the arc, the parabola, the ramp |
+| `src/curves.js` | the cycloid through B, its exact time and its rolling wheel, the arc, the parabola, the ramp |
 | `src/scene.js` | the stage in metres, the canvas mapping, limits for B, strokes into tracks |
 | `src/bowl.js` | the cycloidal and circular bowls, swings, exact times to the bottom |
 | `src/main.js` | the page |

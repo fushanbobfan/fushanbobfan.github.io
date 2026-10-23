@@ -197,6 +197,13 @@ kbd {
   margin: 3px 0;
 }
 
+label.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .swatch {
   width: 18px;
   height: 4px;
