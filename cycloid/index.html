@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cycloid: the brachistochrone race</title>
+  <meta name="description" content="Race beads from A to B along a ramp, a circular arc, a parabola, the cycloid and a curve you draw, and see why the cycloid is the fastest way down.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>cycloid</h1>
+    <p>Which way down from A to B is fastest? Beads slide without friction under gravity. Drag B, draw your own track, and release.</p>
+  </header>
+
+  <main>
+    <figure class="stage">
+      <figcaption>Track <span class="hint">drag B to move it &middot; draw anywhere else to lay your own track &middot; arrow keys move B</span></figcaption>
+      <canvas id="stage" tabindex="0" aria-label="Race track from A to B. Arrow keys move B, space releases the beads."></canvas>
+      <p class="status" id="status"></p>
+    </figure>
+
+    <aside class="panel">
+      <section>
+        <h2>Race</h2>
+        <div class="buttons">
+          <button id="release" class="primary">Release <kbd>Space</kbd></button>
+          <button id="reset">Reset <kbd>R</kbd></button>
+        </div>
+        <label>Playback
+          <select id="speed">
+            <option value="1">real time</option>
+            <option value="0.5">&frac12; speed</option>
+            <option value="0.25" selected>&frac14; speed</option>
+            <option value="0.1">1/10 speed</option>
+          </select>
+        </label>
+        <p class="clock">t = <span id="clock">0.000</span> s</p>
+      </section>
+
+      <section>
+        <h2>Tracks</h2>
+        <ul class="tracks" id="tracks"></ul>
+        <button id="clear-drawn" class="wide">Clear my track <kbd>C</kbd></button>
+      </section>
+
+      <section>
+        <h2>Results</h2>
+        <table class="results">
+          <thead><tr><th>Track</th><th>Time</th><th>vs cycloid</th></tr></thead>
+          <tbody id="results" aria-live="polite"></tbody>
+        </table>
+        <dl class="readout">
+          <dt>B</dt><dd id="r-b"></dd>
+          <dt>Cycloid</dt><dd id="r-cycloid"></dd>
+          <dt>Exact time</dt><dd id="r-exact"></dd>
+        </dl>
+        <p class="note" id="note"></p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
