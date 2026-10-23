@@ -1,7 +1,7 @@
 {
   "name": "cycloid",
   "version": "0.1.0",
-  "description": "A brachistochrone race in the browser: beads slide along a straight ramp, a circular arc, a parabola, the cycloid and a curve you draw, and the cycloid always wins.",
+  "description": "A brachistochrone race in the browser: beads slide along a straight ramp, a circular arc, a parabola, the cycloid and a curve you draw, and the cycloid always wins; then drop beads into a cycloidal bowl where every start takes the same time.",
   "type": "module",
   "scripts": {
     "test": "node --test",
