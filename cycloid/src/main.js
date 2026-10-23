@@ -1,5 +1,5 @@
 import { G, traverse, stateAt } from './motion.js';
-import { CURVES, cycloidThrough, cycloidTime, cycloidDepth } from './curves.js';
+import { CURVES, cycloidThrough, cycloidTime, cycloidDepth, cycloidWheel } from './curves.js';
 import { WORLD, fit, clampB, sketchPath } from './scene.js';
 import { BOWL_R, bowlPoint, bowlPoints, swingPoints, timeToBottom, nearestS } from './bowl.js';
 
@@ -180,6 +180,7 @@ function renderReadout() {
   $('r-b').textContent = `${bx.toFixed(2)} m across, ${by.toFixed(2)} m down`;
   $('r-cycloid').textContent = `r = ${r.toFixed(3)} m, rolled through ${((theta * 180) / Math.PI).toFixed(1)}°`;
   $('r-exact').textContent = `θ√(r/g) = ${cycloidTime(bx, by).toFixed(4)} s`;
+  $('r-wheel').textContent = `rolls at a steady √(gr) = ${Math.sqrt(G * r).toFixed(2)} m/s`;
   const dip = cycloidDepth(bx, by) - by;
   $('note').textContent = dip > 1e-6
     ? `B is more than π/2 times as far across as it is down, so the fastest track dips ${(dip * 100).toFixed(0)} cm below B and climbs back up to it.`
@@ -391,6 +392,34 @@ function drawBowl() {
   }
 }
 
+// The generating wheel rolls along the underside of the line through A;
+// the bead on the cycloid track is the point on its rim.
+function drawWheel() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cycloidWheel(state.bx, state.by, state.t);
+  const { theta } = cycloidThrough(state.bx, state.by);
+  strokePath(Float64Array.of(0, 0, w.r * theta + w.r, 0), '#ffbe3c55', 1.5 * dpr, [4 * dpr, 4 * dpr]);
+  const [cx, cy] = view.toScreen(w.cx, w.cy);
+  const [px, py] = view.toScreen(w.px, w.py);
+  const [tx, ty] = view.toScreen(w.cx, 0);
+  ctx.beginPath();
+  ctx.arc(cx, cy, w.r * view.scale, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#ffbe3c66';
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(px, py);
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(tx, ty);
+  ctx.strokeStyle = '#ffbe3c44';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5 * dpr, 0, 2 * Math.PI);
+  ctx.fillStyle = '#ffbe3c88';
+  ctx.fill();
+}
+
 function draw() {
   const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -399,6 +428,7 @@ function draw() {
     drawBowl();
     return;
   }
+  if ($('wheel').checked && state.enabled.cycloid) drawWheel();
   for (const tr of activeTracks()) strokePath(tr.path.pts, COLORS[tr.id] + 'aa', 2.5 * dpr);
   if (state.drawing) {
     strokePath(Float64Array.of(0, 0, ...state.stroke), COLORS.drawn, 2 * dpr, [6 * dpr, 5 * dpr]);
