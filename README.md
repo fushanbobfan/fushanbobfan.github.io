@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [cycloid](https://fushanbobfan.github.io/cycloid/) | The brachistochrone race in the browser: beads slide from A to B along a ramp, an arc, a parabola, the cycloid and a track you draw, and the cycloid wins. | [`cycloid/`](cycloid/) |
 | [fatou](https://fushanbobfan.github.io/fatou/) | The Mandelbrot set and its Julia sets side by side: pick c, follow the orbit of 0 and see which cycle it settles on. | [`fatou/`](fatou/) |
 | [orbium](https://fushanbobfan.github.io/orbium/) | Lenia in the browser: a continuous cellular automaton that grows gliding creatures. Place Orbium and its relatives, paint, and retune the rule live. | [`orbium/`](orbium/) |
 | [streakline](https://fushanbobfan.github.io/streakline/) | A wind tunnel in the browser: lattice Boltzmann flow past a cylinder, plate or wing, with vortex streets, streaklines and drawable walls. | [`streakline/`](streakline/) |
