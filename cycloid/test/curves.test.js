@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { G, traverse } from '../src/motion.js';
+import { G, traverse, stateAt } from '../src/motion.js';
 import {
   cycloidThrough, cycloidPoints, cycloidTime, cycloidDepth,
-  linePoints, lineTime, arcPoints, parabolaPoints, CURVES,
+  linePoints, lineTime, arcPoints, parabolaPoints, cycloidWheel, CURVES,
 } from '../src/curves.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} vs ${b}`);
@@ -75,4 +75,29 @@ test('the parabola uses x = bx (y/by)^2', () => {
 test('time scales with sqrt(size / g)', () => {
   close(cycloidTime(4, 2), Math.SQRT2 * cycloidTime(2, 1), 1e-12);
   close(cycloidTime(2, 1, G / 4), 2 * cycloidTime(2, 1), 1e-12);
+});
+
+test('the rolling wheel carries the bead on its rim', () => {
+  for (const [bx, by] of ends) {
+    const path = traverse(cycloidPoints(bx, by, 4000));
+    for (const f of [0.1, 0.35, 0.6, 0.9]) {
+      const time = f * path.total;
+      const w = cycloidWheel(bx, by, time);
+      const p = stateAt(path, time);
+      close(Math.hypot(w.px - w.cx, w.py - w.cy), w.r, 1e-12);
+      close(w.px, p.x, 2e-3 * bx, `B=(${bx},${by}) f=${f} x`);
+      close(w.py, p.y, 2e-3 * bx, `B=(${bx},${by}) f=${f} y`);
+    }
+  }
+});
+
+test('the wheel rolls at the constant speed sqrt(g r) and stops at B', () => {
+  const { r } = cycloidThrough(2, 1);
+  const a = cycloidWheel(2, 1, 0.1), b = cycloidWheel(2, 1, 0.3);
+  close((b.cx - a.cx) / 0.2, Math.sqrt(G * r), 1e-12);
+  assert.equal(a.cy, r);
+  const end = cycloidWheel(2, 1, 99);
+  close(end.px, 2, 1e-12);
+  close(end.py, 1, 1e-12);
+  assert.equal(cycloidWheel(2, 1, -1).t, 0);
 });

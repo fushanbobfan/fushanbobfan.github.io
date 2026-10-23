@@ -37,6 +37,16 @@ export function cycloidTime(bx, by, g = G) {
   return theta * Math.sqrt(r / g);
 }
 
+// The wheel that draws the cycloid, rolling along the underside of the line
+// through A. The bead's parameter grows at the steady rate sqrt(g / r), so
+// the wheel rolls at the constant speed sqrt(g r) and the bead is the point
+// on its rim. After the bead arrives the wheel stops at t = theta.
+export function cycloidWheel(bx, by, time, g = G) {
+  const { r, theta } = cycloidThrough(bx, by);
+  const t = Math.min(theta, Math.max(0, time) * Math.sqrt(g / r));
+  return { r, t, cx: r * t, cy: r, px: r * (t - Math.sin(t)), py: r * (1 - Math.cos(t)) };
+}
+
 // How far below A the cycloid reaches: past t = pi it dips below B.
 export function cycloidDepth(bx, by) {
   const { r, theta } = cycloidThrough(bx, by);
