@@ -23,7 +23,7 @@ export const PRESETS = {
     label: 'Flag in the wind',
     cols: 40, rows: 24, spacing: 0.04,
     pins: (i) => i === 0,
-    wind: 7,
+    wind: 16,
   },
   sheet: {
     label: 'Sheet on a line',
