@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCloth, step, relax, tear, strain, maxStrain, windAt } from '../src/cloth.js';
+import { createCloth, step, relax, tear, strain, maxStrain, windAt, collideBalls } from '../src/cloth.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} vs ${b}`);
 
@@ -87,4 +87,26 @@ test('wind always pushes the way it blows and is zero when calm', () => {
     assert.ok(w >= 5 * 0.35 - 1e-12 && w <= 5 + 1e-12, `${w}`);
     assert.ok(windAt(-5, Math.sin(t), Math.cos(t), t) < 0);
   }
+});
+
+test('a particle inside a ball is pushed out to its surface along the radius', () => {
+  const c = createCloth({ cols: 1, rows: 1, spacing: 1, left: 0.3, top: 0.4 });
+  collideBalls(c, [{ x: 0, y: 0, r: 1 }], 0);
+  close(Math.hypot(c.x[0], c.y[0]), 1, 1e-12);
+  close(c.y[0] / c.x[0], 0.4 / 0.3, 1e-12, 'same direction');
+  const centred = createCloth({ cols: 1, rows: 1, spacing: 1 });
+  collideBalls(centred, [{ x: 0, y: 0, r: 0.5 }], 0);
+  assert.deepEqual([centred.x[0], centred.y[0]], [0, -0.5], 'a particle at the centre goes out the top');
+});
+
+test('a sheet dropped on a ball drapes over it and nothing ends up inside', () => {
+  const ball = { x: 0.8, y: 1, r: 0.3 };
+  const c = createCloth({ cols: 21, rows: 8, spacing: 0.06, left: 0.2, top: 0.2 });
+  for (let s = 0; s < 600; s++) step(c, 1 / 120, { balls: [ball], floor: 1.6 });
+  for (let k = 0; k < c.n; k++) {
+    assert.ok(Math.hypot(c.x[k] - ball.x, c.y[k] - ball.y) >= ball.r - 1e-9, `particle ${k} inside`);
+  }
+  const middle = 10;
+  close(c.y[middle], ball.y - ball.r, 0.02, 'top row rests on the crown');
+  assert.ok(c.y[0] > c.y[middle] + 0.1 && c.y[20] > c.y[middle] + 0.1, 'edges hang down the sides');
 });
