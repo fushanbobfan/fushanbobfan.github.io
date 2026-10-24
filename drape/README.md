@@ -31,6 +31,7 @@ Run the tests with `npm test` (Node 20 or later).
 | Grab <kbd>G</kbd> | Close a hand on the patch under the pointer and pull. Let go mid-flick to throw the cloth. Grabbing a pin moves it. |
 | Cut <kbd>C</kbd> | Slash across the cloth; every thread the stroke crosses is cut. Right-drag or Shift-drag cuts with any tool. |
 | Pin <kbd>P</kbd> | Click a point to pin it in place, or click a pin to free it. |
+| Ball <kbd>B</kbd> | Roll a ball in beside the scene. Drag it into the cloth, or move it with the arrow keys, to push the cloth aside like a tieback. |
 
 <kbd>Space</kbd> pauses, <kbd>R</kbd> rehangs the scene and <kbd>T</kbd> tears a
 slit down the middle, so the main experiment works from the keyboard alone.
@@ -61,7 +62,9 @@ momentary stretch of a sweep in progress.
 
 Wind is a horizontal push with a gust that travels across the cloth, so a flag
 ripples as it streams out. A floor stops anything that falls, with
-friction so torn pieces settle.
+friction so torn pieces settle. The ball works the same way: any point inside
+it is pushed back out along the radius to its surface, and friction takes part
+of its sliding speed, so cloth that lands on it stays and gathers.
 
 The threads are coloured on a square-root scale from slack to the tearing
 stretch. A hanging cloth stretches a few percent near its pins and hardly at
@@ -104,8 +107,12 @@ until it hangs from both ends again.
   its pins falls away.
 - A hand carries the patch it grabbed rigidly, a pin dragged and dropped stays
   pinned where it lands, and a released point keeps the hand's velocity.
+- A point inside a ball comes out on its surface along the same radius, and a
+  sheet dropped on a ball drapes over its crown with both edges hanging down
+  and no point left inside.
 - Every scene starts inside the world, hangs for four seconds without a tear
   at the default strength, and the gathered curtain falls into folds.
+- The ball starts on the floor, clear of every scene once it has settled.
 - The catenary solver recovers a known *a*, passes through both supports with
   the requested arc length (checked by summing 20,000 chords), ignores the
   order of the supports, and refuses a chain too short to reach.
@@ -116,9 +123,9 @@ until it hangs from both ends again.
 
 | File | Contents |
 | --- | --- |
-| `src/cloth.js` | grid construction, Verlet step, relaxation, tearing, floor, wind |
+| `src/cloth.js` | grid construction, Verlet step, relaxation, tearing, floor, ball, wind |
 | `src/tools.js` | nearest point, stroke cutting, pins, grab and throw |
-| `src/presets.js` | the world size and the five scenes |
+| `src/presets.js` | the world size, the five scenes and the ball |
 | `src/catenary.js` | the catenary through two supports for a given length |
 | `src/view.js` | world-to-canvas fitting and the strain palette |
 | `src/main.js` | canvas, pointer and keyboard input, drawing, readout |

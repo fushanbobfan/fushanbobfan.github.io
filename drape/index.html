@@ -17,7 +17,7 @@
   <main>
     <figure class="stage">
       <figcaption><span id="caption">Cloth</span> <span class="hint" id="hint"></span></figcaption>
-      <canvas id="stage" tabindex="0" aria-label="Cloth simulation. Space pauses, R resets, T tears a slit down the middle, G, C and P pick the grab, cut and pin tools."></canvas>
+      <canvas id="stage" tabindex="0" aria-label="Cloth simulation. Space pauses, R resets, T tears a slit down the middle, G, C and P pick the grab, cut and pin tools, B adds or removes a ball and the arrow keys move it."></canvas>
       <p class="status" id="status" aria-live="polite"></p>
     </figure>
 
@@ -38,6 +38,8 @@
           <button id="pause">Pause <kbd>Space</kbd></button>
         </div>
         <button id="slit" class="wide">Tear a slit down the middle <kbd>T</kbd></button>
+        <label class="row"><input type="checkbox" id="ball"> Ball <kbd>B</kbd></label>
+        <p class="note">Drag the ball, or move it with the arrow keys while the cloth has focus.</p>
       </section>
 
       <section>

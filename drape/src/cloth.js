@@ -48,6 +48,7 @@ export const DEFAULTS = {
   tearAt: Infinity,
   floor: Infinity,
   friction: 0.6,
+  balls: [],
 };
 
 // Horizontal wind acceleration felt at (x, y) at time t: a steady push plus
@@ -126,12 +127,34 @@ export function collideFloor(c, floor, friction) {
   }
 }
 
+// Push any particle inside a ball back out to its surface along the radius,
+// and let friction take part of its sliding speed.
+export function collideBalls(c, balls, friction) {
+  if (balls.length === 0) return;
+  const { x, y, px, py } = c;
+  for (const { x: bx, y: by, r } of balls) {
+    for (let k = 0; k < c.n; k++) {
+      const dx = x[k] - bx;
+      const dy = y[k] - by;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= r * r) continue;
+      const d = Math.sqrt(d2);
+      const [nx, ny] = d > 0 ? [dx / d, dy / d] : [0, -1];
+      x[k] = bx + nx * r;
+      y[k] = by + ny * r;
+      px[k] = x[k] - (x[k] - px[k]) * (1 - friction);
+      py[k] = y[k] - (y[k] - py[k]) * (1 - friction);
+    }
+  }
+}
+
 export function step(c, dt, options = {}) {
   const o = { ...DEFAULTS, ...options };
   integrate(c, dt, o);
   for (let it = 0; it < o.iterations; it++) {
     relax(c);
     collideFloor(c, o.floor, o.friction);
+    collideBalls(c, o.balls, o.friction);
   }
   c.time += dt;
   return tear(c, o.tearAt);

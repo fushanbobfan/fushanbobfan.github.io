@@ -1,6 +1,6 @@
 import { step, strain, maxStrain } from './cloth.js';
 import { nearest, cut, togglePin, grab, drag, release, pinCount } from './tools.js';
-import { PRESETS, WORLD, buildScene } from './presets.js';
+import { PRESETS, WORLD, buildScene, newBall } from './presets.js';
 import { fit, toWorld, toScreen, PALETTE, strainBucket } from './view.js';
 import { catenary, rmsGap } from './catenary.js';
 
@@ -8,13 +8,14 @@ const DT = 1 / 120;
 const MAX_STEPS = 4;
 const REACH = 0.12;
 const HAND = 0.08;
+const NUDGE = 0.05;
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
 const ctx = canvas.getContext('2d');
 
 const HINTS = {
-  grab: 'drag the cloth &middot; flick to throw &middot; drag a pin to move it',
+  grab: 'drag the cloth &middot; flick to throw &middot; drag a pin or the ball to move it',
   cut: 'slash across the cloth to cut threads',
   pin: 'click a point to pin or unpin it',
 };
@@ -25,6 +26,8 @@ const state = {
   tool: 'grab',
   paused: false,
   held: null,
+  ball: null,
+  ballGrab: null,
   pointer: null,
   pointerVel: [0, 0],
   lastMove: 0,
@@ -44,6 +47,7 @@ function settings() {
     tearAt: $('unbreakable').checked ? Infinity : Number($('tear').value),
     iterations: Number($('iterations').value),
     floor: WORLD.floor,
+    balls: state.ball ? [state.ball] : [],
   };
 }
 
@@ -51,6 +55,8 @@ function setScene(name) {
   state.scene = name;
   state.cloth = buildScene(name);
   state.held = null;
+  state.ballGrab = null;
+  if (state.ball) state.ball = newBall();
   state.trail = [];
   $('wind').value = PRESETS[name].wind;
   $('caption').textContent = PRESETS[name].label;
@@ -98,6 +104,19 @@ function eventWorld(e) {
   return toWorld(state.view, (e.clientX - rect.left) * state.dpr, (e.clientY - rect.top) * state.dpr);
 }
 
+function setBall(on) {
+  state.ball = on ? newBall() : null;
+  state.ballGrab = null;
+  $('ball').checked = on;
+}
+
+// Keep the ball inside the world and resting on the floor at the lowest.
+function moveBall(x, y) {
+  const b = state.ball;
+  b.x = Math.min(Math.max(x, b.r), WORLD.width - b.r);
+  b.y = Math.min(Math.max(y, b.r), WORLD.floor - b.r);
+}
+
 function slit() {
   const c = state.cloth;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -121,7 +140,9 @@ canvas.addEventListener('pointerdown', (e) => {
   const tool = e.button === 2 || e.shiftKey ? 'cut' : state.tool;
   if (tool === 'grab') {
     state.held = grab(c, x, y, HAND);
-    if (state.held) canvas.classList.add('holding');
+    const b = state.ball;
+    if (!state.held && b && Math.hypot(x - b.x, y - b.y) < b.r) state.ballGrab = [b.x - x, b.y - y];
+    if (state.held || state.ballGrab) canvas.classList.add('holding');
   } else if (tool === 'pin') {
     const k = nearest(c, x, y, REACH);
     if (k >= 0) togglePin(c, k);
@@ -138,6 +159,7 @@ canvas.addEventListener('pointermove', (e) => {
   const now = performance.now();
   const dt = Math.max((now - state.lastMove) / 1000, 1e-3);
   state.pointerVel = [(x - state.pointer[0]) / dt, (y - state.pointer[1]) / dt];
+  if (state.ballGrab) moveBall(x + state.ballGrab[0], y + state.ballGrab[1]);
   if (state.cutting) {
     cut(state.cloth, state.pointer[0], state.pointer[1], x, y);
     state.trail.push([x, y, now]);
@@ -152,8 +174,9 @@ function endPointer() {
     const [vx, vy] = stale ? [0, 0] : state.pointerVel;
     release(state.cloth, state.held, vx, vy, DT);
     state.held = null;
-    canvas.classList.remove('holding');
   }
+  state.ballGrab = null;
+  canvas.classList.remove('holding');
   state.cutting = false;
   state.pointer = null;
 }
@@ -172,12 +195,19 @@ document.addEventListener('keydown', (e) => {
   else if (key === 'g') setTool('grab');
   else if (key === 'c') setTool('cut');
   else if (key === 'p') setTool('pin');
+  else if (key === 'b') setBall(!state.ball);
+  else if (state.ball && e.target === canvas && e.key.startsWith('Arrow')) {
+    e.preventDefault();
+    const [dx, dy] = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    moveBall(state.ball.x + dx * NUDGE, state.ball.y + dy * NUDGE);
+  }
 });
 
 for (const t of ['grab', 'cut', 'pin']) $(`tool-${t}`).addEventListener('click', () => setTool(t));
 $('reset').addEventListener('click', () => setScene(state.scene));
 $('pause').addEventListener('click', () => setPaused(!state.paused));
 $('slit').addEventListener('click', slit);
+$('ball').addEventListener('change', (e) => setBall(e.target.checked));
 $('scene').addEventListener('change', (e) => setScene(e.target.value));
 for (const id of ['wind', 'gravity', 'tear', 'unbreakable', 'iterations']) $(id).addEventListener('input', syncOutputs);
 
@@ -223,6 +253,17 @@ function draw() {
   ctx.moveTo(0, fy);
   ctx.lineTo(canvas.width, fy);
   ctx.stroke();
+
+  if (state.ball) {
+    const [bx, by] = toScreen(v, state.ball.x, state.ball.y);
+    ctx.fillStyle = '#1d1d29';
+    ctx.strokeStyle = state.ballGrab ? '#f7a247' : '#3a3a4c';
+    ctx.lineWidth = 2 * state.dpr;
+    ctx.beginPath();
+    ctx.arc(bx, by, state.ball.r * v.scale, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+  }
 
   const paths = PALETTE.map(() => new Path2D());
   const { a, b, broken, count } = c.links;
