@@ -1,0 +1,21 @@
+{
+  "name": "drape",
+  "version": "0.1.0",
+  "description": "A cloth simulation in the browser: hang a curtain, a banner or a flag from pins, grab it, cut it and tear it, with every thread coloured by how hard it is pulled.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "cloth",
+    "verlet",
+    "position-based-dynamics",
+    "physics",
+    "simulation",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
