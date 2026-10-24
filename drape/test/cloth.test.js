@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCloth, step, relax, strain, maxStrain, windAt } from '../src/cloth.js';
+import { createCloth, step, relax, tear, strain, maxStrain, windAt } from '../src/cloth.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} vs ${b}`);
 
@@ -55,20 +55,22 @@ test('a hanging chain settles close to its rest lengths, tension largest at the 
 
 test('a link pulled past the tear ratio snaps and stays broken', () => {
   const c = createCloth({ cols: 3, rows: 1, spacing: 1, pins: (i) => i === 0 });
-  c.x[2] = 6;
-  const snapped = relax(c, 1.5);
-  assert.equal(snapped, 1);
+  c.x[2] = 3.6;
+  assert.equal(tear(c, 1.5), 1);
   assert.equal(c.brokenCount, 1);
   assert.equal(c.links.broken[1], 1);
+  assert.equal(c.links.broken[0], 0);
   c.x[2] = 2;
-  relax(c, 1.5);
+  relax(c);
   assert.equal(c.links.broken[1], 1);
+  assert.equal(c.x[2], 2, 'a broken link no longer pulls');
 });
 
 test('without a tear ratio nothing ever breaks', () => {
   const c = createCloth({ cols: 3, rows: 1, spacing: 1, pins: (i) => i === 0 });
   c.x[2] = 100;
-  assert.equal(relax(c), 0);
+  assert.equal(tear(c, Infinity), 0);
+  assert.equal(step(c, 1 / 120), 0);
 });
 
 test('the floor stops a falling cloth and nothing passes through it', () => {

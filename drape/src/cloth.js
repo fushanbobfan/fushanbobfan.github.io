@@ -44,7 +44,7 @@ export const DEFAULTS = {
   gravity: 9.81,
   wind: 0,
   damping: 0.01,
-  iterations: 16,
+  iterations: 24,
   tearAt: Infinity,
   floor: Infinity,
   friction: 0.6,
@@ -73,12 +73,10 @@ export function integrate(c, dt, o) {
   }
 }
 
-// One relaxation sweep over every intact link. Returns the number of links
-// that snapped during the sweep.
-export function relax(c, tearAt = Infinity) {
+// One relaxation sweep over every intact link.
+export function relax(c) {
   const { x, y, pinned } = c;
   const { a, b, rest, broken, count } = c.links;
-  let snapped = 0;
   for (let m = 0; m < count; m++) {
     if (broken[m]) continue;
     const i = a[m];
@@ -86,11 +84,6 @@ export function relax(c, tearAt = Infinity) {
     const dx = x[j] - x[i];
     const dy = y[j] - y[i];
     const d = Math.hypot(dx, dy);
-    if (d > tearAt * rest[m]) {
-      broken[m] = 1;
-      snapped++;
-      continue;
-    }
     const wi = pinned[i] ? 0 : 1;
     const wj = pinned[j] ? 0 : 1;
     const w = wi + wj;
@@ -100,6 +93,22 @@ export function relax(c, tearAt = Infinity) {
     y[i] += dy * s * wi;
     x[j] -= dx * s * wj;
     y[j] -= dy * s * wj;
+  }
+}
+
+// Snap every link still longer than tearAt times its rest length once the
+// solver has done its best. Returns the number that snapped.
+export function tear(c, tearAt) {
+  if (!Number.isFinite(tearAt)) return 0;
+  const { a, b, rest, broken, count } = c.links;
+  let snapped = 0;
+  for (let m = 0; m < count; m++) {
+    if (broken[m]) continue;
+    const d = Math.hypot(c.x[b[m]] - c.x[a[m]], c.y[b[m]] - c.y[a[m]]);
+    if (d > tearAt * rest[m]) {
+      broken[m] = 1;
+      snapped++;
+    }
   }
   c.brokenCount += snapped;
   return snapped;
@@ -120,13 +129,12 @@ export function collideFloor(c, floor, friction) {
 export function step(c, dt, options = {}) {
   const o = { ...DEFAULTS, ...options };
   integrate(c, dt, o);
-  let snapped = 0;
   for (let it = 0; it < o.iterations; it++) {
-    snapped += relax(c, o.tearAt);
+    relax(c);
     collideFloor(c, o.floor, o.friction);
   }
   c.time += dt;
-  return snapped;
+  return tear(c, o.tearAt);
 }
 
 // Stretch of link m relative to its rest length: 0 at rest, 0.1 at 10% longer.
