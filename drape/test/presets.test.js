@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { step } from '../src/cloth.js';
 import { pinCount } from '../src/tools.js';
-import { PRESETS, WORLD, buildScene } from '../src/presets.js';
+import { PRESETS, WORLD, BALL, buildScene, newBall } from '../src/presets.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} vs ${b}`);
 
@@ -43,6 +43,20 @@ test('the chain hangs from its two ends with slack to sag', () => {
   assert.ok(c.pinned[0] && c.pinned[c.n - 1]);
   const span = c.x[c.n - 1] - c.x[0];
   close(span, (c.n - 1) * c.spacing * PRESETS.chain.gather, 1e-12);
+});
+
+test('the ball starts clear of every scene, resting inside the world', () => {
+  const b = newBall();
+  assert.deepEqual(b, BALL);
+  assert.notEqual(b, BALL, 'a fresh copy');
+  assert.ok(b.y + b.r <= WORLD.floor + 1e-12 && b.x - b.r > 0 && b.x + b.r < WORLD.width);
+  for (const name of Object.keys(PRESETS)) {
+    const c = buildScene(name);
+    for (let s = 0; s < 480; s++) step(c, 1 / 120, { wind: PRESETS[name].wind, floor: WORLD.floor });
+    let inside = 0;
+    for (let k = 0; k < c.n; k++) if (Math.hypot(c.x[k] - b.x, c.y[k] - b.y) < b.r) inside++;
+    assert.ok(inside < c.n * 0.05, `${name}: ${inside} particles where the ball appears`);
+  }
 });
 
 test('an unknown scene is an error', () => {

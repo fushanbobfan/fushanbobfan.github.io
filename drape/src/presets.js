@@ -40,6 +40,14 @@ export const PRESETS = {
   },
 };
 
+// A ball resting on the floor to the right of every scene: drag it into the
+// cloth to push it around.
+export const BALL = { x: 2.75, y: 1.84, r: 0.28 };
+
+export function newBall() {
+  return { ...BALL };
+}
+
 export function buildScene(name) {
   const p = PRESETS[name];
   if (!p) throw new Error(`unknown scene: ${name}`);
