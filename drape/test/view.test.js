@@ -16,8 +16,9 @@ test('the world fits the canvas and round-trips through screen space', () => {
 test('strain buckets run from slack to the tearing point', () => {
   assert.equal(strainBucket(-0.2, 1.6), 0);
   assert.equal(strainBucket(0, 1.6), 0);
-  assert.equal(strainBucket(0.31, 1.6), 4);
+  assert.equal(strainBucket(0.04, 1.6), 2, 'a quarter of the way up the square-root scale');
+  assert.equal(strainBucket(0.16, 1.6), 4);
   assert.equal(strainBucket(0.6, 1.6), PALETTE.length - 1);
   assert.equal(strainBucket(5, 1.6), PALETTE.length - 1);
-  assert.equal(strainBucket(0.25, Infinity), 4, 'unbreakable cloth uses a 50% scale');
+  assert.equal(strainBucket(0.13, Infinity), 4, 'unbreakable cloth uses a 50% scale');
 });

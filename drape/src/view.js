@@ -18,7 +18,8 @@ export function toScreen(v, x, y) {
 }
 
 // Slack threads are pale; taut ones run through amber to red as they approach
-// the stretch at which they tear.
+// the stretch at which they tear. The square root spreads the few-percent
+// stretch of a hanging cloth over the lower colours instead of leaving it pale.
 export const PALETTE = [
   '#c9d4e3', '#d9d2b8', '#e6c98f', '#f0b968', '#f7a247', '#fb8634', '#f6662c', '#e8432a',
 ];
@@ -26,6 +27,6 @@ export const PALETTE = [
 export function strainBucket(strain, tearAt) {
   const limit = Number.isFinite(tearAt) ? tearAt - 1 : 0.5;
   if (strain <= 0) return 0;
-  const t = Math.min(strain / limit, 1);
+  const t = Math.sqrt(Math.min(strain / limit, 1));
   return Math.min(PALETTE.length - 1, Math.floor(t * PALETTE.length));
 }
