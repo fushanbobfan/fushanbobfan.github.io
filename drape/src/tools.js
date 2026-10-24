@@ -48,25 +48,41 @@ export function togglePin(c, k) {
   return c.pinned[k] === 1;
 }
 
-// A grabbed particle is pinned to the pointer while held, so the solver treats
-// the hand as an anchor. Letting go restores its old pin and, if it was free,
-// gives it the pointer's velocity so a flick throws the cloth.
-export function grab(c, k) {
-  const g = { k, wasPinned: c.pinned[k] === 1 };
-  c.pinned[k] = 1;
-  return g;
+// A hand closes on every particle within `radius` of the pointer (at least the
+// nearest one) and pins them to it while held, so the pull is spread over a
+// patch of threads instead of one. Letting go restores each particle's old pin
+// and gives the free ones the hand's velocity, so a flick throws the cloth.
+export function grab(c, x, y, radius) {
+  const k0 = nearest(c, x, y, radius);
+  if (k0 < 0) return null;
+  const cx = c.x[k0];
+  const cy = c.y[k0];
+  const members = [];
+  for (let k = 0; k < c.n; k++) {
+    const dx = c.x[k] - cx;
+    const dy = c.y[k] - cy;
+    if (k !== k0 && dx * dx + dy * dy > radius * radius) continue;
+    members.push({ k, dx, dy, wasPinned: c.pinned[k] === 1 });
+    c.pinned[k] = 1;
+  }
+  return { k: k0, members };
 }
 
+// Move the hand so that the particle it first closed on sits at (x, y).
 export function drag(c, g, x, y) {
-  c.x[g.k] = c.px[g.k] = x;
-  c.y[g.k] = c.py[g.k] = y;
+  for (const { k, dx, dy } of g.members) {
+    c.x[k] = c.px[k] = x + dx;
+    c.y[k] = c.py[k] = y + dy;
+  }
 }
 
 export function release(c, g, vx = 0, vy = 0, dt = 0) {
-  if (g.wasPinned) return;
-  c.pinned[g.k] = 0;
-  c.px[g.k] = c.x[g.k] - vx * dt;
-  c.py[g.k] = c.y[g.k] - vy * dt;
+  for (const { k, wasPinned } of g.members) {
+    if (wasPinned) continue;
+    c.pinned[k] = 0;
+    c.px[k] = c.x[k] - vx * dt;
+    c.py[k] = c.y[k] - vy * dt;
+  }
 }
 
 export function pinCount(c) {

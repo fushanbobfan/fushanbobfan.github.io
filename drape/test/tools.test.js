@@ -44,7 +44,8 @@ test('toggling a pin freezes the particle where it is', () => {
 
 test('a held particle follows the hand and anchors the cloth', () => {
   const c = createCloth({ cols: 1, rows: 3, spacing: 0.1 });
-  const g = grab(c, 0);
+  const g = grab(c, 0.01, 0.01, 0.05);
+  assert.equal(g.members.length, 1);
   for (let s = 0; s < 1200; s++) {
     drag(c, g, 0.5, 0.2);
     step(c, 1 / 120);
@@ -56,7 +57,7 @@ test('a held particle follows the hand and anchors the cloth', () => {
 
 test('letting go of a free particle throws it with the hand velocity', () => {
   const c = createCloth({ cols: 1, rows: 1, spacing: 1 });
-  const g = grab(c, 0);
+  const g = grab(c, 0, 0, 0.1);
   drag(c, g, 1, 0);
   release(c, g, 3, 0, 1 / 100);
   assert.equal(c.pinned[0], 0);
@@ -66,11 +67,28 @@ test('letting go of a free particle throws it with the hand velocity', () => {
 
 test('dragging a pin moves it and it stays pinned where it is dropped', () => {
   const c = createCloth({ cols: 2, rows: 1, spacing: 1, pins: (i) => i === 0 });
-  const g = grab(c, 0);
+  const g = grab(c, 0, 0, 0.5);
   drag(c, g, -2, 1);
   release(c, g, 5, 5, 1 / 100);
   assert.equal(c.pinned[0], 1);
   step(c, 1 / 100);
   assert.equal(c.x[0], -2);
   assert.equal(c.y[0], 1);
+});
+
+test('a hand closes on a patch and carries it rigidly', () => {
+  const c = createCloth({ cols: 5, rows: 5, spacing: 0.1 });
+  const g = grab(c, 0.21, 0.19, 0.11);
+  assert.equal(g.k, 12);
+  assert.deepEqual(g.members.map((m) => m.k).sort((p, q) => p - q), [7, 11, 12, 13, 17]);
+  drag(c, g, 1, 1);
+  assert.equal(c.x[12], 1);
+  assert.ok(Math.abs(c.x[13] - 1.1) < 1e-12 && Math.abs(c.y[7] - 0.9) < 1e-12);
+  release(c, g);
+  assert.equal(c.pinned.reduce((s, p) => s + p, 0), 0);
+});
+
+test('a hand that misses grabs nothing', () => {
+  const c = createCloth({ cols: 2, rows: 2, spacing: 0.1 });
+  assert.equal(grab(c, 3, 3, 0.1), null);
 });
