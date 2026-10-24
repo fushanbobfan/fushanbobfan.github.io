@@ -2,9 +2,10 @@
 
 Cloth in the browser. A woven grid of point masses joined by threads of fixed
 length hangs from pins: a curtain gathered on rings, a banner on four hooks, a
-flag in the wind, a sheet on a line. Grab it and pull, slash it, move its pins,
-and watch every thread change colour with how hard it is stretched until the
-weakest ones snap.
+flag in the wind, a sheet on a line. A single row of the same threads hangs as
+a chain, drawn against the catenary it should follow. Grab the cloth and pull,
+slash it, move its pins, and watch every thread change colour with how hard it
+is stretched until the weakest ones snap.
 
 **Live demo:** https://fushanbobfan.github.io/drape/
 
@@ -67,6 +68,28 @@ stretch. A hanging cloth stretches a few percent near its pins and hardly at
 its hem, and the square root spreads that range over the paler colours so the
 gradient of tension stays visible before anything comes close to tearing.
 
+## The chain and the catenary
+
+The chain scene hangs a single row of 60 links slack between two pins. A
+uniform chain hangs in a catenary, *Y* = *a* cosh((*x* &minus; *x*<sub>0</sub>)/*a*) + *C*,
+and the page draws that curve as a dashed line over the simulated chain,
+solved for the chain's own length and its two supports as they stand.
+
+For supports a horizontal distance *h* apart and a height *v* apart, a chain
+of length *L* satisfies &radic;(*L*&sup2; &minus; *v*&sup2;) = 2*a* sinh(*h*/2*a*),
+which fixes *a* (found by bisection), and the lowest point sits at
+*x*<sub>0</sub> = (*x*<sub>1</sub> + *x*<sub>2</sub>)/2 &minus; *a* artanh(*v*/*L*).
+The readout gives the span, the chain's length, *a*, the sag below the higher
+support for the chain and for the curve, and the root-mean-square vertical
+gap between the chain's points and the curve. The chain stretches slightly
+under its own weight, so the curve uses the chain's present length; the
+comparison is of shape.
+
+With the default pins the chain sags 79.1 cm against the curve's 79.0 cm and
+sits within a millimetre of it. Drag either pin, higher, lower or closer, and
+the curve follows. Cut the chain or unpin an end and the comparison pauses
+until it hangs from both ends again.
+
 ## What the tests check
 
 - An unpinned point falls exactly *g dt*&sup2; *n*(*n*+1)/2 after *n* Verlet
@@ -83,6 +106,11 @@ gradient of tension stays visible before anything comes close to tearing.
   pinned where it lands, and a released point keeps the hand's velocity.
 - Every scene starts inside the world, hangs for four seconds without a tear
   at the default strength, and the gathered curtain falls into folds.
+- The catenary solver recovers a known *a*, passes through both supports with
+  the requested arc length (checked by summing 20,000 chords), ignores the
+  order of the supports, and refuses a chain too short to reach.
+- A simulated 60-link chain settles with its sag within 1% of the catenary's
+  and its points within 5 mm rms of the curve.
 
 ## Files
 
@@ -90,7 +118,8 @@ gradient of tension stays visible before anything comes close to tearing.
 | --- | --- |
 | `src/cloth.js` | grid construction, Verlet step, relaxation, tearing, floor, wind |
 | `src/tools.js` | nearest point, stroke cutting, pins, grab and throw |
-| `src/presets.js` | the world size and the four scenes |
+| `src/presets.js` | the world size and the five scenes |
+| `src/catenary.js` | the catenary through two supports for a given length |
 | `src/view.js` | world-to-canvas fitting and the strain palette |
 | `src/main.js` | canvas, pointer and keyboard input, drawing, readout |
 

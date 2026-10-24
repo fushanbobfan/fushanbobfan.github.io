@@ -36,6 +36,15 @@ test('the curtain hangs gathered: its rings sit closer than the cloth between th
   assert.ok(wiggle > c.spacing, `a middle row should fold, moved ${wiggle}`);
 });
 
+test('the chain hangs from its two ends with slack to sag', () => {
+  const c = buildScene('chain');
+  assert.equal(c.rows, 1);
+  assert.equal(pinCount(c), 2);
+  assert.ok(c.pinned[0] && c.pinned[c.n - 1]);
+  const span = c.x[c.n - 1] - c.x[0];
+  close(span, (c.n - 1) * c.spacing * PRESETS.chain.gather, 1e-12);
+});
+
 test('an unknown scene is an error', () => {
   assert.throws(() => buildScene('tent'), /unknown scene/);
 });

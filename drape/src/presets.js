@@ -25,6 +25,13 @@ export const PRESETS = {
     pins: (i) => i === 0,
     wind: 16,
   },
+  chain: {
+    label: 'Chain between two pins',
+    cols: 61, rows: 1, spacing: 0.04,
+    pins: (i, j, cols) => i === 0 || i === cols - 1,
+    gather: 0.7,
+    wind: 0,
+  },
   sheet: {
     label: 'Sheet on a line',
     cols: 44, rows: 26, spacing: 0.045,
