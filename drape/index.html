@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>drape: cloth you can pin, pull and tear</title>
+  <meta name="description" content="A cloth simulation in the browser: hang a curtain, a banner or a flag from pins, grab it, cut it and tear it, with every thread coloured by how hard it is pulled.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>drape</h1>
+    <p>A woven grid of point masses held together by threads of fixed length. Hang it from pins, pull it, cut it, and watch where the tension runs.</p>
+  </header>
+
+  <main>
+    <figure class="stage">
+      <figcaption><span id="caption">Cloth</span> <span class="hint" id="hint"></span></figcaption>
+      <canvas id="stage" tabindex="0" aria-label="Cloth simulation. Space pauses, R resets, T tears a slit down the middle, G, C and P pick the grab, cut and pin tools."></canvas>
+      <p class="status" id="status" aria-live="polite"></p>
+    </figure>
+
+    <aside class="panel">
+      <div class="modes" role="group" aria-label="Tool">
+        <button id="tool-grab" aria-pressed="true">Grab <kbd>G</kbd></button>
+        <button id="tool-cut" aria-pressed="false">Cut <kbd>C</kbd></button>
+        <button id="tool-pin" aria-pressed="false">Pin <kbd>P</kbd></button>
+      </div>
+
+      <section>
+        <h2>Scene</h2>
+        <label>Hang
+          <select id="scene"></select>
+        </label>
+        <div class="buttons">
+          <button id="reset">Rehang <kbd>R</kbd></button>
+          <button id="pause">Pause <kbd>Space</kbd></button>
+        </div>
+        <button id="slit" class="wide">Tear a slit down the middle <kbd>T</kbd></button>
+      </section>
+
+      <section>
+        <h2>Weather and fabric</h2>
+        <label>Wind <output id="wind-out"></output>
+          <input type="range" id="wind" min="-25" max="25" step="0.5">
+        </label>
+        <label>Gravity <output id="gravity-out"></output>
+          <input type="range" id="gravity" min="0" max="20" step="0.1" value="9.81">
+        </label>
+        <label>Tears at <output id="tear-out"></output>
+          <input type="range" id="tear" min="1.1" max="3" step="0.05" value="1.6">
+        </label>
+        <label class="row"><input type="checkbox" id="unbreakable"> Unbreakable threads</label>
+        <label>Stiffness <output id="iter-out"></output>
+          <input type="range" id="iterations" min="2" max="60" step="1" value="24">
+        </label>
+      </section>
+
+      <section>
+        <h2>Tension</h2>
+        <div class="scale" id="scale" aria-hidden="true"></div>
+        <div class="scale-labels"><span>slack</span><span id="scale-max"></span></div>
+        <dl class="readout">
+          <dt>Particles</dt><dd id="r-particles"></dd>
+          <dt>Threads</dt><dd id="r-threads"></dd>
+          <dt>Torn</dt><dd id="r-torn"></dd>
+          <dt>Pins</dt><dd id="r-pins"></dd>
+          <dt>Most stretched</dt><dd id="r-strain"></dd>
+        </dl>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
