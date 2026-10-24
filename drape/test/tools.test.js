@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCloth, step } from '../src/cloth.js';
-import { nearest, segmentsCross, cut, togglePin, hold, pinCount } from '../src/tools.js';
+import { nearest, segmentsCross, cut, togglePin, grab, drag, release, pinCount } from '../src/tools.js';
 
 test('nearest finds the closest particle within the radius', () => {
   const c = createCloth({ cols: 4, rows: 3, spacing: 1 });
@@ -42,9 +42,35 @@ test('toggling a pin freezes the particle where it is', () => {
   assert.equal(pinCount(c), 0);
 });
 
-test('releasing a dragged particle keeps the drag velocity', () => {
+test('a held particle follows the hand and anchors the cloth', () => {
+  const c = createCloth({ cols: 1, rows: 3, spacing: 0.1 });
+  const g = grab(c, 0);
+  for (let s = 0; s < 1200; s++) {
+    drag(c, g, 0.5, 0.2);
+    step(c, 1 / 120);
+  }
+  assert.equal(c.x[0], 0.5);
+  assert.equal(c.y[0], 0.2);
+  assert.ok(Math.abs(c.x[2] - 0.5) < 1e-3 && c.y[2] > 0.39, 'the rest hangs below the hand');
+});
+
+test('letting go of a free particle throws it with the hand velocity', () => {
   const c = createCloth({ cols: 1, rows: 1, spacing: 1 });
-  hold(c, 0, 0.1, 0);
+  const g = grab(c, 0);
+  drag(c, g, 1, 0);
+  release(c, g, 3, 0, 1 / 100);
+  assert.equal(c.pinned[0], 0);
   step(c, 1 / 100, { gravity: 0, damping: 0 });
-  assert.ok(Math.abs(c.x[0] - 0.2) < 1e-12, `${c.x[0]}`);
+  assert.ok(Math.abs(c.x[0] - 1.03) < 1e-12, `${c.x[0]}`);
+});
+
+test('dragging a pin moves it and it stays pinned where it is dropped', () => {
+  const c = createCloth({ cols: 2, rows: 1, spacing: 1, pins: (i) => i === 0 });
+  const g = grab(c, 0);
+  drag(c, g, -2, 1);
+  release(c, g, 5, 5, 1 / 100);
+  assert.equal(c.pinned[0], 1);
+  step(c, 1 / 100);
+  assert.equal(c.x[0], -2);
+  assert.equal(c.y[0], 1);
 });

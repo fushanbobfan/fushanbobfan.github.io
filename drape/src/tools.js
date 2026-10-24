@@ -48,11 +48,25 @@ export function togglePin(c, k) {
   return c.pinned[k] === 1;
 }
 
-// Hold particle k at (x, y). Its previous position is left alone, so letting go
-// after a quick drag throws the cloth with the drag's velocity.
-export function hold(c, k, x, y) {
-  c.x[k] = x;
-  c.y[k] = y;
+// A grabbed particle is pinned to the pointer while held, so the solver treats
+// the hand as an anchor. Letting go restores its old pin and, if it was free,
+// gives it the pointer's velocity so a flick throws the cloth.
+export function grab(c, k) {
+  const g = { k, wasPinned: c.pinned[k] === 1 };
+  c.pinned[k] = 1;
+  return g;
+}
+
+export function drag(c, g, x, y) {
+  c.x[g.k] = c.px[g.k] = x;
+  c.y[g.k] = c.py[g.k] = y;
+}
+
+export function release(c, g, vx = 0, vy = 0, dt = 0) {
+  if (g.wasPinned) return;
+  c.pinned[g.k] = 0;
+  c.px[g.k] = c.x[g.k] - vx * dt;
+  c.py[g.k] = c.y[g.k] - vy * dt;
 }
 
 export function pinCount(c) {
