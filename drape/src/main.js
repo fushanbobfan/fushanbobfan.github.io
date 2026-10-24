@@ -2,6 +2,7 @@ import { step, strain, maxStrain } from './cloth.js';
 import { nearest, cut, togglePin, grab, drag, release, pinCount } from './tools.js';
 import { PRESETS, WORLD, buildScene } from './presets.js';
 import { fit, toWorld, toScreen, PALETTE, strainBucket } from './view.js';
+import { catenary, rmsGap } from './catenary.js';
 
 const DT = 1 / 120;
 const MAX_STEPS = 4;
@@ -53,6 +54,7 @@ function setScene(name) {
   state.trail = [];
   $('wind').value = PRESETS[name].wind;
   $('caption').textContent = PRESETS[name].label;
+  $('chain-panel').hidden = PRESETS[name].rows !== 1;
   $('status').textContent = state.paused ? 'Paused.' : '';
   syncOutputs();
   readout();
@@ -179,6 +181,33 @@ $('slit').addEventListener('click', slit);
 $('scene').addEventListener('change', (e) => setScene(e.target.value));
 for (const id of ['wind', 'gravity', 'tear', 'unbreakable', 'iterations']) $(id).addEventListener('input', syncOutputs);
 
+// The catenary for the current chain, while it is a single intact row hanging
+// from pins at both ends; its length is the chain's present, slightly
+// stretched length so the comparison is of shape alone.
+function chainCurve(c) {
+  if (c.rows !== 1 || c.brokenCount > 0 || !c.pinned[0] || !c.pinned[c.n - 1]) return null;
+  let length = 0;
+  for (let k = 1; k < c.n; k++) length += Math.hypot(c.x[k] - c.x[k - 1], c.y[k] - c.y[k - 1]);
+  const curve = catenary(c.x[0], c.y[0], c.x[c.n - 1], c.y[c.n - 1], length);
+  return curve && { ...curve, length };
+}
+
+function drawCurve(curve, v) {
+  ctx.save();
+  ctx.strokeStyle = '#6fd3c1';
+  ctx.lineWidth = 2 * state.dpr;
+  ctx.setLineDash([6 * state.dpr, 5 * state.dpr]);
+  ctx.beginPath();
+  const steps = 120;
+  for (let i = 0; i <= steps; i++) {
+    const x = curve.x1 + ((curve.x2 - curve.x1) * i) / steps;
+    const [sx, sy] = toScreen(v, x, curve.yAt(x));
+    if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function draw() {
   const c = state.cloth;
   const v = state.view;
@@ -209,6 +238,9 @@ function draw() {
     ctx.strokeStyle = PALETTE[i];
     ctx.stroke(paths[i]);
   }
+
+  const curve = $('show-catenary').checked ? chainCurve(c) : null;
+  if (curve) drawCurve(curve, v);
 
   ctx.fillStyle = '#e6e4ee';
   const held = state.held ? state.held.k : -1;
@@ -252,6 +284,30 @@ function readout() {
   const inHand = state.held ? state.held.members.filter((m) => !m.wasPinned).length : 0;
   $('r-pins').textContent = (pinCount(c) - inHand).toLocaleString();
   $('r-strain').textContent = `${(maxStrain(c) * 100).toFixed(1)}%`;
+  if (c.rows === 1) chainReadout(c);
+}
+
+const cm = (m) => `${(m * 100).toFixed(1)} cm`;
+
+function chainReadout(c) {
+  const curve = chainCurve(c);
+  if (!curve) {
+    for (const id of ['r-span', 'r-length', 'r-a', 'r-sag', 'r-gap']) $(id).textContent = '–';
+    $('chain-note').textContent = c.brokenCount > 0
+      ? 'The chain is broken, so it no longer hangs as one curve. Rehang it to compare again.'
+      : 'Pin both ends of the chain, side by side and close enough for it to sag, to compare it with the catenary.';
+    return;
+  }
+  const n = c.n;
+  let lowest = 0;
+  for (let k = 0; k < n; k++) if (c.y[k] > c.y[lowest]) lowest = k;
+  const top = Math.min(c.y[0], c.y[n - 1]);
+  $('r-span').textContent = cm(curve.x2 - curve.x1);
+  $('r-length').textContent = cm(curve.length);
+  $('r-a').textContent = cm(curve.a);
+  $('r-sag').textContent = `${cm(c.y[lowest] - top)} / ${cm(curve.lowest.y - top)}`;
+  $('r-gap').textContent = `${(rmsGap(curve, c.x, c.y) * 1000).toFixed(1)} mm rms`;
+  $('chain-note').textContent = 'Drag either pin to change the span or the height of a support; the dashed curve follows.';
 }
 
 function frame(t) {

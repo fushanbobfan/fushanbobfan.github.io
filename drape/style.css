@@ -222,6 +222,13 @@ label.row {
 #stage[data-tool="grab"].holding { cursor: grabbing; }
 #stage[data-tool="pin"] { cursor: cell; }
 
+.key-swatch {
+  display: inline-block;
+  width: 22px;
+  border-top: 2px dashed #6fd3c1;
+  vertical-align: middle;
+}
+
 .readout {
   display: grid;
   grid-template-columns: auto 1fr;

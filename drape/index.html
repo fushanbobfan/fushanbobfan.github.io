@@ -57,6 +57,19 @@
         </label>
       </section>
 
+      <section id="chain-panel" hidden>
+        <h2>Catenary</h2>
+        <label class="row"><input type="checkbox" id="show-catenary" checked> Show the catenary <span class="key-swatch" aria-hidden="true"></span></label>
+        <dl class="readout">
+          <dt>Span</dt><dd id="r-span"></dd>
+          <dt>Chain length</dt><dd id="r-length"></dd>
+          <dt>Parameter a</dt><dd id="r-a"></dd>
+          <dt>Sag, chain / curve</dt><dd id="r-sag"></dd>
+          <dt>Off the curve</dt><dd id="r-gap"></dd>
+        </dl>
+        <p class="note" id="chain-note"></p>
+      </section>
+
       <section>
         <h2>Tension</h2>
         <div class="scale" id="scale" aria-hidden="true"></div>
