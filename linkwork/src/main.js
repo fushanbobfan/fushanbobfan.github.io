@@ -1,6 +1,7 @@
 import { solve, cycle, step, crankArc, ground, couplerOffsets, branchOf, wrap } from './linkage.js';
 import { classify, closes } from './grashof.js';
 import { PRESETS } from './presets.js';
+import { cognatePose, cognateLinks, couplerRatio } from './cognates.js';
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -16,6 +17,8 @@ const COLORS = {
   other: '#3d6a80',
   joint: '#e6e4ee',
   label: '#9a97ab',
+  cognate1: '#7ee08a',
+  cognate2: '#c792ea',
 };
 
 const state = {
@@ -103,6 +106,12 @@ function fit() {
   for (const c of [state.curve, state.other]) {
     if (!c) continue;
     for (const p of c.poses) pts.push(p.B, p.C, p.P);
+  }
+  if (showingCognates() && state.curve) {
+    for (const p of state.curve.poses) {
+      const k = cognatePose(state.link, p);
+      pts.push(k.O, k.E, k.F, k.G, k.H);
+    }
   }
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const p of pts) {
@@ -240,6 +249,7 @@ function draw() {
 
   const { A, D } = state.link;
   const p = pose();
+  if (p && showingCognates()) drawCognates(p);
   bar(A, D, COLORS.ground, 1.5);
   if (p) {
     const tri = [p.B, p.C, p.P];
@@ -250,6 +260,8 @@ function draw() {
     ctx.lineWidth = 2;
     polyline(tri, true);
     ctx.stroke();
+    bar(p.B, p.P, COLORS.coupler, 3);
+    bar(p.C, p.P, COLORS.coupler, 3);
     bar(p.B, p.C, COLORS.coupler, 6);
     bar(A, p.B, COLORS.crank, 6);
     bar(D, p.C, COLORS.rocker, 6);
@@ -269,6 +281,88 @@ function draw() {
     label(p.C, 'C');
     label(p.P, 'P');
   }
+}
+
+// The cognates collapse when P sits on B or C: one of their bars has no length.
+function cognatesExist() {
+  const z = couplerRatio(state.link);
+  return Math.hypot(z.x, z.y) > 1e-3 && Math.hypot(1 - z.x, z.y) > 1e-3;
+}
+
+function showingCognates() {
+  return $('show-cognates').checked && cognatesExist();
+}
+
+function drawCognates(p) {
+  const { A, D } = state.link;
+  const k = cognatePose(state.link, p);
+  bar(A, k.O, COLORS.ground, 1);
+  bar(D, k.O, COLORS.ground, 1);
+  for (const [B, C, piv, color, fill] of [
+    [k.E, k.G, A, COLORS.cognate1, 'rgba(126, 224, 138, 0.12)'],
+    [k.F, k.H, D, COLORS.cognate2, 'rgba(199, 146, 234, 0.12)'],
+  ]) {
+    ctx.fillStyle = fill;
+    polyline([B, C, p.P], true);
+    ctx.fill();
+    ctx.globalAlpha = 0.85;
+    bar(B, C, color, 3);
+    bar(C, p.P, color, 3);
+    bar(B, p.P, color, 3);
+    bar(piv, B, color, 3);
+    bar(k.O, C, color, 3);
+    ctx.globalAlpha = 1;
+    joint(B, 4, color, false);
+    joint(C, 4, color, false);
+  }
+  pivot(k.O);
+  joint(k.O, 6, COLORS.joint, false);
+  label(k.O, 'O', 10, -8);
+  label(k.E, 'E');
+  label(k.G, 'G');
+  label(k.F, 'F');
+  label(k.H, 'H');
+}
+
+function updateCognates() {
+  const ok = cognatesExist();
+  $('use-1').disabled = !ok;
+  $('use-2').disabled = !ok;
+  const p = pose();
+  const out = $('cognate-list');
+  out.textContent = '';
+  if (!ok || !p) {
+    $('cognate-note').textContent = 'P sits on a joint of the coupler, so the cognates collapse.';
+    return;
+  }
+  $('cognate-note').textContent = 'Three different linkages, one curve. The third pivot O makes a triangle with A and D similar to the coupler triangle BCP.';
+  const g = (q, r) => Math.hypot(q.x - r.x, q.y - r.y);
+  const rows = [['Original', 'A, D', state.link.a, state.link.b, state.link.c, g(state.link.A, state.link.D)]];
+  cognateLinks(state.link, p).forEach((cog, i) => {
+    rows.push([`Cognate ${i + 1}`, i === 0 ? 'A, O' : 'D, O', cog.link.a, cog.link.b, cog.link.c, g(cog.link.A, cog.link.D)]);
+  });
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    for (const [j, v] of r.entries()) {
+      const td = document.createElement('td');
+      td.textContent = j < 2 ? v : v.toFixed(2);
+      tr.append(td);
+    }
+    out.append(tr);
+  }
+}
+
+function useCognate(i) {
+  const p = pose();
+  if (!p || !cognatesExist()) return;
+  const cog = cognateLinks(state.link, p)[i];
+  const link = { ...cog.link, A: { ...cog.link.A }, D: { ...cog.link.D } };
+  const theta = Math.atan2(cog.B.y - link.A.y, cog.B.x - link.A.x);
+  commit(link, theta, branchOf(cog.B, cog.C, link.D));
+  state.dir = 1;
+  $('caption').textContent = `Cognate ${i + 1} of the last linkage`;
+  fit();
+  draw();
 }
 
 // ---- readout ---------------------------------------------------------------
@@ -309,6 +403,7 @@ function updateReadout() {
   if (arc && !arc.full) notes.push('The crank rocks between two toggles, where coupler and rocker line up, and the loop changes assembly at each one; the curve includes both.');
   if (info.type === 'change-point') notes.push('s + l = p + q: the bars can line up flat, and there the linkage can switch assembly.');
   $('note').textContent = notes.join(' ');
+  updateCognates();
   updateLive();
 }
 
@@ -477,6 +572,12 @@ $('play').addEventListener('click', () => setRunning(!state.running));
 $('reverse').addEventListener('click', () => { state.dir = -state.dir; });
 $('flip').addEventListener('click', flip);
 $('show-other').addEventListener('change', draw);
+$('show-cognates').addEventListener('change', () => {
+  fit();
+  draw();
+});
+$('use-1').addEventListener('click', () => useCognate(0));
+$('use-2').addEventListener('click', () => useCognate(1));
 $('preset').addEventListener('change', (e) => {
   loadPreset(e.target.value);
   draw();
@@ -501,6 +602,10 @@ document.addEventListener('keydown', (e) => {
     state.dir = -state.dir;
   } else if (e.key === 'f' || e.key === 'F') {
     flip();
+  } else if (e.key === 'g' || e.key === 'G') {
+    $('show-cognates').checked = !$('show-cognates').checked;
+    fit();
+    draw();
   }
 });
 

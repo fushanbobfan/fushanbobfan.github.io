@@ -68,13 +68,42 @@ The transmission angle is the angle between coupler and rocker at C. Near
 pulls almost along the rocker and can barely turn it. The readout shows the
 current angle and the worst one over a whole cycle.
 
+## Cognates
+
+Every coupler curve is drawn by three different four-bars: the
+Roberts&ndash;Chebyshev theorem, after Samuel Roberts and Pafnuty Chebyshev. **Show the two cognates**
+(<kbd>G</kbd>) adds them to the stage and lists their bars; **Use cognate 1**
+or **2** makes one of them the linkage on the stage.
+
+Write the bars as vectors, crank &alpha; = B &minus; A, coupler
+&beta; = C &minus; B and rocker &gamma; = C &minus; D, and the coupler point as
+P = B + z&beta; with z a complex number. The loop closes when
+&beta; = (D &minus; A) + &gamma; &minus; &alpha;, which gives
+
+| Joint | Position | Moves on |
+| --- | --- | --- |
+| O, the third pivot | A + z(D &minus; A) | fixed |
+| E | A + z&beta; | a circle about A |
+| G | O + z&gamma; = E + z(P &minus; E) | a circle about O |
+| F | D + (z &minus; 1)&beta; | a circle about D |
+| H | O + (1 &minus; z)&alpha; = F + (1 &minus; z)(P &minus; F) | a circle about O |
+
+so A, E, G, O is a four-bar with P on its coupler EG, and so is D, F, H, O.
+The triangle A, D, O is similar to the coupler triangle B, C, P. The tests
+check that every cognate bar keeps its length through a whole cycle and that
+each cognate, solved on its own from scratch, retraces the original curve.
+
+Both cognates of the crossed Chebyshev linkage are the lambda linkage, one
+on each side, and the tests check the bar lengths match exactly. When P sits
+on B or C the cognates collapse, since one of their bars has no length.
+
 ## Starting linkages
 
 | Linkage | Bars (ground, crank, coupler, rocker) | What to look for |
 | --- | --- | --- |
 | Crank-rocker | 4, 1.5, 4, 3 | a full-turn crank and a looping curve |
 | Chebyshev's straight line | 4, 5, 2, 5, crossed, P at the coupler midpoint | between x = 0 and x = 4 the curve rises at most 0.01 above the line y = 4 |
-| Chebyshev lambda | 2, 1, 2.5, 2.5, P at 5 along the coupler | the same curve as the crossed linkage, driven by a crank that turns fully |
+| Chebyshev lambda | 2, 1, 2.5, 2.5, P at 5 along the coupler | a cognate of the crossed linkage, driven by a crank that turns fully |
 | Watt's linkage | 6.08, 3, 1, 3, P at the coupler midpoint | a figure eight with a nearly straight middle |
 | Drag link | 1, 3, 3.5, 2.5 | both cranks turn fully |
 | Triple rocker | 4.5, 2.6, 2.6, 2.6 | no bar turns; the curve runs through both assemblies |
@@ -109,6 +138,7 @@ trace the same curve to within 0.02 of each other.
 | <kbd>Space</kbd> or **Run** | start or stop the crank |
 | <kbd>R</kbd> or **Reverse** | reverse the crank |
 | <kbd>F</kbd> or **Other assembly** | switch assembly |
+| <kbd>G</kbd> or **Show the two cognates** | draw the cognates |
 | Bar fields | set exact lengths |
 
 ## Code layout
@@ -117,6 +147,7 @@ trace the same curve to within 0.02 of each other.
 | --- | --- |
 | `src/linkage.js` | position analysis, crank range, a full cycle, stepping through toggles |
 | `src/grashof.js` | Grashof classification and whether the loop can close |
+| `src/cognates.js` | the third pivot and the two Roberts-Chebyshev cognates |
 | `src/presets.js` | the starting linkages |
 | `src/main.js` | the page |
 
