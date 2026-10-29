@@ -57,7 +57,7 @@ test('at a toggle the velocities are undefined', () => {
 });
 
 test('speed colours run from blue to yellow and clamp outside the range', () => {
-  assert.equal(speedColor(0, 0, 1), 'rgb(36, 46, 120)');
+  assert.equal(speedColor(0, 0, 1), 'rgb(64, 80, 190)');
   assert.equal(speedColor(1, 0, 1), 'rgb(253, 231, 37)');
   assert.equal(speedColor(-5, 0, 1), speedColor(0, 0, 1));
   assert.equal(speedColor(9, 0, 1), speedColor(1, 0, 1));

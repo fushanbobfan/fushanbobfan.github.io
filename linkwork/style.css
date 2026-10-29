@@ -245,6 +245,21 @@ button:disabled {
   cursor: default;
 }
 
+.ramp {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0 0 26px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #0c0c12;
+  background: linear-gradient(90deg, rgb(64, 80, 190), rgb(33, 113, 181), rgb(32, 170, 160), rgb(120, 205, 90), rgb(253, 231, 37));
+}
+
+.ramp span:first-child {
+  color: var(--text);
+}
+
 .readout {
   display: grid;
   grid-template-columns: auto 1fr;

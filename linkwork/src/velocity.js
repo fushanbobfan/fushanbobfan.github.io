@@ -28,7 +28,7 @@ export function velocities(link, pose, w2 = 1) {
 // A colour for a speed between lo and hi, running from deep blue through
 // teal and green to yellow.
 const RAMP = [
-  [36, 46, 120],
+  [64, 80, 190],
   [33, 113, 181],
   [32, 170, 160],
   [120, 205, 90],

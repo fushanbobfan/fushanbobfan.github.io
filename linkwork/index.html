@@ -41,6 +41,9 @@
         </label>
         <button id="flip" class="wide">Other assembly <kbd>F</kbd></button>
         <label class="row"><input type="checkbox" id="show-other"> Show the other assembly's curve</label>
+        <label class="row"><input type="checkbox" id="speed-color" checked> Colour the curve by the speed of P</label>
+        <div class="ramp" aria-hidden="true"><span>slow</span><span>fast</span></div>
+        <label class="row"><input type="checkbox" id="show-velocity"> Show the velocity of P</label>
       </section>
 
       <section>
@@ -76,6 +79,9 @@
           <dt>Input range</dt><dd id="r-range"></dd>
           <dt>Transmission</dt><dd id="r-mu"></dd>
           <dt>Worst angle</dt><dd id="r-mu-min"></dd>
+          <dt>Speed of P</dt><dd id="r-speed"></dd>
+          <dt>Over a cycle</dt><dd id="r-speed-range"></dd>
+          <dt>Rocker / crank</dt><dd id="r-ratio"></dd>
         </dl>
         <p class="note" id="note"></p>
       </section>
