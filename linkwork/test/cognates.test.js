@@ -67,11 +67,16 @@ test('each cognate, solved on its own, retraces the same coupler curve', () => {
   }
 });
 
-test("a cognate of Chebyshev's linkage is the lambda linkage", () => {
+test("both cognates of Chebyshev's linkage are the lambda linkage", () => {
   const cheb = PRESETS.find((p) => p.id === 'chebyshev');
   const lambda = PRESETS.find((p) => p.id === 'lambda').link;
-  const [one] = cognateLinks(cheb.link, solve(cheb.link, cheb.theta, cheb.branch));
+  const [one, two] = cognateLinks(cheb.link, solve(cheb.link, cheb.theta, cheb.branch));
   close(one.link.D.x, lambda.D.x, 1e-12);
   close(one.link.D.y, lambda.D.y, 1e-12);
   for (const k of ['a', 'b', 'c', 'u', 'v']) close(one.link[k], lambda[k], 1e-12, k);
+  // the other cognate is its mirror image, pivoted at D and O
+  close(two.link.A.x, 4, 1e-12);
+  close(Math.hypot(two.link.D.x - two.link.A.x, two.link.D.y - two.link.A.y), 2, 1e-12);
+  for (const k of ['a', 'b', 'c', 'u']) close(two.link[k], lambda[k], 1e-12, k);
+  close(Math.abs(two.link.v), 0, 1e-12);
 });
