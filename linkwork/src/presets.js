@@ -13,7 +13,7 @@ export const PRESETS = [
   {
     id: 'chebyshev',
     name: "Chebyshev's straight line",
-    note: 'Bars in the ratio 4 : 5 : 2 : 5, crossed. The middle of the short coupler runs very nearly straight across the top of its path.',
+    note: 'Bars in the ratio 4 : 5 : 2 : 5, crossed. The middle of the short coupler runs very nearly straight along the flat side of its path.',
     link: { A: { x: 0, y: 0 }, D: { x: 4, y: 0 }, a: 5, b: 2, c: 5, u: 1, v: 0 },
     theta: Math.atan2(4, 3),
     branch: -1,
