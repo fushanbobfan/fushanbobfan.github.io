@@ -1,0 +1,21 @@
+{
+  "name": "linkwork",
+  "version": "0.1.0",
+  "description": "A four-bar linkage lab in the browser: set the bar lengths, turn the crank, and watch the coupler point trace its curve.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "four-bar-linkage",
+    "kinematics",
+    "mechanism",
+    "coupler-curve",
+    "visualization",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
