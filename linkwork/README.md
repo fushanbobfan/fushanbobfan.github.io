@@ -68,6 +68,27 @@ The transmission angle is the angle between coupler and rocker at C. Near
 pulls almost along the rocker and can barely turn it. The readout shows the
 current angle and the worst one over a whole cycle.
 
+## Speed
+
+With the crank turning at a steady rate, the coupler point does not. The
+curve is coloured by the speed of P, from blue where it lingers to yellow
+where it rushes, and **Show the velocity of P** adds an arrow at P. The
+readout gives the speed of P per radian of crank, its slowest and fastest
+values over a cycle, and the ratio of rocker to crank angular velocity.
+
+The velocities come from differentiating the loop. With crank, coupler and
+rocker vectors r&#8322; = B &minus; A, r&#8323; = C &minus; B and
+r&#8324; = C &minus; D, and &times; the 2D cross product,
+
+- coupler: &omega;&#8323; = &minus;&omega;&#8322; (r&#8322; &times; r&#8324;) / (r&#8323; &times; r&#8324;)
+- rocker: &omega;&#8324; = &omega;&#8322; (r&#8322; &times; r&#8323;) / (r&#8324; &times; r&#8323;)
+- coupler point: v<sub>P</sub> = &omega;&#8322; &times; r&#8322; + &omega;&#8323; &times; (P &minus; B)
+
+The tests compare all three with central differences of the position
+solution. At a toggle r&#8323; and r&#8324; line up, the denominators vanish,
+and the speed of P has no bound, so a rocking input's speed range is reported
+as unbounded and the colours are scaled to the 95th percentile.
+
 ## Cognates
 
 Every coupler curve is drawn by three different four-bars: the
@@ -147,6 +168,7 @@ trace the same curve to within 0.02 of each other.
 | --- | --- |
 | `src/linkage.js` | position analysis, crank range, a full cycle, stepping through toggles |
 | `src/grashof.js` | Grashof classification and whether the loop can close |
+| `src/velocity.js` | angular velocities, the velocity of P, the speed colours |
 | `src/cognates.js` | the third pivot and the two Roberts-Chebyshev cognates |
 | `src/presets.js` | the starting linkages |
 | `src/main.js` | the page |
