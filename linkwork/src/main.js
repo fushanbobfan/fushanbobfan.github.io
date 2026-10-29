@@ -2,6 +2,7 @@ import { solve, cycle, step, crankArc, ground, couplerOffsets, branchOf, wrap } 
 import { classify, closes } from './grashof.js';
 import { PRESETS } from './presets.js';
 import { cognatePose, cognateLinks, couplerRatio } from './cognates.js';
+import { velocities, speedColor, speedRange } from './velocity.js';
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -55,6 +56,8 @@ function pose() {
 function rebuild() {
   state.curve = cycle(state.link, state.theta, state.branch, 900);
   state.other = state.curve && state.curve.full ? cycle(state.link, state.theta, -state.branch, 900) : null;
+  state.speeds = state.curve ? state.curve.poses.map((p) => velocities(state.link, p)?.speed ?? Infinity) : [];
+  state.range = speedRange(state.speeds);
   syncInputs();
   updateReadout();
 }
@@ -240,7 +243,9 @@ function draw() {
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (state.curve) {
+  if (state.curve && $('speed-color').checked) {
+    drawSpeedCurve();
+  } else if (state.curve) {
     ctx.strokeStyle = COLORS.curve;
     ctx.lineWidth = 2;
     polyline(state.curve.poses.map((p) => p.P), true);
@@ -276,11 +281,59 @@ function draw() {
   if (p) {
     joint(p.B, 5, COLORS.joint, hv === 'B');
     joint(p.C, 5, COLORS.joint, hv === 'C');
+    if ($('show-velocity').checked) {
+      const v = velocities(state.link, p, state.dir);
+      if (v) arrow(p.P, v.vP.x, v.vP.y, COLORS.joint);
+    }
     joint(p.P, 6, COLORS.curve, hv === 'P');
     label(p.B, 'B');
     label(p.C, 'C');
     label(p.P, 'P');
   }
+}
+
+// Each piece of the curve takes the colour of the coupler point's speed
+// there, for a crank turning at a steady rate.
+function drawSpeedCurve() {
+  const { poses } = state.curve;
+  const { lo, hi } = state.range;
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < poses.length; i++) {
+    const j = (i + 1) % poses.length;
+    const s = toScreen(poses[i].P);
+    const t = toScreen(poses[j].P);
+    ctx.strokeStyle = speedColor((state.speeds[i] + state.speeds[j]) / 2, lo, hi);
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.stroke();
+  }
+}
+
+function arrow(from, vx, vy, color) {
+  const s = toScreen(from);
+  const len = Math.hypot(vx, vy);
+  if (len < 1e-9) return;
+  // screen y points down
+  const px = Math.min(120, (60 * len) / Math.max(state.range.hi, 1e-9));
+  const ux = vx / len;
+  const uy = -vy / len;
+  const tx = s.x + ux * px;
+  const ty = s.y + uy * px;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(s.x, s.y);
+  ctx.lineTo(tx, ty);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(tx - ux * 9 - uy * 5, ty - uy * 9 + ux * 5);
+  ctx.lineTo(tx - ux * 9 + uy * 5, ty - uy * 9 - ux * 5);
+  ctx.closePath();
+  ctx.fill();
 }
 
 // The cognates collapse when P sits on B or C: one of their bars has no length.
@@ -403,6 +456,10 @@ function updateReadout() {
   if (arc && !arc.full) notes.push('The crank rocks between two toggles, where coupler and rocker line up, and the loop changes assembly at each one; the curve includes both.');
   if (info.type === 'change-point') notes.push('s + l = p + q: the bars can line up flat, and there the linkage can switch assembly.');
   $('note').textContent = notes.join(' ');
+  const finite = state.speeds.filter(Number.isFinite);
+  $('r-speed-range').textContent = finite.length
+    ? `${Math.min(...finite).toFixed(2)} to ${state.curve.full ? Math.max(...finite).toFixed(2) : 'unbounded'}`
+    : '—';
   updateCognates();
   updateLive();
 }
@@ -416,6 +473,9 @@ function updateLive() {
   const p = pose();
   $('r-crank').textContent = deg(wrapSigned(state.theta));
   $('r-mu').textContent = p ? deg(p.mu) : '—';
+  const v = p && velocities(state.link, p);
+  $('r-speed').textContent = v ? `${v.speed.toFixed(2)} per radian` : 'at a toggle';
+  $('r-ratio').textContent = v ? v.w4.toFixed(2) : '—';
 }
 
 // ---- interaction -----------------------------------------------------------
@@ -572,6 +632,8 @@ $('play').addEventListener('click', () => setRunning(!state.running));
 $('reverse').addEventListener('click', () => { state.dir = -state.dir; });
 $('flip').addEventListener('click', flip);
 $('show-other').addEventListener('change', draw);
+$('speed-color').addEventListener('change', draw);
+$('show-velocity').addEventListener('change', draw);
 $('show-cognates').addEventListener('change', () => {
   fit();
   draw();
