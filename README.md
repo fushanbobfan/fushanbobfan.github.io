@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [linkwork](https://fushanbobfan.github.io/linkwork/) | A four-bar linkage lab in the browser: drag the pivots and joints, turn the crank, and watch a point on the coupler trace loops, figure eights and nearly straight lines. | [`linkwork/`](linkwork/) |
 | [drape](https://fushanbobfan.github.io/drape/) | Cloth in the browser: hang a curtain, a banner or a flag from pins, grab, cut and tear it, and watch every thread coloured by how hard it is pulled. | [`drape/`](drape/) |
 | [cycloid](https://fushanbobfan.github.io/cycloid/) | The brachistochrone and the tautochrone in the browser: race beads from A to B along a ramp, an arc, the cycloid and a track you draw, then drop them into a cycloidal bowl where every start takes the same time. | [`cycloid/`](cycloid/) |
 | [fatou](https://fushanbobfan.github.io/fatou/) | The Mandelbrot set and its Julia sets side by side: pick c, follow the orbit of 0 and see which cycle it settles on. | [`fatou/`](fatou/) |
