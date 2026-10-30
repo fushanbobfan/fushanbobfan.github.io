@@ -1,0 +1,21 @@
+{
+  "name": "iris",
+  "version": "0.1.0",
+  "description": "Rainbows in the browser: follow sunlight through a raindrop, find Descartes' rainbow ray, and render the primary bow, the secondary bow and Alexander's dark band.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "rainbow",
+    "optics",
+    "refraction",
+    "dispersion",
+    "visualization",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
