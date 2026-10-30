@@ -98,6 +98,27 @@ reflection to check the formula for D.
   circles on the sky circular on the page, so the bows stay round across a
   wide view.
 
+## Through a polarizing filter
+
+The plane of scattering holds the sun, the drop and the eye, so on the sky it
+runs along the great circle through the antisolar point. Light polarized
+across that plane (s) vibrates along the bow and light in it (p) across the
+bow. An ideal filter whose axis makes angle &psi; with the direction toward
+the antisolar point passes sin&sup2;&psi; of the s light and cos&sup2;&psi; of
+the p light.
+
+**Look through a polarizing filter** (<kbd>P</kbd>) applies this at every
+point of the sky, with the axis set by **Filter axis** and drawn in the
+corner. The light of the primary bow is about 90% polarized along the bow,
+so with the axis horizontal the top of the bow is bright and its feet fade;
+turn the axis upright and the top nearly vanishes. The secondary is less
+polarized, about 77%, and the light inside the primary much less. The page
+works out the direction toward the antisolar point on the page by stepping
+along the great circle and projecting, which is exact because the
+stereographic projection preserves angles. A filter always takes half of
+unpolarized light, so the exposure is doubled under it and the plain sky
+keeps its brightness.
+
 Geometric optics leaves out the wave effects of small drops: the pale
 supernumerary bands just inside the primary and the fogbow of tiny droplets.
 
@@ -108,6 +129,7 @@ supernumerary bands just inside the primary and the fogbow of tiny droplets.
 | Drag in the drop, or arrow keys with it focused | move the incoming ray (shift for small steps) |
 | <kbd>1</kbd>, <kbd>2</kbd> | one or two reflections |
 | <kbd>D</kbd> or **Go to the rainbow ray** | jump to Descartes' ray |
+| <kbd>P</kbd> or **Look through a polarizing filter** | view the sky through a filter; **Filter axis** turns it |
 | Sun elevation | raise or lower the sun and the antisolar point |
 | Exposure | brighten or dim the rendered bows |
 
@@ -120,6 +142,7 @@ supernumerary bands just inside the primary and the fogbow of tiny droplets.
 | `src/color.js` | colour-matching functions, sunlight, spectrum to sRGB |
 | `src/scatter.js` | radiance by angle from the antisolar point, blurred by the sun |
 | `src/sky.js` | angles on the sky and the stereographic projection |
+| `src/polarizer.js` | the direction of the bow's polarization on the page and the filter's weights |
 | `src/main.js` | the page |
 
 ## License
