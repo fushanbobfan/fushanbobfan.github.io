@@ -3,6 +3,7 @@ import { deviation, rainbowAngle, descartesImpact, bowAngle, orderWeights, trace
 import { angularProfile, colourProfile } from './scatter.js';
 import { wavelengthColor, encode } from './color.js';
 import { antisolarAngle, bowTop, project, unproject } from './sky.js';
+import { radialAngle, filterWeights, polarizationDegree } from './polarizer.js';
 
 const $ = (id) => document.getElementById(id);
 const DEG = 180 / Math.PI;
@@ -26,6 +27,8 @@ const state = {
   sun: 12,
   show: { 1: true, 2: true },
   fromAir: false,
+  filter: false,
+  axis: 0,
   exposure: 1,
   order: 1,
   x: 0.6,
@@ -91,6 +94,9 @@ function renderSky() {
   const img = bctx.createImageData(W, H);
   const t = state.tables;
   const gain = state.base * state.exposure;
+  // Any linear polarizer removes half of unpolarized light; the exposure is
+  // doubled under the filter so the plain sky keeps its brightness.
+  const axis = state.axis * RAD;
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {
       const [az, el] = unproject((px + 0.5 - W / 2) / f.s, (H / 2 - py - 0.5) / f.s, f.el0);
@@ -102,13 +108,20 @@ function renderSky() {
       if (t && lit) {
         const a = antisolarAngle(az, el, sun) * DEG;
         const bin = Math.floor(a / t[1].binDeg);
+        let ws = 1;
+        let wp = 1;
+        if (state.filter && bin < t[1].bins) {
+          const w = filterWeights(radialAngle(az, el, sun, f.el0), axis);
+          ws = 2 * w.s;
+          wp = 2 * w.p;
+        }
         if (bin < t[1].bins) {
           for (const k of [1, 2]) {
             if (!state.show[k]) continue;
             const { rgbS, rgbP } = t[k];
-            r += gain * (rgbS[3 * bin] + rgbP[3 * bin]);
-            g += gain * (rgbS[3 * bin + 1] + rgbP[3 * bin + 1]);
-            b += gain * (rgbS[3 * bin + 2] + rgbP[3 * bin + 2]);
+            r += gain * (ws * rgbS[3 * bin] + wp * rgbP[3 * bin]);
+            g += gain * (ws * rgbS[3 * bin + 1] + wp * rgbP[3 * bin + 1]);
+            b += gain * (ws * rgbS[3 * bin + 2] + wp * rgbP[3 * bin + 2]);
           }
         }
       }
@@ -168,12 +181,31 @@ function renderSky() {
     ctx.fillStyle = COLORS.marker;
     ctx.fillText(`your ray: ${(alpha * DEG).toFixed(1)}°`, top[0] + 6 * dpr, top[1] - 6 * dpr);
   }
+  if (state.filter) drawFilterDial(ctx, c.width - 34 * dpr, 34 * dpr, 22 * dpr, dpr);
   if (!state.tables) {
     ctx.fillStyle = COLORS.label;
     ctx.font = `${13 * dpr}px system-ui, sans-serif`;
     ctx.fillText('Following a few million rays through the drop…', 12 * dpr, 22 * dpr);
   }
   ctx.restore();
+}
+
+// The filter's transmission axis, drawn as a line across a ring.
+function drawFilterDial(ctx, x, y, r, dpr) {
+  const a = state.axis * RAD;
+  ctx.fillStyle = 'rgba(10, 12, 18, 0.55)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = dpr;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = COLORS.marker;
+  ctx.lineWidth = 2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(x - Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8);
+  ctx.lineTo(x + Math.cos(a) * r * 0.8, y - Math.sin(a) * r * 0.8);
+  ctx.stroke();
 }
 
 // A circle on the sky of angular radius alpha about the antisolar point,
@@ -478,6 +510,10 @@ function updateReadout() {
   if (top <= 0 && !state.fromAir) {
     note += ' With the sun this high, the primary bow is below the horizon from the ground.';
   }
+  $('r-pol').textContent = state.bowPolarization === undefined ? '…' : `${Math.round(state.bowPolarization * 100)}% along the bow`;
+  if (state.filter) {
+    note += ' Through the filter the bow fades where the axis points at the antisolar point and brightens where it runs along the bow.';
+  }
   $('note').textContent = note;
 }
 
@@ -520,6 +556,16 @@ function computeTables() {
     peak = Math.max(peak, lum);
   }
   state.base = 0.55 / peak;
+  let best = 0;
+  let at = 0;
+  for (let b = Math.round(38 / binDeg); b < Math.round(44 / binDeg); b++) {
+    const lum = 0.7152 * (rgbS[3 * b + 1] + rgbP[3 * b + 1]);
+    if (lum > best) {
+      best = lum;
+      at = b;
+    }
+  }
+  state.bowPolarization = polarizationDegree(rgbS.slice(3 * at, 3 * at + 3), rgbP.slice(3 * at, 3 * at + 3));
   state.tables = t;
 }
 
@@ -538,6 +584,20 @@ $('show-1').addEventListener('change', (e) => {
 $('show-2').addEventListener('change', (e) => {
   state.show[2] = e.target.checked;
   renderSky();
+});
+function setFilter(on) {
+  state.filter = on;
+  $('filter').checked = on;
+  renderSky();
+  updateReadout();
+}
+
+$('filter').addEventListener('change', (e) => setFilter(e.target.checked));
+$('axis').addEventListener('input', (e) => {
+  state.axis = Number(e.target.value);
+  $('axis-out').textContent = `${state.axis}°`;
+  if (state.filter) renderSky();
+  else setFilter(true);
 });
 $('from-air').addEventListener('change', (e) => {
   state.fromAir = e.target.checked;
@@ -579,6 +639,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '1') setOrder(1);
   else if (e.key === '2') setOrder(2);
   else if (e.key === 'd' || e.key === 'D') goDescartes();
+  else if (e.key === 'p' || e.key === 'P') setFilter(!state.filter);
 });
 
 let pending = 0;
@@ -590,5 +651,5 @@ new ResizeObserver(() => {
 renderAll();
 setTimeout(() => {
   computeTables();
-  renderSky();
+  renderAll();
 }, 30);

@@ -45,6 +45,14 @@
       </section>
 
       <section>
+        <h2>Polarizer</h2>
+        <label class="row"><input type="checkbox" id="filter"> Look through a polarizing filter <kbd>P</kbd></label>
+        <label>Filter axis <output id="axis-out">0°</output>
+          <input type="range" id="axis" min="0" max="180" step="1" value="0">
+        </label>
+      </section>
+
+      <section>
         <h2>Ray</h2>
         <div class="modes" role="group" aria-label="Number of reflections inside the drop">
           <button id="order-1" aria-pressed="true">Primary <kbd>1</kbd></button>
@@ -70,6 +78,7 @@
           <dt>Secondary bow</dt><dd id="r-b2"></dd>
           <dt>Dark band</dt><dd id="r-band"></dd>
           <dt>Top of primary</dt><dd id="r-top"></dd>
+          <dt>Bow polarized</dt><dd id="r-pol"></dd>
         </dl>
         <p class="note" id="note"></p>
       </section>
