@@ -119,8 +119,49 @@ stereographic projection preserves angles. A filter always takes half of
 unpolarized light, so the exposure is doubled under it and the plain sky
 keeps its brightness.
 
-Geometric optics leaves out the wave effects of small drops: the pale
-supernumerary bands just inside the primary and the fogbow of tiny droplets.
+## Drop size and wave optics
+
+Rays alone make every bow the same whatever the size of the drops. Real
+bows are not: the light near the rainbow ray leaves the drop on a wavefront
+bent into a cubic, and its interference sets the shape of the bow. This is
+Airy's theory of the rainbow. **Wave optics for drops of this size** turns it
+on, and **Drop diameter** runs from 0.05 mm drizzle to 5 mm downpour.
+
+Writing the deviation near the rainbow ray as
+&alpha;(x) &asymp; &alpha;<sub>R</sub> &minus; &alpha;''(x &minus; x<sub>R</sub>)&sup2;/2,
+a drop of radius a tilts the outgoing wavefront by &minus;C u&sup2; at
+distance u from the rainbow ray, with C = &alpha;''/(2a&sup2;). Its far field
+is Ai(s&epsilon;), with &epsilon; the angle from the geometric bow toward its
+dark side, s = (k&sup2;/C)<sup>1/3</sup> and k the wavenumber, so
+
+- the brightest ring sits 1.019/s inside the geometric bow, not on it;
+- the supernumerary bands follow at the next maxima of Ai&sup2;, 3.248/s,
+  4.820/s and so on, closer together the farther in they are;
+- some light reaches the dark side, falling off smoothly.
+
+Because s grows as a<sup>2/3</sup>, small drops spread all of this out. For
+green light a 1 mm drop moves the bow in by about 0.3&deg; with the first
+supernumerary 0.7&deg; inside it; at 0.2 mm the shift is about 0.9&deg; and
+the bands are 2&deg; apart and plain to see; at 0.05 mm each colour's bow is
+several degrees wide, the colours overlap and the bow turns almost white.
+The readout gives the shift and the spacing for green light.
+
+Averaged over its fringes, 2&pi;&radic;s Ai&sup2;(s&epsilon;) tends to
+1/&radic;(&minus;&epsilon;), the shape of the geometric caustic, and the tests
+check that numerically. Within 0.8&deg; of the bow the page uses the Airy
+intensity scaled to that caustic. Farther in the cubic approximation drifts,
+so the traced profile is kept and multiplied by the fringes, which leaves its
+average unchanged; the tests compare both regions with the rays. Where the
+fringes grow finer than the 0.05&deg; angle bins, they fade out over a short
+stretch and the rays carry on alone.
+
+Ai itself comes from its power series on [&minus;5, 5], its asymptotic series
+above 5, and below &minus;5 from integrating Ai'' = x Ai with fourth-order
+Runge&ndash;Kutta, read back by cubic Hermite interpolation. The tests check
+it against tabulated values, its first five zeros and the zeros of its slope.
+
+Airy's theory still treats the drop as large compared with the wavelength;
+for the smallest drops a full Mie calculation differs in detail.
 
 ## Controls
 
@@ -130,6 +171,7 @@ supernumerary bands just inside the primary and the fogbow of tiny droplets.
 | <kbd>1</kbd>, <kbd>2</kbd> | one or two reflections |
 | <kbd>D</kbd> or **Go to the rainbow ray** | jump to Descartes' ray |
 | <kbd>P</kbd> or **Look through a polarizing filter** | view the sky through a filter; **Filter axis** turns it |
+| **Wave optics** and **Drop diameter** | render the sky with Airy's theory for drops of that size |
 | Sun elevation | raise or lower the sun and the antisolar point |
 | Exposure | brighten or dim the rendered bows |
 
@@ -140,7 +182,8 @@ supernumerary bands just inside the primary and the fogbow of tiny droplets.
 | `src/water.js` | refractive index of water and the wavelengths used |
 | `src/optics.js` | deviation, the rainbow ray, Fresnel weights, ray tracing in a drop |
 | `src/color.js` | colour-matching functions, sunlight, spectrum to sRGB |
-| `src/scatter.js` | radiance by angle from the antisolar point, blurred by the sun |
+| `src/scatter.js` | radiance by angle from the antisolar point, Airy's theory near the bows, blurred by the sun |
+| `src/airy.js` | the Airy function and the scale of Airy's rainbow |
 | `src/sky.js` | angles on the sky and the stereographic projection |
 | `src/polarizer.js` | the direction of the bow's polarization on the page and the filter's weights |
 | `src/main.js` | the page |
