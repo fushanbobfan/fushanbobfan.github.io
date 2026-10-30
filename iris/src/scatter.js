@@ -87,7 +87,10 @@ function applyAiry(s, p, w, k, bins, binDeg, radius) {
     if (eps < -reach || eps > (3 * Math.PI) / 180) continue;
     const f = airyFactor(eps, scale);
     if (eps < -NEAR) {
-      const m = Math.sqrt(-eps) * f;
+      // Fade the fringes out over the last 30% of their reach, so stopping
+      // them leaves no edge.
+      const fade = Math.min(1, (reach + eps) / (0.3 * reach));
+      const m = 1 + fade * (Math.sqrt(-eps) * f - 1);
       s[w * bins + b] *= m;
       p[w * bins + b] *= m;
     } else {
