@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { angularProfile, colourProfile, bandRadiance } from '../src/scatter.js';
 import { WAVELENGTHS, waterIndex } from '../src/water.js';
 import { bowAngle, descartesImpact, orderWeights, rainbowAngle } from '../src/optics.js';
+import { airyScale, AIRY_PEAKS } from '../src/airy.js';
 
 const profile = angularProfile({ samples: 8000 });
 const W550 = WAVELENGTHS.indexOf(550);
@@ -79,4 +80,75 @@ test('the profile is deterministic and finite', () => {
   const again = angularProfile({ samples: 8000 });
   assert.deepEqual(again.s, profile.s);
   assert.ok(profile.s.every(Number.isFinite) && profile.p.every(Number.isFinite));
+});
+
+test('with a drop size the bow follows Airy: it moves inward and lights its dark side', () => {
+  const n = waterIndex(550);
+  const ar = bowAngle(n, 1);
+  const h = 1e-4;
+  const x = descartesImpact(n, 1);
+  const curvature = Math.abs(rainbowAngle(x + h, n, 1) - 2 * ar + rainbowAngle(x - h, n, 1)) / (h * h);
+  const s = airyScale(curvature, 0.5e-3, 550);
+  const wave = angularProfile({ orders: [1], samples: 8000, radius: 0.5e-3, sun: false });
+  const rays = angularProfile({ orders: [1], samples: 8000, sun: false });
+  const at = (P, deg) => {
+    const b = Math.floor(deg / P.binDeg);
+    return P.s[W550 * P.bins + b] + P.p[W550 * P.bins + b];
+  };
+  let best = 0;
+  let peak = 0;
+  for (let d = 38; d < 44; d += 0.05) {
+    if (at(wave, d) > best) {
+      best = at(wave, d);
+      peak = d;
+    }
+  }
+  const expected = (ar + AIRY_PEAKS[0] / s) * DEG;
+  assert.ok(Math.abs(peak - expected) < 0.06, `peak ${peak}, Airy ${expected}`);
+  assert.equal(at(rays, ar * DEG + 0.3), 0);
+  assert.ok(at(wave, ar * DEG + 0.3) > 0);
+});
+
+test('averaged over its fringes the wave profile keeps the brightness of the rays', () => {
+  const avg = (P, a, b) => {
+    let t = 0;
+    let c = 0;
+    for (let i = Math.round(a / P.binDeg); i < Math.round(b / P.binDeg); i++) {
+      t += P.s[W550 * P.bins + i] + P.p[W550 * P.bins + i];
+      c++;
+    }
+    return t / c;
+  };
+  for (const [k, tol] of [[1, 0.03], [2, 0.08]]) {
+    const ar = bowAngle(waterIndex(550), k) * DEG;
+    const wave = angularProfile({ orders: [k], samples: 20000, radius: 0.5e-3 });
+    const rays = angularProfile({ orders: [k], samples: 20000 });
+    const side = k === 1 ? -1 : 1;
+    for (const [a, b] of [[0.8, 2], [2, 4], [4, 6]]) {
+      const lo = Math.min(ar + side * a, ar + side * b);
+      const hi = Math.max(ar + side * a, ar + side * b);
+      const ratio = avg(wave, lo, hi) / avg(rays, lo, hi);
+      assert.ok(Math.abs(ratio - 1) < tol, `order ${k}, ${a}-${b}°: ${ratio}`);
+    }
+  }
+});
+
+test('small drops wash the bow toward white', () => {
+  const saturation = (radius) => {
+    const rgb = colourProfile(angularProfile({ orders: [1], samples: 8000, radius }));
+    let best = 0;
+    let sat = 0;
+    for (let b = Math.round(36 / rgb.binDeg); b < Math.round(44 / rgb.binDeg); b++) {
+      const c = [0, 1, 2].map((j) => rgb.rgbS[3 * b + j] + rgb.rgbP[3 * b + j]);
+      const lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+      if (lum > best) {
+        best = lum;
+        sat = (Math.max(...c) - Math.min(...c)) / Math.max(...c);
+      }
+    }
+    return sat;
+  };
+  const big = saturation(1e-3);
+  const small = saturation(0.05e-3);
+  assert.ok(small < big - 0.2, `1 mm ${big}, 0.05 mm ${small}`);
 });
