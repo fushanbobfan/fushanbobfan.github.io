@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>iris: how a raindrop makes a rainbow</title>
+  <meta name="description" content="Follow sunlight through a raindrop, find Descartes' rainbow ray, and see the primary bow, the secondary bow and Alexander's dark band in a rendered sky.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>iris</h1>
+    <p>Every drop of rain sends sunlight back in all directions, but the light piles up at one angle. Bend a ray through a drop, watch where it leaves, and see why the bow stands 42&deg; from the shadow of your head.</p>
+  </header>
+
+  <main>
+    <div class="views">
+      <figure class="view sky-view">
+        <figcaption>Sky <span class="hint">looking away from the sun &middot; the cross marks the antisolar point</span></figcaption>
+        <canvas id="sky" aria-label="Rendered sky with the rainbow, seen with the sun behind you"></canvas>
+      </figure>
+      <figure class="view">
+        <figcaption>Inside a drop <span class="hint">drag up and down, or use the arrow keys</span></figcaption>
+        <canvas id="drop" tabindex="0" aria-label="Rays through a raindrop. Up and down arrows move the incoming ray."></canvas>
+      </figure>
+      <figure class="view">
+        <figcaption>Where each ray goes <span class="hint">angle from the antisolar point against impact parameter</span></figcaption>
+        <canvas id="plot" aria-label="Angle from the antisolar point against impact parameter for the primary and secondary bows"></canvas>
+      </figure>
+    </div>
+
+    <aside class="panel">
+      <section>
+        <h2>Sky</h2>
+        <label>Sun elevation <output id="sun-out"></output>
+          <input type="range" id="sun" min="0" max="60" step="0.5" value="12">
+        </label>
+        <label class="row"><input type="checkbox" id="show-1" checked> Primary bow</label>
+        <label class="row"><input type="checkbox" id="show-2" checked> Secondary bow</label>
+        <label class="row"><input type="checkbox" id="from-air"> Seen from the air, no ground</label>
+        <label>Exposure
+          <input type="range" id="exposure" min="0.2" max="4" step="0.05" value="1">
+        </label>
+      </section>
+
+      <section>
+        <h2>Ray</h2>
+        <div class="modes" role="group" aria-label="Number of reflections inside the drop">
+          <button id="order-1" aria-pressed="true">Primary <kbd>1</kbd></button>
+          <button id="order-2" aria-pressed="false">Secondary <kbd>2</kbd></button>
+        </div>
+        <label>Impact parameter <output id="impact-out"></output>
+          <input type="range" id="impact" min="0" max="0.999" step="0.001" value="0.6">
+        </label>
+        <button id="descartes" class="wide">Go to the rainbow ray <kbd>D</kbd></button>
+        <label class="row"><input type="checkbox" id="fan"> Show a fan of parallel rays</label>
+        <label class="row"><input type="checkbox" id="spread" checked> Split into red, green and violet</label>
+      </section>
+
+      <section>
+        <h2>Readout</h2>
+        <dl class="readout">
+          <dt>Incidence</dt><dd id="r-i"></dd>
+          <dt>Refraction</dt><dd id="r-r"></dd>
+          <dt>Turned by</dt><dd id="r-d"></dd>
+          <dt>From antisolar</dt><dd id="r-a"></dd>
+          <dt>Light kept</dt><dd id="r-w"></dd>
+          <dt>Primary bow</dt><dd id="r-b1"></dd>
+          <dt>Secondary bow</dt><dd id="r-b2"></dd>
+          <dt>Dark band</dt><dd id="r-band"></dd>
+          <dt>Top of primary</dt><dd id="r-top"></dd>
+        </dl>
+        <p class="note" id="note"></p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
