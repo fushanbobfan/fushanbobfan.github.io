@@ -1,6 +1,7 @@
 import { waterIndex } from './water.js';
 import { deviation, rainbowAngle, descartesImpact, bowAngle, orderWeights, tracePath } from './optics.js';
 import { angularProfile, colourProfile } from './scatter.js';
+import { airyScale, AIRY_PEAKS } from './airy.js';
 import { wavelengthColor, encode } from './color.js';
 import { antisolarAngle, bowTop, project, unproject } from './sky.js';
 import { radialAngle, filterWeights, polarizationDegree } from './polarizer.js';
@@ -28,6 +29,9 @@ const state = {
   show: { 1: true, 2: true },
   fromAir: false,
   filter: false,
+  wave: false,
+  diameter: 1,
+  busy: true,
   axis: 0,
   exposure: 1,
   order: 1,
@@ -182,7 +186,7 @@ function renderSky() {
     ctx.fillText(`your ray: ${(alpha * DEG).toFixed(1)}°`, top[0] + 6 * dpr, top[1] - 6 * dpr);
   }
   if (state.filter) drawFilterDial(ctx, c.width - 34 * dpr, 34 * dpr, 22 * dpr, dpr);
-  if (!state.tables) {
+  if (state.busy) {
     ctx.fillStyle = COLORS.label;
     ctx.font = `${13 * dpr}px system-ui, sans-serif`;
     ctx.fillText('Following a few million rays through the drop…', 12 * dpr, 22 * dpr);
@@ -510,6 +514,20 @@ function updateReadout() {
   if (top <= 0 && !state.fromAir) {
     note += ' With the sun this high, the primary bow is below the horizon from the ground.';
   }
+  if (state.wave) {
+    const ng = waterIndex(550);
+    const ar = bowAngle(ng, 1);
+    const xr = descartesImpact(ng, 1);
+    const h = 1e-4;
+    const curvature = Math.abs(rainbowAngle(xr + h, ng, 1) - 2 * ar + rainbowAngle(xr - h, ng, 1)) / (h * h);
+    const sc = airyScale(curvature, (state.diameter / 2) * 1e-3, 550);
+    $('r-shift').textContent = fmt((-AIRY_PEAKS[0] / sc) * DEG, 2);
+    $('r-super').textContent = fmt(((AIRY_PEAKS[0] - AIRY_PEAKS[1]) / sc) * DEG, 2);
+  } else {
+    $('r-shift').textContent = 'off';
+    $('r-super').textContent = 'off';
+  }
+  $('diameter-out').textContent = `${state.diameter < 0.1 ? state.diameter.toFixed(2) : state.diameter.toFixed(1)} mm`;
   $('r-pol').textContent = state.bowPolarization === undefined ? '…' : `${Math.round(state.bowPolarization * 100)}% along the bow`;
   if (state.filter) {
     note += ' Through the filter the bow fades where the axis points at the antisolar point and brightens where it runs along the bow.';
@@ -544,9 +562,10 @@ function goDescartes() {
 }
 
 function computeTables() {
+  const radius = state.wave ? (state.diameter / 2) * 1e-3 : null;
   const t = {
-    1: colourProfile(angularProfile({ orders: [1] })),
-    2: colourProfile(angularProfile({ orders: [2] })),
+    1: colourProfile(angularProfile({ orders: [1], radius })),
+    2: colourProfile(angularProfile({ orders: [2], radius })),
   };
   // Scale so that the brightest part of the primary comes out just below full.
   let peak = 0;
@@ -555,7 +574,9 @@ function computeTables() {
     const lum = 0.2126 * (rgbS[3 * b] + rgbP[3 * b]) + 0.7152 * (rgbS[3 * b + 1] + rgbP[3 * b + 1]) + 0.0722 * (rgbS[3 * b + 2] + rgbP[3 * b + 2]);
     peak = Math.max(peak, lum);
   }
-  state.base = 0.55 / peak;
+  // Set the exposure once, from the first sky computed, so that changing
+  // the drop size shows the bow getting brighter or fainter.
+  if (!state.tables) state.base = 0.55 / peak;
   let best = 0;
   let at = 0;
   for (let b = Math.round(38 / binDeg); b < Math.round(44 / binDeg); b++) {
@@ -567,6 +588,7 @@ function computeTables() {
   }
   state.bowPolarization = polarizationDegree(rgbS.slice(3 * at, 3 * at + 3), rgbP.slice(3 * at, 3 * at + 3));
   state.tables = t;
+  state.busy = false;
 }
 
 $('sun').addEventListener('input', (e) => {
@@ -585,6 +607,31 @@ $('show-2').addEventListener('change', (e) => {
   state.show[2] = e.target.checked;
   renderSky();
 });
+function recompute() {
+  state.busy = true;
+  renderSky();
+  setTimeout(() => {
+    computeTables();
+    renderAll();
+  }, 30);
+}
+
+$('wave').addEventListener('change', (e) => {
+  state.wave = e.target.checked;
+  recompute();
+});
+$('diameter').addEventListener('input', (e) => {
+  state.diameter = 10 ** Number(e.target.value);
+  updateReadout();
+});
+$('diameter').addEventListener('change', () => {
+  if (!state.wave) {
+    state.wave = true;
+    $('wave').checked = true;
+  }
+  recompute();
+});
+
 function setFilter(on) {
   state.filter = on;
   $('filter').checked = on;
