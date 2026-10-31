@@ -53,6 +53,24 @@ vector (½, ½). The tests check that
 - the largest rotation order matches the largest digit of the symbol,
 - p3m1 has a mirror through every threefold centre and p31m does not.
 
+## Symmetry elements
+
+**Show the symmetry elements** (<kbd>E</kbd>) draws what each group is made
+of over the pattern, computed from the operations in `src/elements.js`:
+
+- a rotation x → Mx + t turns about the point c with (I − M)c = t, marked by
+  the largest order of rotation about it: a lens for 2, a triangle for 3, a
+  square for 4 and a hexagon for 6;
+- a reflection x → Ax + w fixes the line through (w − Aw)/4 along its axis and
+  slides along it by (w + Aw)/2. The line is drawn solid when that slide is a
+  lattice vector, so some symmetry reflects in it without sliding (a mirror),
+  and dashed otherwise (a glide line).
+
+The tests check the standard counts of rotation centres per cell, the mirror
+and glide lines of pm, pg and cm, the number of mirror directions in p4m, p4g,
+p6m and pgg, and, for all 17 groups, that the orbits of rotation centres give
+exactly the digits of the orbifold symbol.
+
 ## Drawing
 
 A stroke is stored in lattice coordinates, moved by a whole lattice vector so
@@ -69,6 +87,7 @@ angle of a rectangular or oblique cell reshapes the drawing with the lattice.
 | Cell size | zoom the pattern |
 | Side ratio, cell angle | reshape rectangular and oblique cells |
 | Show the unit cell | dashed outline of one cell (<kbd>C</kbd>) |
+| Show the symmetry elements | rotation centres, mirrors and glide lines (<kbd>E</kbd>) |
 | Draw only the original strokes | hide the copies to see what was actually drawn |
 | Save as PNG | download the current picture |
 
@@ -79,6 +98,7 @@ index.html        page and controls
 style.css         layout
 src/groups.js     the 17 groups, lattice bases, coordinate changes
 src/tiling.js     copies of a stroke that reach the view
+src/elements.js   rotation centres, mirrors and glide lines
 src/main.js       canvas drawing and input
 test/             node --test suites
 scripts/serve.js  dependency-free static server

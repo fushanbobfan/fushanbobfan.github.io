@@ -1,5 +1,6 @@
 import { GROUPS, byId, cellOps, basis, toFrac, toCart } from './groups.js';
 import { copies, reachOf, anchor } from './tiling.js';
+import { elements } from './elements.js';
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -38,6 +39,7 @@ const state = {
   width: 4,
   paper: '#101018',
   showCell: true,
+  showElements: false,
   originalOnly: false,
 };
 
@@ -138,11 +140,67 @@ function drawCell() {
   ctx.setLineDash([]);
 }
 
+// Rotation centres as the usual crystallographic marks (a lens for 2, a
+// triangle for 3, a square for 4, a hexagon for 6), mirrors as solid lines and
+// glide lines dashed.
+function drawElements() {
+  const b = B();
+  const s = state.cell * dpr;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const light = state.paper === '#f4efe3';
+  const ink = light ? '#1a1a26' : '#ffffff';
+  const { centres, lines } = elements(state.group, b, viewRect());
+  const reach = Math.hypot(canvas.width, canvas.height) / s;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // veil the drawing so the elements read clearly over it
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = state.paper;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 1;
+  ctx.lineCap = 'butt';
+  for (const l of lines) {
+    ctx.strokeStyle = l.mirror ? ink : '#9fb4ff';
+    ctx.lineWidth = (l.mirror ? 2.2 : 1.6) * dpr;
+    ctx.setLineDash(l.mirror ? [] : [7 * dpr, 6 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(cx + (l.px - l.dx * reach) * s, cy + (l.py - l.dy * reach) * s);
+    ctx.lineTo(cx + (l.px + l.dx * reach) * s, cy + (l.py + l.dy * reach) * s);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  const r = Math.max(5, Math.min(9, state.cell / 12)) * dpr;
+  for (const c of centres) {
+    const x = cx + c.x * s;
+    const y = cy + c.y * s;
+    ctx.fillStyle = '#ff7a59';
+    ctx.strokeStyle = light ? '#f4efe3' : '#101018';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    if (c.order === 2) {
+      ctx.ellipse(x, y, r * 0.55, r, 0, 0, 2 * Math.PI);
+    } else {
+      const k = c.order;
+      for (let i = 0; i < k; i++) {
+        const a = -Math.PI / 2 + (2 * Math.PI * i) / k + (k === 4 ? Math.PI / 4 : 0);
+        const px = x + r * Math.cos(a);
+        const py = y + r * Math.sin(a);
+        i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+      }
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
 function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(cache, 0, 0);
   if (state.live) paintStroke(ctx, state.live, B(), viewRect());
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (state.showElements) drawElements();
+  $('legend').hidden = !state.showElements;
   if (state.showCell) drawCell();
 }
 
@@ -201,6 +259,10 @@ window.addEventListener('keydown', (e) => {
   } else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
     state.showCell = !state.showCell;
     $('show-cell').checked = state.showCell;
+    draw();
+  } else if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.metaKey) {
+    state.showElements = !state.showElements;
+    $('show-elements').checked = state.showElements;
     draw();
   }
 });
@@ -281,6 +343,10 @@ function buildPanel() {
   });
   $('show-cell').addEventListener('change', (e) => {
     state.showCell = e.target.checked;
+    draw();
+  });
+  $('show-elements').addEventListener('change', (e) => {
+    state.showElements = e.target.checked;
     draw();
   });
   $('show-only').addEventListener('change', (e) => {
