@@ -1,0 +1,21 @@
+{
+  "name": "glide",
+  "version": "0.1.0",
+  "description": "Draw with the 17 wallpaper groups: every stroke is repeated by the symmetries of the chosen plane pattern.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "wallpaper-groups",
+    "symmetry",
+    "crystallography",
+    "orbifold",
+    "drawing",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
