@@ -74,8 +74,8 @@ exactly the digits of the orbifold symbol.
 ## Quiz
 
 **New puzzle** (<kbd>N</kbd>) repeats a random motif with a hidden group on a
-cell of random proportions, chosen away from the square and hexagonal shapes
-that would add symmetry. Name the group and press **Check**, or press **Show
+cell of random proportions, kept away from square and hexagonal shapes so the
+lattice alone does not suggest a higher symmetry. Name the group and press **Check**, or press **Show
 the steps** to walk the usual identification chart, answered from the
 pattern's own symmetry elements (`src/identify.js`):
 

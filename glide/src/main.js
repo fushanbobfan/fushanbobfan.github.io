@@ -327,8 +327,9 @@ function newPuzzle() {
   const g = GROUPS[Math.floor(Math.random() * GROUPS.length)];
   state.quiz = { id: g.id, seed, tries: 0, done: false };
   state.score.played += 1;
-  // keep the cell clear of the square and hexagonal shapes, which add symmetry
-  state.shape.ratio = 0.55 + Math.random() * 0.25;
+  // keep the cell away from square and hexagonal proportions (ratio 1 and
+  // 1/sqrt 3), so the lattice alone does not suggest a higher symmetry
+  state.shape.ratio = 0.62 + Math.random() * 0.23;
   state.shape.angle = 66 + Math.floor(Math.random() * 14);
   $('ratio').value = state.shape.ratio;
   $('angle').value = state.shape.angle;
@@ -337,6 +338,7 @@ function newPuzzle() {
   $('quiz-play').hidden = false;
   $('quiz-result').textContent = '';
   $('quiz-steps').hidden = true;
+  $('quiz-steps').replaceChildren();
   $('quiz-check').disabled = false;
   setGroup(g.id);
   score();
