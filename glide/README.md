@@ -71,6 +71,26 @@ and glide lines of pm, pg and cm, the number of mirror directions in p4m, p4g,
 p6m and pgg, and, for all 17 groups, that the orbits of rotation centres give
 exactly the digits of the orbifold symbol.
 
+## Quiz
+
+**New puzzle** (<kbd>N</kbd>) repeats a random motif with a hidden group on a
+cell of random proportions, chosen away from the square and hexagonal shapes
+that would add symmetry. Name the group and press **Check**, or press **Show
+the steps** to walk the usual identification chart, answered from the
+pattern's own symmetry elements (`src/identify.js`):
+
+| Smallest rotation | Questions | Groups |
+| --- | --- | --- |
+| none | mirrors? glides off the mirrors? | p1, pm, pg, cm |
+| ½ turn | mirrors? in two directions? all centres on mirrors? glides? | p2, pmm, pmg, pgg, cmm |
+| ⅓ turn | mirrors? all centres on mirrors? | p3, p3m1, p31m |
+| ¼ turn | mirrors? quarter-turn centres on mirrors? | p4, p4m, p4g |
+| ⅙ turn | mirrors? | p6, p6m |
+
+The tests run the chart on the elements of every group, on several cell
+shapes for the rectangular and oblique ones, and check that it names the
+group it started from.
+
 ## Drawing
 
 A stroke is stored in lattice coordinates, moved by a whole lattice vector so
@@ -89,6 +109,7 @@ angle of a rectangular or oblique cell reshapes the drawing with the lattice.
 | Show the unit cell | dashed outline of one cell (<kbd>C</kbd>) |
 | Show the symmetry elements | rotation centres, mirrors and glide lines (<kbd>E</kbd>) |
 | Draw only the original strokes | hide the copies to see what was actually drawn |
+| New puzzle | a random motif in a hidden group (<kbd>N</kbd>) |
 | Save as PNG | download the current picture |
 
 ## Layout
@@ -99,6 +120,7 @@ style.css         layout
 src/groups.js     the 17 groups, lattice bases, coordinate changes
 src/tiling.js     copies of a stroke that reach the view
 src/elements.js   rotation centres, mirrors and glide lines
+src/identify.js   identification chart and random puzzle motifs
 src/main.js       canvas drawing and input
 test/             node --test suites
 scripts/serve.js  dependency-free static server
