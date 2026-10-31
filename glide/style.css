@@ -329,6 +329,27 @@ button:disabled {
   transform: rotate(45deg);
 }
 
+.steps {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+
+.steps li {
+  margin-top: 3px;
+}
+
+.steps li.answer {
+  list-style: none;
+  margin-left: -20px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+select:disabled, input:disabled {
+  opacity: 0.5;
+}
+
 .note {
   margin: 8px 0 0;
   color: var(--muted);

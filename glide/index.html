@@ -42,6 +42,24 @@
       </section>
 
       <section>
+        <h2>Quiz</h2>
+        <p class="note">A random motif repeated by a hidden group. Which one is it?</p>
+        <button id="quiz-new" class="wide">New puzzle <kbd>N</kbd></button>
+        <div id="quiz-play" hidden>
+          <label>Your answer
+            <select id="quiz-guess"></select>
+          </label>
+          <div class="buttons">
+            <button id="quiz-check" class="primary">Check</button>
+            <button id="quiz-reveal">Show the steps</button>
+          </div>
+          <p class="note" id="quiz-result" aria-live="polite"></p>
+          <ol class="steps" id="quiz-steps" hidden></ol>
+        </div>
+        <p class="note" id="quiz-score"></p>
+      </section>
+
+      <section>
         <h2>Pen</h2>
         <div class="swatches" id="swatches" role="radiogroup" aria-label="Pen colour"></div>
         <label>Width
