@@ -30,7 +30,7 @@ export function identify(f) {
     steps.push({ q, a: a ? 'yes' : 'no' });
     return a;
   };
-  steps.push({ q: 'Smallest rotation, in turns', a: f.rotation === 1 ? 'none' : `1/${f.rotation}` });
+  steps.push({ q: 'Smallest rotation', a: f.rotation === 1 ? 'none' : `1/${f.rotation} turn` });
   let id;
   switch (f.rotation) {
     case 1:

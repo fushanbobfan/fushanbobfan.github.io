@@ -1,6 +1,7 @@
 import { GROUPS, byId, cellOps, basis, toFrac, toCart } from './groups.js';
 import { copies, reachOf, anchor } from './tiling.js';
 import { elements } from './elements.js';
+import { features, identify, randomMotif } from './identify.js';
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -41,6 +42,8 @@ const state = {
   showCell: true,
   showElements: false,
   originalOnly: false,
+  quiz: null, // { id, seed, tries, done }
+  score: { right: 0, played: 0 },
 };
 
 const cache = document.createElement('canvas');
@@ -260,7 +263,9 @@ window.addEventListener('keydown', (e) => {
     state.showCell = !state.showCell;
     $('show-cell').checked = state.showCell;
     draw();
-  } else if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.metaKey) {
+  } else if (e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey) {
+    newPuzzle();
+  } else if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.metaKey && !$('show-elements').disabled) {
     state.showElements = !state.showElements;
     $('show-elements').checked = state.showElements;
     draw();
@@ -272,6 +277,10 @@ window.addEventListener('keydown', (e) => {
 function status() {
   const n = state.strokes.length;
   const per = cellOps(state.group).length;
+  if (state.quiz && !state.quiz.done) {
+    $('status').textContent = 'Which wallpaper group repeats this motif?';
+    return;
+  }
   $('status').textContent = n
     ? `${n} stroke${n === 1 ? '' : 's'}, each drawn ${per} time${per === 1 ? '' : 's'} in every cell`
     : 'Draw anywhere on the canvas.';
@@ -288,8 +297,99 @@ function setGroup(id) {
   $('group-note').textContent = NOTES[g.id];
   $('ratio-label').hidden = !(g.lattice === 'rectangular' || g.lattice === 'oblique');
   $('angle-label').hidden = g.lattice !== 'oblique';
+  if (state.quiz && !state.quiz.done) maskGroup();
   status();
   rebuild();
+}
+
+// --- quiz ----------------------------------------------------------------
+
+function maskGroup() {
+  $('caption').textContent = `Puzzle ${state.quiz.seed}`;
+  for (const id of ['r-orbifold', 'r-lattice', 'r-order']) $(id).textContent = '?';
+  $('group-note').textContent = 'Hidden until the puzzle is solved.';
+  // the cell controls would give the lattice away
+  $('ratio-label').hidden = true;
+  $('angle-label').hidden = true;
+}
+
+function lockForQuiz(locked) {
+  $('group').disabled = locked;
+  $('show-elements').disabled = locked;
+  if (locked) {
+    state.showElements = false;
+    $('show-elements').checked = false;
+  }
+}
+
+function newPuzzle() {
+  const seed = 1 + Math.floor(Math.random() * 99999);
+  const g = GROUPS[Math.floor(Math.random() * GROUPS.length)];
+  state.quiz = { id: g.id, seed, tries: 0, done: false };
+  state.score.played += 1;
+  // keep the cell clear of the square and hexagonal shapes, which add symmetry
+  state.shape.ratio = 0.55 + Math.random() * 0.25;
+  state.shape.angle = 66 + Math.floor(Math.random() * 14);
+  $('ratio').value = state.shape.ratio;
+  $('angle').value = state.shape.angle;
+  state.strokes = randomMotif(seed, PENS.slice(0, 7));
+  lockForQuiz(true);
+  $('quiz-play').hidden = false;
+  $('quiz-result').textContent = '';
+  $('quiz-steps').hidden = true;
+  $('quiz-check').disabled = false;
+  setGroup(g.id);
+  score();
+}
+
+function endPuzzle(message) {
+  state.quiz.done = true;
+  lockForQuiz(false);
+  $('quiz-check').disabled = true;
+  $('quiz-result').textContent = message;
+  setGroup(state.quiz.id);
+  score();
+}
+
+function checkGuess() {
+  const q = state.quiz;
+  if (!q || q.done) return;
+  q.tries += 1;
+  const guess = $('quiz-guess').value;
+  if (guess === q.id) {
+    state.score.right += 1;
+    endPuzzle(q.tries === 1 ? `Right, it is ${q.id}.` : `Right, it is ${q.id}, on try ${q.tries}.`);
+  } else {
+    $('quiz-result').textContent = `Not ${guess}. Look for the smallest turn that maps the pattern onto itself, then for mirrors.`;
+  }
+}
+
+function revealSteps() {
+  const q = state.quiz;
+  if (!q) return;
+  const { id, steps } = identify(features(byId(q.id), state.shape));
+  const list = $('quiz-steps');
+  list.replaceChildren(
+    ...steps.map((s) => {
+      const li = document.createElement('li');
+      li.textContent = `${s.q}${s.q.endsWith('?') ? ' ' : ': '}${s.a}`;
+      return li;
+    }),
+  );
+  const last = document.createElement('li');
+  last.className = 'answer';
+  last.textContent = `So the group is ${id}.`;
+  list.append(last);
+  list.hidden = false;
+  if (!q.done) endPuzzle('');
+  state.showElements = true;
+  $('show-elements').checked = true;
+  draw();
+}
+
+function score() {
+  const { right, played } = state.score;
+  $('quiz-score').textContent = played ? `${right} of ${played} solved` : '';
 }
 
 function buildPanel() {
@@ -306,6 +406,17 @@ function buildPanel() {
     sel.append(og);
   }
   sel.addEventListener('change', () => setGroup(sel.value));
+
+  const guess = $('quiz-guess');
+  for (const g of GROUPS) {
+    const o = document.createElement('option');
+    o.value = g.id;
+    o.textContent = g.id;
+    guess.append(o);
+  }
+  $('quiz-new').addEventListener('click', newPuzzle);
+  $('quiz-check').addEventListener('click', checkGuess);
+  $('quiz-reveal').addEventListener('click', revealSteps);
 
   const sw = $('swatches');
   PENS.forEach((c, i) => {
