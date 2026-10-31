@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>glide: drawing with the 17 wallpaper groups</title>
+  <meta name="description" content="Draw in the browser with the 17 wallpaper groups: every stroke is repeated by the rotations, mirrors and glides of the chosen plane pattern.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>glide</h1>
+    <p>There are exactly seventeen ways to repeat a pattern across the plane. Pick one and draw: every stroke is copied by its rotations, mirrors and glides.</p>
+  </header>
+
+  <main>
+    <figure class="stage">
+      <figcaption><span id="caption">p1</span> <span class="hint">draw with the mouse, a pen or a finger &middot; Ctrl+Z undoes a stroke</span></figcaption>
+      <canvas id="stage" tabindex="0" aria-label="Drawing surface. Strokes are repeated by the chosen wallpaper group."></canvas>
+      <p class="status" id="status" aria-live="polite"></p>
+    </figure>
+
+    <aside class="panel">
+      <section>
+        <h2>Group</h2>
+        <label>Symmetry
+          <select id="group"></select>
+        </label>
+        <dl class="readout">
+          <dt>Orbifold</dt><dd id="r-orbifold"></dd>
+          <dt>Lattice</dt><dd id="r-lattice"></dd>
+          <dt>Copies per cell</dt><dd id="r-order"></dd>
+        </dl>
+        <p class="note" id="group-note"></p>
+      </section>
+
+      <section>
+        <h2>Pen</h2>
+        <div class="swatches" id="swatches" role="radiogroup" aria-label="Pen colour"></div>
+        <label>Width
+          <input type="range" id="width" min="1" max="24" step="1" value="4">
+        </label>
+        <div class="buttons">
+          <button id="undo">Undo <kbd>Ctrl+Z</kbd></button>
+          <button id="clear">Clear</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Lattice</h2>
+        <label>Cell size
+          <input type="range" id="cell" min="40" max="260" step="2" value="120">
+        </label>
+        <label id="ratio-label">Side ratio
+          <input type="range" id="ratio" min="0.4" max="1.6" step="0.01" value="0.7">
+        </label>
+        <label id="angle-label">Cell angle
+          <input type="range" id="angle" min="50" max="88" step="1" value="74">
+        </label>
+        <label class="row"><input type="checkbox" id="show-cell" checked> Show the unit cell <kbd>C</kbd></label>
+        <label class="row"><input type="checkbox" id="show-only" > Draw only the original strokes</label>
+      </section>
+
+      <section>
+        <h2>Picture</h2>
+        <label>Background
+          <select id="paper">
+            <option value="#101018">Night</option>
+            <option value="#f4efe3">Paper</option>
+            <option value="#1d2b3a">Slate</option>
+          </select>
+        </label>
+        <button id="save" class="wide">Save as PNG</button>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
