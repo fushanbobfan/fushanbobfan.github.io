@@ -49,6 +49,15 @@
           <dt>Continued fraction</dt><dd id="r-cf"></dd>
           <dt>Convergent denominators</dt><dd id="r-qs"></dd>
         </dl>
+        <label>Packing around this angle
+          <select id="land-width">
+            <option value="5">within 2.5&deg;</option>
+            <option value="0.5">within 0.25&deg;</option>
+          </select>
+        </label>
+        <canvas id="landscape" class="chart" aria-label="Tightest packing of the head against the divergence angle, around the current angle. Click to choose an angle."></canvas>
+        <p class="note" id="land-note" aria-live="polite"></p>
+        <button id="land-peak" class="wide" disabled>Go to the best angle here</button>
       </section>
 
       <section>
