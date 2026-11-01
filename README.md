@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [florets](https://fushanbobfan.github.io/florets/) | Grow a sunflower head in the browser: turn the divergence angle and watch Fibonacci spirals appear, curl into arms and break apart. | [`florets/`](florets/) |
 | [glide](https://fushanbobfan.github.io/glide/) | Draw with the 17 wallpaper groups: every stroke is repeated by the rotations, mirrors and glides of the chosen plane pattern. | [`glide/`](glide/) |
 | [iris](https://fushanbobfan.github.io/iris/) | Rainbows in the browser: follow sunlight through a raindrop, find the ray where light piles up, and see the primary bow, the reversed secondary and the dark band between them. | [`iris/`](iris/) |
 | [linkwork](https://fushanbobfan.github.io/linkwork/) | A four-bar linkage lab in the browser: drag the pivots and joints, turn the crank, and watch a point on the coupler trace loops, figure eights and nearly straight lines. | [`linkwork/`](linkwork/) |
