@@ -2,6 +2,8 @@ import {
   GOLDEN_DEG, LUCAS_DEG, PHI, florets, continuedFraction, convergents,
   describeSpirals, neighbourSteps, packing,
 } from './phyllo.js';
+import { Tip, contactPairOf, growthAt, settled } from './growth.js';
+import { drawTip, drawChart } from './tip-view.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
@@ -16,7 +18,11 @@ const state = {
   numbers: false,
   selected: -1,
   growing: 0,
+  view: 'head',
 };
+
+let tip = null;
+let tipRunning = false;
 
 let points = [];
 let scale = 1; // pixels per unit of Vogel's spacing c
@@ -162,6 +168,10 @@ function traceThrough(n, which) {
 
 function draw() {
   const { w, h } = size();
+  if (state.view === 'tip' && tip) {
+    drawTip(ctx, tip, w, h);
+    return;
+  }
   if (!w || !points.length) return;
   ctx.save();
   ctx.fillStyle = '#14110c';
@@ -263,7 +273,8 @@ function updateReadout() {
     ?? 'custom';
   $('preset').value = presetValue;
   const caption = presetValue === 'golden' ? 'golden angle' : presetValue === 'lucas' ? 'Lucas angle' : `${state.deg.toFixed(3)}°`;
-  $('caption').textContent = caption;
+  $('caption').dataset.head = caption;
+  if (state.view === 'head') $('caption').textContent = caption;
   $('count-out').textContent = String(state.count);
   canvas.setAttribute('aria-label', `Sunflower head of ${state.count} florets at ${state.deg.toFixed(3)} degrees. ${$('r-pair').textContent} at the rim.`);
   if (state.selected < 0) $('status').textContent = '';
@@ -271,6 +282,7 @@ function updateReadout() {
 
 function setAngle(deg, from) {
   if (!Number.isFinite(deg)) return;
+  showView('head');
   state.deg = Math.min(360, Math.max(0, deg));
   if (from !== 'slider') $('angle').value = String(state.deg);
   if (from !== 'number') $('angle-num').value = state.deg.toFixed(3);
@@ -297,6 +309,7 @@ function describeSelected() {
 
 function grow() {
   if (state.growing) return;
+  showView('head');
   state.selected = -1;
   const start = performance.now();
   const duration = 900 + 2.2 * state.count;
@@ -316,6 +329,7 @@ function grow() {
 }
 
 canvas.addEventListener('click', (e) => {
+  if (state.view !== 'head') return;
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left - rect.width / 2) / scale;
   const y = -(e.clientY - rect.top - rect.height / 2) / scale;
@@ -367,6 +381,121 @@ $('save').addEventListener('click', () => {
   a.href = canvas.toDataURL('image/png');
   a.click();
 });
+
+function showView(view) {
+  if (state.view === view) return;
+  state.view = view;
+  $('view').value = view;
+  $('caption').textContent = view === 'tip' ? 'shoot tip' : $('caption').dataset.head || '';
+  $('hint').textContent = view === 'tip'
+    ? 'dashed circle: the apex rim, where each new primordium appears'
+    : 'click a floret to trace the spirals through it · arrow keys turn the angle';
+  draw();
+}
+
+const TIP_PRESETS = {
+  ease: { start: 3, end: 1.05, steps: 300 },
+  lucas: { start: 1.15, end: 1.15, steps: 250 },
+  alternate: { start: 6, end: 6, steps: 80 },
+  whorl: { start: 1.6, end: 1.6, steps: 150 },
+};
+
+function tipOptions() {
+  return {
+    start: Number($('tip-start').value),
+    end: Number($('tip-end').value),
+    steps: Number($('tip-steps').value),
+  };
+}
+
+function updateTipReadout() {
+  if (!tip) return;
+  const n = tip.divergences.length;
+  const last = n ? tip.divergences[n - 1] : NaN;
+  const g = growthAt(Math.max(0, n - 1), tip.steps, tip.start, tip.end);
+  $('t-step').textContent = `${n} of ${tip.steps}`;
+  $('t-ratio').textContent = g.toFixed(3);
+  $('t-last').textContent = n ? `${last.toFixed(2)}°` : '–';
+  if (n >= 20) {
+    const s = settled(tip.divergences, 20);
+    $('t-settled').textContent = `${s.mean.toFixed(2)}° ± ${s.spread.toFixed(2)}`;
+  } else {
+    $('t-settled').textContent = '–';
+  }
+  // Read the spirals a little way out from the rim, where several
+  // primordia already surround each one.
+  const prims = tip.primordia;
+  let probe = -1;
+  for (let i = prims.length - 1; i >= 0; i--) {
+    if (prims[i].r >= 2.5) { probe = i; break; }
+  }
+  if (probe > 10 && prims.length - probe > 4) {
+    const [a, b] = contactPairOf(prims, probe);
+    $('t-pair').textContent = `${a} and ${b}`;
+  } else {
+    $('t-pair').textContent = '–';
+  }
+  $('tip-use').disabled = n < 20;
+  drawChart($('chart'), tip);
+}
+
+function describeSettled({ mean, spread }) {
+  const at = `${mean.toFixed(2)}°`;
+  if (spread > 2) return `The tip has not settled: its last turns still spread by ${spread.toFixed(1)}° around ${at}.`;
+  if (Math.abs(mean - 180) < 0.5) return 'The tip settled into alternating at 180°: one primordium on each side in turn, as in a grass.';
+  if (Math.abs(mean - GOLDEN_DEG) < 2) return `The tip settled at ${at}, ${Math.abs(mean - GOLDEN_DEG).toFixed(2)}° from the golden angle.`;
+  if (Math.abs(mean - LUCAS_DEG) < 4) return `The tip settled at ${at}, near the Lucas angle of ${LUCAS_DEG.toFixed(2)}°: the same rule found a different branch.`;
+  return `The tip settled at ${at}.`;
+}
+
+function runTip() {
+  tip = new Tip(tipOptions());
+  showView('tip');
+  if (tipRunning) return;
+  tipRunning = true;
+  $('tip-run').textContent = 'Growing…';
+  const frame = () => {
+    const t0 = performance.now();
+    while (!tip.done && performance.now() - t0 < 12) tip.step();
+    updateTipReadout();
+    if (state.view === 'tip') draw();
+    if (!tip.done) requestAnimationFrame(frame);
+    else {
+      tipRunning = false;
+      $('tip-run').textContent = 'Grow the tip';
+      const s = settled(tip.divergences, 20);
+      $('status').textContent = describeSettled(s);
+    }
+  };
+  requestAnimationFrame(frame);
+}
+
+$('view').addEventListener('change', (e) => {
+  if (e.target.value === 'tip' && !tip) runTip();
+  else showView(e.target.value);
+});
+$('tip-preset').addEventListener('change', (e) => {
+  const p = TIP_PRESETS[e.target.value];
+  if (!p) return;
+  $('tip-start').value = p.start;
+  $('tip-end').value = p.end;
+  $('tip-steps').value = p.steps;
+  syncTipOutputs();
+});
+function syncTipOutputs() {
+  $('tip-start-out').textContent = Number($('tip-start').value).toFixed(2);
+  $('tip-end-out').textContent = Number($('tip-end').value).toFixed(2);
+  $('tip-steps-out').textContent = $('tip-steps').value;
+}
+for (const id of ['tip-start', 'tip-end', 'tip-steps']) {
+  $(id).addEventListener('input', () => { $('tip-preset').value = 'custom'; syncTipOutputs(); });
+}
+$('tip-run').addEventListener('click', runTip);
+$('tip-use').addEventListener('click', () => {
+  if (!tip || tip.divergences.length < 20) return;
+  setAngle(settled(tip.divergences, 20).mean);
+});
+syncTipOutputs();
 
 window.addEventListener('resize', resize);
 $('angle').value = String(state.deg);

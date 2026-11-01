@@ -65,6 +65,34 @@ The Lucas angle, 1/(2 + φ) turn ≈ 99.502°, is [0; 3, 1, 1, 1, …]. Its tail
 ones packs about as well as the golden angle, and its spirals follow the Lucas
 numbers 4, 7, 11, 18, 29, 47, 76, 123, …
 
+## Growing from the tip
+
+Vogel's model is handed the angle. A real shoot never is: it makes new
+primordia (the buds of leaves or florets) one at a time on the rim of its
+growing tip, each where the existing ones inhibit it least, while the older
+ones are carried outward. Douady and Couder (1996) showed that this rule alone
+picks the angle. The **Grow from the tip** panel runs a version of their iterative model
+in `src/growth.js`, with these choices:
+
+- the apex rim is the unit circle; every primordium at distance *d* adds
+  1/*d*³ to the crowding at a point of the rim,
+- the next primordium goes to the least crowded point (a 720-point scan,
+  refined by golden-section search),
+- then every primordium moves outward by the drift ratio *G* (r → G·r).
+
+A large drift leaves only the newest primordium near the rim, so the next one
+goes straight opposite: the tip alternates at 180°, as grasses do. A young
+shoot's tip is narrow and widens as it grows, so the default run eases *G*
+down from 3 to 1.05 over 300 primordia. The divergence then falls from 180°
+through about 145° and settles within a degree of 137.5°, and the spirals near
+the rim climb 2 and 3, then 3 and 5, then 5 and 8. Run at a steady slow drift
+of 1.15 from the start, the same rule locks onto a different branch at
+101.8°, with 4 and 7 spirals: Lucas numbers, near the Lucas angle.
+
+**Use its angle** carries the settled angle to the flower head. It is the
+mean of the last twenty turns, still a fraction of a degree off golden, and a
+head built with any fixed angle that far off shows arms by a thousand florets.
+
 ## What the tests check
 
 - the golden angle is 360/φ² ≈ 137.50776° and floret *n* sits at radius c √n,
@@ -77,7 +105,12 @@ numbers 4, 7, 11, 18, 29, 47, 76, 123, …
 - 2/5 and 3/8 of a turn give 5 and 8 spokes, 137.6° gives 34 arms at a
   thousand florets, and the Lucas angle gives consecutive Lucas numbers,
 - over 1500 florets the golden angle packs better than 137.3°, 137.45°,
-  137.5°, 137.55°, 137.6° and 99.5°, and mirroring the angle keeps the packing.
+  137.5°, 137.55°, 137.6° and 99.5°, and mirroring the angle keeps the packing,
+- at the tip, a lone primordium sends the next one to the opposite side, and
+  two a quarter turn apart send it opposite their midpoint,
+- a steady drift of 6 alternates at 180°; easing from 3 to 1.05 settles within
+  1° of the golden angle with Fibonacci spirals 2, 3 → 3, 5 → 5, 8; a steady
+  1.15 settles near 101.8° with spirals 4 and 7.
 
 ## Controls
 
@@ -92,6 +125,10 @@ numbers 4, 7, 11, 18, 29, 47, 76, 123, …
 | Draw both spiral families (<kbd>L</kbd>) | join every floret to its neighbours in the two rim families |
 | Number the florets | label each floret with its index (up to 600 florets) |
 | Save as PNG | download the picture |
+| Start from, Drift at the start / end, Primordia | set up a run at the shoot tip |
+| Grow the tip | run it, with a chart of every turn against 180°, 137.5° and 99.5° |
+| Use its angle | build the flower head with the angle the tip settled on |
+| Show | switch the picture between the flower head and the shoot tip |
 
 ## Layout
 
@@ -99,6 +136,8 @@ numbers 4, 7, 11, 18, 29, 47, 76, 123, …
 index.html        page and controls
 style.css
 src/phyllo.js     the model: positions, continued fractions, spirals, packing
+src/growth.js     the shoot tip: crowding, least crowded spot, drift
+src/tip-view.js   drawing the tip and the divergence chart
 src/main.js       drawing and interaction
 test/             node --test suite
 scripts/serve.js  static server for local use
