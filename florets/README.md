@@ -61,6 +61,15 @@ gap anywhere in the head (past the first ten florets), over the gap a perfect
 hexagonal lattice with the same area per floret would have. The golden angle
 holds about 87% at every size; nearby angles drop as their arms or spokes form.
 
+**Packing around this angle** charts that number against the angle across a
+window of 5° or 0.5° centred on the current one: the head is grown at 501
+angles (up to 800 florets each) and the curve fills in a slice per frame.
+Between 135° and 140° the highest point is the golden angle, and the peak is
+sharp: at 500 florets, 0.05° to either side already loses more than ten
+points. Each pixel column of the chart shows the highest sample that falls in
+it, so a peak narrower than a pixel keeps its height. Click the chart to jump
+to an angle, or go straight to the best one in the window.
+
 The Lucas angle, 1/(2 + φ) turn ≈ 99.502°, is [0; 3, 1, 1, 1, …]. Its tail of
 ones packs about as well as the golden angle, and its spirals follow the Lucas
 numbers 4, 7, 11, 18, 29, 47, 76, 123, …
@@ -106,6 +115,9 @@ head built with any fixed angle that far off shows arms by a thousand florets.
   thousand florets, and the Lucas angle gives consecutive Lucas numbers,
 - over 1500 florets the golden angle packs better than 137.3°, 137.45°,
   137.5°, 137.55°, 137.6° and 99.5°, and mirroring the angle keeps the packing,
+- sampling 135°–140° in steps of 0.01° at 500 florets puts the best packing
+  within 0.01° of the golden angle, and 97°–102° puts it within 0.01° of the
+  Lucas angle; the chart filled slice by slice matches a single pass,
 - at the tip, a lone primordium sends the next one to the opposite side, and
   two a quarter turn apart send it opposite their midpoint,
 - a steady drift of 6 alternates at 180°; easing from 3 to 1.05 settles within
@@ -118,6 +130,7 @@ head built with any fixed angle that far off shows arms by a thousand florets.
 | --- | --- |
 | Preset, Angle, Degrees | set the divergence angle; ← → on the head turn it by 0.01° (Shift 0.1°, Alt 0.001°) |
 | Florets | 50 to 4000 florets |
+| Packing around this angle | chart packing against angle; click it to choose an angle |
 | Grow (<kbd>Space</kbd>) | grow the head from the centre outward |
 | Golden (<kbd>G</kbd>) | back to the golden angle |
 | Click a floret | trace the two spirals through it, inward and outward |
@@ -138,6 +151,8 @@ style.css
 src/phyllo.js     the model: positions, continued fractions, spirals, packing
 src/growth.js     the shoot tip: crowding, least crowded spot, drift
 src/tip-view.js   drawing the tip and the divergence chart
+src/landscape.js  packing across a window of angles, and its peak
+src/landscape-view.js  the packing chart
 src/main.js       drawing and interaction
 test/             node --test suite
 scripts/serve.js  static server for local use
