@@ -4,6 +4,8 @@ import {
 } from './phyllo.js';
 import { Tip, contactPairOf, growthAt, settled } from './growth.js';
 import { drawTip, drawChart } from './tip-view.js';
+import { landscapeSlices, peak } from './landscape.js';
+import { drawLandscape, chartAngle } from './landscape-view.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
@@ -297,6 +299,7 @@ function schedule() {
     pending = false;
     recompute();
     describeSelected();
+    refreshLandscape();
   });
 }
 
@@ -497,8 +500,67 @@ $('tip-use').addEventListener('click', () => {
 });
 syncTipOutputs();
 
+// Packing against angle around the current one. Each head is capped at 800
+// florets so a window of 501 angles fills in well under a second.
+const land = { from: 0, to: 0, count: 0, width: 0, values: null, done: 0, job: 0 };
+
+function landCount() {
+  return Math.min(state.count, 800);
+}
+
+function refreshLandscape() {
+  const width = Number($('land-width').value);
+  const count = landCount();
+  const margin = 0.2 * width;
+  const inside = state.deg >= land.from + margin && state.deg <= land.to - margin;
+  if (land.values && inside && land.count === count && land.width === width) {
+    paintLandscape();
+    return;
+  }
+  const job = ++land.job;
+  Object.assign(land, { from: state.deg - width / 2, to: state.deg + width / 2, count, width, values: null, done: 0 });
+  $('land-peak').disabled = true;
+  $('land-note').textContent = `Growing ${count} florets at 501 angles…`;
+  const slices = landscapeSlices(count, land.from, land.to, 501);
+  const work = () => {
+    if (job !== land.job) return;
+    const t0 = performance.now();
+    let part;
+    do part = slices.next(); while (!part.done && part.value.done < 501 && performance.now() - t0 < 14);
+    if (!part.done) {
+      land.values = part.value.values;
+      land.done = part.value.done;
+    }
+    paintLandscape();
+    if (land.done < 501) requestAnimationFrame(work);
+    else finishLandscape();
+  };
+  requestAnimationFrame(work);
+}
+
+function paintLandscape() {
+  drawLandscape($('landscape'), { values: land.values, done: land.done, from: land.from, to: land.to, current: state.deg });
+}
+
+function finishLandscape() {
+  const p = peak(land.values, land.from, land.to);
+  land.best = p.deg;
+  $('land-peak').disabled = false;
+  $('land-note').textContent = `With ${land.count} florets the best angle here is ${p.deg.toFixed(3)}°, packing at ${(100 * p.value).toFixed(1)}% of hexagonal. Click the chart to try any angle.`;
+}
+
+$('landscape').addEventListener('click', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  setAngle(chartAngle(e.clientX - rect.left, land.from, land.to, rect.width));
+});
+$('land-width').addEventListener('change', refreshLandscape);
+$('land-peak').addEventListener('click', () => {
+  if (Number.isFinite(land.best)) setAngle(land.best);
+});
+
 window.addEventListener('resize', resize);
 $('angle').value = String(state.deg);
 $('angle-num').value = state.deg.toFixed(3);
 recompute();
 resize();
+refreshLandscape();
