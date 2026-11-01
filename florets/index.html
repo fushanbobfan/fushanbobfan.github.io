@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>florets: the golden angle and the spirals of a sunflower</title>
+  <meta name="description" content="Grow a sunflower head in the browser: turn the divergence angle and watch Fibonacci spirals appear, straighten into spokes and break apart.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>florets</h1>
+    <p>A sunflower adds each new floret a fixed angle past the last. At 137.508&deg; the head packs evenly and its spirals come in Fibonacci numbers; move the angle a tenth of a degree and spokes appear.</p>
+  </header>
+
+  <main>
+    <figure class="stage">
+      <figcaption><span id="caption">golden angle</span> <span class="hint">click a floret to trace the spirals through it &middot; arrow keys turn the angle</span></figcaption>
+      <canvas id="stage" tabindex="0" aria-label="Sunflower head"></canvas>
+      <p class="status" id="status" aria-live="polite"></p>
+    </figure>
+
+    <aside class="panel">
+      <section>
+        <h2>Divergence angle</h2>
+        <label>Preset
+          <select id="preset">
+            <option value="golden">Golden angle 137.508&deg;</option>
+            <option value="137.3">137.3&deg;</option>
+            <option value="137.45">137.45&deg;</option>
+            <option value="137.6">137.6&deg;</option>
+            <option value="lucas">Lucas angle 99.502&deg;</option>
+            <option value="144">144&deg; = 2/5 turn</option>
+            <option value="135">135&deg; = 3/8 turn</option>
+            <option value="120">120&deg; = 1/3 turn</option>
+            <option value="180">180&deg; = 1/2 turn</option>
+            <option value="custom" hidden>Custom</option>
+          </select>
+        </label>
+        <label>Angle
+          <input type="range" id="angle" min="90" max="180" step="0.01" value="137.51">
+        </label>
+        <label class="inline">Degrees
+          <input type="number" id="angle-num" min="0" max="360" step="0.001" value="137.508">
+        </label>
+        <dl class="readout">
+          <dt>Fraction of a turn</dt><dd id="r-turns"></dd>
+          <dt>Continued fraction</dt><dd id="r-cf"></dd>
+          <dt>Convergent denominators</dt><dd id="r-qs"></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Head</h2>
+        <label>Florets <output id="count-out"></output>
+          <input type="range" id="count" min="50" max="4000" step="10" value="1200">
+        </label>
+        <div class="buttons">
+          <button id="grow" class="primary">Grow <kbd>Space</kbd></button>
+          <button id="golden">Golden <kbd>G</kbd></button>
+        </div>
+        <dl class="readout">
+          <dt>Spirals at the rim</dt><dd id="r-pair"></dd>
+          <dt>Ratio of the two</dt><dd id="r-ratio"></dd>
+          <dt>Tightest packing</dt><dd id="r-pack"></dd>
+        </dl>
+        <p class="note" id="pair-note"></p>
+      </section>
+
+      <section>
+        <h2>Picture</h2>
+        <label>Colour
+          <select id="colour">
+            <option value="spirals">By spiral family</option>
+            <option value="flower">Sunflower</option>
+            <option value="order">By order of birth</option>
+          </select>
+        </label>
+        <label class="row"><input type="checkbox" id="show-lines"> Draw both spiral families <kbd>L</kbd></label>
+        <label class="row"><input type="checkbox" id="show-numbers"> Number the florets</label>
+        <button id="save" class="wide">Save as PNG</button>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

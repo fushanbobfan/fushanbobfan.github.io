@@ -1,0 +1,21 @@
+{
+  "name": "florets",
+  "version": "0.1.0",
+  "description": "Grow a sunflower head in the browser: turn the divergence angle and watch Fibonacci spirals appear, bend into spokes and break apart.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "phyllotaxis",
+    "golden-angle",
+    "fibonacci",
+    "continued-fractions",
+    "sunflower",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
