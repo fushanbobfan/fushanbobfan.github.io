@@ -4,6 +4,10 @@
 export const PHI = (1 + Math.sqrt(5)) / 2;
 export const GOLDEN_TURNS = 2 - PHI; // 0.381966..., the smaller golden angle
 export const GOLDEN_DEG = 360 * GOLDEN_TURNS; // 137.5077...
+// 1 / (2 + phi) = [0; 3, 1, 1, ...]: the same tail of ones as the golden
+// fraction, so its spirals follow the Lucas numbers 4, 7, 11, 18, ...
+export const LUCAS_TURNS = 1 / (2 + PHI);
+export const LUCAS_DEG = 360 * LUCAS_TURNS; // 99.5016...
 
 // Floret n sits at radius c * sqrt(n) and angle n * d. The square root keeps
 // the area per floret constant, so the head fills evenly as it grows.
@@ -72,12 +76,34 @@ export function neighbourSteps(n, turns, kMax = 400) {
 // The contact parastichies at floret n: the two nearest index steps that point
 // in different directions. A multiple of the first step lies on the same line,
 // so it is skipped. Returns [smaller, larger].
-export function contactPair(n, turns, kMax = 400) {
+export function contactSteps(n, turns, kMax = 400) {
   const steps = neighbourSteps(n, turns, Math.max(2, kMax));
-  const k1 = steps[0].k;
-  const second = steps.find((s) => s.k % k1 !== 0);
-  const k2 = second ? second.k : 2 * k1;
-  return k1 < k2 ? [k1, k2] : [k2, k1];
+  const first = steps[0];
+  const second = steps.find((s) => s.k % first.k !== 0) || { k: 2 * first.k, d: Infinity };
+  return first.k < second.k ? [first, second] : [second, first];
+}
+
+export function contactPair(n, turns, kMax = 400) {
+  return contactSteps(n, turns, kMax).map((s) => s.k);
+}
+
+// What the eye sees at floret n. When the nearest neighbour is much closer than
+// any floret off its line, the florets stand on straight-looking spokes.
+export function describeSpirals(n, turns, kMax = 400) {
+  const [a, b] = contactSteps(n, turns, kMax);
+  const near = Math.min(a.d, b.d);
+  const far = Math.max(a.d, b.d);
+  const spokes = far / near > 1.8 ? (a.d < b.d ? a.k : b.k) : 0;
+  const fib = fibonacciUpTo(Math.max(a.k, b.k));
+  const i = fib.indexOf(a.k);
+  const fibonacci = !spokes && i >= 0 && fib[i + 1] === b.k;
+  return {
+    pair: [a.k, b.k],
+    gaps: [a.d, b.d],
+    spokes,
+    fibonacci,
+    winding: [winding(a.k, turns), winding(b.k, turns)],
+  };
 }
 
 // Which way a family of spirals winds, seen with y pointing up: stepping from

@@ -2,8 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   GOLDEN_DEG, GOLDEN_TURNS, PHI, florets, floretPosition, continuedFraction,
-  convergents, contactPair, winding, packing, fibonacciUpTo,
+  convergents, contactPair, describeSpirals, winding, packing, fibonacciUpTo, LUCAS_TURNS,
 } from '../src/phyllo.js';
+
+function isLucasPair([a, b]) {
+  const lucas = [1, 3, 4, 7, 11, 18, 29, 47, 76, 123, 199, 322];
+  const i = lucas.indexOf(a);
+  return i >= 0 && lucas[i + 1] === b;
+}
 
 test('the golden angle is 360 / phi^2 degrees', () => {
   assert.ok(Math.abs(GOLDEN_DEG - 360 / (PHI * PHI)) < 1e-9);
@@ -60,6 +66,27 @@ test('golden heads show consecutive Fibonacci spirals that climb with the radius
 test('a rational angle p/q puts the florets on q straight spokes', () => {
   assert.equal(contactPair(2000, 2 / 5)[0], 5);
   assert.equal(contactPair(2000, 3 / 8)[0], 8);
+});
+
+test('the description tells Fibonacci spirals, other lattices and spokes apart', () => {
+  const golden = describeSpirals(1000, GOLDEN_TURNS);
+  assert.deepEqual(golden.pair, [55, 89]);
+  assert.equal(golden.fibonacci, true);
+  assert.equal(golden.spokes, 0);
+  assert.notEqual(golden.winding[0], golden.winding[1]);
+
+  const lucas = describeSpirals(1000, LUCAS_TURNS);
+  assert.equal(lucas.fibonacci, false);
+  assert.equal(lucas.spokes, 0);
+  assert.ok(isLucasPair(lucas.pair), `Lucas pair ${lucas.pair}`);
+
+  const fifths = describeSpirals(2000, 2 / 5);
+  assert.equal(fifths.spokes, 5);
+  assert.equal(fifths.fibonacci, false);
+
+  // 137.6 degrees: at about a thousand florets the head has straightened
+  // into 34 spokes before turning back into spirals further out.
+  assert.equal(describeSpirals(1000, 137.6 / 360).spokes, 34);
 });
 
 test('the two families of a golden head wind in opposite directions', () => {
