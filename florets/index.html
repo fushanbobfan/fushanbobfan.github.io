@@ -16,7 +16,7 @@
 
   <main>
     <figure class="stage">
-      <figcaption><span id="caption">golden angle</span> <span class="hint">click a floret to trace the spirals through it &middot; arrow keys turn the angle</span></figcaption>
+      <figcaption><span id="caption">golden angle</span> <span class="hint" id="hint">click a floret to trace the spirals through it &middot; arrow keys turn the angle</span></figcaption>
       <canvas id="stage" tabindex="0" aria-label="Sunflower head"></canvas>
       <p class="status" id="status" aria-live="polite"></p>
     </figure>
@@ -69,7 +69,48 @@
       </section>
 
       <section>
+        <h2>Grow from the tip</h2>
+        <p class="note">Each new primordium appears on the rim of the shoot tip where the others crowd it least, and all of them drift outward. No angle is given; watch which one the tip picks.</p>
+        <label>Start from
+          <select id="tip-preset">
+            <option value="ease">A young shoot widening: drift 3 &rarr; 1.05</option>
+            <option value="lucas">A steady slow drift of 1.15</option>
+            <option value="whorl">A steady drift of 1.6</option>
+            <option value="alternate">A steady fast drift of 6</option>
+            <option value="custom" hidden>Custom</option>
+          </select>
+        </label>
+        <label>Drift at the start <output id="tip-start-out"></output>
+          <input type="range" id="tip-start" min="1.03" max="6" step="0.01" value="3">
+        </label>
+        <label>Drift at the end <output id="tip-end-out"></output>
+          <input type="range" id="tip-end" min="1.03" max="6" step="0.01" value="1.05">
+        </label>
+        <label>Primordia <output id="tip-steps-out"></output>
+          <input type="range" id="tip-steps" min="40" max="500" step="10" value="300">
+        </label>
+        <div class="buttons">
+          <button id="tip-run" class="primary">Grow the tip</button>
+          <button id="tip-use" disabled>Use its angle</button>
+        </div>
+        <canvas id="chart" class="chart" aria-label="Divergence between successive primordia, step by step, with the golden and Lucas angles marked"></canvas>
+        <dl class="readout">
+          <dt>Primordia</dt><dd id="t-step">–</dd>
+          <dt>Drift now</dt><dd id="t-ratio">–</dd>
+          <dt>Last turn</dt><dd id="t-last">–</dd>
+          <dt>Last 20 turns</dt><dd id="t-settled">–</dd>
+          <dt>Spirals near the rim</dt><dd id="t-pair">–</dd>
+        </dl>
+      </section>
+
+      <section>
         <h2>Picture</h2>
+        <label>Show
+          <select id="view">
+            <option value="head">The flower head</option>
+            <option value="tip">The shoot tip</option>
+          </select>
+        </label>
         <label>Colour
           <select id="colour">
             <option value="spirals">By spiral family</option>
