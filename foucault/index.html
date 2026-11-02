@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>foucault: a pendulum that shows the Earth turning</title>
+  <meta name="description" content="A Foucault pendulum in the browser: pick a latitude, release the bob and watch the floor turn under its swing, knocking over a ring of pins.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>foucault</h1>
+    <p>A heavy bob on a long wire keeps swinging in the same plane while the floor turns beneath it. Seen from the floor the swing slowly turns: once a day at the poles, never at the equator, and once every 31.8 hours in Paris, where Foucault first showed it in 1851.</p>
+  </header>
+
+  <main>
+    <figure class="stage">
+      <figcaption><span id="caption"></span> <span class="hint">click the floor to draw the bob aside there &middot; <kbd>Space</kbd> releases it</span></figcaption>
+      <canvas id="stage" tabindex="0" aria-label="The floor under the pendulum, seen from above, with the bob's track in the sand and a ring of pins"></canvas>
+      <p class="status" id="status" aria-live="polite"></p>
+    </figure>
+
+    <aside class="panel">
+      <section>
+        <h2>Place</h2>
+        <label>Where
+          <select id="place">
+            <option value="90">North Pole 90&deg; N</option>
+            <option value="48.8462" selected>Panth&eacute;on, Paris 48.8&deg; N</option>
+            <option value="34.1184">Griffith Observatory, Los Angeles 34.1&deg; N</option>
+            <option value="0">Equator 0&deg;</option>
+            <option value="-33.8688">Sydney 33.9&deg; S</option>
+            <option value="-90">South Pole 90&deg; S</option>
+            <option value="custom" hidden>Custom</option>
+          </select>
+        </label>
+        <label>Latitude <output id="lat-out"></output>
+          <input type="range" id="lat" min="-90" max="90" step="0.1" value="48.8">
+        </label>
+        <dl class="readout">
+          <dt>Plane turns</dt><dd id="r-rate"></dd>
+          <dt>Full turn</dt><dd id="r-turn"></dd>
+          <dt>On this page</dt><dd id="r-page"></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Pendulum</h2>
+        <label>Wire length <output id="len-out"></output>
+          <input type="range" id="len" min="2" max="100" step="1" value="67">
+        </label>
+        <label>Set going
+          <select id="mode">
+            <option value="rest">drawn aside, let go from rest</option>
+            <option value="centre">pushed from the centre</option>
+          </select>
+        </label>
+        <dl class="readout">
+          <dt>Swing</dt><dd id="r-swing"></dd>
+          <dt>Swings per turn</dt><dd id="r-swings"></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Time</h2>
+        <label>Earth spins
+          <select id="spin">
+            <option value="1" selected>as it does</option>
+            <option value="10">10 times faster</option>
+            <option value="100">100 times faster</option>
+            <option value="1000">1000 times faster</option>
+          </select>
+        </label>
+        <label>Play at
+          <select id="speed">
+            <option value="1">real time</option>
+            <option value="10">&times;10</option>
+            <option value="100">&times;100</option>
+            <option value="1000" selected>&times;1000</option>
+            <option value="5000">&times;5000</option>
+          </select>
+        </label>
+        <div class="buttons">
+          <button id="go" class="primary">Release <kbd>Space</kbd></button>
+          <button id="pause">Pause <kbd>P</kbd></button>
+        </div>
+        <dl class="readout">
+          <dt>Time since release</dt><dd id="r-time"></dd>
+          <dt>Plane has turned</dt><dd id="r-turned"></dd>
+          <dt>Pins down</dt><dd id="r-pins"></dd>
+          <dt>Next pin</dt><dd id="r-next"></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>View</h2>
+        <label>Watch from
+          <select id="view">
+            <option value="floor">the floor</option>
+            <option value="plane">a frame turning with the swing</option>
+          </select>
+        </label>
+        <label class="row"><input type="checkbox" id="sand" checked> Track in the sand</label>
+        <label class="row"><input type="checkbox" id="show-pins" checked> Ring of pins</label>
+        <p class="note" id="view-note"></p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "foucault",
+  "version": "0.1.0",
+  "description": "A Foucault pendulum in the browser: pick a latitude, release the bob and watch the Earth turn under its swing.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "foucault-pendulum",
+    "coriolis",
+    "earth-rotation",
+    "physics",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
