@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [foucault](https://fushanbobfan.github.io/foucault/) | A Foucault pendulum in the browser: pick a latitude, release the bob and watch the floor turn under its swing, knocking over a ring of pins. | [`foucault/`](foucault/) |
 | [florets](https://fushanbobfan.github.io/florets/) | Grow a sunflower head in the browser: turn the divergence angle and watch Fibonacci spirals appear, curl into arms and break apart. | [`florets/`](florets/) |
 | [glide](https://fushanbobfan.github.io/glide/) | Draw with the 17 wallpaper groups: every stroke is repeated by the rotations, mirrors and glides of the chosen plane pattern. | [`glide/`](glide/) |
 | [iris](https://fushanbobfan.github.io/iris/) | Rainbows in the browser: follow sunlight through a raindrop, find the ray where light piles up, and see the primary bow, the reversed secondary and the dark band between them. | [`iris/`](iris/) |
