@@ -68,6 +68,23 @@ What the model leaves out: the swing is small, so the bob stays in a plane;
 the centrifugal force is folded into local gravity; there is no air drag
 (real pendulums are given a small push each swing to keep going).
 
+## Why sin φ
+
+Over one day the Earth carries the pendulum once around its parallel. The
+cone that touches the globe all along that parallel has its tip on the polar
+axis at R / sin φ from the centre, and it can be cut and laid flat without
+stretching. On the flat sheet a swing that is never twisted keeps one
+direction, while the local north always points along the cone to its tip.
+The sheet is a sector of 360° × sin φ (its arc, slant × angle, is the length
+of the parallel), so after a full trip north has turned that far past the
+swing. At the pole the sheet is a whole disc and the turn is a full 360°; at
+30° it is a half disc and the turn is 180°; at the equator the cone becomes a
+cylinder that unrolls into a strip, and the swing never turns.
+
+The section under the floor draws the globe with its cone and the sheet laid
+flat, and follows the running pendulum around the parallel. In the south the
+cone's tip lies below the south pole and the turn goes the other way.
+
 ## What the tests check
 
 - the plane turns once a sidereal day at either pole and never at the
@@ -81,7 +98,12 @@ the centrifugal force is folded into local gravity; there is no air drag
   pushed from the centre the bob returns to the centre every half swing,
 - a release in any direction starts the swing on that line,
 - pins knocked over by the simulated swing fall at the predicted times,
-  clockwise around the ring in the north, in opposite pairs.
+  clockwise around the ring in the north, in opposite pairs,
+- the cone grazes the globe along the parallel (its edge is square to the
+  radius there), and laid flat the parallel keeps its length,
+- the sheet is a full disc at the pole, a half disc at 30° and a strip at the
+  equator, and the angle north turns past the swing on it over a day equals
+  the pendulum's turn over a sidereal day at every latitude tried.
 
 ## Controls
 
@@ -106,6 +128,8 @@ style.css
 src/pendulum.js   the model: spin at a latitude, the closed-form swing, its plane
 src/pins.js       the ring of pins, knocking them over, when each should fall
 src/format.js     durations, hours and latitudes for the readouts
+src/cone.js       the tangent cone along the parallel, and the sheet laid flat
+src/cone-view.js  drawing the globe with its cone, and the sheet
 src/view.js       drawing the floor, the sand track, the pins and the bob
 src/main.js       animation and interaction
 test/             node --test suite
