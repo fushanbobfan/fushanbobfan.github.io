@@ -60,14 +60,16 @@ export function solve({ length, g = G, omegaZ, x0 = 1, y0 = 0, vx0 = 0, vy0 = 0 
   };
 }
 
-// The two ways the pendulum is usually set going, scaled to an amplitude.
-export function release(mode, amplitude, length, g = G, omegaZ = 0) {
+// The two ways the pendulum is usually set going, scaled to an amplitude,
+// along a direction measured anticlockwise from east (north by default).
+export function release(mode, amplitude, length, g = G, omegaZ = 0, direction = Math.PI / 2) {
+  const ux = Math.cos(direction), uy = Math.sin(direction);
   if (mode === 'centre') {
     const om = Math.sqrt(g / length + omegaZ * omegaZ);
-    return { x0: 0, y0: 0, vx0: 0, vy0: amplitude * om };
+    return { x0: 0, y0: 0, vx0: amplitude * om * ux, vy0: amplitude * om * uy };
   }
-  // drawn aside and let go from rest, along the north–south line
-  return { x0: 0, y0: amplitude, vx0: 0, vy0: 0 };
+  // drawn aside and let go from rest
+  return { x0: amplitude * ux, y0: amplitude * uy, vx0: 0, vy0: 0 };
 }
 
 // Orientation of the swing in the floor frame at time t, in radians,
