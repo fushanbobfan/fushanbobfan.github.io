@@ -7,11 +7,13 @@ import { duration, hours, latitude } from './format.js';
 import { Sand, drawScene, layout, toFloor } from './view.js';
 import { drawGlobe, drawSheet } from './cone-view.js';
 import { tangentCone, turnedAfter } from './cone.js';
+import { spinVector, start as startFull, airyRate, apsides, turnRate } from './spherical.js';
+import { drawTurnChart } from './short-view.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
 const ctx = canvas.getContext('2d');
-const globe = $('globe'), sheet = $('sheet');
+const globe = $('globe'), sheet = $('sheet'), swChart = $('sw-chart');
 
 const PIN_COUNT = 36, PIN_RADIUS = 0.96, REACH = 0.04;
 const FADE_SWINGS = 60; // the track fades over about this many swings
@@ -180,6 +182,61 @@ function updateLive() {
   }
 }
 
+// Short wires: the full pendulum over two hours of the real Earth's turn.
+const SHORT = { length: 2, ampShare: 0.1, slip: 0.01, duration: 7200, result: null };
+
+function runShort() {
+  const L = SHORT.length, a = SHORT.ampShare * L, b = SHORT.slip * a;
+  const om = spinVector(state.lat);
+  const { apsides: points } = apsides(startFull(L, a, b), { L, om, duration: SHORT.duration, stepsPerSwing: 80 });
+  const foucault = -localSpin(state.lat);
+  // Airy's turn goes the way the bob goes round: clockwise (falling angle) for a positive slip
+  const airy = -Math.sign(b) * airyRate(L, a, Math.abs(b));
+  SHORT.result = { points, foucault, predicted: foucault + airy, airy, measured: turnRate(points) };
+  updateShort();
+  drawShort();
+}
+
+const perHour = (rate) => {
+  const d = (-rate * 3600 * 180) / Math.PI;
+  if (Math.abs(d) < 0.005) return '0° an hour';
+  return `${Math.abs(d).toFixed(2)}° an hour ${d > 0 ? 'clockwise' : 'anticlockwise'}`;
+};
+
+function updateShort() {
+  $('sw-len-out').textContent = `${SHORT.length} m`;
+  $('sw-amp-out').textContent = `${Math.round(100 * SHORT.ampShare)}% of the wire, ${fmtLength(SHORT.ampShare * SHORT.length)}`;
+  const r = SHORT.result;
+  if (!r) return;
+  $('sw-earth').textContent = perHour(r.foucault);
+  $('sw-airy').textContent = perHour(r.airy);
+  $('sw-measured').textContent = perHour(r.measured);
+  const share = Math.abs(r.airy) / Math.abs(r.foucault || 1);
+  $('sw-note').textContent = Math.abs(r.foucault) < 1e-12
+    ? "At the equator the Earth adds nothing; any turn is Airy's."
+    : SHORT.slip === 0
+      ? 'A flat release has no ellipse to turn: the full pendulum follows the Earth alone.'
+      : share >= 1
+        ? `Airy's turn is ${share.toFixed(1)} times the Earth's: this pendulum mostly shows how it was let go.`
+        : `Airy's turn is ${(100 * share).toFixed(share < 0.1 ? 1 : 0)}% of the Earth's.`;
+}
+
+function fmtLength(m) {
+  return m < 1 ? `${Math.round(m * 100)} cm` : `${m.toFixed(m < 10 ? 1 : 0)} m`;
+}
+
+function drawShort() {
+  if (!SHORT.result) return;
+  const rect = swChart.getBoundingClientRect();
+  drawTurnChart(swChart.getContext('2d'), rect.width, rect.height, { ...SHORT.result, duration: SHORT.duration });
+}
+
+$('sw-len').addEventListener('input', (e) => { SHORT.length = Number(e.target.value); updateShort(); });
+$('sw-amp').addEventListener('input', (e) => { SHORT.ampShare = Number(e.target.value) / 100; updateShort(); });
+$('sw-len').addEventListener('change', runShort);
+$('sw-amp').addEventListener('change', runShort);
+$('sw-slip').addEventListener('change', (e) => { SHORT.slip = Number(e.target.value); runShort(); });
+
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
@@ -194,13 +251,14 @@ function frame(now) {
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  for (const c of [canvas, globe, sheet]) {
+  for (const c of [canvas, globe, sheet, swChart]) {
     const rect = c.getBoundingClientRect();
     c.width = Math.round(rect.width * dpr);
     c.height = Math.round(rect.height * dpr);
     c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   if (run) draw();
+  drawShort();
 }
 
 function setLatitude(lat, fromPreset = false) {
@@ -211,6 +269,13 @@ function setLatitude(lat, fromPreset = false) {
     $('place').value = match ? match.value : 'custom';
   }
   start();
+  scheduleShort();
+}
+
+let shortTimer = 0;
+function scheduleShort() {
+  clearTimeout(shortTimer);
+  shortTimer = setTimeout(runShort, 200);
 }
 
 function togglePause() {
@@ -258,4 +323,5 @@ window.addEventListener('resize', resize);
 $('lat').value = state.lat;
 resize();
 start();
+runShort();
 requestAnimationFrame(frame);

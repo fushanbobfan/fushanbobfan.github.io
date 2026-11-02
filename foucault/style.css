@@ -269,7 +269,24 @@ button:disabled {
   margin: 4px 0 0;
 }
 
+.short-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+}
+
+.short-grid label:first-child {
+  margin-top: 0;
+}
+
+.explain #sw-chart {
+  aspect-ratio: 16 / 9;
+}
+
 @media (max-width: 820px) {
+  .short-grid {
+    grid-template-columns: 1fr;
+  }
   .explain {
     margin: 0 16px 16px;
   }

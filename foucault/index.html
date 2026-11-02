@@ -124,6 +124,40 @@
     <p class="note" id="cone-note" aria-live="polite"></p>
   </section>
 
+  <section class="explain" aria-labelledby="short">
+    <h2 id="short">Why the wire is long</h2>
+    <p>A real swing is never quite flat. Let the bob go with the slightest sideways slip and it traces a thin ellipse, and a wide ellipse on a spherical pendulum turns by itself, in the sense it goes round, at Airy's rate (3/8)&nbsp;&omega;<sub>0</sub>&nbsp;a&nbsp;b&nbsp;/&nbsp;L&sup2;. On a short wire that can outrun the Earth. This runs the full pendulum, wide swings included, for two hours at the latitude chosen above.</p>
+    <div class="short-grid">
+      <div class="short-controls">
+        <label>Wire length <output id="sw-len-out"></output>
+          <input type="range" id="sw-len" min="1" max="100" step="1" value="2">
+        </label>
+        <label>Swing <output id="sw-amp-out"></output>
+          <input type="range" id="sw-amp" min="1" max="20" step="1" value="10">
+        </label>
+        <label>Sideways slip at release
+          <select id="sw-slip">
+            <option value="-0.05">5% of the swing, going round anticlockwise</option>
+            <option value="-0.01">1%, anticlockwise</option>
+            <option value="0">none: a perfectly flat release</option>
+            <option value="0.01" selected>1%, clockwise</option>
+            <option value="0.05">5% of the swing, going round clockwise</option>
+          </select>
+        </label>
+        <dl class="readout">
+          <dt>Earth alone</dt><dd id="sw-earth"></dd>
+          <dt>Airy alone</dt><dd id="sw-airy"></dd>
+          <dt>Full pendulum</dt><dd id="sw-measured"></dd>
+        </dl>
+        <p class="note" id="sw-note"></p>
+      </div>
+      <figure>
+        <canvas id="sw-chart" aria-label="How far the swing has turned against time: the full pendulum as dots, the Earth's share alone dashed, the Earth's plus Airy's solid"></canvas>
+        <figcaption>Turn of the swing, clockwise up: dots, the full pendulum at each end of its swing; dashed, the Earth alone; solid, the Earth plus Airy</figcaption>
+      </figure>
+    </div>
+  </section>
+
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
