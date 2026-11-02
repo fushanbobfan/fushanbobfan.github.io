@@ -111,3 +111,15 @@ test('the spin of the Earth is 2π per sidereal day', () => {
   close(EARTH_SPIN, 7.2921159e-5, 1e-12);
   close(localSpin(30), EARTH_SPIN / 2, 1e-15);
 });
+
+test('a release along any direction starts its swing on that line', () => {
+  const length = 30, omegaZ = localSpin(60, 400);
+  for (const dir of [0, 0.7, 2.5, -1.2]) {
+    for (const mode of ['rest', 'centre']) {
+      const motion = solve({ length, omegaZ, ...release(mode, 1, length, G, omegaZ, dir) });
+      const plane = planeAngle(motion, omegaZ, length);
+      const d = Math.abs(plane(0) - wrapHalf(dir));
+      close(Math.min(d, Math.PI - d), 0, 1e-9, `${mode} ${dir}`);
+    }
+  }
+});
