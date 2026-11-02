@@ -85,6 +85,34 @@ The section under the floor draws the globe with its cone and the sheet laid
 flat, and follows the running pendulum around the parallel. In the south the
 cone's tip lies below the south pole and the turn goes the other way.
 
+## Why the wire is long
+
+The model above is the small-swing limit. `src/spherical.js` runs the full
+spherical pendulum, wide swings included: the bob stays at distance L from the pivot under
+gravity, the wire's pull and the Coriolis force of the whole spin vector
+Ω (0, cos φ, sin φ), integrated with Runge–Kutta steps and put back on its
+sphere after each one.
+
+A release is never perfectly flat. A slight sideways slip makes the swing a
+thin ellipse with semi-axes a and b, and on a spherical pendulum such an
+ellipse turns by itself, in the sense the bob goes round, at Airy's rate
+
+    (3/8) ω0 a b / L²
+
+This adds to or takes from the Earth's turn, and it grows fast as the wire
+shortens. The section at the bottom of the page runs two hours of the real
+Earth at the chosen latitude and charts the full pendulum's turn beside the
+Earth's share and the Earth's plus Airy's. In Paris:
+
+| Wire | Swing | Slip | Earth | Airy | Full pendulum |
+| --- | --- | --- | --- | --- | --- |
+| 2 m | 20 cm | 1% clockwise | 11.33° an hour | 17.13° an hour | 28.42° an hour |
+| 2 m | 20 cm | 5% anticlockwise | 11.33° an hour | −85.64° an hour | −74.41° an hour |
+| 67 m | 2.7 m | 1% clockwise | 11.33° an hour | 0.47° an hour | 11.79° an hour |
+
+Turns are clockwise seen from above; negative is anticlockwise. A long, heavy
+pendulum that is let go carefully keeps Airy's share to a few percent.
+
 ## What the tests check
 
 - the plane turns once a sidereal day at either pole and never at the
@@ -103,7 +131,17 @@ cone's tip lies below the south pole and the turn goes the other way.
   radius there), and laid flat the parallel keeps its length,
 - the sheet is a full disc at the pole, a half disc at 30° and a strip at the
   equator, and the angle north turns past the swing on it over a day equals
-  the pendulum's turn over a sidereal day at every latitude tried.
+  the pendulum's turn over a sidereal day at every latitude tried,
+- the full pendulum stays on its sphere with no speed along the wire and
+  keeps its energy, and with no spin a flat swing keeps its plane even when
+  wide,
+- with no spin an elliptical swing turns at Airy's rate within 3%, in the
+  sense the bob goes round,
+- a small flat swing on a 67 m wire turns at the Foucault rate within 0.5%
+  and stays within 2 cm of the small-swing closed form after 1500 s,
+- a 2 m wire with a 20 cm swing and a 1 cm slip turns faster from Airy's
+  effect than from the Earth's in Paris, and a 67 m wire with a 3 m swing and
+  the same slip stays under 2%.
 
 ## Controls
 
@@ -130,6 +168,8 @@ src/pins.js       the ring of pins, knocking them over, when each should fall
 src/format.js     durations, hours and latitudes for the readouts
 src/cone.js       the tangent cone along the parallel, and the sheet laid flat
 src/cone-view.js  drawing the globe with its cone, and the sheet
+src/spherical.js  the full spherical pendulum, the far ends of its swing, Airy's rate
+src/short-view.js the chart of the swing's turn against time
 src/view.js       drawing the floor, the sand track, the pins and the bob
 src/main.js       animation and interaction
 test/             node --test suite
