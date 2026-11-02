@@ -108,6 +108,22 @@
     </aside>
   </main>
 
+  <section class="explain" aria-labelledby="why">
+    <h2 id="why">Why sin &phi;</h2>
+    <p>Over a day the Earth carries the pendulum once around its parallel. Take the cone that touches the globe all along that parallel: it can be cut and laid flat without stretching, and on the flat sheet a swing that is never twisted keeps one direction (gold), while north (blue) always points along the cone to its tip. Laid flat, the cone is a sector of 360&deg; &times; sin &phi;, so by the time the pendulum is back where it started, north has turned that far past the swing.</p>
+    <div class="explain-grid">
+      <figure>
+        <canvas id="globe" aria-label="The globe with the cone that touches it along the pendulum's parallel"></canvas>
+        <figcaption>The cone along this parallel</figcaption>
+      </figure>
+      <figure>
+        <canvas id="sheet" aria-label="The cone cut open and laid flat, with north and the swing marked along the parallel"></canvas>
+        <figcaption>The same cone laid flat</figcaption>
+      </figure>
+    </div>
+    <p class="note" id="cone-note" aria-live="polite"></p>
+  </section>
+
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

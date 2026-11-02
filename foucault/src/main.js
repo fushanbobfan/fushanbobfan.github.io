@@ -1,14 +1,17 @@
 import {
-  G, localSpin, precessionPeriod, degreesPerHour, swingPeriod, solve, release,
+  G, EARTH_SPIN, localSpin, precessionPeriod, degreesPerHour, swingPeriod, solve, release,
   planeAngle, wrapHalf,
 } from './pendulum.js';
 import { pinRing, knock, fallTime, pinOffset } from './pins.js';
 import { duration, hours, latitude } from './format.js';
 import { Sand, drawScene, layout, toFloor } from './view.js';
+import { drawGlobe, drawSheet } from './cone-view.js';
+import { tangentCone, turnedAfter } from './cone.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
 const ctx = canvas.getContext('2d');
+const globe = $('globe'), sheet = $('sheet');
 
 const PIN_COUNT = 36, PIN_RADIUS = 0.96, REACH = 0.04;
 const FADE_SWINGS = 60; // the track fades over about this many swings
@@ -106,6 +109,32 @@ function draw() {
     planeNow: run.plane(run.t),
     bob: run.bob,
   });
+  drawExplain();
+}
+
+// fraction of the (possibly spun-up) day since release, as the trip round the parallel
+function dayFraction() {
+  const turns = (EARTH_SPIN * state.factor * run.t) / (2 * Math.PI);
+  return turns - Math.floor(turns);
+}
+
+function drawExplain() {
+  const f = dayFraction();
+  for (const [c, fn] of [[globe, drawGlobe], [sheet, drawSheet]]) {
+    const rect = c.getBoundingClientRect();
+    fn(c.getContext('2d'), rect.width, rect.height, state.lat, f);
+  }
+}
+
+function updateConeNote() {
+  const cone = tangentCone(state.lat);
+  const turned = (Math.abs(turnedAfter(state.lat, dayFraction())) * 180) / Math.PI;
+  const sector = (cone.sector * 180) / Math.PI;
+  const trip = `${Math.floor(100 * dayFraction())}% of the way round`;
+  $('cone-note').textContent = cone.kind === 'cylinder'
+    ? `At the equator the cone becomes a cylinder, which unrolls into a strip: north points the same way all along it, so the swing never turns. ${trip}.`
+    : `At ${latitude(state.lat)} the flat sheet spans ${sector.toFixed(1)}°. ${trip}, north has turned ${turned.toFixed(1)}° past the swing; ` +
+      `seen from the floor the swing has turned ${turned.toFixed(1)}° ${state.lat > 0 ? 'clockwise' : 'anticlockwise'} since this day began.`;
 }
 
 function updateStatic() {
@@ -130,6 +159,7 @@ function updateStatic() {
 
 function updateLive() {
   const r = run;
+  updateConeNote();
   const down = r.pins.filter((p) => p.down).length;
   $('r-time').textContent = duration(r.t);
   $('r-turned').textContent = `${((Math.abs(r.omegaZ) * r.t * 180) / Math.PI).toFixed(1)}°`;
@@ -164,10 +194,12 @@ function frame(now) {
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (const c of [canvas, globe, sheet]) {
+    const rect = c.getBoundingClientRect();
+    c.width = Math.round(rect.width * dpr);
+    c.height = Math.round(rect.height * dpr);
+    c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
   if (run) draw();
 }
 
