@@ -78,8 +78,9 @@ trail, which is its position minus the Earth's, winds around in loops, one
 per synodic period, each drawn pink while the planet runs backwards. This is
 the picture Ptolemy matched with a deferent and an epicycle. For Mars the
 loop comes where the planet passes nearest; the 2025 approach was 0.642 au
-on 12 January, four days before opposition, because Mars was moving in from
-farther out on its eccentric orbit.
+on 12 January, four days before opposition: Mars was moving away from the
+Sun on its eccentric orbit, from 1.623 au on 12 January to 1.626 au on the
+16th, so the gap closed a little sooner than the line-up.
 
 **In the sky.** The planet's path in ecliptic longitude across (east to the
 left, as when facing south from the northern hemisphere) and ecliptic latitude
