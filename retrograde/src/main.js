@@ -20,6 +20,7 @@ const state = {
   showAll: true,
   trailFrac: 1,
   skyMode: 'loop',
+  frame: 'sun',
 };
 
 let cache = { key: '', list: [] };
@@ -69,14 +70,14 @@ function render() {
     label: NAMES[state.planet],
     jd: state.jd,
     showAll: state.showAll,
+    frame: state.frame,
     trail: trailDays(),
     half: HALF[state.planet],
   };
   const scale = drawOrrery(orrery, s);
   drawSky(sky, s, monthTicks);
-  $('top-caption').textContent = scale.k === 1
-    ? 'From above the Sun'
-    : 'From above the Sun, distances compressed';
+  const title = state.frame === 'earth' ? 'With the Earth held still' : 'From above the Sun';
+  $('top-caption').textContent = scale.k === 1 ? title : `${title}, distances compressed`;
   readouts(mid);
 }
 
@@ -188,6 +189,7 @@ $('play').addEventListener('click', () => setPlaying(!state.playing));
 $('today').addEventListener('click', () => go(today()));
 $('prev-loop').addEventListener('click', () => jumpLoop(-1));
 $('next-loop').addEventListener('click', () => jumpLoop(1));
+$('frame').addEventListener('change', (e) => { state.frame = e.target.value; render(); });
 $('sky-mode').addEventListener('change', (e) => { state.skyMode = e.target.value; render(); });
 $('all').addEventListener('change', (e) => { state.showAll = e.target.checked; render(); });
 $('trail').addEventListener('input', (e) => {
@@ -204,6 +206,10 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
     e.preventDefault();
     go(state.jd + (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1));
+  } else if (e.key === 'e' || e.key === 'E') {
+    state.frame = state.frame === 'earth' ? 'sun' : 'earth';
+    $('frame').value = state.frame;
+    render();
   } else if (e.key === 'n' || e.key === 'N') {
     jumpLoop(e.shiftKey ? -1 : 1);
   } else if (e.key >= '1' && e.key <= '7') {

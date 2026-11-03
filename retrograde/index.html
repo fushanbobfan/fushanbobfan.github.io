@@ -88,6 +88,12 @@
 
       <section>
         <h2>View</h2>
+        <label>Top view <kbd>E</kbd>
+          <select id="frame">
+            <option value="sun" selected>the Sun holds still</option>
+            <option value="earth">the Earth holds still</option>
+          </select>
+        </label>
         <label>Sky strip shows
           <select id="sky-mode">
             <option value="loop" selected>the loop nearest the date</option>
@@ -95,7 +101,7 @@
           </select>
         </label>
         <label class="row"><input type="checkbox" id="all" checked> The other planets inside its orbit</label>
-        <label>Marks on the sky ring <output id="trail-out"></output>
+        <label>Trail <output id="trail-out"></output>
           <input type="range" id="trail" min="0" max="2" step="0.05" value="1">
         </label>
       </section>

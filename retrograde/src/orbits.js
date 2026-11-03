@@ -163,3 +163,32 @@ export function loops(planet, jd0, jd1) {
 export function inner(planet) {
   return ELEMENTS[planet][0] < ELEMENTS.earth[0];
 }
+
+// The planet's track in a frame that keeps the Earth at the centre, n points
+// from jd0 to jd1: the loops Ptolemy drew with epicycles.
+export function earthCentredPath(planet, jd0, jd1, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const t = jd0 + (n === 1 ? 0 : (i / (n - 1)) * (jd1 - jd0));
+    const g = geocentric(planet, t);
+    out.push({ t, x: g.x, y: g.y, z: g.z, dist: g.dist });
+  }
+  return out;
+}
+
+// The date and distance of the planet's nearest approach to the Earth
+// between jd0 and jd1, to within a few minutes.
+export function closestApproach(planet, jd0, jd1) {
+  let best = jd0, bestDist = Infinity;
+  for (let t = jd0; t <= jd1; t += 0.5) {
+    const d = geocentric(planet, t).dist;
+    if (d < bestDist) { bestDist = d; best = t; }
+  }
+  let lo = Math.max(jd0, best - 0.5), hi = Math.min(jd1, best + 0.5);
+  for (let i = 0; i < 40; i++) {
+    const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+    if (geocentric(planet, m1).dist < geocentric(planet, m2).dist) hi = m2; else lo = m1;
+  }
+  const jd = (lo + hi) / 2;
+  return { jd, dist: geocentric(planet, jd).dist };
+}
