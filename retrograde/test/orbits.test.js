@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   PLANETS, J2000, julianDay, elementsAt, dateOf, solveKepler, heliocentric, geocentric, elongation,
   dailyMotion, siderealPeriod, synodicPeriod, stations, loops, inner, wrap180,
+  earthCentredPath, closestApproach,
 } from '../src/orbits.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} vs ${b}`);
@@ -112,4 +113,44 @@ test('longitudes wrap into (-180, 180]', () => {
   close(wrap180(359), -1, 1e-12);
   close(wrap180(181), -179, 1e-12);
   close(wrap180(-190), 170, 1e-12);
+});
+
+test('seen from the Earth, the planet sits at its position minus the Earth\'s', () => {
+  for (const p of PLANETS) {
+    const t = jd('2026-11-02');
+    const g = geocentric(p, t), a = heliocentric(p, t), e = heliocentric('earth', t);
+    close(g.x, a.x - e.x, 1e-12, p);
+    close(g.y, a.y - e.y, 1e-12, p);
+    const path = earthCentredPath(p, t - 10, t + 10, 5);
+    assert.equal(path.length, 5);
+    close(path[2].x, g.x, 1e-12);
+  }
+});
+
+test('the planet comes closest to the Earth in the middle of its loop', () => {
+  for (const p of ['mars', 'jupiter', 'saturn', 'venus']) {
+    const [l] = loops(p, jd('2025-01-01'), jd('2028-01-01'));
+    const near = closestApproach(p, l.start, l.end);
+    close(near.jd, l.middle, 8, `${p} closest approach`);
+    assert.ok(near.dist < geocentric(p, l.start).dist && near.dist < geocentric(p, l.end).dist);
+  }
+  // Mars was nearest on 12 January 2025, about 0.642 au away, four days before opposition
+  const [mars] = loops('mars', jd('2024-09-01'), jd('2025-06-01'));
+  const near = closestApproach('mars', mars.start, mars.end);
+  close(near.jd, jd('2025-01-12'), 1.5, 'date');
+  close(near.dist, 0.642, 0.002, 'distance');
+});
+
+test('in the Earth\'s frame the planet loops once a synodic period', () => {
+  // the direction from the Earth turns back only during the loops
+  const from = jd('2024-01-01'), to = from + 3 * 780;
+  const path = earthCentredPath('mars', from, to, 1171);
+  let backs = 0, prev = false;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i];
+    const back = a.x * b.y - a.y * b.x < 0;
+    if (back && !prev) backs++;
+    prev = back;
+  }
+  assert.equal(backs, loops('mars', from, to).length);
 });
