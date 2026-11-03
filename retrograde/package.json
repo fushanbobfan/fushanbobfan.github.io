@@ -1,0 +1,20 @@
+{
+  "name": "retrograde",
+  "version": "0.1.0",
+  "description": "Retrograde loops in the browser: watch the planets from the Sun and from the Earth, and see why Mars backs up against the stars.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "retrograde-motion",
+    "planets",
+    "kepler",
+    "astronomy",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}

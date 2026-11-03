@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [retrograde](https://fushanbobfan.github.io/retrograde/) | Why the planets back up: watch the Earth overtake Mars from above the Sun, and see the loop it draws against the sky between its two stations. | [`retrograde/`](retrograde/) |
 | [foucault](https://fushanbobfan.github.io/foucault/) | A Foucault pendulum in the browser: pick a latitude, release the bob and watch the floor turn under its swing, knocking over a ring of pins. | [`foucault/`](foucault/) |
 | [florets](https://fushanbobfan.github.io/florets/) | Grow a sunflower head in the browser: turn the divergence angle and watch Fibonacci spirals appear, curl into arms and break apart. | [`florets/`](florets/) |
 | [glide](https://fushanbobfan.github.io/glide/) | Draw with the 17 wallpaper groups: every stroke is repeated by the rotations, mirrors and glides of the chosen plane pattern. | [`glide/`](glide/) |
