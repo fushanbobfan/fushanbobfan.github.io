@@ -192,3 +192,23 @@ export function closestApproach(planet, jd0, jd1) {
   const jd = (lo + hi) / 2;
   return { jd, dist: geocentric(planet, jd).dist };
 }
+
+// The planet's place seen from the Earth split the way Ptolemy split it: a
+// centre carried round a deferent, plus an arm turning on an epicycle. For
+// an outer planet the deferent is the planet's own orbit and the arm is the
+// Sun-to-Earth step reversed, so it always points the way the Sun lies from
+// the Earth; for Mercury and Venus the deferent carries the Sun and the arm
+// is the planet's orbit around it.
+export function epicycle(planet, jd) {
+  const p = heliocentric(planet, jd);
+  const e = heliocentric('earth', jd);
+  const sun = { x: -e.x, y: -e.y, z: -e.z };
+  const centre = inner(planet) ? sun : { x: p.x, y: p.y, z: p.z };
+  const arm = inner(planet) ? p : sun;
+  return {
+    centre,
+    arm,
+    deferent: Math.hypot(centre.x, centre.y),
+    radius: Math.hypot(arm.x, arm.y),
+  };
+}

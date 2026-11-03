@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   PLANETS, J2000, julianDay, elementsAt, dateOf, solveKepler, heliocentric, geocentric, elongation,
   dailyMotion, siderealPeriod, synodicPeriod, stations, loops, inner, wrap180,
-  earthCentredPath, closestApproach,
+  earthCentredPath, closestApproach, epicycle,
 } from '../src/orbits.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} vs ${b}`);
@@ -153,4 +153,44 @@ test('in the Earth\'s frame the planet loops once a synodic period', () => {
     prev = back;
   }
   assert.equal(backs, loops('mars', from, to).length);
+});
+
+test('deferent plus epicycle lands exactly on the planet seen from the Earth', () => {
+  for (const p of PLANETS) {
+    for (let t = jd('2020-01-01'); t < jd('2030-01-01'); t += 211) {
+      const { centre, arm } = epicycle(p, t);
+      const g = geocentric(p, t);
+      close(centre.x + arm.x, g.x, 1e-12, p);
+      close(centre.y + arm.y, g.y, 1e-12, p);
+      close(centre.z + arm.z, g.z, 1e-12, p);
+    }
+  }
+});
+
+test("an outer planet's epicycle arm points at the Sun and turns once a year", () => {
+  const t0 = jd('2025-01-01');
+  for (const p of ['mars', 'jupiter', 'saturn']) {
+    const { arm, radius } = epicycle(p, t0);
+    const e = heliocentric('earth', t0);
+    close(Math.atan2(arm.y, arm.x), Math.atan2(-e.y, -e.x), 1e-12, `${p} arm towards the Sun`);
+    close(radius, 1, 0.02, `${p} epicycle about 1 au`);
+    const later = epicycle(p, t0 + 365.256).arm;
+    close(wrap180((Math.atan2(later.y, later.x) - Math.atan2(arm.y, arm.x)) * 180 / Math.PI), 0, 0.05, `${p} after a year`);
+  }
+});
+
+test('the loop happens with the arm on the near side, against the deferent', () => {
+  // retrograde motion at opposition: the arm points back at the Earth's
+  // side of the deferent, so it is antiparallel to the centre
+  for (const p of ['mars', 'jupiter', 'saturn']) {
+    const [l] = loops(p, jd('2025-01-01'), jd('2028-01-01'));
+    const { centre, arm } = epicycle(p, l.middle);
+    const cos = (centre.x * arm.x + centre.y * arm.y) / (Math.hypot(centre.x, centre.y) * Math.hypot(arm.x, arm.y));
+    assert.ok(cos < -0.99, `${p} ${cos}`);
+  }
+  // Venus at inferior conjunction: the arm points from the Sun back to the Earth
+  const [v] = loops('venus', jd('2025-01-01'), jd('2026-01-01'));
+  const { centre, arm } = epicycle('venus', v.middle);
+  const cos = (centre.x * arm.x + centre.y * arm.y) / (Math.hypot(centre.x, centre.y) * Math.hypot(arm.x, arm.y));
+  assert.ok(cos < -0.99, `venus ${cos}`);
 });
