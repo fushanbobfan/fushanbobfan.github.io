@@ -10,7 +10,7 @@ export const COLORS = {
   saturn: '#e3cf8f',
   uranus: '#9fd8d8',
   neptune: '#7f9ce8',
-  back: '#ff9b6b',
+  back: '#e86fd0',
   grid: '#262a30',
   text: '#9a9890',
   sight: 'rgba(233,230,223,0.35)',
@@ -174,7 +174,7 @@ function dot(ctx, v, r, color, label) {
   ctx.fillText(label, v.x + r + 3, v.y - 2);
 }
 
-// The planet's path against the sky over a window around the current date:
+// The planet's path against the sky over a window around a date:
 // ecliptic longitude across (east to the left, as when facing south from
 // the northern hemisphere) and ecliptic latitude up, stretched so the loop
 // opens out.
@@ -192,8 +192,9 @@ export function trackWindow(planet, jd, half) {
 export function drawSky(canvas, s, monthTicks) {
   const { ctx, w, h } = fitCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
-  const { centre, pts } = trackWindow(s.planet, s.jd, s.half);
-  let lonSpan = 4, latMin = Infinity, latMax = -Infinity;
+  const mid = s.skyMid ?? s.jd;
+  const { centre, pts } = trackWindow(s.planet, mid, s.half);
+  let lonSpan = 0.5, latMin = Infinity, latMax = -Infinity;
   for (const p of pts) {
     lonSpan = Math.max(lonSpan, Math.abs(p.dlon));
     latMin = Math.min(latMin, p.lat);
@@ -201,13 +202,13 @@ export function drawSky(canvas, s, monthTicks) {
   }
   lonSpan *= 1.08;
   const latMid = (latMin + latMax) / 2;
-  const latSpan = Math.max(0.6, (latMax - latMin) * 0.65);
+  const latSpan = Math.max(lonSpan * 0.08, (latMax - latMin) * 0.65);
   const pad = 22;
   const X = (dlon) => w / 2 - (dlon / lonSpan) * (w / 2 - pad);
   const Y = (lat) => h / 2 - ((lat - latMid) / latSpan) * (h / 2 - pad);
 
-  // longitude grid every 1, 2, 5, 10 or 20 degrees
-  const stepDeg = [1, 2, 5, 10, 20].find((d) => (2 * lonSpan) / d <= 9) || 30;
+  // longitude grid every half degree up to every 20 degrees
+  const stepDeg = [0.5, 1, 2, 5, 10, 20].find((d) => (2 * lonSpan) / d <= 9) || 30;
   ctx.font = '11px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -220,7 +221,7 @@ export function drawSky(canvas, s, monthTicks) {
     ctx.lineTo(x, h - 16);
     ctx.stroke();
     ctx.fillStyle = COLORS.text;
-    ctx.fillText(`${((lon % 360) + 360) % 360}°`, x, h - 14);
+    ctx.fillText(`${+((((lon % 360) + 360) % 360).toFixed(1))}°`, x, h - 14);
   }
   // the ecliptic itself, if it is in view
   if (Y(0) > 0 && Y(0) < h - 16) {
@@ -255,7 +256,7 @@ export function drawSky(canvas, s, monthTicks) {
   ctx.fillStyle = COLORS.text;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  for (const m of monthTicks(s.jd - s.half, s.jd + s.half)) {
+  for (const m of monthTicks(mid - s.half, mid + s.half)) {
     const g = geocentric(s.planet, m.jd);
     const x = X(wrap180(g.lon - centre)), y = Y(g.lat);
     ctx.fillStyle = '#e9e6df';
@@ -268,15 +269,17 @@ export function drawSky(canvas, s, monthTicks) {
     }
   }
 
-  const now = geocentric(s.planet, s.jd);
-  ctx.fillStyle = COLORS[s.planet];
-  ctx.strokeStyle = '#0e0f11';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(X(0), Y(now.lat), 6, 0, 2 * Math.PI);
-  ctx.fill();
-  ctx.stroke();
-  ctx.lineWidth = 1;
+  if (Math.abs(s.jd - mid) <= s.half) {
+    const now = geocentric(s.planet, s.jd);
+    ctx.fillStyle = COLORS[s.planet];
+    ctx.strokeStyle = '#0e0f11';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(X(wrap180(now.lon - centre)), Y(now.lat), 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
 
   ctx.fillStyle = COLORS.text;
   ctx.textAlign = 'left';

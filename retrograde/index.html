@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>retrograde: why the planets back up</title>
+  <meta name="description" content="Retrograde loops in the browser: watch the planets from above the Sun and from the Earth, and see why Mars backs up against the stars every 26 months.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>retrograde</h1>
+    <p>Night by night a planet creeps east against the stars. Every so often it stops, backs up west for weeks or months, stops again and carries on. Nothing about the planet changes: the Earth, on its faster inside track, is overtaking it, and the line of sight from the Earth swings back across the sky.</p>
+  </header>
+
+  <main>
+    <div class="stage">
+      <figure>
+        <figcaption><span id="top-caption">From above the Sun</span> <span class="hint">the dashed line is the line of sight from the Earth, run out to the sky</span></figcaption>
+        <canvas id="orrery" tabindex="0" aria-label="The Sun, the Earth and the planet seen from above, with the line of sight from the Earth through the planet and the marks it leaves on a ring of sky"></canvas>
+      </figure>
+      <figure>
+        <figcaption><span id="sky-caption">In the sky</span> <span class="hint">pink where it moves west, dots on the first of each month</span></figcaption>
+        <canvas id="sky" aria-label="The planet's path against the sky in ecliptic longitude and latitude around the chosen date"></canvas>
+      </figure>
+      <p class="status" id="status" aria-live="polite"></p>
+    </div>
+
+    <aside class="panel">
+      <section>
+        <h2>Planet</h2>
+        <label>Watch
+          <select id="planet">
+            <option value="mercury">Mercury</option>
+            <option value="venus">Venus</option>
+            <option value="mars" selected>Mars</option>
+            <option value="jupiter">Jupiter</option>
+            <option value="saturn">Saturn</option>
+            <option value="uranus">Uranus</option>
+            <option value="neptune">Neptune</option>
+          </select>
+        </label>
+        <dl class="readout">
+          <dt>Loops every</dt><dd id="r-synodic"></dd>
+          <dt>Year</dt><dd id="r-sidereal"></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Date</h2>
+        <label>Day (UTC)
+          <input type="date" id="date" min="1800-01-01" max="2050-12-31">
+        </label>
+        <label>Play at
+          <select id="speed">
+            <option value="2">2 days a second</option>
+            <option value="7" selected>a week a second</option>
+            <option value="30">a month a second</option>
+            <option value="90">3 months a second</option>
+          </select>
+        </label>
+        <div class="buttons">
+          <button id="play" class="primary">Play <kbd>Space</kbd></button>
+          <button id="today">Today</button>
+        </div>
+        <div class="buttons">
+          <button id="prev-loop">&larr; Last loop</button>
+          <button id="next-loop">Next loop &rarr;</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Now</h2>
+        <dl class="readout">
+          <dt>Longitude</dt><dd id="r-lon"></dd>
+          <dt>Moving</dt><dd id="r-motion"></dd>
+          <dt>From the Sun</dt><dd id="r-elong"></dd>
+          <dt>Distance</dt><dd id="r-dist"></dd>
+        </dl>
+        <p class="note" id="r-loop"></p>
+      </section>
+
+      <section>
+        <h2>Loops near this date</h2>
+        <ol class="loops" id="loops"></ol>
+      </section>
+
+      <section>
+        <h2>View</h2>
+        <label>Sky strip shows
+          <select id="sky-mode">
+            <option value="loop" selected>the loop nearest the date</option>
+            <option value="date">the months around the date</option>
+          </select>
+        </label>
+        <label class="row"><input type="checkbox" id="all" checked> The other planets inside its orbit</label>
+        <label>Marks on the sky ring <output id="trail-out"></output>
+          <input type="range" id="trail" min="0" max="2" step="0.05" value="1">
+        </label>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
