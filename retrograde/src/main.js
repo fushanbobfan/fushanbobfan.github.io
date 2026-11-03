@@ -21,6 +21,7 @@ const state = {
   trailFrac: 1,
   skyMode: 'loop',
   frame: 'sun',
+  epicycles: false,
 };
 
 let cache = { key: '', list: [] };
@@ -71,6 +72,7 @@ function render() {
     jd: state.jd,
     showAll: state.showAll,
     frame: state.frame,
+    epicycles: state.epicycles,
     trail: trailDays(),
     half: HALF[state.planet],
   };
@@ -189,7 +191,15 @@ $('play').addEventListener('click', () => setPlaying(!state.playing));
 $('today').addEventListener('click', () => go(today()));
 $('prev-loop').addEventListener('click', () => jumpLoop(-1));
 $('next-loop').addEventListener('click', () => jumpLoop(1));
-$('frame').addEventListener('change', (e) => { state.frame = e.target.value; render(); });
+function setFrame(frame) {
+  state.frame = frame;
+  $('frame').value = frame;
+  $('epicycles-row').hidden = frame !== 'earth';
+  render();
+}
+
+$('frame').addEventListener('change', (e) => setFrame(e.target.value));
+$('epicycles').addEventListener('change', (e) => { state.epicycles = e.target.checked; render(); });
 $('sky-mode').addEventListener('change', (e) => { state.skyMode = e.target.value; render(); });
 $('all').addEventListener('change', (e) => { state.showAll = e.target.checked; render(); });
 $('trail').addEventListener('input', (e) => {
@@ -207,9 +217,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     go(state.jd + (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1));
   } else if (e.key === 'e' || e.key === 'E') {
-    state.frame = state.frame === 'earth' ? 'sun' : 'earth';
-    $('frame').value = state.frame;
-    render();
+    setFrame(state.frame === 'earth' ? 'sun' : 'earth');
   } else if (e.key === 'n' || e.key === 'N') {
     jumpLoop(e.shiftKey ? -1 : 1);
   } else if (e.key >= '1' && e.key <= '7') {

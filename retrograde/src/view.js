@@ -1,4 +1,6 @@
-import { ELEMENTS, heliocentric, geocentric, dailyMotion, wrap180, earthCentredPath } from './orbits.js';
+import {
+  ELEMENTS, heliocentric, geocentric, dailyMotion, wrap180, earthCentredPath, epicycle, inner,
+} from './orbits.js';
 
 export const COLORS = {
   sun: '#f2c45a',
@@ -14,6 +16,7 @@ export const COLORS = {
   grid: '#262a30',
   text: '#9a9890',
   sight: 'rgba(233,230,223,0.35)',
+  epicycle: '#8fc9a0',
 };
 
 export function fitCanvas(canvas) {
@@ -198,6 +201,54 @@ function drawEarthFrame(ctx, s, cx, cy, scale) {
   }
   ctx.globalAlpha = 1;
   ctx.lineWidth = 1;
+  if (s.epicycles) drawEpicycle(ctx, s, cx, cy, scale);
+}
+
+// Ptolemy's construction for the current date: the deferent the centre
+// rides on, the epicycle around that centre and the arm out to the planet.
+// Circles go through the same radial map as everything else, so with
+// compressed distances they bend a little.
+function drawEpicycle(ctx, s, cx, cy, scale) {
+  const ep = epicycle(s.planet, s.jd);
+  const trace = (pts) => {
+    ctx.beginPath();
+    pts.forEach((q, i) => {
+      const v = toScreen(q, cx, cy, scale);
+      if (i) ctx.lineTo(v.x, v.y); else ctx.moveTo(v.x, v.y);
+    });
+    ctx.closePath();
+    ctx.stroke();
+  };
+  ctx.strokeStyle = COLORS.epicycle;
+  ctx.setLineDash([2, 4]);
+  if (!inner(s.planet)) {
+    // the deferent: the planet's own orbit, now centred on the Earth
+    const period = 36525 * 360 / ELEMENTS[s.planet][9];
+    const pts = [];
+    for (let i = 0; i < 180; i++) pts.push(heliocentric(s.planet, s.jd + (i / 180) * period));
+    trace(pts);
+  }
+  const circle = [];
+  for (let i = 0; i < 96; i++) {
+    const a = (i / 96) * 2 * Math.PI;
+    circle.push({ x: ep.centre.x + ep.radius * Math.cos(a), y: ep.centre.y + ep.radius * Math.sin(a) });
+  }
+  trace(circle);
+  ctx.setLineDash([]);
+  const c = toScreen(ep.centre, cx, cy, scale);
+  const tip = toScreen({ x: ep.centre.x + ep.arm.x, y: ep.centre.y + ep.arm.y }, cx, cy, scale);
+  ctx.strokeStyle = COLORS.epicycle;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(c.x, c.y);
+  ctx.lineTo(tip.x, tip.y);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.fillStyle = COLORS.epicycle;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, 3, 0, 2 * Math.PI);
+  ctx.fill();
 }
 
 function dot(ctx, v, r, color, label) {

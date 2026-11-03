@@ -82,6 +82,19 @@ on 12 January, four days before opposition: Mars was moving away from the
 Sun on its eccentric orbit, from 1.623 au on 12 January to 1.626 au on the
 16th, so the gap closed a little sooner than the line-up.
 
+**Deferent and epicycle.** In the Earth-centred view a checkbox splits the
+planet's position the way Ptolemy did, as a centre riding on a deferent plus
+an arm turning on an epicycle. For an outer planet the deferent is the
+planet's own orbit and the arm is the step from the Earth to the Sun, about
+1 au long, so it always points the way the Sun lies and turns once a year;
+for Mercury and Venus the deferent carries the Sun and the arm is the
+planet's orbit around it. The loop comes when the arm swings round to the
+Earth's side of the deferent, against the centre's motion. Ptolemy's
+epicycles kept this year-long, Sun-locked turning for every planet without a
+reason for it; the heliocentric picture supplies one. With distances
+compressed (Jupiter and beyond) the circles are drawn through the same
+square-root map and come out slightly squashed.
+
 **In the sky.** The planet's path in ecliptic longitude across (east to the
 left, as when facing south from the northern hemisphere) and ecliptic latitude
 up, stretched so the loop opens out; the stretch is printed in the corner.
@@ -117,6 +130,12 @@ overtakes it relative to the nodes of its tilted orbit.
   middle of their loops, and Mars came to 0.642 au on 12 January 2025,
 - in the Earth's frame the direction to Mars turns backwards exactly as many
   times as it makes loops over three synodic periods,
+- the deferent point plus the epicycle arm lands exactly on the planet as
+  seen from the Earth, for every planet over 2020–2030,
+- an outer planet's arm points at the Sun, is about 1 au long and comes back
+  to the same direction after a year,
+- in the middle of a loop the arm points against the centre, for Mars,
+  Jupiter, Saturn and Venus,
 - dates read and print in UTC, and month ticks fall on the first of each
   month.
 
@@ -131,6 +150,7 @@ overtakes it relative to the nodes of its tilted orbit.
 | Last loop, Next loop (<kbd>N</kbd>, <kbd>Shift</kbd>+<kbd>N</kbd>) | jump to the middle of the neighbouring loop |
 | Loops near this date | click a loop to jump to its middle |
 | Top view (<kbd>E</kbd>) | hold the Sun still, or the Earth |
+| Ptolemy's deferent and epicycle | with the Earth held still, draw the construction |
 | Sky strip shows | the loop nearest the date, or the months around it |
 | The other planets inside its orbit | show or hide them in the top view |
 | Trail | how far back the marks on the sky ring and the planet's track reach |
