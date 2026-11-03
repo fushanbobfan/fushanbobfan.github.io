@@ -1,4 +1,4 @@
-import { ELEMENTS, heliocentric, geocentric, dailyMotion, wrap180 } from './orbits.js';
+import { ELEMENTS, heliocentric, geocentric, dailyMotion, wrap180, earthCentredPath } from './orbits.js';
 
 export const COLORS = {
   sun: '#f2c45a',
@@ -31,7 +31,7 @@ export function fitCanvas(canvas) {
 // Distances from the centre in au map to pixels; past Mars the map is
 // compressed so the Earth's orbit stays visible beside Neptune's.
 export function radialScale(outer, pixels) {
-  const k = outer > 2 ? 0.5 : 1;
+  const k = outer > 3 ? 0.5 : 1;
   const R = outer * 1.08;
   return { k, f: (r) => pixels * Math.pow(r / R, k) };
 }
@@ -53,13 +53,18 @@ function toScreen(p, cx, cy, scale) {
 // Seen from above the ecliptic's north pole: the Sun in the middle, the
 // Earth and the chosen planet on their orbits, the line of sight from the
 // Earth through the planet run out to a ring of sky, and the marks the
-// sight line has left on that ring over the trail.
+// sight line has left on that ring over the trail. With s.frame 'earth' the
+// Earth holds still in the middle; the Sun circles it and the planet's
+// track over the trail shows its loops.
 export function drawOrrery(canvas, s) {
   const { ctx, w, h } = fitCanvas(canvas);
   const cx = w / 2, cy = h / 2;
   const ring = Math.min(w, h) / 2 - 18;
   const a = ELEMENTS[s.planet][0];
-  const scale = radialScale(Math.max(a, 1), ring - 26);
+  const fromEarth = s.frame === 'earth';
+  const scale = radialScale(fromEarth ? a * (1 + ELEMENTS[s.planet][1]) + 1.02 : Math.max(a, 1), ring - 26);
+  const origin = fromEarth ? heliocentric('earth', s.jd) : { x: 0, y: 0, z: 0 };
+  const place = (p) => toScreen({ x: p.x - origin.x, y: p.y - origin.y }, cx, cy, scale);
   ctx.clearRect(0, 0, w, h);
 
   // the sky ring with longitude ticks; 0° is the March equinox direction
@@ -85,7 +90,8 @@ export function drawOrrery(canvas, s) {
     }
   }
 
-  const planets = s.showAll ? Object.keys(ELEMENTS) : ['earth', s.planet];
+  const planets = fromEarth ? [] : s.showAll ? Object.keys(ELEMENTS) : ['earth', s.planet];
+  if (fromEarth) drawEarthFrame(ctx, s, cx, cy, scale);
   for (const p of planets) {
     if (ELEMENTS[p][0] > a * 1.01 && p !== 'earth') continue;
     const path = orbitPath(p, s.jd);
@@ -116,9 +122,10 @@ export function drawOrrery(canvas, s) {
     ctx.globalAlpha = 1;
   }
 
-  const earth = toScreen(heliocentric('earth', s.jd), cx, cy, scale);
+  const earth = place(heliocentric('earth', s.jd));
   const here = geocentric(s.planet, s.jd);
-  const target = toScreen(heliocentric(s.planet, s.jd), cx, cy, scale);
+  const target = place(heliocentric(s.planet, s.jd));
+  const sun = place({ x: 0, y: 0 });
   const ang = here.lon * Math.PI / 180;
   const rim = { x: cx + Math.cos(ang) * ring, y: cy - Math.sin(ang) * ring };
 
@@ -135,13 +142,13 @@ export function drawOrrery(canvas, s) {
   // the Sun
   ctx.fillStyle = COLORS.sun;
   ctx.beginPath();
-  ctx.arc(cx, cy, 7, 0, 2 * Math.PI);
+  ctx.arc(sun.x, sun.y, 7, 0, 2 * Math.PI);
   ctx.fill();
 
   if (s.showAll) {
     for (const p of Object.keys(ELEMENTS)) {
       if (p === 'earth' || p === s.planet || ELEMENTS[p][0] > a * 1.01) continue;
-      const v = toScreen(heliocentric(p, s.jd), cx, cy, scale);
+      const v = place(heliocentric(p, s.jd));
       ctx.fillStyle = COLORS[p];
       ctx.globalAlpha = 0.55;
       ctx.beginPath();
@@ -161,6 +168,36 @@ export function drawOrrery(canvas, s) {
   ctx.lineWidth = 1;
 
   return scale;
+}
+
+// In the Earth's frame: the Sun's yearly circle, and the planet's track over
+// the trail, pink where it runs backwards.
+function drawEarthFrame(ctx, s, cx, cy, scale) {
+  ctx.strokeStyle = '#3c424a';
+  ctx.beginPath();
+  for (let i = 0; i <= 120; i++) {
+    const e = heliocentric('earth', s.jd + (i / 120) * 365.26);
+    const v = toScreen({ x: -e.x, y: -e.y }, cx, cy, scale);
+    if (i) ctx.lineTo(v.x, v.y); else ctx.moveTo(v.x, v.y);
+  }
+  ctx.stroke();
+  if (s.trail <= 0) return;
+  const n = Math.min(600, Math.max(60, Math.round(s.trail / 2)));
+  const path = earthCentredPath(s.planet, s.jd - s.trail, s.jd, n);
+  ctx.lineWidth = 1.6;
+  for (let i = 1; i < path.length; i++) {
+    const p = path[i - 1], q = path[i];
+    const back = p.x * q.y - p.y * q.x < 0;
+    ctx.strokeStyle = back ? COLORS.back : COLORS[s.planet];
+    ctx.globalAlpha = 0.2 + 0.8 * (i / path.length);
+    const u = toScreen(p, cx, cy, scale), v = toScreen(q, cx, cy, scale);
+    ctx.beginPath();
+    ctx.moveTo(u.x, u.y);
+    ctx.lineTo(v.x, v.y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1;
 }
 
 function dot(ctx, v, r, color, label) {
