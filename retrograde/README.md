@@ -72,6 +72,15 @@ and beyond the distances are compressed (square-root scale) so the Earth's
 orbit stays visible; the line of sight is drawn through the compressed
 positions and meets the ring at the true longitude.
 
+**With the Earth held still.** The same top view in a frame that moves with
+the Earth: the Sun circles it once a year, and the planet's track over the
+trail, which is its position minus the Earth's, winds around in loops, one
+per synodic period, each drawn pink while the planet runs backwards. This is
+the picture Ptolemy matched with a deferent and an epicycle. For Mars the
+loop comes where the planet passes nearest; the 2025 approach was 0.642 au
+on 12 January, four days before opposition, because Mars was moving in from
+farther out on its eccentric orbit.
+
 **In the sky.** The planet's path in ecliptic longitude across (east to the
 left, as when facing south from the northern hemisphere) and ecliptic latitude
 up, stretched so the loop opens out; the stretch is printed in the corner.
@@ -102,6 +111,11 @@ overtakes it relative to the nodes of its tilted orbit.
   of the Sun,
 - from Mars outwards each loop lasts longer and covers a shorter arc,
 - stations alternate between turning west and turning east,
+- seen from the Earth each planet sits at its position minus the Earth's;
+  Mars, Jupiter, Saturn and Venus come nearest within eight days of the
+  middle of their loops, and Mars came to 0.642 au on 12 January 2025,
+- in the Earth's frame the direction to Mars turns backwards exactly as many
+  times as it makes loops over three synodic periods,
 - dates read and print in UTC, and month ticks fall on the first of each
   month.
 
@@ -115,9 +129,10 @@ overtakes it relative to the nodes of its tilted orbit.
 | <kbd>←</kbd> <kbd>→</kbd> | a day back or forward (<kbd>Shift</kbd>: 10 days) |
 | Last loop, Next loop (<kbd>N</kbd>, <kbd>Shift</kbd>+<kbd>N</kbd>) | jump to the middle of the neighbouring loop |
 | Loops near this date | click a loop to jump to its middle |
+| Top view (<kbd>E</kbd>) | hold the Sun still, or the Earth |
 | Sky strip shows | the loop nearest the date, or the months around it |
 | The other planets inside its orbit | show or hide them in the top view |
-| Marks on the sky ring | how far back the line of sight's marks reach |
+| Trail | how far back the marks on the sky ring and the planet's track reach |
 
 ## Layout
 
