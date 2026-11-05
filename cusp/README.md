@@ -48,16 +48,23 @@ stiffness as 1 and the moving band's as s,
 
     V(θ; C) = ½ (L_A − l)₊² + ½ s (L_C − l)₊²
 
-The wheel rests at the minima of V. The slider range keeps l < a − r, so the
-fixed band is taut at every angle.
+The wheel rests at the minima of V. The page only builds machines with
+l < a − r, so the fixed band is taut at every angle.
 
 **The set.** A well disappears where V′ = V″ = 0. For a given θ, write
 C = pin + L(αR + βT), with R and T the radial and tangent units at the pin. The
-moving band's torque is −s(L − l)rβ, so V′ = 0 fixes β from the stretch, and V″
-becomes a function of the stretch alone on each branch α = ±√(1 − β²). A
-one-dimensional root search per angle gives every fold point, and neighbouring
-angles link into curves. Cusps are the points where V‴ also vanishes, found by
-bisecting sign changes of V‴ along the curve.
+moving band's torque is −s(L − l)rβ. With α = sin φ and |β| = cos φ, V′ = 0
+fixes the stretch from φ, and V″ becomes a function of φ alone. A one-dimensional
+root search per angle gives every fold point, and neighbouring angles link into
+curves. Where two roots vanish within one angle step, bisecting the angle fills
+in the hairpin. Cusps are the points where V‴ also vanishes, found by bisecting
+sign changes of V‴ along the curve.
+
+**Stiff machines.** With the pin at θ = π the fixed band exerts no torque, so the
+moving band can balance it with no stretch. If s r² is larger than the size of
+the fixed band's curvature there, part of the circle where the moving band just
+goes taut joins the set: inside it the pin at π is a hill, outside it a well, and
+V″ jumps across it. On those machines the side cusps can be replaced by corners.
 
 **The default machine** (r = 0.5, a = 2, l = 1, s = 1) has one closed curve with
 four cusps. The two on the axis have closed forms from V″(0) = 0 and V″(π) = 0,
@@ -83,11 +90,13 @@ into another well.
 - The live wheel, stepped at 60 frames a second at the tour's speed, snaps within
   0.04 of the diamond's edges in both directions.
 
+- A survey of 416 machines across the slider range gave one closed curve each,
+  with 386 at four cusps and 30 at two. Six of them, chosen for being soft, stiff
+  or hairpinned, are kept as tests, including that two wells lie inside the curve
+  and one outside at 97% or more of a grid of points.
+
 The tracker's jump threshold means a jump smaller than 0.3 rad, close to a cusp
-where the two wells merge, is not reported as a snap. Some stiff machines (for
-example s = 2 with long bands) have a set that breaks into open pieces where the
-moving band goes slack; the shading, which counts wells directly, stays right
-there.
+where the two wells merge, is not reported as a snap.
 
 ## References
 
