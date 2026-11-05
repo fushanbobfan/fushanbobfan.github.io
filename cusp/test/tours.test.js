@@ -11,6 +11,7 @@ const machines = [
   { r: 0.5, a: 2.4, l: 0.8, s: 1.6 },
   { r: 0.5, a: 3, l: 1.4, s: 0.5 },
   { r: 0.5, a: 1.6, l: 0.4, s: 1 },
+  { r: 0.5, a: 2, l: 1.4, s: 2 },
 ];
 
 function tourOn(m, name) {

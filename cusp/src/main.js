@@ -301,7 +301,9 @@ function onMachineInput() {
   };
   if (isValidMachine(next)) {
     applyMachine(next, '');
-    $('machine-note').textContent = `${state.cusps.length} cusps on this machine.`;
+    $('machine-note').textContent = state.cusps.length === 2
+      ? '2 cusps on this machine. The side cusps have given way to corners, where the moving band goes slack along an arc of the curve.'
+      : `${state.cusps.length} cusps on this machine.`;
   } else {
     syncMachineControls();
     $('machine-note').textContent = 'The bands must be shorter than the gap from the wheel to A, or the fixed band goes slack.';
