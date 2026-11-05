@@ -1,0 +1,20 @@
+{
+  "name": "cusp",
+  "version": "0.1.0",
+  "description": "Zeeman's catastrophe machine in the browser: pull a rubber band slowly and watch a wheel suddenly snap round.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "catastrophe-theory",
+    "cusp",
+    "bifurcation",
+    "hysteresis",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}

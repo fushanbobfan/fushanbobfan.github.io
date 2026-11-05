@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cusp: Zeeman's catastrophe machine</title>
+  <meta name="description" content="Zeeman's catastrophe machine in the browser: pull a rubber band slowly and watch a wheel suddenly snap round, then find the curved diamond where it happens.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>cusp</h1>
+    <p>A wheel, a pin and two rubber bands. Move the free end of one band a little and the wheel turns a little, until, with no extra effort from you, it snaps round. Move back the way you came and it does not snap back until much later. All of this is decided by one curved diamond in the plane your hand moves in.</p>
+  </header>
+
+  <main>
+    <div class="stage">
+      <figure>
+        <figcaption>The machine <span class="hint">drag C; the wheel follows at the speed of a slow hand. Hollow pins mark the other places the wheel could rest.</span></figcaption>
+        <canvas id="machine" tabindex="0" aria-label="A wheel on a pivot with a pin on its rim. One rubber band runs from the pin to a fixed point A, the other to the point C, which you can drag or move with the arrow keys. A curved diamond marks where the wheel can snap."></canvas>
+      </figure>
+      <p class="status" id="status" aria-live="polite"></p>
+      <figure>
+        <figcaption>Energy against pin angle <span class="hint">the ball is the wheel. It stays in its well until the well is gone.</span></figcaption>
+        <canvas id="energy" aria-label="The stored elastic energy of the two bands as a function of the angle of the pin, with a ball showing where the wheel is now."></canvas>
+      </figure>
+    </div>
+
+    <aside class="panel">
+      <section>
+        <h2>Try</h2>
+        <div class="tours" id="tours"></div>
+        <p class="note" id="tour-note"></p>
+      </section>
+
+      <section>
+        <h2>Now</h2>
+        <dl class="readout">
+          <dt>Places to rest</dt><dd id="r-wells"></dd>
+          <dt>Pin angle</dt><dd id="r-angle"></dd>
+          <dt>Moving band</dt><dd id="r-band"></dd>
+          <dt>Snaps so far</dt><dd id="r-snaps"></dd>
+        </dl>
+        <div class="buttons">
+          <button type="button" id="clear">Clear trail <kbd>c</kbd></button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Build another</h2>
+        <label>Fixed point distance <output id="a-out"></output>
+          <input type="range" id="a" min="1.2" max="3.2" step="0.05">
+        </label>
+        <label>Band rest length <output id="l-out"></output>
+          <input type="range" id="l" min="0.3" max="1.5" step="0.05">
+        </label>
+        <label>Moving band stiffness <output id="s-out"></output>
+          <input type="range" id="s" min="0.4" max="2.5" step="0.05">
+        </label>
+        <p class="note" id="machine-note"></p>
+        <div class="buttons">
+          <button type="button" id="classical">Classic machine</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Show</h2>
+        <label class="row"><input type="checkbox" id="show-set" checked> The diamond</label>
+        <label class="row"><input type="checkbox" id="show-shade" checked> Shade where two wells exist</label>
+        <label class="row"><input type="checkbox" id="show-trail" checked> Trail of C and snap marks</label>
+        <div class="buttons">
+          <button type="button" id="share">Copy link</button>
+          <button type="button" id="png">Save PNG</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

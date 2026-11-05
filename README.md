@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [cusp](https://fushanbobfan.github.io/cusp/) | Zeeman's catastrophe machine in the browser: pull a rubber band slowly, watch a wheel suddenly snap round, and find the curved diamond that decides when. | [`cusp/`](cusp/) |
 | [retrograde](https://fushanbobfan.github.io/retrograde/) | Why the planets back up: watch the Earth overtake Mars from above the Sun, and see the loop it draws against the sky between its two stations. | [`retrograde/`](retrograde/) |
 | [foucault](https://fushanbobfan.github.io/foucault/) | A Foucault pendulum in the browser: pick a latitude, release the bob and watch the floor turn under its swing, knocking over a ring of pins. | [`foucault/`](foucault/) |
 | [florets](https://fushanbobfan.github.io/florets/) | Grow a sunflower head in the browser: turn the divergence angle and watch Fibonacci spirals appear, curl into arms and break apart. | [`florets/`](florets/) |
