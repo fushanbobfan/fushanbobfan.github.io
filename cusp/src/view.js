@@ -2,6 +2,7 @@
 
 import { energy, pinPosition, wrapAngle } from './machine.js';
 import { countWells } from './equilibria.js';
+import { liftedCrease, ribOrder, rotate, toScene } from './surface.js';
 
 const COLORS = {
   grid: '#20252a',
@@ -269,6 +270,139 @@ export function drawMachine(ctx, canvas, ratio, scene) {
   ctx.arc(cx, cy, 2.6 * ratio, 0, Math.PI * 2);
   ctx.fill();
   label(ctx, 'C', cx + 14 * ratio, cy - 10 * ratio, ratio);
+}
+
+function surfaceProjector(w, h, turn) {
+  // The scene reaches about 1.3 across and 1.05 up at any turn.
+  const size = Math.min((0.5 * w) / 1.3, (0.5 * h) / 1.05);
+  return (p) => {
+    const r = rotate(p, turn);
+    return [w / 2 + size * r.across, h / 2 - size * r.up];
+  };
+}
+
+// The ribs change only with the machine or the turn, so they are kept as an image.
+export function paintSurface(w, h, ratio, surface, turn) {
+  const layer = document.createElement('canvas');
+  layer.width = w;
+  layer.height = h;
+  const ctx = layer.getContext('2d');
+  const project = surfaceProjector(w, h, turn);
+  const { box, ribs, chains } = surface;
+
+  // The floor: the plane C moves in, with the diamond drawn on it.
+  const floorZ = -0.62;
+  const floor = (x, y) => project({ ...toScene(box, x, y, 0), z: floorZ });
+  ctx.strokeStyle = COLORS.axis;
+  ctx.lineWidth = ratio;
+  ctx.beginPath();
+  [[box.x0, -box.yHalf], [box.x1, -box.yHalf], [box.x1, box.yHalf], [box.x0, box.yHalf]].forEach(([x, y], i) => {
+    const [px, py] = floor(x, y);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(111, 211, 199, 0.55)';
+  for (const { points, closed } of chains) {
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      const [px, py] = floor(p.x, p.y);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    if (closed) ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.fillStyle = COLORS.text;
+  ctx.font = `${11 * ratio}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  const [ax, ay] = floor(box.x1, 0);
+  ctx.fillText('towards A', ax, ay + 14 * ratio);
+  ctx.textAlign = 'start';
+
+  // Ribs back to front, with the far ones dimmer.
+  const ordered = ribOrder(ribs, box, turn);
+  ordered.forEach((rib, index) => {
+    const nearness = ordered.length > 1 ? index / (ordered.length - 1) : 1;
+    for (const stable of [false, true]) {
+      ctx.beginPath();
+      for (const seg of rib.segments) {
+        if (seg.stable !== stable) continue;
+        const [x0, y0] = project(toScene(box, rib.x, seg.sa, seg.ta));
+        const [x1, y1] = project(toScene(box, rib.x, seg.sb, seg.tb));
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+      }
+      ctx.lineWidth = (stable ? 1.25 : 0.8) * ratio;
+      ctx.strokeStyle = stable
+        ? `rgba(217, 201, 163, ${0.3 + 0.55 * nearness})`
+        : `rgba(155, 154, 146, ${0.08 + 0.17 * nearness})`;
+      ctx.stroke();
+    }
+  });
+
+  // The crease, broken where it crosses the seam.
+  ctx.strokeStyle = COLORS.set;
+  ctx.lineWidth = 2 * ratio;
+  for (const { points, closed } of liftedCrease(chains, box)) {
+    ctx.beginPath();
+    const count = closed ? points.length + 1 : points.length;
+    for (let i = 0; i < count; i += 1) {
+      const p = points[i % points.length];
+      const [px, py] = project(p);
+      const prev = i > 0 ? points[i - 1] : null;
+      if (!prev || Math.abs(p.z - prev.z) > 0.5) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  return layer;
+}
+
+export function drawSurface(ctx, canvas, ratio, scene) {
+  const { surface, turn, control, theta, wheelPath } = scene;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!surface.layer) return;
+  ctx.drawImage(surface.layer, 0, 0);
+  const project = surfaceProjector(w, h, turn);
+  const { box } = surface;
+
+  ctx.strokeStyle = COLORS.snap;
+  ctx.lineWidth = 2 * ratio;
+  ctx.beginPath();
+  let previous = null;
+  for (const q of wheelPath) {
+    const p = toScene(box, q.x, q.y, q.theta);
+    const [px, py] = project(p);
+    if (!previous || Math.abs(p.z - previous.z) > 0.5) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+    previous = p;
+  }
+  ctx.stroke();
+
+  // C on the floor, joined to the wheel above it. Off the box, C simply is not shown.
+  const inBox = control.x >= box.x0 && control.x <= box.x1 && Math.abs(control.y) <= box.yHalf;
+  if (!inBox) return;
+  const up = toScene(box, control.x, control.y, theta);
+  const [bx, by] = project(up);
+  const [fx, fy] = project({ ...up, z: -0.62 });
+  ctx.strokeStyle = 'rgba(244, 239, 228, 0.5)';
+  ctx.lineWidth = ratio;
+  ctx.beginPath();
+  ctx.moveTo(fx, fy);
+  ctx.lineTo(bx, by);
+  ctx.stroke();
+  ctx.strokeStyle = COLORS.control;
+  ctx.beginPath();
+  ctx.arc(fx, fy, 4 * ratio, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = COLORS.ball;
+  ctx.beginPath();
+  ctx.arc(bx, by, 5.5 * ratio, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 export function drawSlice(ctx, canvas, ratio, scene) {

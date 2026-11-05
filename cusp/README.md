@@ -42,6 +42,13 @@ the wheel really took in orange. Drag C from the right of the diamond towards it
 middle and watch a smooth curve fold into an S. **Sweep along it** runs C over the
 whole line and back, from wherever it stands, and draws one hysteresis loop.
 
+Below them, **all the slices together** make one surface: pin angle above the
+plane C moves in, turned by dragging or the arrow keys. Over the diamond the sheet
+pleats, the crease is the teal curve, and its shadow on the floor is the diamond.
+The wheel's path runs along the sheet until it reaches the crease and falls to the
+sheet below. The top and bottom edges of the picture are the same angle, so the
+surface continues from one to the other.
+
 Drag C anywhere, or focus the machine and use the arrow keys (Shift for bigger
 steps). C follows the pointer at a limited speed, since the story depends on a
 slow hand.
@@ -79,6 +86,10 @@ at x = −1.4041 and x = −2.4557; the other two are numerical, at
 
 **The slice** is the zero contour of the torque over position on the line and pin
 angle, drawn by marching squares, with each segment marked by the sign of V″.
+
+**The surface** is 46 slices side by side, painted back to front under an
+orthographic rotation. It is a set of ribs and has no hidden-line removal, so the
+near ribs are simply drawn brighter.
 
 **The wheel** is a rotor with light inertia and damping, integrated in substeps
 of at most 2 ms. A separate tracker rolls downhill from the last rest position

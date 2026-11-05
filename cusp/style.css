@@ -99,6 +99,23 @@ canvas {
   min-height: 150px;
 }
 
+#surface {
+  aspect-ratio: 16 / 10;
+  max-height: 78vh;
+  margin-top: 0;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+#surface.dragging {
+  cursor: grabbing;
+}
+
+#surface:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .choice {
   border: 0;
   margin: 0;
