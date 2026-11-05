@@ -46,6 +46,20 @@ export function restPoints(m, cx, cy, n = 360) {
   return { minima, maxima };
 }
 
+// The number of wells alone, for shading the control plane quickly.
+export function countWells(m, cx, cy, n = 180) {
+  const start = -Math.PI + 0.00137;
+  const dt = TAU / n;
+  let g0 = torque(m, cx, cy, start);
+  let wells = 0;
+  for (let i = 1; i <= n; i += 1) {
+    const g1 = torque(m, cx, cy, start + i * dt);
+    if (g0 <= 0 && g1 > 0) wells += 1;
+    g0 = g1;
+  }
+  return wells;
+}
+
 // Roll downhill from theta to the bottom of its well. The result keeps the
 // wheel's winding: it is theta plus the distance rolled, without wrapping.
 export function settle(m, cx, cy, theta, step = 0.015) {
