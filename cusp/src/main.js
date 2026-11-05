@@ -4,13 +4,16 @@ import { findCusps, traceFoldSet } from './foldset.js';
 import { TOUR_NAMES, makeTour } from './tours.js';
 import { driveWheel } from './wheel.js';
 import { decodeState, encodeState } from './share.js';
-import { drawEnergy, drawMachine, fitCanvas, makeView, shadeWells } from './view.js';
+import { foldsOnLine, offsetOfLine, positionOnLine, sliceCurve, sweepAlong } from './slice.js';
+import { drawEnergy, drawMachine, drawSlice, fitCanvas, makeView, shadeWells } from './view.js';
 
 const $ = (id) => document.getElementById(id);
 const machineCanvas = $('machine');
 const energyCanvas = $('energy');
+const sliceCanvas = $('slice');
 const machineCtx = machineCanvas.getContext('2d');
 const energyCtx = energyCanvas.getContext('2d');
+const sliceCtx = sliceCanvas.getContext('2d');
 
 const HAND_SPEED = 1.6;
 const TOUR_SPEED = 0.55;
@@ -40,6 +43,10 @@ const state = {
   shade: null,
   view: null,
   options: { set: true, shade: true, trail: true },
+  lineAxis: 'y',
+  slice: null,
+  history: [],
+  historyLine: '',
   dirty: true,
 };
 state.rest = settle(state.machine, state.control.x, state.control.y, state.theta);
@@ -73,9 +80,51 @@ function rebuildSet() {
 function resize() {
   ratio = fitCanvas(machineCanvas);
   fitCanvas(energyCanvas);
+  fitCanvas(sliceCanvas);
   state.view = makeView(machineCanvas, state.machine, state.chains);
+  state.slice = null;
   queueShade();
   state.dirty = true;
+}
+
+function lineRange() {
+  const { left, right, top } = state.view;
+  return state.lineAxis === 'y' ? [-top, top] : [left, right];
+}
+
+// Rebuild the slice when C leaves the line it was computed for. The wheel's path
+// only means something on one line, so it starts afresh with the new one.
+function refreshSlice() {
+  const at = offsetOfLine({ axis: state.lineAxis }, state.control);
+  if (state.slice && Math.abs(state.slice.line.at - at) < 1e-6) return;
+  const line = { axis: state.lineAxis, at };
+  const range = lineRange();
+  const folds = foldsOnLine(state.chains, line);
+  state.slice = { line, range, folds, segments: sliceCurve(state.machine, line, range) };
+  if (state.historyLine !== `${line.axis}:${at}`) {
+    state.history = [];
+    state.historyLine = `${line.axis}:${at}`;
+  }
+  writeSliceNote(line, folds);
+}
+
+function writeSliceNote(line, folds) {
+  const name = line.axis;
+  if (folds.length < 2) {
+    $('slice-note').textContent = 'This line misses the curve, so there is one well all along it and nothing to snap.';
+    return;
+  }
+  const low = folds[0];
+  const high = folds[folds.length - 1];
+  $('slice-note').textContent = `Two wells from ${name} = ${low.toFixed(2)} to ${high.toFixed(2)}, a span of ${(high - low).toFixed(2)}.`;
+}
+
+function recordHistory() {
+  const s = positionOnLine(state.slice.line, state.control);
+  const last = state.history[state.history.length - 1];
+  if (last && Math.abs(last.s - s) < 1e-4 && Math.abs(last.theta - state.theta) < 0.002) return;
+  state.history.push({ s, theta: state.theta });
+  if (state.history.length > TRAIL_LIMIT) state.history.shift();
 }
 
 function say(text) {
@@ -99,6 +148,8 @@ function moveControl(to, dt) {
     if (state.trail.length > TRAIL_LIMIT) state.trail.shift();
   }
   refreshWells();
+  refreshSlice();
+  recordHistory();
   state.dirty = true;
 }
 
@@ -130,8 +181,27 @@ function startTour(name) {
   state.tour = { name, path, leg: 1 };
   state.trail.push(path[0]);
   refreshWells();
+  // Each tour reads best on the line it travels along.
+  setLineAxis(Math.abs(path[1].x - path[0].x) > Math.abs(path[1].y - path[0].y) ? 'x' : 'y');
+  refreshSlice();
   setTourButtons(name);
   state.dirty = true;
+}
+
+// Sweep from where C is now, so the wheel's history carries through the whole loop.
+function startSweep() {
+  refreshSlice();
+  const { line, folds, range } = state.slice;
+  state.target = null;
+  say('');
+  state.tour = { name: null, path: sweepAlong(line, state.control, folds, range), leg: 1 };
+  setTourButtons(null);
+}
+
+function setLineAxis(axis) {
+  state.lineAxis = axis;
+  state.slice = null;
+  for (const radio of document.querySelectorAll('input[name="line"]')) radio.checked = radio.value === axis;
 }
 
 function stopTour() {
@@ -190,6 +260,8 @@ function draw() {
   const scene = { ...state, theta: state.theta };
   drawMachine(machineCtx, machineCanvas, ratio, scene);
   drawEnergy(energyCtx, energyCanvas, ratio, scene);
+  scene.slice = { ...state.slice, history: state.history, control: state.control, theta: state.theta };
+  drawSlice(sliceCtx, sliceCanvas, ratio, scene);
   updateReadout();
 }
 
@@ -204,6 +276,7 @@ function frame(now) {
     state.theta = state.rest;
     state.omega = 0;
   }
+  refreshSlice();
   if (state.dirty) {
     state.dirty = false;
     draw();
@@ -215,6 +288,7 @@ function clearTrail() {
   state.trail = [];
   state.snaps = [];
   state.snapCount = 0;
+  state.history = [];
   state.dirty = true;
 }
 
@@ -256,7 +330,17 @@ machineCanvas.addEventListener('keydown', (event) => {
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLInputElement || event.ctrlKey || event.metaKey) return;
   if (event.key === 'c') clearTrail();
+  if (event.key === 's') startSweep();
 });
+
+for (const radio of document.querySelectorAll('input[name="line"]')) {
+  radio.addEventListener('change', () => {
+    setLineAxis(radio.value);
+    state.dirty = true;
+  });
+}
+
+$('sweep').addEventListener('click', startSweep);
 
 for (const [name, text] of Object.entries(TOUR_NAMES)) {
   const button = document.createElement('button');
@@ -281,6 +365,8 @@ function syncMachineControls() {
 function applyMachine(next, note) {
   stopTour();
   state.machine = next;
+  state.slice = null;
+  state.historyLine = '';
   rebuildSet();
   state.control = clampToView(state.control);
   state.target = null;
@@ -347,6 +433,7 @@ window.addEventListener('resize', resize);
 
 ratio = fitCanvas(machineCanvas);
 fitCanvas(energyCanvas);
+fitCanvas(sliceCanvas);
 rebuildSet();
 state.control = clampToView(state.control);
 state.trail.push(state.control);

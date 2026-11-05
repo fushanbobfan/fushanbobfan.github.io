@@ -21,10 +21,16 @@
         <canvas id="machine" tabindex="0" aria-label="A wheel on a pivot with a pin on its rim. One rubber band runs from the pin to a fixed point A, the other to the point C, which you can drag or move with the arrow keys. A curved diamond marks where the wheel can snap."></canvas>
       </figure>
       <p class="status" id="status" aria-live="polite"></p>
-      <figure>
-        <figcaption>Energy against pin angle <span class="hint">the ball is the wheel. It stays in its well until the well is gone.</span></figcaption>
-        <canvas id="energy" aria-label="The stored elastic energy of the two bands as a function of the angle of the pin, with a ball showing where the wheel is now."></canvas>
-      </figure>
+      <div class="charts">
+        <figure>
+          <figcaption>Energy against pin angle <span class="hint">the ball is the wheel. It stays in its well until the well is gone.</span></figcaption>
+          <canvas id="energy" aria-label="The stored elastic energy of the two bands as a function of the angle of the pin, with a ball showing where the wheel is now."></canvas>
+        </figure>
+        <figure>
+          <figcaption>Every rest position along a line through C <span class="hint">solid for wells, dotted for hills. Orange is the path the wheel really took.</span></figcaption>
+          <canvas id="slice" aria-label="The pin angles at which the wheel can balance, for each position of C along a straight line through it. Inside the diamond the curve folds into an S."></canvas>
+        </figure>
+      </div>
     </div>
 
     <aside class="panel">
@@ -45,6 +51,19 @@
         <div class="buttons">
           <button type="button" id="clear">Clear trail <kbd>c</kbd></button>
         </div>
+      </section>
+
+      <section>
+        <h2>The line through C</h2>
+        <fieldset class="choice">
+          <legend>Runs</legend>
+          <label class="row"><input type="radio" name="line" value="y" checked> Up and down</label>
+          <label class="row"><input type="radio" name="line" value="x"> Side to side</label>
+        </fieldset>
+        <div class="buttons">
+          <button type="button" id="sweep">Sweep along it <kbd>s</kbd></button>
+        </div>
+        <p class="note" id="slice-note"></p>
       </section>
 
       <section>

@@ -36,6 +36,12 @@ Run the tests with `npm test` (Node 20 or later).
 - **Into the tip.** C approaches along the axis, a hair above it. One well
   splits into two and that hair picks the side.
 
+The chart beside the energy curve is a slice: every rest position for each place
+C could stand on a line through it, wells solid and hills dotted, with the path
+the wheel really took in orange. Drag C from the right of the diamond towards its
+middle and watch a smooth curve fold into an S. **Sweep along it** runs C over the
+whole line and back, from wherever it stands, and draws one hysteresis loop.
+
 Drag C anywhere, or focus the machine and use the arrow keys (Shift for bigger
 steps). C follows the pointer at a limited speed, since the story depends on a
 slow hand.
@@ -71,6 +77,9 @@ four cusps. The two on the axis have closed forms from V″(0) = 0 and V″(π) 
 at x = −1.4041 and x = −2.4557; the other two are numerical, at
 (−1.8669, ±0.7175).
 
+**The slice** is the zero contour of the torque over position on the line and pin
+angle, drawn by marching squares, with each segment marked by the sign of V″.
+
 **The wheel** is a rotor with light inertia and damping, integrated in substeps
 of at most 2 ms. A separate tracker rolls downhill from the last rest position
 as C moves in steps of 0.004. A jump above 0.3 rad between neighbouring steps is
@@ -85,6 +94,9 @@ into another well.
   cusps match the closed forms to 1e-6; every cusp has V‴ near zero.
 - The count of wells from a brute scan of the energy changes at the same places
   that horizontal lines cross the traced curve.
+- The slice has the same number of wells and hills as a direct search at each
+  position, and a sweep along a line snaps within 0.01 of where the line crosses
+  the traced curve.
 - The tours do what their labels say on four different machines: two snaps, or
   none.
 - The live wheel, stepped at 60 frames a second at the tour's speed, snaps within

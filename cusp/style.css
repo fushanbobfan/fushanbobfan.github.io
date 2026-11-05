@@ -87,9 +87,31 @@ canvas {
   outline-offset: 2px;
 }
 
-#energy {
-  aspect-ratio: 16 / 3;
-  min-height: 130px;
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+#energy,
+#slice {
+  aspect-ratio: 16 / 8;
+  min-height: 150px;
+}
+
+.choice {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.choice legend {
+  padding: 0;
+  color: var(--muted);
+}
+
+.choice label {
+  margin-top: 4px;
 }
 
 .status {
@@ -229,7 +251,11 @@ kbd {
     max-height: none;
     aspect-ratio: 4 / 3;
   }
-  #energy {
+  .charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #energy,
+  #slice {
     aspect-ratio: 16 / 7;
   }
 }

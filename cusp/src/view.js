@@ -271,6 +271,84 @@ export function drawMachine(ctx, canvas, ratio, scene) {
   label(ctx, 'C', cx + 14 * ratio, cy - 10 * ratio, ratio);
 }
 
+export function drawSlice(ctx, canvas, ratio, scene) {
+  const { line, range, segments, folds, history, control, theta } = scene.slice;
+  const w = canvas.width;
+  const h = canvas.height;
+  const pad = { left: 36 * ratio, right: 10 * ratio, top: 10 * ratio, bottom: 22 * ratio };
+  const xOf = (s) => pad.left + ((s - range[0]) / (range[1] - range[0])) * (w - pad.left - pad.right);
+  const yOf = (t) => pad.top + ((Math.PI - wrapAngle(t)) / (2 * Math.PI)) * (h - pad.top - pad.bottom);
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.font = `${11 * ratio}px system-ui, sans-serif`;
+  ctx.fillStyle = COLORS.text;
+  ctx.strokeStyle = COLORS.grid;
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'right';
+  for (const deg of [-180, -90, 0, 90, 180]) {
+    const y = pad.top + ((180 - deg) / 360) * (h - pad.top - pad.bottom);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+    ctx.fillText(`${deg}°`, pad.left - 4 * ratio, y + 4 * ratio);
+  }
+  ctx.textAlign = 'center';
+  const tick = range[1] - range[0] > 4 ? 1 : 0.5;
+  for (let s = Math.ceil(range[0] / tick) * tick; s <= range[1]; s += tick) {
+    const x = xOf(s);
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, h - pad.bottom);
+    ctx.stroke();
+    ctx.fillText(`${line.axis} = ${Number(s.toFixed(1))}`, x, h - 7 * ratio);
+  }
+  ctx.textAlign = 'start';
+
+  // The band where two wells exist on this line, between its folds.
+  ctx.fillStyle = 'rgba(111, 211, 199, 0.09)';
+  for (let i = 0; i + 1 < folds.length; i += 2) {
+    ctx.fillRect(xOf(folds[i]), pad.top, xOf(folds[i + 1]) - xOf(folds[i]), h - pad.top - pad.bottom);
+  }
+
+  // Wells as a solid line, hills as dots, so the two kinds differ without colour.
+  ctx.beginPath();
+  ctx.fillStyle = COLORS.text;
+  for (const seg of segments) {
+    if (Math.abs(wrapAngle(seg.ta) - wrapAngle(seg.tb)) > Math.PI) continue;
+    if (seg.stable) {
+      ctx.moveTo(xOf(seg.sa), yOf(seg.ta));
+      ctx.lineTo(xOf(seg.sb), yOf(seg.tb));
+    } else {
+      ctx.fillRect(xOf(seg.sa) - 0.8 * ratio, yOf(seg.ta) - 0.8 * ratio, 1.6 * ratio, 1.6 * ratio);
+    }
+  }
+  ctx.strokeStyle = COLORS.curve;
+  ctx.lineWidth = 2 * ratio;
+  ctx.stroke();
+
+  if (history.length > 1) {
+    ctx.strokeStyle = COLORS.snap;
+    ctx.lineWidth = 1.6 * ratio;
+    ctx.beginPath();
+    let drawing = false;
+    history.forEach((p, i) => {
+      const x = xOf(p.s);
+      const y = yOf(p.theta);
+      const wrapped = i > 0 && Math.abs(wrapAngle(p.theta) - wrapAngle(history[i - 1].theta)) > Math.PI;
+      if (!drawing || wrapped) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      drawing = true;
+    });
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = COLORS.ball;
+  ctx.beginPath();
+  ctx.arc(xOf(line.axis === 'y' ? control.y : control.x), yOf(theta), 5 * ratio, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 export function drawEnergy(ctx, canvas, ratio, scene) {
   const { machine: m, control, theta, wells, hills } = scene;
   const w = canvas.width;
