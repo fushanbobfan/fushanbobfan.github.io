@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { CLASSICAL, angleGap } from '../src/machine.js';
 import { restPoints, settle } from '../src/equilibria.js';
 import { findCusps, traceFoldSet } from '../src/foldset.js';
-import { followRest, stepWheel, sweepPath } from '../src/wheel.js';
+import { DEFAULT_ROTOR, driveWheel, followRest, stepWheel, sweepPath } from '../src/wheel.js';
 
 const m = CLASSICAL;
 const set = traceFoldSet(m)[0].points;
@@ -29,7 +29,7 @@ test('a damped wheel comes to rest at a minimum', () => {
 
 test('the rotor loses energy on the way down', () => {
   const state = { theta: 1, omega: 0 };
-  const total = () => 0.5 * 0.02 * state.omega ** 2;
+  const total = () => 0.5 * DEFAULT_ROTOR.inertia * state.omega ** 2;
   let peak = 0;
   for (let i = 0; i < 400; i += 1) {
     stepWheel(state, m, -1, 0.3, 1 / 240);
@@ -74,6 +74,36 @@ test('circling outside the cusp changes the side without any snap', () => {
   const run = sweepPath(m, path, startAngle);
   assert.equal(run.snaps.length, 0);
   assert.ok(Math.sign(run.rest) !== Math.sign(startAngle), `${startAngle} to ${run.rest}`);
+});
+
+test('the live wheel keeps up with a slow hand and snaps at the edges of the diamond', () => {
+  const x = -2;
+  const [bottom, top] = crossingsOnVertical(x);
+  const dt = 1 / 60;
+  const speed = 0.55;
+  const start = { x, y: 1 };
+  const rest = settle(m, x, 1, 1.5);
+  const state = { control: start, rest, theta: rest, omega: 0 };
+  const snaps = [];
+  let worstLag = 0;
+  const run = (from, to) => {
+    const steps = Math.ceil(Math.abs(to - from) / (speed * dt));
+    for (let i = 1; i <= steps; i += 1) {
+      const y = from + ((to - from) * i) / steps;
+      const events = driveWheel(state, m, { x, y }, dt);
+      snaps.push(...events);
+      // Right at the edge the well moves arbitrarily fast, so lag is only held down away from it.
+      if (!snaps.length && y > bottom + 0.1) {
+        worstLag = Math.max(worstLag, Math.abs(angleGap(state.theta, state.rest)));
+      }
+    }
+  };
+  run(1, -1);
+  run(-1, 1);
+  assert.equal(snaps.length, 2, snaps.map((s) => s.y).join(' '));
+  assert.ok(Math.abs(snaps[0].y - bottom) < 0.04, `${snaps[0].y} vs ${bottom}`);
+  assert.ok(Math.abs(snaps[1].y - top) < 0.04, `${snaps[1].y} vs ${top}`);
+  assert.ok(worstLag < 0.2, `lag ${worstLag}`);
 });
 
 test('a large step is subdivided, so the jump lands where small steps land', () => {

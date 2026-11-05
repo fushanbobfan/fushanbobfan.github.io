@@ -1,13 +1,15 @@
 // The wheel as a damped rotor, and a tracker that notices when its well vanishes.
 
-import { torque } from './machine.js';
+import { angleGap, torque } from './machine.js';
 import { settle } from './equilibria.js';
 
 // A jump of more than this between neighbouring control points counts as a snap.
 export const SNAP_ANGLE = 0.3;
 const CONTROL_STEP = 0.004;
 
-export const DEFAULT_ROTOR = Object.freeze({ inertia: 0.02, damping: 0.1 });
+// Light and lightly damped: the wheel tracks a slowly moving well closely, then
+// visibly swings and rings when it falls into a new one.
+export const DEFAULT_ROTOR = Object.freeze({ inertia: 0.003, damping: 0.025 });
 
 export function stepWheel(state, m, cx, cy, dt, rotor = DEFAULT_ROTOR) {
   const substeps = Math.max(1, Math.ceil(dt / 0.002));
@@ -37,6 +39,25 @@ export function followRest(m, from, to, rest) {
     theta = next;
   }
   return { rest: theta, snaps };
+}
+
+// One frame of the live machine: the control point moves, the rest tracker follows
+// it, and the rotor chases the rest position. Returns the snaps of this frame.
+export function driveWheel(state, m, to, dt, rotor = DEFAULT_ROTOR) {
+  const leg = followRest(m, state.control, to, state.rest);
+  state.control = to;
+  state.rest = leg.rest;
+  const snaps = leg.snaps;
+  stepWheel(state, m, to.x, to.y, dt, rotor);
+  const gap = Math.abs(angleGap(state.theta, state.rest));
+  if (Math.abs(state.omega) < 0.02 && gap > 0.05) {
+    const landed = settle(m, to.x, to.y, state.theta);
+    if (Math.abs(angleGap(state.rest, landed)) > SNAP_ANGLE) {
+      snaps.push({ x: to.x, y: to.y, from: state.rest, to: landed });
+    }
+    state.rest = landed;
+  }
+  return snaps;
 }
 
 // Run the control point along a polyline from a settled start.
