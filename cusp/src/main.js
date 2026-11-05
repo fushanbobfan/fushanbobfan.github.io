@@ -5,15 +5,18 @@ import { TOUR_NAMES, makeTour } from './tours.js';
 import { driveWheel } from './wheel.js';
 import { decodeState, encodeState } from './share.js';
 import { foldsOnLine, offsetOfLine, positionOnLine, sliceCurve, sweepAlong } from './slice.js';
-import { drawEnergy, drawMachine, drawSlice, fitCanvas, makeView, shadeWells } from './view.js';
+import { DEFAULT_TURN, buildRibs, clampPitch, surfaceBox } from './surface.js';
+import { drawEnergy, drawMachine, drawSlice, drawSurface, fitCanvas, makeView, paintSurface, shadeWells } from './view.js';
 
 const $ = (id) => document.getElementById(id);
 const machineCanvas = $('machine');
 const energyCanvas = $('energy');
 const sliceCanvas = $('slice');
+const surfaceCanvas = $('surface');
 const machineCtx = machineCanvas.getContext('2d');
 const energyCtx = energyCanvas.getContext('2d');
 const sliceCtx = sliceCanvas.getContext('2d');
+const surfaceCtx = surfaceCanvas.getContext('2d');
 
 const HAND_SPEED = 1.6;
 const TOUR_SPEED = 0.55;
@@ -47,12 +50,16 @@ const state = {
   slice: null,
   history: [],
   historyLine: '',
+  surface: { box: null, ribs: [], chains: [], layer: null },
+  turn: { ...DEFAULT_TURN },
+  wheelPath: [],
   dirty: true,
 };
 state.rest = settle(state.machine, state.control.x, state.control.y, state.theta);
 state.theta = state.rest;
 
 let shadeTimer = 0;
+let ribsTimer = 0;
 let ratio = 1;
 
 function refreshWells() {
@@ -70,20 +77,39 @@ function queueShade() {
   }, 90);
 }
 
+function repaintSurface() {
+  state.surface.layer = paintSurface(surfaceCanvas.width, surfaceCanvas.height, ratio, state.surface, state.turn);
+  state.dirty = true;
+}
+
+// The ribs take a moment, so slider drags wait until the hand pauses.
+function queueRibs() {
+  window.clearTimeout(ribsTimer);
+  const chains = state.chains;
+  ribsTimer = window.setTimeout(() => {
+    const box = surfaceBox(chains);
+    state.surface = { box, chains, ribs: buildRibs(state.machine, box), layer: null };
+    repaintSurface();
+  }, 120);
+}
+
 function rebuildSet() {
   state.chains = traceFoldSet(state.machine);
   state.cusps = findCusps(state.machine, state.chains);
   state.view = makeView(machineCanvas, state.machine, state.chains);
   queueShade();
+  queueRibs();
 }
 
 function resize() {
   ratio = fitCanvas(machineCanvas);
   fitCanvas(energyCanvas);
   fitCanvas(sliceCanvas);
+  fitCanvas(surfaceCanvas);
   state.view = makeView(machineCanvas, state.machine, state.chains);
   state.slice = null;
   queueShade();
+  if (state.surface.box) repaintSurface();
   state.dirty = true;
 }
 
@@ -125,6 +151,8 @@ function recordHistory() {
   if (last && Math.abs(last.s - s) < 1e-4 && Math.abs(last.theta - state.theta) < 0.002) return;
   state.history.push({ s, theta: state.theta });
   if (state.history.length > TRAIL_LIMIT) state.history.shift();
+  state.wheelPath.push({ x: state.control.x, y: state.control.y, theta: state.theta });
+  if (state.wheelPath.length > TRAIL_LIMIT) state.wheelPath.shift();
 }
 
 function say(text) {
@@ -262,6 +290,7 @@ function draw() {
   drawEnergy(energyCtx, energyCanvas, ratio, scene);
   scene.slice = { ...state.slice, history: state.history, control: state.control, theta: state.theta };
   drawSlice(sliceCtx, sliceCanvas, ratio, scene);
+  drawSurface(surfaceCtx, surfaceCanvas, ratio, scene);
   updateReadout();
 }
 
@@ -289,8 +318,43 @@ function clearTrail() {
   state.snaps = [];
   state.snapCount = 0;
   state.history = [];
+  state.wheelPath = [];
   state.dirty = true;
 }
+
+function turnSurface(dYaw, dPitch) {
+  state.turn = { yaw: state.turn.yaw + dYaw, pitch: clampPitch(state.turn.pitch + dPitch) };
+  if (state.surface.box) repaintSurface();
+}
+
+let turning = null;
+surfaceCanvas.addEventListener('pointerdown', (event) => {
+  surfaceCanvas.setPointerCapture(event.pointerId);
+  surfaceCanvas.classList.add('dragging');
+  turning = { x: event.clientX, y: event.clientY };
+});
+surfaceCanvas.addEventListener('pointermove', (event) => {
+  if (!turning) return;
+  turnSurface((event.clientX - turning.x) * 0.008, (event.clientY - turning.y) * 0.008);
+  turning = { x: event.clientX, y: event.clientY };
+});
+function endTurn() {
+  surfaceCanvas.classList.remove('dragging');
+  turning = null;
+}
+surfaceCanvas.addEventListener('pointerup', endTurn);
+surfaceCanvas.addEventListener('pointercancel', endTurn);
+surfaceCanvas.addEventListener('dblclick', () => {
+  state.turn = { ...DEFAULT_TURN };
+  if (state.surface.box) repaintSurface();
+});
+surfaceCanvas.addEventListener('keydown', (event) => {
+  const moves = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] };
+  const move = moves[event.key];
+  if (!move) return;
+  event.preventDefault();
+  turnSurface(move[0], move[1]);
+});
 
 function pointerWorld(event) {
   const box = machineCanvas.getBoundingClientRect();
@@ -434,6 +498,7 @@ window.addEventListener('resize', resize);
 ratio = fitCanvas(machineCanvas);
 fitCanvas(energyCanvas);
 fitCanvas(sliceCanvas);
+fitCanvas(surfaceCanvas);
 rebuildSet();
 state.control = clampToView(state.control);
 state.trail.push(state.control);
