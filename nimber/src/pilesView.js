@@ -1,8 +1,9 @@
 // The pile game on the page: stones are buttons, so the board works by keyboard
 // and screen reader. All game rules live in match.js and nim.js.
 
-import { computerMove, createMatch, deal, playMove, takeBack, turningPoints } from './match.js';
-import { blocks, nimSum, oddBlockSizes, winningMoves } from './nim.js';
+import { createMatch, deal } from './match.js';
+import { blocks, nimSum, oddBlockSizes } from './nim.js';
+import { chooseMove, playMove, takeBack, turningPoints, winningMoves } from './turns.js';
 import { formatPiles, parsePiles } from './share.js';
 
 const $ = (id) => document.getElementById(id);
@@ -24,7 +25,7 @@ export function mountPiles() {
     clearTimeout(timer);
     hinted = null;
     match = createMatch(config);
-    cursor = { pile: match.heaps.findIndex((h) => h > 0), stone: 0 };
+    cursor = { pile: match.position.findIndex((h) => h > 0), stone: 0 };
     render();
     scheduleComputer();
   }
@@ -46,7 +47,7 @@ export function mountPiles() {
   function scheduleComputer() {
     if (match.winner || match.turn !== 'computer') return;
     timer = setTimeout(() => {
-      const move = computerMove(match.heaps, { misere: match.misere, skill: skill() });
+      const move = chooseMove(match.rules, match.position, { skill: skill() });
       document.querySelectorAll(`.stone[data-pile="${move.heap}"]`).forEach((el) => {
         if (Number(el.dataset.stone) >= move.to) el.classList.add('leaving');
       });
@@ -79,8 +80,8 @@ export function mountPiles() {
     const stoneHeight = window.matchMedia('(max-width: 800px)').matches ? 21 : 27;
     root.style.minHeight = `${Math.max(...match.start) * stoneHeight + 100}px`;
     const yourTurn = match.turn === 'you' && !match.winner;
-    const odd = oddBlockSizes(match.heaps);
-    match.heaps.forEach((size, pile) => {
+    const odd = oddBlockSizes(match.position);
+    match.position.forEach((size, pile) => {
       const column = document.createElement('div');
       column.className = 'pile';
       const stack = document.createElement('div');
@@ -127,8 +128,8 @@ export function mountPiles() {
     const wrap = $('table-wrap');
     wrap.hidden = !$('show-table').checked;
     if (wrap.hidden) return;
-    const sum = nimSum(match.heaps);
-    const rows = match.heaps.map((size, i) => `
+    const sum = nimSum(match.position);
+    const rows = match.position.map((size, i) => `
       <tr><th scope="row">Pile ${i + 1}: ${size}</th>${COLUMNS.map((c) => `<td class="${size & c ? '' : 'off'}">${size & c ? 1 : 0}</td>`).join('')}</tr>`);
     wrap.innerHTML = `
       <table class="binary">
@@ -150,13 +151,15 @@ export function mountPiles() {
     return `Your move. ${goal} Pick a stone: it and every stone above it leave the pile.`;
   }
 
+  const moveText = ({ move, before }) => `pile ${move.heap + 1}, ${before[move.heap]} to ${move.to}`;
+
   function renderLog() {
     const log = $('log');
     log.replaceChildren();
     for (const entry of match.history) {
       const li = document.createElement('li');
       const name = entry.who === 'you' ? 'You' : 'Computer';
-      li.textContent = `${name}: pile ${entry.heap + 1}, ${entry.from} to ${entry.to}`;
+      li.textContent = `${name}: ${moveText(entry)}`;
       if (match.winner && entry.quality === 'slip') {
         li.className = 'slip';
         li.textContent += ' (gave the game away)';
@@ -176,7 +179,7 @@ export function mountPiles() {
     }
     const last = turns[turns.length - 1];
     const name = last.who === 'you' ? 'your' : "the computer's";
-    return `The game last changed hands on ${name} move in pile ${last.heap + 1}, ${last.from} to ${last.to}.`;
+    return `The game last changed hands on ${name} move: ${moveText(last)}.`;
   }
 
   function render() {
@@ -190,10 +193,10 @@ export function mountPiles() {
   }
 
   function showHint() {
-    const good = winningMoves(match.heaps, match.misere);
+    const good = winningMoves(match.rules, match.position);
     if (good.length) {
       hinted = good[0];
-      const taken = match.heaps[hinted.heap] - hinted.to;
+      const taken = match.position[hinted.heap] - hinted.to;
       $('status').textContent = `Take ${taken} from pile ${hinted.heap + 1}, leaving ${hinted.to}.`;
     } else {
       hinted = null;
@@ -212,7 +215,7 @@ export function mountPiles() {
   }
 
   function moveCursor(key) {
-    const nonEmpty = match.heaps.map((h, i) => (h > 0 ? i : -1)).filter((i) => i >= 0);
+    const nonEmpty = match.position.map((h, i) => (h > 0 ? i : -1)).filter((i) => i >= 0);
     const at = nonEmpty.indexOf(cursor.pile);
     if (key === 'ArrowLeft' || key === 'ArrowRight') {
       const step = key === 'ArrowLeft' ? -1 : 1;
@@ -220,7 +223,7 @@ export function mountPiles() {
     } else {
       cursor.stone += key === 'ArrowUp' ? 1 : -1;
     }
-    cursor.stone = Math.max(0, Math.min(match.heaps[cursor.pile] - 1, cursor.stone));
+    cursor.stone = Math.max(0, Math.min(match.position[cursor.pile] - 1, cursor.stone));
     focusAfterRender = true;
     renderPiles();
   }
@@ -229,7 +232,7 @@ export function mountPiles() {
     const el = event.target.closest('.stone');
     if (!el || el.disabled) return;
     const move = { heap: Number(el.dataset.pile), to: Number(el.dataset.stone) };
-    const remaining = match.heaps.map((h, i) => (i === move.heap ? move.to : h));
+    const remaining = match.position.map((h, i) => (i === move.heap ? move.to : h));
     const next = remaining.findIndex((h) => h > 0);
     cursor = {
       pile: remaining[cursor.pile] > 0 ? cursor.pile : Math.max(next, 0),
@@ -256,7 +259,7 @@ export function mountPiles() {
     const rewound = takeBack(match);
     if (match.winner) score[match.winner] -= 1;
     match = rewound;
-    cursor = { pile: match.heaps.findIndex((h) => h > 0), stone: 0 };
+    cursor = { pile: match.position.findIndex((h) => h > 0), stone: 0 };
     render();
     scheduleComputer();
   });

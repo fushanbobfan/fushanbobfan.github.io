@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computerMove, createMatch, deal, playMove, takeBack, turningPoints } from '../src/match.js';
+import { createMatch, deal, nimRules } from '../src/match.js';
+import { chooseMove, judgeMove, playMove, takeBack, turningPoints } from '../src/turns.js';
 import { isWinning, legalMoves } from '../src/nim.js';
 import { seededRandom } from '../src/rng.js';
 
 function playout(heaps, misere, first, you, computer) {
   let match = createMatch({ heaps, misere, first });
   while (!match.winner) {
-    const move = match.turn === 'you' ? you(match.heaps) : computer(match.heaps);
+    const move = match.turn === 'you' ? you(match.position) : computer(match.position);
     match = playMove(match, move);
   }
   return match;
@@ -25,7 +26,7 @@ for (const misere of [false, true]) {
         const moves = legalMoves(h);
         return moves[Math.floor(rng() * moves.length)];
       };
-      const match = playout(heaps, misere, 'computer', random, (h) => computerMove(h, { misere, rng }));
+      const match = playout(heaps, misere, 'computer', random, (h) => chooseMove(nimRules(misere), h, { rng }));
       assert.equal(match.winner, 'computer', heaps.join(','));
       games++;
     }
@@ -36,7 +37,7 @@ for (const misere of [false, true]) {
     const rng = seededRandom(11);
     for (let i = 0; i < 200; i++) {
       const heaps = deal(rng, { piles: 2 + (i % 4), largest: 3 + (i % 11), kind: 'losing', misere });
-      const perfect = (h) => computerMove(h, { misere, rng });
+      const perfect = (h) => chooseMove(nimRules(misere), h, { rng });
       const match = playout(heaps, misere, 'computer', perfect, perfect);
       assert.equal(match.winner, 'you', heaps.join(','));
       assert.equal(turningPoints(match).length, 0);
@@ -63,7 +64,7 @@ test('taking back rewinds your move and the reply to it', () => {
   match = playMove(match, { heap: 0, to: 1 });
   match = playMove(match, { heap: 1, to: 0 });
   const back = takeBack(match);
-  assert.deepEqual(back.heaps, [3, 4, 5]);
+  assert.deepEqual(back.position, [3, 4, 5]);
   assert.equal(back.turn, 'you');
   assert.equal(back.history.length, 0);
 });
@@ -73,7 +74,7 @@ test('taking back when the computer opened keeps its opening move', () => {
   match = playMove(match, { heap: 0, to: 1 });
   match = playMove(match, { heap: 1, to: 2 });
   const back = takeBack(match);
-  assert.deepEqual(back.heaps, [1, 4, 5]);
+  assert.deepEqual(back.position, [1, 4, 5]);
   assert.equal(back.turn, 'you');
   assert.equal(takeBack(back), back);
 });
@@ -88,7 +89,7 @@ test('a weak computer slips, and those slips are the turning points', () => {
   const rng = seededRandom(3);
   let slips = 0;
   for (let i = 0; i < 300; i++) {
-    const move = computerMove([3, 4, 5], { skill: 0, rng });
+    const move = chooseMove(nimRules(), [3, 4, 5], { skill: 0, rng });
     if (isWinning([3, 4, 5].map((h, j) => (j === move.heap ? move.to : h)))) slips++;
   }
   assert.equal(slips, 300);
@@ -112,4 +113,11 @@ test('a dealt position has the requested outcome and shape', () => {
       }
     }
   }
+});
+
+test('judging a move', () => {
+  const rules = nimRules();
+  assert.equal(judgeMove(rules, [3, 4, 5], { heap: 0, to: 1 }), 'good');
+  assert.equal(judgeMove(rules, [3, 4, 5], { heap: 2, to: 0 }), 'slip');
+  assert.equal(judgeMove(rules, [1, 2, 3], { heap: 0, to: 0 }), 'lost');
 });
