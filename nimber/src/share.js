@@ -22,6 +22,25 @@ export function parseRows(hash) {
   return { game, length, first: p.get('c') === '1' ? 'computer' : 'you' };
 }
 
+// A queen game as a link: #q=9,13&s=16&c=1.
+export function formatQueen({ square, size, first }) {
+  const p = new URLSearchParams();
+  p.set('q', square.join(','));
+  p.set('s', size);
+  if (first === 'computer') p.set('c', '1');
+  return p.toString().replaceAll('%2C', ',');
+}
+
+export function parseQueen(hash) {
+  const p = new URLSearchParams(hash.replace(/^#/, ''));
+  const raw = p.get('q');
+  const size = Number(p.get('s'));
+  if (!raw || !/^\d+,\d+$/.test(raw) || !Number.isInteger(size) || size < 8 || size > 24) return null;
+  const square = raw.split(',').map(Number);
+  if (square.some((c) => c >= size) || (square[0] === 0 && square[1] === 0)) return null;
+  return { square, size, first: p.get('c') === '1' ? 'computer' : 'you' };
+}
+
 export function formatPiles({ heaps, misere, first }) {
   const p = new URLSearchParams();
   p.set('h', heaps.join(','));
