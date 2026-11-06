@@ -3,6 +3,25 @@
 export const MAX_PILES = 6;
 export const MAX_STONES = 15;
 
+const ROW_GAMES = ['kayles', 'dawson', 'chess', 'officers'];
+
+// A row game as a link: #r=kayles&n=13&c=1.
+export function formatRows({ game, length, first }) {
+  const p = new URLSearchParams();
+  p.set('r', game);
+  p.set('n', length);
+  if (first === 'computer') p.set('c', '1');
+  return p.toString();
+}
+
+export function parseRows(hash) {
+  const p = new URLSearchParams(hash.replace(/^#/, ''));
+  const game = p.get('r');
+  const length = Number(p.get('n'));
+  if (!ROW_GAMES.includes(game) || !Number.isInteger(length) || length < 2 || length > 36) return null;
+  return { game, length, first: p.get('c') === '1' ? 'computer' : 'you' };
+}
+
 export function formatPiles({ heaps, misere, first }) {
   const p = new URLSearchParams();
   p.set('h', heaps.join(','));

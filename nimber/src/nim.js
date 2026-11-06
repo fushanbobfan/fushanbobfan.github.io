@@ -44,10 +44,3 @@ export function blocks(size) {
 export function oddBlockSizes(heaps) {
   return blocks(nimSum(heaps));
 }
-
-// 'good' keeps a won position won, 'slip' throws it away,
-// 'lost' is any move from a position that was already lost.
-export function judgeMove(heaps, move, misere = false) {
-  if (!isWinning(heaps, misere)) return 'lost';
-  return isWinning(applyMove(heaps, move), misere) ? 'slip' : 'good';
-}

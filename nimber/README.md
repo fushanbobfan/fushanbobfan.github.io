@@ -1,9 +1,9 @@
 # nimber
 
-Two players take turns removing stones from one pile at a time, and whoever
-takes the last stone wins. Play it against a computer that never slips, then
-colour the stones by block and see the rule it follows: hand over a position
-where every block size appears an even number of times.
+Two players take turns, and whoever cannot move loses. Play Nim and the
+Kayles family of pin games against a computer that never slips, and see the
+number hidden in every position: each run of pins plays exactly like a Nim pile
+of a certain size, and a table of those sizes settles the game for every length.
 
 **Live demo:** https://fushanbobfan.github.io/nimber/
 
@@ -37,6 +37,17 @@ Run the tests with `npm test` (Node 20 or later).
   the time.
 - **Copy link** shares the starting position, the rule and who moved first.
 
+## Rows
+
+- Four games on a row of pins: Kayles (octal code 0.77), Dawson's Kayles (0.07),
+  Dawson's Chess (0.137) and Officers (0.6). Pins and the gaps between them are
+  buttons; each game's rule is written above the board.
+- **Show each run as a Nim pile** replaces the row's runs with their nimbers and
+  gives the nim-sum.
+- The wall below the board shows the nimber of every run length. Set the cells
+  per line to a game's period and the repeating part falls into straight
+  columns, with the exceptions marked. Clicking a cell sets up a row of that length.
+
 ## How it is checked
 
 - `src/nim.js` decides positions by Bouton's rule. The tests compare that
@@ -45,11 +56,23 @@ Run the tests with `npm test` (Node 20 or later).
 - `src/match.js` plays a whole game as plain data. The tests play it out: the
   computer wins all 400 dealt positions it holds as won against a random
   opponent, in both rules, and loses every position lost for it to perfect play.
+- `src/octal.js` computes nimbers from the digits of the octal code. The tests
+  match the values and exceptions listed in OEIS A002186 (Kayles) and A002187
+  (Dawson's Chess, whose shift is Dawson's Kayles), and the first Officers values in
+  Flammenkamp's table. For every position of a 12-pin row, the nimbers agree with
+  exhaustive search, and every legal move can be made by a click.
+- `provePeriod` applies Guy and Smith's test to the table: 71 and 12 for Kayles,
+  52 and 34 for Dawson's Chess, 53 and 34 for Dawson's Kayles, nothing through 1500
+  for Officers.
 
 ## References
 
 - C. L. Bouton, "Nim, a game with a complete mathematical theory", *Annals of
   Mathematics*, 1901.
+- R. K. Guy and C. A. B. Smith, "The G-values of various games", *Proc. Cambridge
+  Philos. Soc.* 52, 1956.
+- A. Flammenkamp, tables of octal games:
+  https://wwwhomes.uni-bielefeld.de/achim/octal.html
 
 ## License
 

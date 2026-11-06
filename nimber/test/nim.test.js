@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  applyMove, blocks, isWinning, judgeMove, legalMoves, nimSum, oddBlockSizes, winningMoves,
+  applyMove, blocks, isWinning, legalMoves, nimSum, oddBlockSizes, winningMoves,
 } from '../src/nim.js';
 
 function searchWins(heaps, misere, memo = new Map()) {
@@ -86,10 +86,4 @@ test('misère differs only in positions where every pile is at most 1', () => {
   }
   assert.equal(isWinning([1, 1, 1], true), false);
   assert.equal(isWinning([1, 1], true), true);
-});
-
-test('judging a move', () => {
-  assert.equal(judgeMove([3, 4, 5], { heap: 0, to: 1 }), 'good');
-  assert.equal(judgeMove([3, 4, 5], { heap: 2, to: 0 }), 'slip');
-  assert.equal(judgeMove([1, 2, 3], { heap: 0, to: 0 }), 'lost');
 });

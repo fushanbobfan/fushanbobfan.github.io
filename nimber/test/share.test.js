@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatPiles, parsePiles } from '../src/share.js';
+import { formatPiles, formatRows, parsePiles, parseRows } from '../src/share.js';
+
+test('a row game survives a round trip through its link', () => {
+  const game = { game: 'chess', length: 21, first: 'computer' };
+  assert.equal(formatRows(game), 'r=chess&n=21&c=1');
+  assert.deepEqual(parseRows(`#${formatRows(game)}`), game);
+});
+
+test('bad row links are ignored', () => {
+  for (const hash of ['', '#r=kayles', '#r=nope&n=5', '#r=kayles&n=1', '#r=kayles&n=99', '#r=kayles&n=x']) {
+    assert.equal(parseRows(hash), null, hash);
+  }
+});
 
 test('a pile game survives a round trip through its link', () => {
   for (const game of [
