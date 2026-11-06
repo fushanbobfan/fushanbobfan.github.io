@@ -3,18 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>nimber: play Nim and see why it is solved</title>
-  <meta name="description" content="Play Nim against a computer that never slips, and see why the balance of the piles decides every game.">
+  <title>nimber: games that are secretly Nim</title>
+  <meta name="description" content="Play Nim and Kayles against a computer that never slips, and see the number hidden in every position.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="masthead">
     <h1>nimber</h1>
-    <p>Two players take turns removing stones from one pile at a time. It looks like a game of nerve. Every position has already been decided, and you can learn to read the verdict.</p>
+    <p>Two players take turns, and whoever cannot move loses. These games look like contests of nerve. Every position has already been decided, and you can learn to read the verdict.</p>
+    <nav class="tabs" aria-label="Games">
+      <button type="button" data-tab="piles">Piles</button>
+      <button type="button" data-tab="rows">Rows</button>
+    </nav>
   </header>
 
   <main>
+    <div id="tab-piles" data-panel="piles">
     <section class="game" aria-labelledby="piles-title">
       <div class="board-column">
         <h2 id="piles-title" class="visually-hidden">Piles</h2>
@@ -85,6 +90,83 @@
         <p>The misère game, where the last stone loses, needs one change. Play the same way until your move would leave only single stones, then leave an odd number of them. While any pile holds two or more stones, the two games agree on who is winning.</p>
       </div>
     </section>
+    </div>
+
+    <div id="tab-rows" data-panel="rows" hidden>
+    <section class="game" aria-labelledby="rows-title">
+      <div class="board-column">
+        <h2 id="rows-title" class="visually-hidden">Rows</h2>
+        <p id="row-rule" class="row-rule"></p>
+        <p id="row-status" class="status" role="status" aria-live="polite"></p>
+        <div id="row-board" class="row-board" role="group" aria-label="Row of pins"></div>
+        <div class="actions">
+          <button id="row-new" type="button" class="primary">New game</button>
+          <button id="row-hint" type="button">Hint</button>
+          <button id="row-back" type="button">Take back</button>
+          <button id="row-copy" type="button">Copy link</button>
+          <span id="row-score" class="score"></span>
+        </div>
+        <div class="reveal">
+          <label><input id="row-show-values" type="checkbox"> Show each run as a Nim pile</label>
+        </div>
+        <div id="row-values" class="row-values" hidden></div>
+      </div>
+
+      <aside class="side-column">
+        <h3>Next game</h3>
+        <div class="field">
+          <label for="row-game">Game</label>
+          <select id="row-game">
+            <option value="kayles">Kayles (0.77)</option>
+            <option value="dawson">Dawson's Kayles (0.07)</option>
+            <option value="chess">Dawson's Chess (0.137)</option>
+            <option value="officers">Officers (0.6)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="row-length">Pins <output id="row-length-out"></output></label>
+          <input id="row-length" type="range" min="2" max="36" value="13">
+        </div>
+        <div class="field">
+          <label for="row-skill">Computer</label>
+          <select id="row-skill">
+            <option value="1">Never slips</option>
+            <option value="0.6">Sometimes slips</option>
+            <option value="0.2">Mostly guesses</option>
+          </select>
+        </div>
+        <label class="check"><input id="row-computer-first" type="checkbox"> Computer moves first</label>
+
+        <h3>Moves</h3>
+        <ol id="row-log" class="log"></ol>
+        <p id="row-verdict" class="verdict"></p>
+      </aside>
+    </section>
+
+    <section class="wall-section" aria-labelledby="wall-title">
+      <h2 id="wall-title">What a run of each length is worth</h2>
+      <p id="wall-proof" class="wall-proof"></p>
+      <canvas id="wall" class="wall" tabindex="-1" aria-describedby="wall-proof"></canvas>
+      <div class="wall-controls">
+        <div class="field">
+          <label for="wall-wrap">Cells per line <output id="wall-wrap-out"></output></label>
+          <input id="wall-wrap" type="range" min="1" max="60" value="12">
+        </div>
+        <p id="wall-readout" class="wall-readout" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="notes">
+      <h2>Why a row is a pile in disguise</h2>
+      <div class="note-columns">
+        <p>A run of pins can be swapped for one Nim pile without changing who wins any game it is part of. Roland Sprague and Patrick Grundy proved this independently in the 1930s, for every game of this kind. The size of that pile is the run's <em>nimber</em>.</p>
+        <p>To find it, list the values a move can reach and take the smallest one missing. In Kayles, a run of 4 can become 3 pins (worth 3), 1 and 2 (worth 1 and 2, nim-sum 3), 2 pins (worth 2), or 1 and 1 (nim-sum 0). The values 0, 2 and 3 are reachable and 1 is missing, so the run of 4 is worth 1.</p>
+        <p>A move splits one run into two, so a row is a sum of separate games. Its value is the nim-sum of its runs, and a move wins exactly when it brings that sum to zero, the same rule as in Piles.</p>
+        <p>Kayles is Henry Dudeney's puzzle of 1908, and Richard Guy and Cedric Smith worked out its values in 1956. Its opening player always has a win: fell the middle pin or the middle two, then mirror every reply. Their periodicity test shows why a finite table can settle the game for all lengths: once the values repeat for long enough, each new value only depends on values that already repeat.</p>
+        <p>Officers gets no such certificate here. Set the wall to any width you like: Achim Flammenkamp's tables of octal games, computed far past this page, list no period for it, and whether every game of this family eventually repeats is an open question.</p>
+      </div>
+    </section>
+    </div>
   </main>
 
   <footer class="colophon">
