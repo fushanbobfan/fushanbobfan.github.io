@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nimber: play Nim and see why it is solved</title>
+  <meta name="description" content="Play Nim against a computer that never slips, and see why the balance of the piles decides every game.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>nimber</h1>
+    <p>Two players take turns removing stones from one pile at a time. It looks like a game of nerve. Every position has already been decided, and you can learn to read the verdict.</p>
+  </header>
+
+  <main>
+    <section class="game" aria-labelledby="piles-title">
+      <div class="board-column">
+        <h2 id="piles-title" class="visually-hidden">Piles</h2>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+        <div id="piles" class="piles" role="group" aria-label="Piles of stones"></div>
+        <div class="actions">
+          <button id="new-game" type="button" class="primary">New game</button>
+          <button id="hint" type="button">Hint</button>
+          <button id="take-back" type="button">Take back</button>
+          <button id="copy-link" type="button">Copy link</button>
+          <span id="score" class="score"></span>
+        </div>
+        <div class="reveal">
+          <label><input id="show-blocks" type="checkbox"> Colour stones by block</label>
+          <label><input id="show-table" type="checkbox"> Show the binary table</label>
+        </div>
+        <div id="table-wrap" class="table-wrap" hidden></div>
+      </div>
+
+      <aside class="side-column">
+        <h3>Next game</h3>
+        <div class="field">
+          <label for="position">Position</label>
+          <select id="position">
+            <option value="classic">Classic 3, 4, 5</option>
+            <option value="any">Random</option>
+            <option value="winning">Won for whoever moves first</option>
+            <option value="losing">Lost for whoever moves first</option>
+          </select>
+        </div>
+        <div class="field" data-random>
+          <label for="pile-count">Piles <output id="pile-count-out"></output></label>
+          <input id="pile-count" type="range" min="2" max="6" value="4">
+        </div>
+        <div class="field" data-random>
+          <label for="largest">Largest pile <output id="largest-out"></output></label>
+          <input id="largest" type="range" min="3" max="15" value="9">
+        </div>
+        <div class="field">
+          <label for="rule">Last stone</label>
+          <select id="rule">
+            <option value="normal">Wins the game</option>
+            <option value="misere">Loses the game (misère)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="skill">Computer</label>
+          <select id="skill">
+            <option value="1">Never slips</option>
+            <option value="0.6">Sometimes slips</option>
+            <option value="0.2">Mostly guesses</option>
+          </select>
+        </div>
+        <label class="check"><input id="computer-first" type="checkbox"> Computer moves first</label>
+
+        <h3>Moves</h3>
+        <ol id="log" class="log"></ol>
+        <p id="verdict" class="verdict"></p>
+      </aside>
+    </section>
+
+    <section class="notes">
+      <h2>Reading the piles</h2>
+      <div class="note-columns">
+        <p>Write each pile as a sum of blocks of 8, 4, 2 and 1 stones. Call the position <em>balanced</em> when every block size appears an even number of times. The position 1, 4, 5 is balanced: 5 is 4 + 1, so there are two 4s and two 1s.</p>
+        <p>Balance is the whole game. A move changes one pile only, so it always breaks a balanced position: the blocks of that pile change, and nothing else moves to make up for it. An unbalanced position can always be repaired. Find the largest block size held an odd number of times, pick a pile holding it, and rebuild that pile so every odd size flips. Removing that large block frees enough room for the smaller ones.</p>
+        <p>The empty board is balanced. So whoever hands over a balanced position every turn takes the last stone. C. L. Bouton published this complete solution in 1901. Adding piles without carrying, which is what the table does, is now called the <em>nim-sum</em>.</p>
+        <p>The misère game, where the last stone loses, needs one change. Play the same way until your move would leave only single stones, then leave an odd number of them. While any pile holds two or more stones, the two games agree on who is winning.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/nimber">Source</a>
+    <a href="../">More explorables</a>
+  </footer>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
