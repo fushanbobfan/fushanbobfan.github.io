@@ -1,7 +1,7 @@
 {
   "name": "nimber",
   "version": "0.1.0",
-  "description": "Play Nim against a computer that never slips, and see why the balance of its piles decides every game.",
+  "description": "Play Nim and Kayles against a computer that never slips, and see the number hidden in every position.",
   "type": "module",
   "scripts": {
     "test": "node --test",
