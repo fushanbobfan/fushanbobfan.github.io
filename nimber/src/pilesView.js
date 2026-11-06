@@ -2,8 +2,9 @@
 // and screen reader. All game rules live in match.js and nim.js.
 
 import { createMatch, deal } from './match.js';
+import { renderMoves } from './movesLog.js';
 import { blocks, nimSum, oddBlockSizes } from './nim.js';
-import { chooseMove, playMove, takeBack, turningPoints, winningMoves } from './turns.js';
+import { chooseMove, playMove, takeBack, winningMoves } from './turns.js';
 import { formatPiles, parsePiles } from './share.js';
 
 const $ = (id) => document.getElementById(id);
@@ -153,39 +154,10 @@ export function mountPiles() {
 
   const moveText = ({ move, before }) => `pile ${move.heap + 1}, ${before[move.heap]} to ${move.to}`;
 
-  function renderLog() {
-    const log = $('log');
-    log.replaceChildren();
-    for (const entry of match.history) {
-      const li = document.createElement('li');
-      const name = entry.who === 'you' ? 'You' : 'Computer';
-      li.textContent = `${name}: ${moveText(entry)}`;
-      if (match.winner && entry.quality === 'slip') {
-        li.className = 'slip';
-        li.textContent += ' (gave the game away)';
-      }
-      log.append(li);
-    }
-    log.scrollTop = log.scrollHeight;
-    $('verdict').textContent = match.winner ? verdictText() : '';
-  }
-
-  function verdictText() {
-    const turns = turningPoints(match);
-    if (!turns.length) {
-      const opener = match.first === 'you' ? 'You' : 'The computer';
-      const won = match.winner === match.first;
-      return `${opener} moved first from a position that was ${won ? 'won' : 'lost'} from the start, and nobody slipped.`;
-    }
-    const last = turns[turns.length - 1];
-    const name = last.who === 'you' ? 'your' : "the computer's";
-    return `The game last changed hands on ${name} move: ${moveText(last)}.`;
-  }
-
   function render() {
     renderPiles();
     renderTable();
-    renderLog();
+    renderMoves($('log'), $('verdict'), match, moveText, 'position');
     $('status').textContent = statusText();
     $('score').textContent = `You ${score.you} · Computer ${score.computer}`;
     $('hint').disabled = match.turn !== 'you' || Boolean(match.winner);
