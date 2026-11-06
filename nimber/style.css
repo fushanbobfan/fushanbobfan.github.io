@@ -307,6 +307,28 @@ button, select, input { font: inherit; color: inherit; }
 .wall-controls .field { flex: 0 1 260px; margin: 0; }
 .wall-readout { margin: 0; min-height: 1.5em; font-variant-numeric: lining-nums tabular-nums; }
 
+.queen-board {
+  display: block;
+  max-width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  touch-action: manipulation;
+}
+
+.queen-board:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+#queen-board { cursor: pointer; }
+.reveal select, .heat-controls select { padding: 3px; margin-left: 6px; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; }
+.sieve-layout { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.sieve-side { flex: 1 1 260px; max-width: 360px; }
+.plain-button { padding: 6px 13px; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; cursor: pointer; }
+.plain-button:disabled { opacity: 0.5; cursor: default; }
+.sieve-table { margin-top: 12px; width: 100%; }
+.sieve-table tr.latest td { font-weight: 700; color: var(--accent); }
+.sieve-table td { padding: 1px 8px; }
+.heat-controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin-bottom: 10px; }
+.heat { display: block; width: min(100%, 512px); height: auto; image-rendering: pixelated; cursor: crosshair; }
+
 .side-column h3 { margin: 0 0 8px; font-size: 1.02rem; }
 .side-column h3:not(:first-child) { margin-top: 20px; }
 
