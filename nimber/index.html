@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>nimber: games that are secretly Nim</title>
-  <meta name="description" content="Play Nim and Kayles against a computer that never slips, and see the number hidden in every position.">
+  <meta name="description" content="Play Nim, Kayles and Wythoff's queen against a computer that never slips, and see the number hidden in every position.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,6 +15,7 @@
     <nav class="tabs" aria-label="Games">
       <button type="button" data-tab="piles">Piles</button>
       <button type="button" data-tab="rows">Rows</button>
+      <button type="button" data-tab="queen">Queen</button>
     </nav>
   </header>
 
@@ -164,6 +165,107 @@
         <p>A move splits one run into two, so a row is a sum of separate games. Its value is the nim-sum of its runs, and a move wins exactly when it brings that sum to zero, the same rule as in Piles.</p>
         <p>Kayles is Henry Dudeney's puzzle of 1908, and Richard Guy and Cedric Smith worked out its values in 1956. Its opening player always has a win: fell the middle pin or the middle two, then mirror every reply. Their periodicity test shows why a finite table can settle the game for all lengths: once the values repeat for long enough, each new value only depends on values that already repeat.</p>
         <p>Officers gets no such certificate here. Set the wall to any width you like: Achim Flammenkamp's tables of octal games, computed far past this page, list no period for it, and whether every game of this family eventually repeats is an open question.</p>
+      </div>
+    </section>
+    </div>
+    <div id="tab-queen" data-panel="queen" hidden>
+    <section class="game" aria-labelledby="queen-title">
+      <div class="board-column">
+        <h2 id="queen-title" class="visually-hidden">Queen</h2>
+        <p class="row-rule">Move the queen left, down, or diagonally down and left, as far as you like. Whoever reaches the corner wins.</p>
+        <p id="queen-status" class="status" role="status" aria-live="polite"></p>
+        <canvas id="queen-board" class="queen-board" tabindex="0" aria-label="Board. Arrow keys choose a square, Enter moves the queen there."></canvas>
+        <p id="queen-cursor" class="visually-hidden" aria-live="polite"></p>
+        <div class="actions">
+          <button id="queen-new" type="button" class="primary">New game</button>
+          <button id="queen-hint" type="button">Hint</button>
+          <button id="queen-back" type="button">Take back</button>
+          <button id="queen-copy" type="button">Copy link</button>
+          <span id="queen-score" class="score"></span>
+        </div>
+        <div class="reveal">
+          <label>On the board
+            <select id="queen-reveal">
+              <option value="none">Nothing extra</option>
+              <option value="cold">Cold squares</option>
+              <option value="nimbers">Nimbers</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <aside class="side-column">
+        <h3>Next game</h3>
+        <div class="field">
+          <label for="queen-position">Queen starts</label>
+          <select id="queen-position">
+            <option value="any">Anywhere</option>
+            <option value="winning">Won for whoever moves first</option>
+            <option value="losing">Lost for whoever moves first</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="queen-size">Board <output id="queen-size-out"></output></label>
+          <input id="queen-size" type="range" min="8" max="24" value="16">
+        </div>
+        <div class="field">
+          <label for="queen-skill">Computer</label>
+          <select id="queen-skill">
+            <option value="1">Never slips</option>
+            <option value="0.6">Sometimes slips</option>
+            <option value="0.2">Mostly guesses</option>
+          </select>
+        </div>
+        <label class="check"><input id="queen-computer-first" type="checkbox"> Computer moves first</label>
+
+        <h3>Moves</h3>
+        <ol id="queen-log" class="log"></ol>
+        <p id="queen-verdict" class="verdict"></p>
+      </aside>
+    </section>
+
+    <section class="wall-section" aria-labelledby="sieve-title">
+      <h2 id="sieve-title">Finding the cold squares by hand</h2>
+      <p id="sieve-note" class="wall-proof" aria-live="polite"></p>
+      <div class="sieve-layout">
+        <canvas id="sieve" class="queen-board"></canvas>
+        <div class="sieve-side">
+          <div class="field">
+            <label for="sieve-step">Cold squares found <output id="sieve-step-out"></output></label>
+            <input id="sieve-step" type="range" min="0" value="3">
+          </div>
+          <button id="sieve-next" type="button" class="plain-button">Next square</button>
+          <table id="sieve-table" class="binary sieve-table">
+            <caption class="visually-hidden">Cold squares and the ratio of each smaller coordinate to its number</caption>
+            <thead><tr><th scope="col">k</th><th scope="col">Column</th><th scope="col">Row</th><th scope="col">Column / k</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="wall-section" aria-labelledby="heat-title">
+      <h2 id="heat-title">Every nimber at once</h2>
+      <p class="wall-proof">Each pixel is one square of a board with 256 squares on a side, the corner at the top left. Black pixels are worth 0. Nim's table is Wythoff's table with the diagonal move taken away.</p>
+      <div class="heat-controls">
+        <label>Show
+          <select id="heat-kind">
+            <option value="wythoff">Queen (Wythoff)</option>
+            <option value="nim">Two Nim piles (no diagonal)</option>
+          </select>
+        </label>
+        <span id="heat-readout" class="wall-readout"></span>
+      </div>
+      <canvas id="heat" class="heat" width="256" height="256" aria-label="Map of the nimbers of every square"></canvas>
+    </section>
+
+    <section class="notes">
+      <h2>The golden ratio in a game of stones</h2>
+      <div class="note-columns">
+        <p>The queen's two coordinates are two piles of stones. Moving left or down takes from one pile, and moving diagonally takes the same number from both. W. A. Wythoff published the solution in 1907.</p>
+        <p>Call a square <em>cold</em> if whoever must move from it loses. The corner is cold. Every square that can reach a cold square in one move is hot. The first square left over is cold again, and it rules out its own row, column and diagonal. So each column, row and diagonal holds exactly one cold square.</p>
+        <p>The rule is simple, and its result is exact: the k-th cold square has a smaller coordinate of &lfloor;k&phi;&rfloor; and a larger one of &lfloor;k&phi;&sup2;&rfloor;, which is the smaller plus k, where &phi; is the golden ratio. Since 1/&phi; + 1/&phi;&sup2; = 1, these two sequences together use every positive whole number exactly once, which is what the columns and rows above needed.</p>
+        <p>Cold squares are the squares worth 0. Every other value comes from the same smallest-missing rule as in Rows, and the map above shows how much that one extra diagonal move disturbs Nim's tidy squares.</p>
       </div>
     </section>
     </div>

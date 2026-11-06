@@ -4,8 +4,9 @@
 import {
   freshRow, GAMES, gapMove, pinMove, provePeriod, rowRules, rowValue, runsOf, tableFor,
 } from './octal.js';
+import { renderMoves } from './movesLog.js';
 import { formatRows } from './share.js';
-import { chooseMove, createGame, playMove, takeBack, turningPoints, winningMoves } from './turns.js';
+import { chooseMove, createGame, playMove, takeBack, winningMoves } from './turns.js';
 import { drawWall, wallCellAt } from './wall.js';
 
 const $ = (id) => document.getElementById(id);
@@ -143,38 +144,11 @@ export function mountRows() {
     return 'Your move. Whoever has no move left loses.';
   }
 
-  function renderLog() {
-    const log = $('row-log');
-    log.replaceChildren();
-    for (const entry of game.history) {
-      const li = document.createElement('li');
-      li.textContent = `${entry.who === 'you' ? 'You' : 'Computer'}: ${moveText(entry.move)}`;
-      if (game.winner && entry.quality === 'slip') {
-        li.className = 'slip';
-        li.textContent += ' (gave the game away)';
-      }
-      log.append(li);
-    }
-    log.scrollTop = log.scrollHeight;
-    if (!game.winner) {
-      $('row-verdict').textContent = '';
-      return;
-    }
-    const turns = turningPoints(game);
-    if (turns.length) {
-      const last = turns[turns.length - 1];
-      $('row-verdict').textContent = `The game last changed hands on ${last.who === 'you' ? 'your' : "the computer's"} move: ${moveText(last.move)}.`;
-    } else {
-      const opener = game.first === 'you' ? 'You' : 'The computer';
-      $('row-verdict').textContent = `${opener} moved first from a row that was ${game.winner === game.first ? 'won' : 'lost'} from the start, and nobody slipped.`;
-    }
-  }
-
   function render() {
     $('row-rule').textContent = GAMES[key].rule;
     renderBoard();
     renderValues();
-    renderLog();
+    renderMoves($('row-log'), $('row-verdict'), game, ({ move }) => moveText(move), 'row');
     $('row-status').textContent = statusText();
     $('row-score').textContent = `You ${score.you} · Computer ${score.computer}`;
     $('row-hint').disabled = game.turn !== 'you' || Boolean(game.winner);

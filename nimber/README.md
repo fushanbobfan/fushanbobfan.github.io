@@ -1,9 +1,10 @@
 # nimber
 
-Two players take turns, and whoever cannot move loses. Play Nim and the
-Kayles family of pin games against a computer that never slips, and see the
-number hidden in every position: each run of pins plays exactly like a Nim pile
-of a certain size, and a table of those sizes settles the game for every length.
+Two players take turns, and whoever cannot move loses. Play Nim, the Kayles
+family of pin games and Wythoff's queen against a computer that never slips, and
+see the number hidden in every position: why balanced piles win, why each run of
+pins plays like a Nim pile, and how the golden ratio ends up deciding a game
+of stones.
 
 **Live demo:** https://fushanbobfan.github.io/nimber/
 
@@ -48,6 +49,19 @@ Run the tests with `npm test` (Node 20 or later).
   per line to a game's period and the repeating part falls into straight
   columns, with the exceptions marked. Clicking a cell sets up a row of that length.
 
+## Queen
+
+- A queen on a quarter board moves left, down or diagonally toward the corner, and
+  whoever reaches the corner wins. This is the same game as two piles where you
+  take from one, or the same number from both. Click a shaded square, or use the
+  arrow keys and Enter.
+- **On the board** can mark the cold squares or print each square's nimber.
+- **Finding the cold squares by hand** steps through the rule itself: each cold
+  square shades its row, column and diagonal, and the first square left over is the
+  next. A table beside it shows the column divided by k closing in on the golden ratio.
+- **Every nimber at once** maps a board of 256 by 256 squares, and switches to Nim's
+  two-pile table so the effect of the diagonal move can be compared.
+
 ## How it is checked
 
 - `src/nim.js` decides positions by Bouton's rule. The tests compare that
@@ -64,6 +78,10 @@ Run the tests with `npm test` (Node 20 or later).
 - `provePeriod` applies Guy and Smith's test to the table: 71 and 12 for Kayles,
   52 and 34 for Dawson's Chess, 53 and 34 for Dawson's Kayles, nothing through 1500
   for Officers.
+- `src/wythoff.js` is compared with OEIS A004481, the table of Wythoff nimbers. On
+  the 256 by 256 board, the golden-ratio formula marks exactly the squares worth 0.
+  The sieve finds the same squares as the formula, and the two coordinates use
+  each whole number from 1 to 1999 exactly once.
 
 ## References
 
@@ -71,6 +89,7 @@ Run the tests with `npm test` (Node 20 or later).
   Mathematics*, 1901.
 - R. K. Guy and C. A. B. Smith, "The G-values of various games", *Proc. Cambridge
   Philos. Soc.* 52, 1956.
+- W. A. Wythoff, "A modification of the game of nim", *Nieuw Archief voor Wiskunde*, 1907.
 - A. Flammenkamp, tables of octal games:
   https://wwwhomes.uni-bielefeld.de/achim/octal.html
 
