@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [axon](https://fushanbobfan.github.io/axon/) | Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, with channels opening and closing as the voltage swings. | [`axon/`](axon/) |
 | [nimber](https://fushanbobfan.github.io/nimber/) | Games that are secretly Nim: play Nim, Kayles and Wythoff's queen against a computer that never slips, and see the number hidden in every position. | [`nimber/`](nimber/) |
 | [cusp](https://fushanbobfan.github.io/cusp/) | Zeeman's catastrophe machine in the browser: pull a rubber band slowly, watch a wheel suddenly snap round, and find the curved diamond that decides when. | [`cusp/`](cusp/) |
 | [retrograde](https://fushanbobfan.github.io/retrograde/) | Why the planets back up: watch the Earth overtake Mars from above the Sun, and see the loop it draws against the sky between its two stations. | [`retrograde/`](retrograde/) |

@@ -1,0 +1,20 @@
+{
+  "name": "axon",
+  "version": "0.1.0",
+  "description": "Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, with channels opening and closing as the voltage swings.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "neuroscience",
+    "hodgkin-huxley",
+    "action-potential",
+    "simulation",
+    "canvas"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}

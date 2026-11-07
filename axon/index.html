@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>axon: fire a nerve impulse</title>
+  <meta name="description" content="Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, with channels opening and closing as the voltage swings.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>axon</h1>
+    <p>In 1952 Hodgkin and Huxley wrote down how a squid's nerve fires, from measurements of its membrane and before anyone had seen an ion channel. Their four equations are still running here. Push the membrane with a little current and watch the channels swing it through a spike.</p>
+  </header>
+
+  <main>
+    <section class="lab" aria-labelledby="membrane-title">
+      <div class="traces">
+        <h2 id="membrane-title" class="visually-hidden">Membrane</h2>
+        <p id="verdict" class="verdict" role="status" aria-live="polite"></p>
+        <p class="chart-title">Membrane voltage</p>
+        <canvas id="v-chart" class="chart tall" role="img" aria-label="Membrane voltage over time. The sentence above describes the result."></canvas>
+        <p class="chart-title">Injected current</p>
+        <canvas id="stim-chart" class="chart short" role="img" aria-label="Injected current over time"></canvas>
+        <div class="chart-title lower-title">
+          <label for="lower-view">Below it</label>
+          <select id="lower-view">
+            <option value="gates">Gates</option>
+            <option value="conductance">Conductances</option>
+            <option value="current">Currents</option>
+          </select>
+          <span id="lower-legend" class="legend"></span>
+        </div>
+        <canvas id="lower-chart" class="chart" role="img" aria-label="Gates, conductances or currents over time"></canvas>
+        <div class="transport">
+          <button id="play" type="button" class="primary">Play</button>
+          <label class="scrub-label" for="scrub">Time</label>
+          <input id="scrub" type="range" min="0" max="50" step="0.05" value="0">
+          <button id="pin" type="button">Keep this trace</button>
+          <button id="copy-link" type="button">Copy link</button>
+        </div>
+        <dl class="readouts">
+          <div><dt>Rest</dt><dd id="r-rest"></dd></div>
+          <div><dt>Peak</dt><dd id="r-peak"></dd></div>
+          <div><dt>Spikes</dt><dd id="r-spikes"></dd></div>
+          <div><dt>First spike width</dt><dd id="r-width"></dd></div>
+          <div><dt>Firing rate</dt><dd id="r-rate"></dd></div>
+        </dl>
+      </div>
+
+      <aside class="side">
+        <div class="field">
+          <label for="preset">Experiment</label>
+          <select id="preset"><option value="custom">Your own settings</option></select>
+        </div>
+        <p id="preset-note" class="note"></p>
+
+        <div class="now">
+          <div><span class="now-label">Time</span> <strong id="now-time"></strong></div>
+          <div><span class="now-label">Voltage</span> <strong id="now-volts"></strong></div>
+        </div>
+        <canvas id="channel-canvas" class="channels" role="img" aria-label="Sodium and potassium channels at this moment. The percentages below give the same information."></canvas>
+        <p class="channel-key"><span class="na-key">Sodium</span> <span id="now-na"></span><br><span class="k-key">Potassium</span> <span id="now-k"></span></p>
+        <p class="small">Every dot is a gate, filled when open. A channel conducts only with all its gates open, and a sodium channel also needs its purple plug out of the way.</p>
+
+        <h3>The push</h3>
+        <div class="field">
+          <label for="amp">Strength <output id="amp-out"></output></label>
+          <input id="amp" type="range" min="-40" max="60" step="0.1">
+        </div>
+        <div class="field">
+          <label for="width">Lasts <output id="width-out"></output></label>
+          <input id="width" type="range" min="0" max="100" step="0.5">
+        </div>
+        <label class="check"><input id="second" type="checkbox"> A second 1 ms push</label>
+        <div id="second-fields" hidden>
+          <div class="field">
+            <label for="amp2">Strength <output id="amp2-out"></output></label>
+            <input id="amp2" type="range" min="-40" max="60" step="0.1">
+          </div>
+          <div class="field">
+            <label for="gap">After the first starts <output id="gap-out"></output></label>
+            <input id="gap" type="range" min="2" max="40" step="0.5">
+          </div>
+        </div>
+
+        <h3>The membrane</h3>
+        <div class="field">
+          <label for="celsius">Temperature <output id="celsius-out"></output></label>
+          <input id="celsius" type="range" min="0" max="35" step="0.1">
+        </div>
+        <div class="field">
+          <label for="na">Sodium channels working <output id="na-out"></output></label>
+          <input id="na" type="range" min="0" max="100" step="1">
+        </div>
+        <div class="field">
+          <label for="k">Potassium channels working <output id="k-out"></output></label>
+          <input id="k" type="range" min="0" max="100" step="1">
+        </div>
+        <div class="field">
+          <label for="length">Trace length <output id="length-out"></output></label>
+          <input id="length" type="range" min="20" max="200" step="5">
+        </div>
+      </aside>
+    </section>
+
+    <section class="prose">
+      <details>
+        <summary>The equations behind the page</summary>
+        <p>The membrane is a capacitor with three parallel paths for current. The sodium path conducts in proportion to <i>m</i>³<i>h</i>, the potassium path to <i>n</i>⁴, and a small leak is always open. Each of <i>m</i>, <i>h</i> and <i>n</i> relaxes toward a value set by the voltage, at a speed set by the voltage and the temperature. Voltage opens channels and channels move the voltage, and that loop is the spike.</p>
+        <p>Hodgkin and Huxley never saw gates. They fitted these powers to their recordings and guessed that something like charged particles had to move in the membrane. The picture above follows the guess that later proved close to right: each channel has its own set of gates, and <i>m</i>, <i>h</i> and <i>n</i> are the share of gates open. The crowd in the picture is small, so its count wanders around the exact share printed beneath it.</p>
+        <p>Constants are the classic squid values at 6.3 °C, with rest moved to −65 mV. Rates triple for every 10 °C. Spikes are counted when the voltage crosses 0 mV going up.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Based on A. L. Hodgkin and A. F. Huxley, <a href="https://pubmed.ncbi.nlm.nih.gov/12991237/">A quantitative description of membrane current and its application to conduction and excitation in nerve</a>, J. Physiol. 117 (1952). <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/axon">Source</a>.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
