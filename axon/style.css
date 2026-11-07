@@ -77,6 +77,70 @@ main {
   padding: 10px 16px 24px;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tabs button.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.section-title {
+  margin: 0 0 6px;
+  font-size: 1.2rem;
+}
+
+.lead {
+  max-width: 70ch;
+  margin: 0 0 6px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.card {
+  min-width: 0;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.card .note {
+  margin: 8px 0 0;
+}
+
+p.legend {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.chart.plot {
+  height: 250px;
+  cursor: default;
+  touch-action: auto;
+}
+
+.chart.still {
+  cursor: default;
+  touch-action: auto;
+}
+
 .lab {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
@@ -302,5 +366,6 @@ summary {
 
 @media (max-width: 860px) {
   .lab { grid-template-columns: minmax(0, 1fr); }
+  .cards { grid-template-columns: minmax(0, 1fr); }
   .chart.tall { height: 200px; }
 }
