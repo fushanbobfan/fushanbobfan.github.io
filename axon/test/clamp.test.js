@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { clampCurrents, clampTrace, currentVoltage } from '../src/clamp.js';
 import { alphaH, alphaM, alphaN, betaH, betaM, betaN, steadyGates } from '../src/hh.js';
 import { membrane } from '../src/simulate.js';
+import { describeClamp } from '../src/clampView.js';
 
 const P = membrane();
 
@@ -65,4 +66,14 @@ test('with sodium blocked only the delayed outward current is left', () => {
   const trace = clampTrace(membrane({ naOpen: 0 }), -65, 0, { duration: 20 });
   assert.ok(Math.min(...trace.total) > -5);
   assert.ok(trace.total[trace.total.length - 1] > 1000);
+});
+
+test('the sentence under the chart matches the direction of the current', () => {
+  const say = (p, v) => describeClamp(clampTrace(p, -65, v, { duration: 20 }), v);
+  assert.match(say(P, 0), /flows in, then the current turns and \d+ .* flows out/);
+  assert.match(say(P, -80), /^Stepping to −80 mV: a steady \d+ .* flows in/);
+  assert.match(say(P, 50), /no net inward current/);
+  assert.match(say(membrane({ kOpen: 0 }), 0), /then the current fades away/);
+  assert.match(say(P, -65), /almost nothing happens/);
+  assert.doesNotMatch(say(P, -80), /-\d/);
 });
