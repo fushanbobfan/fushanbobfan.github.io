@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>axon: fire a nerve impulse</title>
-  <meta name="description" content="Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, with channels opening and closing as the voltage swings.">
+  <meta name="description" content="Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, from channels opening to a spike racing along an axon, with and without myelin.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -16,6 +16,7 @@
       <button type="button" data-tab="membrane">Membrane</button>
       <button type="button" data-tab="thresholds">Thresholds</button>
       <button type="button" data-tab="clamp">Voltage clamp</button>
+      <button type="button" data-tab="axon">Axon</button>
     </nav>
   </header>
 
@@ -161,12 +162,52 @@
       </aside>
     </section>
 
+    <section id="tab-axon" data-panel="axon" class="lab" aria-labelledby="axon-title" hidden>
+      <div class="traces">
+        <h2 id="axon-title" class="section-title">A spike on the move</h2>
+        <p id="axon-speeds" class="verdict" role="status" aria-live="polite"></p>
+        <canvas id="track-bare" class="track" role="img" aria-label="Voltage along a bare axon, the fibre, and a chart of position against time. The sentence above gives its speed."></canvas>
+        <canvas id="track-sheathed" class="track" role="img" aria-label="Voltage along an axon with myelin, the fibre, and a chart of position against time. The sentence above gives its speed."></canvas>
+        <p class="small">Each chart under a fibre scrolls downward as time passes: the newest moment is at the top, and a steeper streak means a slower spike. Click a fibre to fire it at that point. <span id="axon-length"></span> Time here: <span id="axon-clock"></span>.</p>
+        <div class="transport">
+          <button id="fire-left" type="button" class="primary">Fire left end</button>
+          <button id="fire-right" type="button">Fire right end</button>
+          <button id="fire-both" type="button">Fire both ends</button>
+          <button id="strip" type="button">Strip a stretch of myelin</button>
+          <button id="restore" type="button">Start again</button>
+        </div>
+        <p class="chart-title speed-title">Speed against diameter, at this temperature</p>
+        <canvas id="speed-chart" class="chart still" role="img" aria-label="Spike speed against fibre diameter for a bare axon and an axon with myelin, on log scales. The vertical line marks the diameter chosen above."></canvas>
+        <p class="legend"><span><i style="background: var(--accent)"></i>bare axon</span> <span><i style="background: var(--potassium)"></i>with myelin</span></p>
+      </div>
+      <aside class="side">
+        <div class="field">
+          <label for="fibre-diameter">Fibre diameter <output id="fibre-diameter-out"></output></label>
+          <input id="fibre-diameter" type="range" min="0" max="100" step="0.5">
+        </div>
+        <div class="field">
+          <label for="fibre-celsius">Temperature <output id="fibre-celsius-out"></output></label>
+          <input id="fibre-celsius" type="range" min="0" max="35" step="0.5">
+        </div>
+        <p class="note">Each firing patch leaks current into its neighbours and lifts them past threshold. The patch behind has just fired and cannot fire again yet, so the spike only ever moves on.</p>
+        <h3>Things to try</h3>
+        <ul class="tries">
+          <li><strong>Fire both ends.</strong> The two spikes meet and vanish, each stopped by the wake the other left behind.</li>
+          <li><strong>Strip myelin.</strong> With the sheath gone, the current has more membrane to charge. At 10 µm and 18.5 °C each stretch slows the spike, and the fourth in a row stops it.</li>
+          <li><strong>Drag the diameter.</strong> A bare axon goes twice as fast at four times the width. A sheath reaches the same speed in far less space: at 18.5 °C a 10 µm sheathed fibre runs at 8.9 m/s, about what a bare axon needs 100 µm for (8.6). At 0.3 µm the sheath adds only about a third.</li>
+          <li><strong>Warm it.</strong> At 10 µm the bare axon's spike shrinks as the temperature rises and fails at 34 °C, while the sheathed one keeps going.</li>
+        </ul>
+        <p class="small">At the 476 µm and 18.5 °C of Hodgkin and Huxley's axon, this bare cable runs at 18.7 m/s. They calculated 18.8 and measured 21.2. The sheathed fibre keeps the squid's channels and assumes its node density, wraps and spacing, so it shows the direction of the effect and not the speed of a real nerve.</p>
+      </aside>
+    </section>
+
     <section class="prose">
       <details>
         <summary>The equations behind the page</summary>
         <p>The membrane is a capacitor with three parallel paths for current. The sodium path conducts in proportion to <i>m</i>³<i>h</i>, the potassium path to <i>n</i>⁴, and a small leak is always open. Each of <i>m</i>, <i>h</i> and <i>n</i> relaxes toward a value set by the voltage, at a speed set by the voltage and the temperature. Voltage opens channels and channels move the voltage, and that loop is the spike.</p>
         <p>Hodgkin and Huxley never saw gates. They fitted these powers to their recordings and guessed that something like charged particles had to move in the membrane. The picture above follows the guess that later proved close to right: each channel has its own set of gates, and <i>m</i>, <i>h</i> and <i>n</i> are the share of gates open. The crowd in the picture is small, so its count wanders around the exact share printed beneath it.</p>
-        <p>Constants are the classic squid values at 6.3 °C, with rest moved to −65 mV. Rates triple for every 10 °C. Spikes are counted when the voltage crosses 0 mV going up.</p>
+        <p>Constants are the classic squid values at 6.3 °C, with rest moved to −65 mV. Rates triple for every 10 °C. On the Membrane page, spikes are counted when the voltage crosses 0 mV going up.</p>
+        <p>On the Axon page the membrane is cut into a chain of patches, each passing current to its neighbours through the resistance of the axon's interior. Speed comes out of the equations and is measured by timing the spike at two points, as it crosses −20 mV.</p>
       </details>
     </section>
   </main>

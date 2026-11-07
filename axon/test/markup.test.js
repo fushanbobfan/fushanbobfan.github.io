@@ -25,7 +25,7 @@ test('every id a page script asks for exists in the markup', async () => {
 test('colours exist for both schemes', async () => {
   const css = await readFile(new URL('../style.css', import.meta.url), 'utf8');
   const [light, dark] = css.split('@media (prefers-color-scheme: dark)');
-  for (const name of ['paper', 'ink', 'muted', 'rule', 'accent', 'sodium', 'potassium', 'plug', 'closed', 'band']) {
+  for (const name of ['paper', 'ink', 'muted', 'rule', 'accent', 'sodium', 'potassium', 'plug', 'closed', 'band', 'sheath']) {
     assert.ok(light.includes(`--${name}:`), `light --${name}`);
     assert.ok(dark.includes(`--${name}:`), `dark --${name}`);
   }
