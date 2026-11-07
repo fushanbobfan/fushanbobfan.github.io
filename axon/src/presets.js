@@ -60,7 +60,7 @@ export const PRESETS = [
     id: 'warm',
     label: 'A warmer axon',
     settings: { amplitude: 20, celsius: 18.5 },
-    note: 'Warmed to 18.5 °C, the gates move about 3.8 times faster and the spike is about four times narrower. Keep warming: by 30 °C the same push makes no spike, because potassium catches up with sodium before the voltage can climb.',
+    note: 'Warmed to 18.5 °C, the gates move about 3.8 times faster and the spike is about four times narrower. Keep warming: by 30 °C the peak stays below 0 mV, because potassium catches up with sodium before the voltage can climb, and by 35 °C only a small bump is left.',
   },
 ];
 

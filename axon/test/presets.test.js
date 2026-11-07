@@ -76,12 +76,15 @@ test('half the potassium blocked: fires with no pulses, spikes wider', () => {
   assert.ok(s.width > at('push').width);
 });
 
-test('warm: 3.8 times faster, spike about four times narrower, and no spike at 30', () => {
+test('warm: 3.8 times faster, spike about four times narrower, stunted at 30, a bump at 35', () => {
   assert.ok(Math.abs(temperatureFactor(18.5) - 3.8) < 0.05);
   const cold = at('warm', { celsius: 6.3 });
   const warm = at('warm');
   assert.ok(Math.abs(cold.width / warm.width - 4) < 0.3, `ratio ${cold.width / warm.width}`);
-  assert.equal(at('warm', { celsius: 30 }).spikes, 0);
+  const hot = at('warm', { celsius: 30 });
+  assert.equal(hot.spikes, 0);
+  assert.ok(hot.peak > -30, `peak ${hot.peak}`);
+  assert.ok(at('warm', { celsius: 35 }).peak < -45);
 });
 
 test('at 30 degrees potassium catches up: n rises while the voltage is still below 0', () => {
