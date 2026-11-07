@@ -49,8 +49,10 @@ written from the measured values:
   up to 200 µA/cm² works at 5 ms, and around 20 ms the need dips below normal.
 
 A strong pulse lifts the voltage past 0 mV by itself, so these curves count a
-spike by the sodium conductance it recruits. Failures stay under 1 mS/cm² and
-spikes pass 15, so the cut at 10 is far from either side.
+spike by the sodium conductance it recruits. At the earliest delay that fires,
+6 ms, the peak jumps from under 2 mS/cm² to over 6 at threshold, and the cut at 5
+sits inside that jump. From 7 ms on the jump is wider, from under 1 to over 12.
+Spikes forced that early are smaller than usual.
 
 ## Voltage clamp
 

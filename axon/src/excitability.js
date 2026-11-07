@@ -8,7 +8,7 @@ import { simulate } from './simulate.js';
 // A big enough pulse lifts the voltage past 0 mV with no channels at all, so a
 // spike is judged by the sodium conductance it recruits. The value separates
 // the two outcomes cleanly: see test/excitability.test.js.
-export const SPIKE_CONDUCTANCE = 10;
+export const SPIKE_CONDUCTANCE = 5;
 
 function firesAfter(trace, from) {
   for (let i = 0; i < trace.t.length; i++) {

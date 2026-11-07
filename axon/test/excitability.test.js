@@ -24,8 +24,58 @@ test('the conductance test separates spikes from failures by a wide margin', () 
   };
   const edge = pulseThreshold(P, 1);
   const pulse = (amplitude) => [{ start: 2, duration: 1, amplitude }];
-  assert.ok(peak(pulse(edge - 0.05), 2) < SPIKE_CONDUCTANCE / 10);
-  assert.ok(peak(pulse(edge + 0.05), 2) > SPIKE_CONDUCTANCE * 1.5);
+  assert.ok(peak(pulse(edge - 0.05), 2) < 1);
+  assert.ok(peak(pulse(edge + 0.05), 2) > 15);
+});
+
+test('the separation also holds for a second pulse on a recovering membrane', () => {
+  const peakAfter = (gap, amplitude) => {
+    const from = 2 + gap;
+    const trace = simulate(P, [{ start: 2, duration: 1, amplitude: 15 }, { start: from, duration: 1, amplitude }], {
+      duration: from + 25,
+      samples: Math.round((from + 25) * 10),
+    });
+    let best = 0;
+    trace.t.forEach((t, i) => {
+      if (t >= from && trace.gNa[i] > best) best = trace.gNa[i];
+    });
+    return best;
+  };
+  for (const gap of [6, 7, 8, 12, 20]) {
+    const edge = secondPulseThreshold(P, gap);
+    assert.ok(peakAfter(gap, edge - 0.2) < 2, `gap ${gap} below: ${peakAfter(gap, edge - 0.2)}`);
+    assert.ok(peakAfter(gap, edge + 0.2) > 6, `gap ${gap} above: ${peakAfter(gap, edge + 0.2)}`);
+  }
+});
+
+test('a spike forced early in recovery is smaller than a normal one', () => {
+  const peakAfter7Wide = () => {
+    const trace = simulate(P, [
+      { start: 2, duration: 1, amplitude: 15 },
+      { start: 9, duration: 1, amplitude: secondPulseThreshold(P, 7) + 0.2 },
+    ], { duration: 34, samples: 340 });
+    let best = 0;
+    trace.t.forEach((t, i) => {
+      if (t >= 9 && trace.gNa[i] > best) best = trace.gNa[i];
+    });
+    return best;
+  };
+  const peakVoltage = (gap) => {
+    const from = 2 + gap;
+    const amplitude = secondPulseThreshold(P, gap) + 1;
+    const trace = simulate(P, [{ start: 2, duration: 1, amplitude: 15 }, { start: from, duration: 1, amplitude }], {
+      duration: from + 25,
+      samples: Math.round((from + 25) * 10),
+    });
+    let best = -100;
+    trace.t.forEach((t, i) => {
+      if (t >= from + 1 && trace.v[i] > best) best = trace.v[i];
+    });
+    return best;
+  };
+  assert.ok(peakAfter7Wide() > 12, 'the jump is wide from 7 ms on');
+  assert.ok(peakVoltage(7) < 20, `7 ms: ${peakVoltage(7)}`);
+  assert.ok(peakVoltage(30) > 30, `30 ms: ${peakVoltage(30)}`);
 });
 
 test('a 1 ms pulse needs about 6.9', () => {

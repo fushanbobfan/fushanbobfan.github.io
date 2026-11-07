@@ -100,7 +100,7 @@ export function mountThresholds() {
     });
     if (rc.length === GAPS.length) {
       const s = recoverySummary(rc, resting);
-      $('rc-note').textContent = `The dashed line is what a pulse needs at rest, ${resting.toFixed(1)} µA/cm². After a spike, even ${STRONGEST_SECOND_PULSE} µA/cm² fails at a delay of ${s.lastBlocked} ms (the absolute refractory period). Then the requirement falls steeply as sodium channels unplug and potassium channels close (the relative refractory period). Around ${s.lowest.gap} ms it dips below normal, to ${s.lowest.threshold.toFixed(1)}, before settling back.`;
+      $('rc-note').textContent = `The dashed line is what a pulse needs at rest, ${resting.toFixed(1)} µA/cm². After a spike, even ${STRONGEST_SECOND_PULSE} µA/cm² fails at a delay of ${s.lastBlocked} ms (the absolute refractory period). Then the requirement falls steeply as sodium channels unplug and potassium channels close (the relative refractory period), and a spike forced that early is smaller than usual. Around ${s.lowest.gap} ms it dips below normal, to ${s.lowest.threshold.toFixed(1)}, before settling back.`;
     }
   }
 
@@ -159,4 +159,3 @@ export function mountThresholds() {
 
   return { redraw, shown };
 }
-
