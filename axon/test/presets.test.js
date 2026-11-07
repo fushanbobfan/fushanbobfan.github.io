@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, PRESETS, presetSettings, pulsesFrom } from '../src/presets.js';
+import { DEFAULTS, PRESETS, presetSettings, pulsesFrom, sliderFromWidth, widthFromSlider } from '../src/presets.js';
 import { membrane, restBehaviour, simulate, summarize } from '../src/simulate.js';
 import { temperatureFactor } from '../src/hh.js';
 
@@ -99,4 +99,13 @@ test('the controls build the pulses they describe', () => {
   assert.equal(pulsesFrom({ ...DEFAULTS, amplitude: 0 }).length, 0);
   const pair = pulsesFrom({ ...DEFAULTS, second: true, gap: 8, secondAmplitude: 3 });
   assert.deepEqual(pair[1], { start: 13, duration: 1, amplitude: 3 });
+});
+
+test('the width slider covers its range and finds its way back', () => {
+  assert.equal(widthFromSlider(0), 0.1);
+  assert.equal(widthFromSlider(100), 200);
+  for (const width of [0.1, 1, 30, 200]) {
+    assert.ok(Math.abs(widthFromSlider(sliderFromWidth(width)) - width) < 0.02 * width, `width ${width}`);
+  }
+  assert.ok(sliderFromWidth(1) > 25, 'a 1 ms pulse sits well away from the end of the track');
 });

@@ -69,6 +69,20 @@ export function presetSettings(id) {
   return preset ? { ...DEFAULTS, ...preset.settings } : null;
 }
 
+// The width slider runs from 0 to 100 on a log scale, 0.1 ms to 200 ms, so short
+// pulses get as much room as long ones. Values snap to two significant figures.
+const WIDTH_LOW = 0.1;
+const WIDTH_HIGH = 200;
+
+export function widthFromSlider(position) {
+  const value = WIDTH_LOW * Math.pow(WIDTH_HIGH / WIDTH_LOW, position / 100);
+  return Math.min(WIDTH_HIGH, Number(value.toPrecision(2)));
+}
+
+export function sliderFromWidth(width) {
+  return (Math.log(width / WIDTH_LOW) / Math.log(WIDTH_HIGH / WIDTH_LOW)) * 100;
+}
+
 // The pulses a set of controls asks for. Everything starts 5 ms into the trace.
 export function pulsesFrom(settings) {
   const pulses = [];
