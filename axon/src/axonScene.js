@@ -96,6 +96,15 @@ export function sceneSpeeds(scene) {
   };
 }
 
+// Both speeds across the range of diameters, a point at a time.
+export const CURVE_DIAMETERS = [0.3, 0.5, 1, 2, 5, 10, 20, 50, 100, 200];
+
+export function* speedCurve(celsius, diameters = CURVE_DIAMETERS) {
+  for (const diameter of diameters) {
+    yield { diameter, ...sceneSpeeds(makeScene(diameter, celsius)) };
+  }
+}
+
 // How long the bare axon takes end to end; sets the pace of the page. Falls
 // back on the square-root law when the axon does not conduct.
 export function crossingTime(scene, bareSpeed) {

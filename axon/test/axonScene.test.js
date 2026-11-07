@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DIAMETER_HIGH, DIAMETER_LOW, advanceScene, crossingTime, describeSpeeds, diameterFromSlider, fireAt, fireEnds, isQuiet,
-  makeScene, patchAt, sceneSpeeds, sliderFromDiameter, stripNext, voltageColour,
+  makeScene, patchAt, sceneSpeeds, sliderFromDiameter, speedCurve, stripNext, voltageColour,
 } from '../src/axonScene.js';
 
 test('the diameter slider spans its range and finds its way back', () => {
@@ -100,4 +100,22 @@ test('colours run from dark at rest to pale at the peak', () => {
   assert.ok(brightness(0) < brightness(40));
   assert.deepEqual(voltageColour(100), voltageColour(40));
   assert.deepEqual(voltageColour(-200), voltageColour(-90));
+});
+
+test('the speed curve rises with diameter and the sheath stays ahead', () => {
+  const points = [...speedCurve(18.5)];
+  assert.equal(points[0].diameter, DIAMETER_LOW);
+  assert.equal(points[points.length - 1].diameter, DIAMETER_HIGH);
+  for (let i = 1; i < points.length; i++) {
+    assert.ok(points[i].bare > points[i - 1].bare);
+    assert.ok(points[i].sheathed > points[i - 1].sheathed);
+  }
+  for (const p of points) assert.ok(p.sheathed > p.bare, `at ${p.diameter}`);
+});
+
+test('a 10 µm sheathed fibre keeps up with a 100 µm bare one', () => {
+  const sheathed = sceneSpeeds(makeScene(10, 18.5)).sheathed;
+  const bare = sceneSpeeds(makeScene(100, 18.5)).bare;
+  assert.equal(sheathed.toFixed(1), '8.9');
+  assert.equal(bare.toFixed(1), '8.6');
 });
