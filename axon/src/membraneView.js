@@ -309,5 +309,5 @@ export function mountMembrane() {
     loadPreset('push', { play: !reduceMotion.matches });
   }
 
-  return { redraw: draw };
+  return { redraw: draw, pause: () => setPlaying(false) };
 }
