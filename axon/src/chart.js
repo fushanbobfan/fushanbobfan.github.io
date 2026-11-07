@@ -77,7 +77,8 @@ export function plotBox(width, height, compact = false) {
 
 // Options: x, y (ranges); series [{ x, y, color, width, dash, count }];
 // xLabel, yLabel; compact (no x axis); playhead (x value); level (extra rule);
-// markers [{ x, y, color, radius }]; logX, when x is drawn on a log scale.
+// markers [{ x, y, color, radius }]; logX and logY for log scales, which need
+// xTicks and yTicks given.
 export function drawChart(canvas, options) {
   const { ctx, width, height } = prepare(canvas);
   const box = plotBox(width, height, options.compact);
@@ -86,7 +87,9 @@ export function drawChart(canvas, options) {
   const toX = options.logX
     ? (x) => box.left + ((Math.log10(x) - Math.log10(x0)) / (Math.log10(x1) - Math.log10(x0))) * (box.right - box.left)
     : (x) => box.left + ((x - x0) / (x1 - x0)) * (box.right - box.left);
-  const toY = (y) => box.bottom - ((y - y0) / (y1 - y0)) * (box.bottom - box.top);
+  const toY = options.logY
+    ? (y) => box.bottom - ((Math.log10(y) - Math.log10(y0)) / (Math.log10(y1) - Math.log10(y0))) * (box.bottom - box.top)
+    : (y) => box.bottom - ((y - y0) / (y1 - y0)) * (box.bottom - box.top);
 
   ctx.font = '11px ui-monospace, Consolas, monospace';
   ctx.lineWidth = 1;
@@ -94,7 +97,7 @@ export function drawChart(canvas, options) {
   ctx.fillStyle = token('muted');
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  const yTicks = niceTicks(y0, y1, options.yTickCount ?? 4);
+  const yTicks = options.yTicks ?? niceTicks(y0, y1, options.yTickCount ?? 4);
   for (const tick of yTicks) {
     const y = toY(tick);
     ctx.beginPath();
