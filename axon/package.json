@@ -1,7 +1,7 @@
 {
   "name": "axon",
   "version": "0.1.0",
-  "description": "Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, with channels opening and closing as the voltage swings.",
+  "description": "Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, from channels opening to a spike racing along an axon, with and without myelin.",
   "type": "module",
   "scripts": {
     "test": "node --test",
