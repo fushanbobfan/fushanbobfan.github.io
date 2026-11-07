@@ -35,6 +35,31 @@ Run the tests with `npm test` (Node 20 or later).
 - **Keep this trace** leaves a dashed copy behind for comparison, and **Copy
   link** shares the settings.
 
+## Thresholds
+
+Three curves are measured on the spot, a point at a time, and their captions are
+written from the measured values:
+
+- **Steady current** sweeps the current slowly up and back down without resetting
+  the membrane. Firing starts at 10 µA/cm² going up and stops at 6.5 going down
+  (on steps of 0.25), so between them the same current can mean silence or firing.
+- **How strong, how long** finds the threshold for each pulse width, with the
+  rheobase (2.24 µA/cm²) and chronaxie (1.66 ms) read off the curve.
+- **How soon again** finds what a second pulse needs after a first spike: nothing
+  up to 200 µA/cm² works at 5 ms, and around 20 ms the need dips below normal.
+
+A strong pulse lifts the voltage past 0 mV by itself, so these curves count a
+spike by the sodium conductance it recruits. Failures stay under 1 mS/cm² and
+spikes pass 15, so the cut at 10 is far from either side.
+
+## Voltage clamp
+
+Step the voltage and read the current. Each gate relaxes exponentially at a fixed
+voltage, so the currents here are exact, with no integrator. Change the voltage
+held before the step to see sodium channels already plugged, or block either
+channel type to split the early inward current from the late outward one. The
+current-voltage curve below updates with every change.
+
 ## What is checked
 
 Each number a note on the page quotes is tested against the model in
@@ -49,6 +74,7 @@ Each number a note on the page quotes is tested against the model in
 - spikes about four times narrower at 18.5 °C, and none from the same push at 30 °C
 
 The integrator is fourth-order Runge-Kutta, with its order tested on a real trace.
+The clamp's exact gates are tested against a numerical integration.
 
 ## Simplifications
 
@@ -62,6 +88,10 @@ further channels that this squid model leaves out.
 - A. L. Hodgkin and A. F. Huxley, [A quantitative description of membrane current
   and its application to conduction and excitation in nerve](https://pubmed.ncbi.nlm.nih.gov/12991237/),
   J. Physiol. 117 (1952).
+- J. Guckenheimer and R. A. Oliva, [Chaos in the Hodgkin-Huxley model](https://pi.math.cornell.edu/~gucken/PDF/hh_chaos.pdf),
+  for the subcritical Hopf bifurcation near 9.78 µA/cm².
+- [Dynamical response of the Hodgkin-Huxley model in the high-input regime](https://arxiv.org/abs/cond-mat/0512341),
+  for the saddle-node of periodic orbits near 6.27 µA/cm².
 
 ## License
 
