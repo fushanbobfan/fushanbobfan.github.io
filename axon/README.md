@@ -2,7 +2,8 @@
 
 Fire a nerve impulse in the browser. Push a patch of squid axon membrane with a
 little current, and watch the sodium and potassium channels swing it through a
-spike. The page runs the four equations Hodgkin and Huxley published in 1952.
+spike, then watch it race along an axon, with and without myelin. The page runs the
+four equations Hodgkin and Huxley published in 1952.
 
 **Live demo:** https://fushanbobfan.github.io/axon/
 
@@ -62,6 +63,19 @@ held before the step to see sodium channels already plugged, or block either
 channel type to split the early inward current from the late outward one. The
 current-voltage curve below updates with every change.
 
+## Axon
+
+One stretch of fibre appears twice, bare and with myelin, and every spike races on
+both. Each has the voltage along it, the fibre itself, and a chart that scrolls down
+with time, where a steeper streak means a slower spike. Click a fibre to fire it at
+that point, or fire from either end or both. **Strip a stretch of myelin** bares one
+more internode from the middle outward.
+
+At 18.5 °C and 10 µm the bare axon runs at 2.7 m/s and the sheathed one at 8.9.
+Three stripped stretches slow it to 4.0, and a fourth stops it. A chart below gives
+both speeds across the range of diameters. Temperature shrinks the spike on the way
+to failure: at 10 µm the bare axon stops between 33 and 34 °C.
+
 ## What is checked
 
 Each number a note on the page quotes is tested against the model in
@@ -78,12 +92,27 @@ Each number a note on the page quotes is tested against the model in
 The integrator is fourth-order Runge-Kutta, with its order tested on a real trace.
 The clamp's exact gates are tested against a numerical integration.
 
+The cable is checked against the literature: at the 476 µm diameter and 35.4 Ω·cm
+axoplasm of the squid axon, at 18.5 °C, it converges to 18.73 m/s, against 18.8
+calculated in 1952 and 18.76 in a later analysis. Refining the grid moves the answer
+by under 0.1 m/s, and four times the diameter gives twice the speed to within 1%.
+
 ## Simplifications
 
 Temperature scales the gate rates by a factor of 3 per 10 °C and leaves the
 conductances alone. Blocking potassium here also removes most of what holds the
 model at rest, which is why the membrane fires by itself. A real neuron has
 further channels that this squid model leaves out.
+
+The sheathed fibre is a sketch built on assumptions of mine: squid channels at twice
+their usual density at nodes, 10 wraps of myelin per µm of diameter, and internodes
+100 diameters long. Its speed-up, its point of block and its heat limit all follow
+from those choices, so they show the direction of each effect and do not predict a
+real nerve. In particular, thick sheathed fibres fail earlier on warming here (at
+100 µm, by 28 °C), which is a property of these choices.
+
+Speed is timed at -20 mV because a spike on a thin or warm fibre can travel at a
+steady height while staying under 0 mV.
 
 ## Sources
 
@@ -94,6 +123,13 @@ further channels that this squid model leaves out.
   for the subcritical Hopf bifurcation near 9.78 µA/cm².
 - [Dynamical response of the Hodgkin-Huxley model in the high-input regime](https://arxiv.org/abs/cond-mat/0512341),
   for the saddle-node of periodic orbits near 6.27 µA/cm².
+- [A note on the discrepancy between the predicted and observed speed of the
+  propagated action potential in the squid giant axon](https://www.sciencedirect.com/science/article/abs/pii/S002251930400181X),
+  for 18.76 m/s against the 21.2 measured.
+- [Analysis of the optimal channel density of the squid giant axon](https://journals.physiology.org/doi/full/10.1152/jn.00646.2003),
+  for the calculated 18.8 and measured 21.2 at 18.5 °C.
+- [Optimization of the leak conductance in the squid giant axon](https://arxiv.org/abs/0905.3154),
+  for the 35.4 Ω·cm axoplasm resistivity.
 
 ## License
 

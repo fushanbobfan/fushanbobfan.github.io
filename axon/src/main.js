@@ -1,3 +1,4 @@
+import { mountAxon } from './axonView.js';
 import { mountClamp } from './clampView.js';
 import { mountMembrane } from './membraneView.js';
 import { mountThresholds } from './thresholdsView.js';
@@ -7,6 +8,7 @@ const views = {
   membrane,
   thresholds: mountThresholds(),
   clamp: mountClamp(),
+  axon: mountAxon(),
 };
 
 const buttons = [...document.querySelectorAll('[data-tab]')];
