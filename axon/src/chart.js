@@ -10,7 +10,7 @@ export function niceTicks(low, high, count = 5) {
   const spacing = (unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10) * power;
   const ticks = [];
   for (let k = Math.ceil(low / spacing - 1e-9); k * spacing <= high + spacing * 1e-9; k++) {
-    ticks.push(Math.round(k * spacing * 1e9) / 1e9);
+    ticks.push(Math.round(k * spacing * 1e9) / 1e9 + 0);
   }
   return ticks;
 }

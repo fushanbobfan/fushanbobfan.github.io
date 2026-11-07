@@ -4,7 +4,8 @@ import { dataRange, niceTicks, plotBox } from '../src/chart.js';
 
 test('ticks are round and stay inside the range', () => {
   assert.deepEqual(niceTicks(0, 50, 10), [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
-  assert.deepEqual(niceTicks(-80, 40, 4), [-80, -60, -40, -20, 0, 20, 40]);
+  assert.deepEqual(niceTicks(-80, 40, 6), [-80, -60, -40, -20, 0, 20, 40]);
+  assert.deepEqual(niceTicks(-100, 60, 4), [-100, -50, 0, 50]);
   for (const tick of niceTicks(-3.7, 11.2, 5)) assert.ok(tick >= -3.7 && tick <= 11.2);
 });
 
