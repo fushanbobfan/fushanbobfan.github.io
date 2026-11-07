@@ -12,10 +12,15 @@
   <header class="masthead">
     <h1>axon</h1>
     <p>In 1952 Hodgkin and Huxley wrote down how a squid's nerve fires, from measurements of its membrane and before anyone had seen an ion channel. Their four equations are still running here. Push the membrane with a little current and watch the channels swing it through a spike.</p>
+    <nav class="tabs" aria-label="Views">
+      <button type="button" data-tab="membrane">Membrane</button>
+      <button type="button" data-tab="thresholds">Thresholds</button>
+      <button type="button" data-tab="clamp">Voltage clamp</button>
+    </nav>
   </header>
 
   <main>
-    <section class="lab" aria-labelledby="membrane-title">
+    <section id="tab-membrane" data-panel="membrane" class="lab" aria-labelledby="membrane-title">
       <div class="traces">
         <h2 id="membrane-title" class="visually-hidden">Membrane</h2>
         <p id="verdict" class="verdict" role="status" aria-live="polite"></p>
@@ -102,6 +107,57 @@
           <label for="length">Trace length <output id="length-out"></output></label>
           <input id="length" type="range" min="20" max="200" step="5">
         </div>
+      </aside>
+    </section>
+
+    <section id="tab-thresholds" data-panel="thresholds" aria-labelledby="thresholds-title" hidden>
+      <h2 id="thresholds-title" class="section-title">What it takes to fire</h2>
+      <p class="lead">Three measurements a physiologist would make, each one many runs of the same membrane. They fill in as they are computed.</p>
+      <p id="measure-status" class="small" role="status" aria-live="polite"></p>
+      <div class="cards">
+        <article class="card">
+          <h3>Steady current</h3>
+          <canvas id="fi-chart" class="chart plot" role="img" aria-label="Firing rate against steady current, swept upward and back downward. The text below gives the result."></canvas>
+          <p class="legend"><span><i style="background: var(--sodium)"></i>sweeping up</span> <span><i style="background: var(--potassium)"></i>sweeping down</span></p>
+          <p id="fi-note" class="note"></p>
+        </article>
+        <article class="card">
+          <h3>How strong, how long</h3>
+          <canvas id="sd-chart" class="chart plot" role="img" aria-label="Threshold strength against pulse width on log scales. The text below gives the result."></canvas>
+          <p id="sd-note" class="note"></p>
+        </article>
+        <article class="card">
+          <h3>How soon again</h3>
+          <canvas id="rc-chart" class="chart plot" role="img" aria-label="Strength a second pulse needs against the delay after a first spike. The text below gives the result."></canvas>
+          <p id="rc-note" class="note"></p>
+        </article>
+      </div>
+    </section>
+
+    <section id="tab-clamp" data-panel="clamp" class="lab" aria-labelledby="clamp-title" hidden>
+      <div class="traces">
+        <h2 id="clamp-title" class="section-title">Hold the voltage still</h2>
+        <p id="clamp-verdict" class="verdict" role="status" aria-live="polite"></p>
+        <p class="chart-title">Membrane current after the step</p>
+        <canvas id="clamp-chart" class="chart tall still" role="img" aria-label="Membrane current over time after a voltage step. The sentence above describes the result."></canvas>
+        <p class="legend"><span><i style="background: var(--ink)"></i>total</span> <span><i style="background: var(--sodium)"></i>sodium</span> <span><i style="background: var(--potassium)"></i>potassium</span></p>
+        <p class="chart-title">Current against voltage, one point for each step</p>
+        <canvas id="iv-chart" class="chart still" role="img" aria-label="Peak sodium current and late current against step voltage"></canvas>
+        <p class="legend"><span><i style="background: var(--sodium)"></i>largest sodium current</span> <span><i style="background: var(--potassium)"></i>current left after 40 ms</span></p>
+      </div>
+      <aside class="side">
+        <p class="note">Spikes are too fast to take apart, because voltage and channels keep changing each other. Hold the voltage fixed with a feedback amplifier, and the current needed to hold it shows what the channels are doing. This is how the equations were measured.</p>
+        <div class="field">
+          <label for="clamp-step">Step to <output id="clamp-step-out"></output></label>
+          <input id="clamp-step" type="range" min="-100" max="80" step="1" value="0">
+        </div>
+        <div class="field">
+          <label for="clamp-hold">Hold before the step at <output id="clamp-hold-out"></output></label>
+          <input id="clamp-hold" type="range" min="-100" max="-40" step="1" value="-65">
+        </div>
+        <label class="check"><input id="clamp-no-na" type="checkbox"> Block sodium channels</label>
+        <label class="check"><input id="clamp-no-k" type="checkbox"> Block potassium channels</label>
+        <p id="clamp-note" class="small">Negative current is inward. Try a step to +50 mV, where sodium stops flowing and is about to reverse. Then hold at −45 mV before the step: many sodium channels are already plugged, and the early current shrinks.</p>
       </aside>
     </section>
 
