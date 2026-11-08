@@ -142,6 +142,52 @@ export function minimax(ballots) {
   return { winner, pair, worst, condorcet: condorcetWinner(pair, k) };
 }
 
+// Each voter scores candidates 0 to 5: 5 for the nearest, 0 for the farthest,
+// the rest in proportion to distance and rounded. Returns totals per candidate
+// and, for STAR, the scores themselves (score[v*k + c]).
+export function cardinalScores(ballots) {
+  const { n, k, dist } = ballots;
+  const each = new Uint8Array(n * k);
+  const total = new Array(k).fill(0);
+  for (let v = 0; v < n; v++) {
+    const base = v * k;
+    let lo = Infinity, hi = -Infinity;
+    for (let c = 0; c < k; c++) {
+      lo = Math.min(lo, dist[base + c]);
+      hi = Math.max(hi, dist[base + c]);
+    }
+    for (let c = 0; c < k; c++) {
+      const s = hi > lo ? Math.round((5 * (hi - dist[base + c])) / (hi - lo)) : 5;
+      each[base + c] = s;
+      total[c] += s;
+    }
+  }
+  return { each, total };
+}
+
+export function score(ballots) {
+  const { total } = cardinalScores(ballots);
+  return { winner: argmax(total), score: total };
+}
+
+// STAR: the two highest-scoring candidates meet in an automatic runoff, won by
+// whoever more voters scored higher. An even runoff goes to the higher total.
+export function star(ballots) {
+  const { n, k } = ballots;
+  const { each, total } = cardinalScores(ballots);
+  const ranked = [...total.keys()].sort((a, b) => total[b] - total[a] || a - b);
+  if (k === 1) return { winner: 0, score: total, finalists: null, prefer: null };
+  const [a, b] = ranked;
+  const prefer = new Array(k).fill(0);
+  for (let v = 0; v < n; v++) {
+    const sa = each[v * k + a], sb = each[v * k + b];
+    if (sa > sb) prefer[a]++;
+    else if (sb > sa) prefer[b]++;
+  }
+  const winner = prefer[b] > prefer[a] ? b : a;
+  return { winner, score: total, finalists: [a, b], prefer, equal: n - prefer[a] - prefer[b] };
+}
+
 export const METHODS = [
   { id: 'plurality', name: 'Plurality', count: plurality,
     rule: 'Each voter names one candidate. Most votes wins.' },
@@ -153,6 +199,10 @@ export const METHODS = [
     rule: 'Voters rank everyone. With k candidates a ballot gives k−1 points to its first choice, k−2 to its second, down to 0.' },
   { id: 'approval', name: 'Approval', count: approval,
     rule: 'Each voter approves every candidate closer than their average distance. Most approvals wins.' },
+  { id: 'score', name: 'Score', count: score,
+    rule: 'Each voter scores every candidate from 0 to 5: 5 for the nearest, 0 for the farthest, the rest by distance. Highest total wins.' },
+  { id: 'star', name: 'STAR', count: star,
+    rule: 'Score ballots, then an automatic runoff: of the two highest totals, the winner is whoever more voters scored higher.' },
   { id: 'minimax', name: 'Condorcet (minimax)', count: minimax,
     rule: 'Every pair meets head to head. The winner is whoever beats all the others, or else whoever loses least badly.' },
 ];

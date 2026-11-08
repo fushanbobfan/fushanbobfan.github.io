@@ -1,9 +1,9 @@
 # hustings
 
-The same voters, the same candidates, six ways of counting. Drag candidates
+The same voters, the same candidates, eight ways of counting. Drag candidates
 across a two-dimensional political map and see who wins at every point under
-plurality, a two-round runoff, instant runoff, the Borda count, approval voting
-and a Condorcet method (minimax).
+plurality, a two-round runoff, instant runoff, the Borda count, approval voting,
+score voting, STAR and a Condorcet method (minimax).
 
 **Live demo:** https://fushanbobfan.github.io/hustings/
 
@@ -27,7 +27,7 @@ Run the tests with `npm test` (Node 20 or later).
 - Each point of the map is the centre of an electorate: a round normal cloud of
   151 voters, the same cloud every time, with a spread set by the slider.
 - Voters rank the candidates by distance, nearest first.
-- Every cell holds the election under all six rules and is coloured by the
+- Every cell holds the election under all eight rules and is coloured by the
   winner (a Yee diagram). A coarse 48 × 48 map appears at once and is refined
   to 160 × 160 a few rows per frame.
 - **Stripe where the rule passes over the Condorcet winner** marks cells where a
@@ -53,6 +53,8 @@ Run the tests with `npm test` (Node 20 or later).
 | Instant runoff | The candidate with the fewest first choices drops out and their ballots move on, until someone has a majority. |
 | Borda count | k−1 points for a first choice down to 0 for a last. |
 | Approval | Each voter approves every candidate nearer than their average distance. |
+| Score | Each voter gives 5 to the nearest candidate, 0 to the farthest and the rest in proportion to distance, rounded. Highest total wins. |
+| STAR | The two highest score totals meet in an automatic runoff, won by whoever more voters scored higher; an even runoff goes to the higher total. |
 | Minimax | The candidate whose worst head-to-head defeat is smallest; this is the Condorcet winner whenever one exists. |
 
 Exact ties go to the lower-lettered candidate, and a tie for last place in
@@ -65,6 +67,8 @@ instant runoff drops the higher-lettered one, so every map is reproducible.
 - **Centre squeeze**: the moderate B beats both rivals head to head yet has the
   fewest first choices in the middle, so both runoffs drop B there. Instant
   runoff still hands B two thin stripes, where the far rival drops out first.
+- **Score and STAR** on the Centre squeeze: plain totals pass over B on about
+  a fifth of the map; STAR's runoff brings B back almost everywhere.
 - Under this approval habit, a candidate standing exactly halfway between two
   others is approved by every voter (its distance is never more than the
   average of the other two), so approval gives B the whole Centre squeeze map.

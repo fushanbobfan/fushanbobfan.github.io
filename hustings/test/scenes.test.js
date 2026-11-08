@@ -63,3 +63,13 @@ test('the link fragment round-trips and rejects junk', () => {
   assert.deepEqual(clamped.candidates[0], { x: 0.03, y: 0.97 });
   assert.equal(clamped.spread, 0.2);
 });
+
+test('STAR passes over the Condorcet winner no more often than plain scores, and far less in the squeeze', () => {
+  for (const s of SCENES) {
+    const map = sceneMap(s.id, 24);
+    assert.ok(condorcetMisses(map, idx('star')) <= condorcetMisses(map, idx('score')), s.id);
+  }
+  const sq = sceneMap('squeeze', 32);
+  assert.ok(condorcetMisses(sq, idx('score')) > 0.1);
+  assert.ok(condorcetMisses(sq, idx('star')) < 0.02);
+});

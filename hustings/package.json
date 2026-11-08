@@ -1,7 +1,7 @@
 {
   "name": "hustings",
   "version": "0.1.0",
-  "description": "Drag candidates across a political map and see who wins under plurality, runoff, instant runoff, Borda, approval and Condorcet voting.",
+  "description": "Drag candidates across a political map and see who wins under plurality, runoff, instant runoff, Borda, approval, score, STAR and Condorcet voting.",
   "type": "module",
   "scripts": {
     "test": "node --test",

@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>hustings: who wins depends on how you count</title>
-  <meta name="description" content="Drag candidates across a political map and see who wins under plurality, runoff, instant runoff, Borda, approval and Condorcet voting.">
+  <meta name="description" content="Drag candidates across a political map and see who wins under plurality, runoff, instant runoff, Borda, approval, score, STAR and Condorcet voting.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="masthead">
     <h1>hustings</h1>
-    <p>The same voters, the same candidates, six ways of counting. Each point of the map is an electorate whose centre stands there; its colour is the candidate who wins. Drag the candidates and watch the borders move.</p>
+    <p>The same voters, the same candidates, eight ways of counting. Each point of the map is an electorate whose centre stands there; its colour is the candidate who wins. Drag the candidates and watch the borders move.</p>
   </header>
 
   <main>
@@ -54,7 +54,7 @@
     </section>
 
     <section class="compare" aria-labelledby="compare-title">
-      <h2 id="compare-title">All six side by side</h2>
+      <h2 id="compare-title">All eight side by side</h2>
       <div id="thumbs" class="thumbs"></div>
     </section>
 
@@ -71,6 +71,7 @@
         <p>Plurality hears only first choices. Two candidates who stand close together split their supporters, and a third candidate wins ground that neither would lose alone. In the Twins scene the far candidate's region bulges into the gap where the cloud is split between the twins.</p>
         <p>A Condorcet winner beats every rival head to head. Every rule here except minimax can elect someone else. In the Centre squeeze scene a moderate everyone prefers to the extremes collects too few first choices to survive the first round of a runoff.</p>
         <p>Instant runoff gives B two thin stripes in the Centre squeeze, one on each side of the middle, and loses B the middle itself, where B stands. In a stripe the far candidate has the fewest first choices and drops out first, and those ballots carry B past the near one. In the middle B has the fewest and drops out.</p>
+        <p>Score and STAR ballots carry more than an order: each voter gives 5 to their nearest candidate, 0 to the farthest and something in between to the rest. Score adds them up. STAR sends the two highest totals to a runoff decided by which of them more voters scored higher, and in every scene here that runoff lands on the Condorcet winner far more often than the totals alone: in the Centre squeeze, plain scores pass over B on about a fifth of the map and STAR on almost none of it.</p>
         <p>Minimax always elects the Condorcet winner when there is one. With voters ranked by distance in a round cloud there almost always is one, so its map is the reference the stripes compare against.</p>
         <p>These pictures are known as Yee diagrams, after Ka-Ping Yee, who drew them in 2006 to compare voting rules. Approval here assumes each voter approves every candidate nearer than their average distance; other habits give other maps. Under this habit a candidate standing exactly halfway between two others is approved by every voter, because their distance to that candidate is never more than the average of their distances to the other two. That is why approval hands B the whole Centre squeeze map.</p>
       </div>

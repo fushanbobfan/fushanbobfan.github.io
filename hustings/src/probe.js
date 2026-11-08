@@ -48,6 +48,18 @@ const detail = {
   approval(r, b) {
     return `<p>Approvals from ${b.n} voters, each approving the candidates nearer than their average distance.</p>${bars(r.score, b.n, 'approvals')}`;
   },
+  score(r, b) {
+    return `<p>Totals of ${b.n} score ballots, each giving 5 to the voter's nearest candidate and 0 to the farthest.</p>${bars(r.score, 0, 'points')}`;
+  },
+  star(r, b) {
+    if (!r.finalists) return `<p>Only one candidate is standing.</p>`;
+    const [f1, f2] = r.finalists;
+    const two = r.score.map((_, c) => (c === f1 || c === f2 ? r.prefer[c] : 0));
+    return `<p>Scoring round: ${chip(f1)} and ${chip(f2)} have the two highest totals.</p>
+      ${bars(r.score, 0, 'points')}
+      <p style="margin-top:12px">Automatic runoff: each ballot counts for whichever finalist it scored higher${r.equal ? `; ${r.equal} scored them the same` : ''}.</p>
+      ${bars(two, b.n, 'voters')}`;
+  },
   minimax(r, b) {
     const k = b.k;
     const head = Array.from({ length: k }, (_, c) => `<th>${chip(c)}</th>`).join('');
