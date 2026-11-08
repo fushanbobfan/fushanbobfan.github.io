@@ -36,9 +36,13 @@ Run the tests with `npm test` (Node 20 or later).
 - Clicking the map, or focusing it and using the arrow keys, shows the election
   at that point in full: first-choice bars, both runoff rounds, the instant
   runoff table, Borda and approval totals, and the head-to-head table.
+- **Show the voters** draws the electorate at the chosen point, one dot per
+  voter, filled with the colour of their first choice. When most dots carry a
+  colour other than the cell's, the counting rule decided the cell.
 - Candidates can be dragged or moved with the arrow keys (Shift for bigger
   steps). Up to six can stand. The address bar keeps the positions and spread,
-  so a copied link reopens the same picture.
+  and **Copy link** puts that address on the clipboard, so the link reopens the
+  same picture.
 
 ## The rules
 
