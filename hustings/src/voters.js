@@ -69,3 +69,14 @@ export function ballotsFromRankings(groups) {
   }
   return { n, k, order, dist };
 }
+
+// Where each voter of the cloud stands when it is centred on (cx, cy).
+export function electorateAt(cloud, cx, cy, spread) {
+  const xs = new Float64Array(cloud.n);
+  const ys = new Float64Array(cloud.n);
+  for (let v = 0; v < cloud.n; v++) {
+    xs[v] = cx + spread * cloud.dx[v];
+    ys[v] = cy + spread * cloud.dy[v];
+  }
+  return { xs, ys };
+}

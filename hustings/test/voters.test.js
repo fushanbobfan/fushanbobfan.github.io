@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { voterCloud, castBallots, ballotsFromRankings } from '../src/voters.js';
+import { voterCloud, castBallots, ballotsFromRankings, electorateAt } from '../src/voters.js';
 
 test('the voter cloud is centred, has unit spread and replays for a seed', () => {
   const cloud = voterCloud(2000, 3);
@@ -44,4 +44,18 @@ test('ballots written by hand expand their counts', () => {
   assert.equal(b.n, 3);
   assert.equal(b.k, 3);
   assert.deepEqual([...b.order], [1, 0, 2, 1, 0, 2, 2, 1, 0]);
+});
+
+test('the electorate drawn on the map is the one that votes there', () => {
+  const cloud = voterCloud(50, 2);
+  const cands = [{ x: 0.2, y: 0.4 }, { x: 0.7, y: 0.6 }];
+  const { xs, ys } = electorateAt(cloud, 0.45, 0.5, 0.1);
+  const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+  assert.ok(Math.abs(mean(xs) - 0.45) < 1e-12);
+  assert.ok(Math.abs(mean(ys) - 0.5) < 1e-12);
+  const b = castBallots(cloud, 0.45, 0.5, 0.1, cands);
+  for (let v = 0; v < cloud.n; v++) {
+    const nearest = Math.hypot(xs[v] - 0.2, ys[v] - 0.4) <= Math.hypot(xs[v] - 0.7, ys[v] - 0.6) ? 0 : 1;
+    assert.equal(b.order[v * 2], nearest);
+  }
 });
