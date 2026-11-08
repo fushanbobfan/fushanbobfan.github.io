@@ -1,4 +1,4 @@
-import { voterCloud } from './voters.js';
+import { voterCloud, castBallots, electorateAt } from './voters.js';
 import { METHODS } from './methods.js';
 import { createMap, fillRows, shares, condorcetMisses } from './map.js';
 import {
@@ -20,6 +20,7 @@ const state = {
   spread: SCENES[0].spread,
   method: 0,
   showMisses: false,
+  showVoters: false,
   probe: { x: 0.5, y: 0.5 },
 };
 
@@ -74,6 +75,11 @@ $('show-misses').addEventListener('change', () => {
   draw();
 });
 
+$('show-voters').addEventListener('change', () => {
+  state.showVoters = $('show-voters').checked;
+  drawOverlay();
+});
+
 $('scene').addEventListener('change', () => {
   const s = SCENES.find((x) => x.id === $('scene').value);
   if (!s) return;
@@ -97,6 +103,17 @@ $('remove').addEventListener('click', () => {
   state.candidates.pop();
   buildHandles();
   changed();
+});
+
+// The address bar already holds the positions; this puts it on the clipboard.
+$('copy-link').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    $('copy-status').textContent = 'Link copied.';
+  } catch {
+    $('copy-status').textContent = 'Copy the address bar to share this picture.';
+  }
+  setTimeout(() => { $('copy-status').textContent = ''; }, 4000);
 });
 
 function selectMethod(i) {
@@ -292,12 +309,31 @@ function drawOverlay() {
     ctx.stroke();
   }
   ctx.setLineDash([]);
+  if (state.showVoters) drawVoters(ctx, size);
   ctx.beginPath();
   ctx.arc(px, py, 4, 0, 2 * Math.PI);
   ctx.fillStyle = '#fff';
   ctx.fill();
   ctx.strokeStyle = '#000';
   ctx.stroke();
+}
+
+// One dot per voter in the probe's electorate, filled with the colour of their first choice.
+function drawVoters(ctx, size) {
+  const { x, y } = state.probe;
+  const { xs, ys } = electorateAt(cloud, x, y, state.spread);
+  const ballots = castBallots(cloud, x, y, state.spread, state.candidates);
+  const r = Math.max(3.5, size / 120);
+  for (let v = 0; v < cloud.n; v++) {
+    ctx.beginPath();
+    ctx.arc(xs[v] * size, ys[v] * size, r, 0, 2 * Math.PI);
+    ctx.fillStyle = COLORS[ballots.order[v * ballots.k]];
+    ctx.fill();
+    // A dark ring keeps a dot visible on a region of its own colour.
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(20,18,15,0.9)';
+    ctx.stroke();
+  }
 }
 
 window.addEventListener('resize', drawOverlay);

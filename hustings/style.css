@@ -157,6 +157,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 
 select { padding: 5px; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; }
 
+.copy-status { align-self: center; color: var(--muted); font-size: 0.9rem; }
+
 .shares { margin: 0; font-size: 0.9rem; color: var(--muted); }
 .swatch {
   display: inline-block;
