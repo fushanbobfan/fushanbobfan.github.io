@@ -1,0 +1,20 @@
+{
+  "name": "hustings",
+  "version": "0.1.0",
+  "description": "Drag candidates across a political map and see who wins under plurality, runoff, instant runoff, Borda, approval and Condorcet voting.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "voting",
+    "social-choice",
+    "yee-diagram",
+    "election",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
