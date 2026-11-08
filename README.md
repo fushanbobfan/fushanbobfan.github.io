@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [hustings](https://fushanbobfan.github.io/hustings/) | Who wins depends on how you count: drag candidates across a political map and compare plurality, runoffs, Borda, approval and Condorcet voting. | [`hustings/`](hustings/) |
 | [axon](https://fushanbobfan.github.io/axon/) | Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, from channels opening to a spike racing along an axon, with and without myelin. | [`axon/`](axon/) |
 | [nimber](https://fushanbobfan.github.io/nimber/) | Games that are secretly Nim: play Nim, Kayles and Wythoff's queen against a computer that never slips, and see the number hidden in every position. | [`nimber/`](nimber/) |
 | [cusp](https://fushanbobfan.github.io/cusp/) | Zeeman's catastrophe machine in the browser: pull a rubber band slowly, watch a wheel suddenly snap round, and find the curved diamond that decides when. | [`cusp/`](cusp/) |
