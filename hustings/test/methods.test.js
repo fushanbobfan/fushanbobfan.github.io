@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ballotsFromRankings } from '../src/voters.js';
 import {
   plurality, runoff, instantRunoff, borda, approval, minimax,
-  pairwise, condorcetWinner, METHODS,
+  pairwise, condorcetWinner, METHODS, cardinalScores, score, star,
 } from '../src/methods.js';
 
 const A = 0, B = 1, C = 2, D = 3;
@@ -99,4 +99,47 @@ test('every rule elects the only candidate in a one-horse race', () => {
 test('every rule elects a candidate who is everyone\'s first choice', () => {
   const b = ballotsFromRankings([[6, [C, A, B]], [4, [C, B, A]]]);
   for (const m of METHODS) assert.equal(m.count(b).winner, C, m.id);
+});
+
+function ballotsFromDistances(groups) {
+  const k = groups[0][1].length;
+  const n = groups.reduce((s, [count]) => s + count, 0);
+  const order = new Uint8Array(n * k);
+  const dist = new Float64Array(n * k);
+  let v = 0;
+  for (const [count, ds] of groups) {
+    const rank = [...ds.keys()].sort((a, b) => ds[a] - ds[b] || a - b);
+    for (let i = 0; i < count; i++, v++) {
+      ds.forEach((d, c) => { dist[v * k + c] = d; });
+      rank.forEach((c, r) => { order[v * k + r] = c; });
+    }
+  }
+  return { n, k, order, dist };
+}
+
+test('score ballots run from 5 for the nearest to 0 for the farthest', () => {
+  const b = ballotsFromDistances([[1, [0.1, 0.5, 0.3]], [1, [0.2, 0.2, 0.2]]]);
+  const { each, total } = cardinalScores(b);
+  assert.deepEqual([...each], [5, 0, 3, 5, 5, 5]);
+  assert.deepEqual(total, [10, 5, 8]);
+});
+
+test('STAR\'s runoff can overturn the highest score', () => {
+  // Four voters love A and score B 0; five prefer B but still give A a 4.
+  const b = ballotsFromDistances([[4, [0, 1, 1]], [5, [0.2, 0, 1]]]);
+  const s = score(b);
+  assert.deepEqual(s.score, [40, 25, 0]);
+  assert.equal(s.winner, A);
+  const r = star(b);
+  assert.deepEqual(r.finalists, [A, B]);
+  assert.deepEqual(r.prefer, [4, 5, 0]);
+  assert.equal(r.winner, B);
+});
+
+test('an even STAR runoff goes to the higher total', () => {
+  const b = ballotsFromDistances([[2, [0, 1, 1]], [2, [0.4, 0, 1]]]);
+  const r = star(b);
+  assert.deepEqual(r.score, [16, 10, 0]);
+  assert.deepEqual(r.prefer, [2, 2, 0]);
+  assert.equal(r.winner, A);
 });
