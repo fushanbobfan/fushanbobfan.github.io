@@ -44,7 +44,7 @@ export const SCENES = [
   {
     id: 'pull',
     name: 'Weighted cubic',
-    note: 'A heavy weight pulls the curve toward its control point and a light one lets it go. Weights change the curve without moving any point, which is why drawing programs and fonts that need exact circles use rational curves.',
+    note: 'A heavy weight pulls the curve toward its control point and a light one lets it go. Weights change the curve without moving any point. Rational curves can draw exact circles and other conics, which is why CAD programs build their shapes from them (as NURBS).',
     points: [[90, 480], [170, 130, 3], [430, 130, 0.4], [510, 480]],
   },
   {

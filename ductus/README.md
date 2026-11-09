@@ -31,19 +31,25 @@ Run the tests with `npm test` (Node 20 or later).
 - **The two halves at *t*.** The outer edges of the construction are the
   control polygons of the curve before and after *t*; this is how a curve is
   cut without changing its shape.
+- **Weights.** Each control point has a weight (0.25 to 4, on a log scale).
+  The construction then runs on (x·w, y·w, w) and divides by the last
+  coordinate, giving a rational Bézier curve. A quadratic is a parabola, an
+  ellipse or a hyperbola arc as its middle weight is 1, below 1 or above, and
+  **Make a circular arc** evens its legs and sets the weight that makes it an
+  exact circle. Heavier points are drawn larger.
 - **Raise the degree** adds a control point and leaves the curve exactly as it
   was. **Add a point** changes it. Double-click a point, or focus it and press
   Delete, to remove it. Points move with the arrow keys (Shift for larger steps).
 
-Starting curves: a cubic arch, a parabola, an S bend, a loop, a near-cusp and a
-degree-six curve.
+Starting curves: a cubic arch, a parabola, an S bend, a loop, a near-cusp, an
+exact quarter circle, a weighted cubic and a degree-six curve.
 
 ## Layout
 
 | File | Role |
 | --- | --- |
-| `src/bezier.js` | de Casteljau levels, evaluation, splitting, derivatives, curvature, degree elevation, arc length |
-| `src/scenes.js` | Starting curves and point editing helpers |
+| `src/bezier.js` | de Casteljau levels, evaluation, splitting, derivatives, curvature, degree elevation and arc length, for polynomial and rational curves |
+| `src/scenes.js` | Starting curves, point and weight editing, snapping to a circular arc |
 | `src/main.js` | Canvas drawing, dragging, keyboard and controls |
 
 Arc length uses five-point Gauss–Legendre quadrature on equal pieces of the
