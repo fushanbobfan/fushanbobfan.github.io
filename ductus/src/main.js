@@ -1,6 +1,6 @@
 import {
   deCasteljau, split, sample, derivative, curvature, normal, elevate, arcLength,
-  isRational, conicKind, circleWeight,
+  isRational, conicKind, circleWeight, lengthTable, tAtFraction,
 } from './bezier.js';
 import {
   BOARD, MAX_POINTS, MIN_POINTS, SCENES, sceneById, scenePoints, withExtraPoint, withoutPoint, clampToBoard,
@@ -20,6 +20,7 @@ const state = {
   t: Number(tInput.value),
   playing: false,
   selected: 1,
+  fraction: 0,
 };
 
 const LEVEL_HUES = [205, 150, 40, 285, 15, 95, 330, 180];
@@ -81,6 +82,23 @@ function drawComb(points) {
   polyline(tips);
 }
 
+function drawTicks(points) {
+  const table = lengthTable(points);
+  const tick = cssVar('--ink');
+  ctx.strokeStyle = tick;
+  ctx.lineWidth = 2;
+  for (let k = 0; k <= 10; k++) {
+    const t = tAtFraction(points, k / 10, table);
+    const p = deCasteljau(points, t).at(-1)[0];
+    const n = normal(points, t);
+    polyline([{ x: p.x - n.x * 11, y: p.y - n.y * 11 }, { x: p.x + n.x * 11, y: p.y + n.y * 11 }]);
+  }
+  for (let k = 0; k <= 10; k++) {
+    const p = deCasteljau(points, k / 10).at(-1)[0];
+    dot(p, 5, cssVar('--point'));
+  }
+}
+
 function draw() {
   fitCanvas();
   const pts = state.points;
@@ -115,6 +133,8 @@ function draw() {
     ctx.lineWidth = 4;
     polyline(sample(pts, 240));
   }
+
+  if ($('show-ticks').checked) drawTicks(pts);
 
   const levels = deCasteljau(pts, state.t);
   if ($('show-construction').checked) {
@@ -152,7 +172,9 @@ function readout(p) {
   const k = Math.abs(curvature(pts, state.t));
   $('r-curvature').textContent = k < 1e-7 ? '0' : fmt(k, 4);
   $('r-radius').textContent = k < 1e-7 ? 'straight' : k > 10 ? 'under 0.1' : fmt(1 / k);
-  $('r-length').textContent = fmt(arcLength(pts, 0, 1, 48));
+  const total = arcLength(pts, 0, 1, 48);
+  $('r-length').textContent = fmt(total);
+  $('r-share').textContent = total > 0 ? `${fmt((100 * arcLength(pts, 0, state.t, 48)) / total)}%` : '–';
   $('t-value').textContent = state.t.toFixed(2);
   $('add').disabled = pts.length >= MAX_POINTS;
   $('elevate').disabled = pts.length >= MAX_POINTS;
@@ -322,14 +344,23 @@ tInput.addEventListener('input', () => {
   draw();
 });
 
-for (const id of ['show-construction', 'show-comb', 'show-split']) $(id).addEventListener('change', draw);
+for (const id of ['show-construction', 'show-comb', 'show-split', 'show-ticks']) $(id).addEventListener('change', draw);
+
+$('even-play').addEventListener('change', () => {
+  state.fraction = arcLength(state.points, 0, state.t, 48) / (arcLength(state.points, 0, 1, 48) || 1);
+});
 
 let last = 0;
 function tick(now) {
   if (!state.playing) return;
   const dt = last ? (now - last) / 1000 : 0;
   last = now;
-  state.t = (state.t + dt / 5) % 1;
+  if ($('even-play').checked) {
+    state.fraction = (state.fraction + dt / 5) % 1;
+    state.t = tAtFraction(state.points, state.fraction);
+  } else {
+    state.t = (state.t + dt / 5) % 1;
+  }
   tInput.value = String(state.t);
   draw();
   requestAnimationFrame(tick);
@@ -341,7 +372,10 @@ play.addEventListener('click', () => {
   play.setAttribute('aria-pressed', String(state.playing));
   play.textContent = state.playing ? 'Pause' : 'Play';
   last = 0;
-  if (state.playing) requestAnimationFrame(tick);
+  if (state.playing) {
+    state.fraction = arcLength(state.points, 0, state.t, 48) / (arcLength(state.points, 0, 1, 48) || 1);
+    requestAnimationFrame(tick);
+  }
 });
 
 new ResizeObserver(draw).observe(board);

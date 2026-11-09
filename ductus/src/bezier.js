@@ -170,3 +170,39 @@ export function circleWeight(points) {
   // The arc's half angle is (π − B)/2, and the weight is its cosine: sin(B/2).
   return Math.sqrt((1 - cosB) / 2);
 }
+
+// A table of cumulative arc length at evenly spaced t, for turning a distance
+// along the curve back into a parameter.
+export function lengthTable(points, steps = 200) {
+  const ts = [0];
+  const lengths = [0];
+  for (let i = 1; i <= steps; i++) {
+    const a = (i - 1) / steps, b = i / steps;
+    ts.push(b);
+    lengths.push(lengths[i - 1] + arcLength(points, a, b, 1));
+  }
+  return { ts, lengths, total: lengths[steps] };
+}
+
+// The parameter at which the curve has covered `fraction` of its length:
+// look the distance up in the table, then refine with Newton steps on the speed.
+export function tAtFraction(points, fraction, table = lengthTable(points)) {
+  const { ts, lengths, total } = table;
+  if (total === 0) return fraction;
+  const target = Math.min(1, Math.max(0, fraction)) * total;
+  let lo = 0, hi = lengths.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (lengths[mid] < target) lo = mid; else hi = mid;
+  }
+  const span = lengths[hi] - lengths[lo];
+  let t = span > 0 ? ts[lo] + ((target - lengths[lo]) / span) * (ts[hi] - ts[lo]) : ts[lo];
+  for (let k = 0; k < 3; k++) {
+    const d = derivative(points, t);
+    const speed = Math.hypot(d.x, d.y);
+    if (speed < 1e-9) break;
+    const covered = lengths[lo] + arcLength(points, ts[lo], t, 1);
+    t = Math.min(ts[hi], Math.max(ts[lo], t - (covered - target) / speed));
+  }
+  return t;
+}

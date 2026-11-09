@@ -55,9 +55,11 @@
 
         <fieldset>
           <legend>Show</legend>
-          <label class="check"><input id="show-construction" type="checkbox" checked> The construction at <i>t</i></label>
-          <label class="check"><input id="show-comb" type="checkbox"> The curvature comb</label>
-          <label class="check"><input id="show-split" type="checkbox"> The two halves at <i>t</i></label>
+          <label class="check"><input id="show-construction" type="checkbox" checked> <span>The construction at <i>t</i></span></label>
+          <label class="check"><input id="show-comb" type="checkbox"> <span>The curvature comb</span></label>
+          <label class="check"><input id="show-split" type="checkbox"> <span>The two halves at <i>t</i></span></label>
+          <label class="check"><input id="show-ticks" type="checkbox"> <span>Ten equal steps of <i>t</i>, and of length</span></label>
+          <label class="check"><input id="even-play" type="checkbox"> <span>Play at constant speed</span></label>
         </fieldset>
 
         <dl class="readout">
@@ -68,6 +70,7 @@
           <div><dt>Curvature</dt><dd id="r-curvature"></dd></div>
           <div><dt>Radius of the turn</dt><dd id="r-radius"></dd></div>
           <div><dt>Length of the curve</dt><dd id="r-length"></dd></div>
+          <div><dt>Share of it up to <i>t</i></dt><dd id="r-share"></dd></div>
         </dl>
       </aside>
     </section>
@@ -78,6 +81,7 @@
         <li><b>The construction.</b> Each coloured level is one round of in-between points. A curve with <i>n</i> + 1 control points needs <i>n</i> rounds. The last segment drawn touches the curve: it is the tangent, and its length times <i>n</i> is the speed of the moving point.</li>
         <li><b>The curvature comb.</b> Each tooth stands on the curve, at right angles to it, with a length proportional to the curvature there: one over the radius of the circle that best fits the curve at that point. Long teeth mark tight turns; where the teeth cross to the other side, the curve inflects.</li>
         <li><b>The two halves.</b> The outer edges of the construction are themselves control polygons: the left edge draws the curve up to <i>t</i>, the right edge the rest. Splitting this way is how drawing programs cut a curve without changing its shape.</li>
+        <li><b>Steps of <i>t</i> and of length.</b> Round dots mark <i>t</i> = 0, 0.1, …, 1; bars across the curve cut it into ten pieces of equal length. The dots bunch up where the point moves slowly and spread out where it is fast, so animating <i>t</i> at a steady rate does not move along the curve at a steady pace. <b>Play at constant speed</b> steps through length instead, finding each <i>t</i> from a table of lengths refined with Newton's method.</li>
         <li><b>Weights.</b> Give each control point a weight and do the construction one dimension up: lift each point to (<i>x</i>·<i>w</i>, <i>y</i>·<i>w</i>, <i>w</i>), interpolate as before, then divide by the last coordinate. The result is a rational Bézier curve. A quadratic with end weights 1 is a parabola when the middle weight is 1, a piece of an ellipse below 1 and of a hyperbola above; with equal legs and the middle weight equal to the cosine of half the arc's angle, it is an exact circle.</li>
       </ul>
       <p>Lengths are in board units; the board is 600 units across.</p>

@@ -149,3 +149,28 @@ test('a heavier weight pulls the curve toward its control point', () => {
   assert.ok(pointAt(q(4), 0.5).y > pointAt(q(1), 0.5).y);
   assert.ok(pointAt(q(0.25), 0.5).y < pointAt(q(1), 0.5).y);
 });
+
+test('the length table ends at the full length', async () => {
+  const { lengthTable } = await import('../src/bezier.js');
+  const table = lengthTable(cubic);
+  close(table.total, arcLength(cubic, 0, 1, 64), 1e-9);
+  for (let i = 1; i < table.lengths.length; i++) assert.ok(table.lengths[i] > table.lengths[i - 1]);
+});
+
+test('equal fractions of length land at equal distances along the curve', async () => {
+  const { tAtFraction, lengthTable } = await import('../src/bezier.js');
+  const uneven = [{ x: 0, y: 0 }, { x: 0.2, y: 3 }, { x: 0.4, y: 3 }, { x: 6, y: 0 }];
+  const table = lengthTable(uneven);
+  for (const f of [0, 0.1, 0.25, 0.5, 0.8, 1]) {
+    const t = tAtFraction(uneven, f, table);
+    close(arcLength(uneven, 0, t, 64), f * table.total, 1e-7);
+  }
+  // Equal steps of t are not equal steps of length on this curve.
+  assert.ok(Math.abs(tAtFraction(uneven, 0.5, table) - 0.5) > 0.05);
+});
+
+test('on a segment with evenly spaced control points the parameter is already arc length', async () => {
+  const { tAtFraction } = await import('../src/bezier.js');
+  const seg = [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }];
+  for (const f of [0.2, 0.7]) close(tAtFraction(seg, f), f, 1e-9);
+});
