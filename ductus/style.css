@@ -105,10 +105,11 @@ h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 8px; }
 .handles { position: absolute; inset: 0; }
 
 .handle {
+  --size: 26px;
   position: absolute;
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
+  width: var(--size);
+  height: var(--size);
+  margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
   padding: 0;
   background: var(--point);
   border: 2px solid var(--handle-edge);
@@ -155,6 +156,9 @@ legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .check { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.weight-row { display: grid; grid-template-columns: minmax(0, 1fr) 3.2em; gap: 8px; align-items: center; }
+.weight-row output { font-variant-numeric: tabular-nums; text-align: right; }
+.weights .hint { margin: 4px 0 8px; }
 .hint { margin: -6px 0 0; color: var(--muted); font-size: 0.85rem; }
 
 button {
