@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [ductus](https://fushanbobfan.github.io/ductus/) | Bézier curves in the browser: drag control points, watch de Casteljau's construction trace the curve, and read its curvature from a comb. | [`ductus/`](ductus/) |
 | [hustings](https://fushanbobfan.github.io/hustings/) | Who wins depends on how you count: drag candidates across a political map and compare plurality, runoffs, Borda, approval and Condorcet voting. | [`hustings/`](hustings/) |
 | [axon](https://fushanbobfan.github.io/axon/) | Fire a nerve impulse in the browser: the Hodgkin-Huxley equations, from channels opening to a spike racing along an axon, with and without myelin. | [`axon/`](axon/) |
 | [nimber](https://fushanbobfan.github.io/nimber/) | Games that are secretly Nim: play Nim, Kayles and Wythoff's queen against a computer that never slips, and see the number hidden in every position. | [`nimber/`](nimber/) |
