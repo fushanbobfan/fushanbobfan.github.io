@@ -31,6 +31,12 @@ Run the tests with `npm test` (Node 20 or later).
 - **The two halves at *t*.** The outer edges of the construction are the
   control polygons of the curve before and after *t*; this is how a curve is
   cut without changing its shape.
+- **Steps of *t* and of length.** Dots at t = 0, 0.1, …, 1 and bars that cut
+  the curve into ten pieces of equal length show where the point moves slowly
+  and where fast. **Play at constant speed** sweeps length instead of *t*: a
+  table of cumulative lengths gives a first guess for each *t* and a few
+  Newton steps on the speed refine it. The readout gives the share of the
+  length covered up to *t*.
 - **Weights.** Each control point has a weight (0.25 to 4, on a log scale).
   The construction then runs on (x·w, y·w, w) and divides by the last
   coordinate, giving a rational Bézier curve. A quadratic is a parabola, an
@@ -48,7 +54,7 @@ exact quarter circle, a weighted cubic and a degree-six curve.
 
 | File | Role |
 | --- | --- |
-| `src/bezier.js` | de Casteljau levels, evaluation, splitting, derivatives, curvature, degree elevation and arc length, for polynomial and rational curves |
+| `src/bezier.js` | de Casteljau levels, evaluation, splitting, derivatives, curvature, degree elevation, arc length and the parameter at a given share of the length, for polynomial and rational curves |
 | `src/scenes.js` | Starting curves, point and weight editing, snapping to a circular arc |
 | `src/main.js` | Canvas drawing, dragging, keyboard and controls |
 
