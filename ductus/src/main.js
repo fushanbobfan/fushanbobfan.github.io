@@ -1,8 +1,10 @@
 import {
   deCasteljau, split, sample, derivative, curvature, normal, elevate, arcLength,
+  isRational, conicKind, circleWeight,
 } from './bezier.js';
 import {
   BOARD, MAX_POINTS, MIN_POINTS, SCENES, sceneById, scenePoints, withExtraPoint, withoutPoint, clampToBoard,
+  weightFromSlider, sliderFromWeight, withWeight, asCircularArc,
 } from './scenes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -17,6 +19,7 @@ const state = {
   points: scenePoints(SCENES[0]),
   t: Number(tInput.value),
   playing: false,
+  selected: 1,
 };
 
 const LEVEL_HUES = [205, 150, 40, 285, 15, 95, 330, 180];
@@ -142,6 +145,7 @@ function readout(p) {
   const n = pts.length - 1;
   const names = ['', 'a straight line', 'quadratic', 'cubic', 'quartic', 'quintic'];
   $('r-degree').textContent = names[n] ? `${n} (${names[n]})` : String(n);
+  $('r-kind').textContent = kindOf(pts);
   $('r-point').textContent = `(${fmt(p.x)}, ${fmt(p.y)})`;
   const d = derivative(pts, state.t);
   $('r-speed').textContent = `${fmt(Math.hypot(d.x, d.y))} per unit of t`;
@@ -152,6 +156,28 @@ function readout(p) {
   $('t-value').textContent = state.t.toFixed(2);
   $('add').disabled = pts.length >= MAX_POINTS;
   $('elevate').disabled = pts.length >= MAX_POINTS;
+  $('circle').disabled = pts.length !== 3;
+  $('reset-weights').disabled = !isRational(pts);
+  syncWeight();
+}
+
+function kindOf(pts) {
+  const conic = conicKind(pts);
+  if (conic === 'ellipse') {
+    const [a, b, c] = pts;
+    const even = Math.abs(Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y)) < 0.5;
+    if (even && Math.abs(pts[1].w - circleWeight(pts)) < 0.005) return 'circular arc';
+  }
+  if (conic) return `${conic} arc`;
+  return isRational(pts) ? 'rational' : 'polynomial';
+}
+
+function syncWeight() {
+  const i = Math.min(state.selected, state.points.length - 1);
+  const w = state.points[i].w ?? 1;
+  $('w-index').textContent = String(i);
+  $('w-value').textContent = w.toFixed(2);
+  if (document.activeElement !== $('weight')) $('weight').value = String(sliderFromWeight(w));
 }
 
 // Handles are buttons so the keyboard can reach and move them.
@@ -174,7 +200,9 @@ function placeHandles() {
     const el = handles.children[i];
     el.style.left = `${(p.x / BOARD) * 100}%`;
     el.style.top = `${(p.y / BOARD) * 100}%`;
-    el.setAttribute('aria-label', `Control point ${i} at ${Math.round(p.x)}, ${Math.round(p.y)}`);
+    const w = p.w ?? 1;
+    el.style.setProperty('--size', `${Math.round(26 + 7 * Math.log2(w))}px`);
+    el.setAttribute('aria-label', `Control point ${i} at ${Math.round(p.x)}, ${Math.round(p.y)}${w === 1 ? '' : `, weight ${w.toFixed(2)}`}`);
   });
 }
 
@@ -192,11 +220,12 @@ handles.addEventListener('pointerdown', (e) => {
   el.focus();
   el.setPointerCapture(e.pointerId);
   drag = { index: Number(el.dataset.index), id: e.pointerId };
+  state.selected = drag.index;
 });
 
 handles.addEventListener('pointermove', (e) => {
   if (!drag || e.pointerId !== drag.id) return;
-  state.points[drag.index] = boardPoint(e);
+  state.points[drag.index] = { ...state.points[drag.index], ...boardPoint(e) };
   draw();
 });
 
@@ -209,6 +238,7 @@ handles.addEventListener('pointercancel', endDrag);
 function removePoint(index) {
   if (state.points.length <= MIN_POINTS) return;
   state.points = withoutPoint(state.points, index);
+  state.selected = Math.min(state.selected, state.points.length - 1);
   buildHandles();
   draw();
   handles.children[Math.min(index, state.points.length - 1)]?.focus();
@@ -233,13 +263,38 @@ handles.addEventListener('keydown', (e) => {
   if (!move) return;
   e.preventDefault();
   const p = state.points[i];
-  state.points[i] = clampToBoard({ x: p.x + move[0], y: p.y + move[1] });
+  state.points[i] = clampToBoard({ ...p, x: p.x + move[0], y: p.y + move[1] });
+  draw();
+});
+
+handles.addEventListener('focusin', (e) => {
+  const el = e.target.closest('.handle');
+  if (!el) return;
+  state.selected = Number(el.dataset.index);
+  syncWeight();
+});
+
+$('weight').addEventListener('input', () => {
+  const i = Math.min(state.selected, state.points.length - 1);
+  state.points = withWeight(state.points, i, weightFromSlider(Number($('weight').value)));
+  draw();
+});
+
+$('reset-weights').addEventListener('click', () => {
+  state.points = state.points.map(({ x, y }) => ({ x, y }));
+  draw();
+});
+
+$('circle').addEventListener('click', () => {
+  state.points = asCircularArc(state.points, circleWeight);
+  state.selected = 1;
   draw();
 });
 
 function loadScene(id) {
   const scene = sceneById(id);
   state.points = scenePoints(scene);
+  state.selected = 1;
   $('scene-note').textContent = scene.note;
   buildHandles();
   draw();

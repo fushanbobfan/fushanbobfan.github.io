@@ -92,3 +92,60 @@ test('arc length of a straight segment and of the quarter-circle cubic', () => {
   const arc = [{ x: 1, y: 0 }, { x: 1, y: k }, { x: k, y: 1 }, { x: 0, y: 1 }];
   close(arcLength(arc), Math.PI / 2, 1e-3);
 });
+
+// Rational curves
+
+test('a quadratic with middle weight cos 45° is an exact quarter circle', async () => {
+  const { circleWeight } = await import('../src/bezier.js');
+  const ctrl = [{ x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+  const w = circleWeight(ctrl);
+  close(w, Math.SQRT1_2);
+  const arc = [ctrl[0], { ...ctrl[1], w }, ctrl[2]];
+  for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) {
+    const p = pointAt(arc, t);
+    close(Math.hypot(p.x, p.y), 1, 1e-12);
+    close(curvature(arc, t), 1, 1e-9);
+  }
+  close(arcLength(arc), Math.PI / 2, 1e-9);
+});
+
+test('the rational derivative matches a central difference', () => {
+  const pts = [{ x: 0, y: 0 }, { x: 2, y: 3, w: 2.5 }, { x: 5, y: 1, w: 0.4 }, { x: 6, y: 4 }];
+  const h = 1e-6;
+  for (const t of [0.15, 0.5, 0.85]) {
+    const a = pointAt(pts, t - h), b = pointAt(pts, t + h);
+    closePt(derivative(pts, t), { x: (b.x - a.x) / (2 * h), y: (b.y - a.y) / (2 * h) }, 1e-5);
+  }
+});
+
+test('splitting and elevating a rational curve leave it unchanged', () => {
+  const pts = [{ x: 0, y: 0 }, { x: 2, y: 3, w: 2.5 }, { x: 5, y: 1, w: 0.4 }, { x: 6, y: 4 }];
+  const { left, right } = split(pts, 0.3);
+  for (const s of [0, 0.4, 1]) {
+    closePt(pointAt(left, s), pointAt(pts, 0.3 * s));
+    closePt(pointAt(right, s), pointAt(pts, 0.3 + 0.7 * s));
+  }
+  const up = elevate(pts);
+  for (const t of [0, 0.2, 0.65, 1]) closePt(pointAt(up, t), pointAt(pts, t));
+});
+
+test('a weight of 1 everywhere is the polynomial curve, and the middle weight names the conic', async () => {
+  const { conicKind, isRational } = await import('../src/bezier.js');
+  const weighted = cubic.map((p) => ({ ...p, w: 1 }));
+  for (const t of [0.2, 0.7]) {
+    closePt(pointAt(weighted, t), pointAt(cubic, t));
+    close(curvature(weighted, t), curvature(cubic, t));
+  }
+  assert.equal(isRational(weighted), false);
+  const q = (w) => [{ x: 0, y: 0 }, { x: 1, y: 2, w }, { x: 2, y: 0 }];
+  assert.equal(conicKind(q(1)), 'parabola');
+  assert.equal(conicKind(q(0.5)), 'ellipse');
+  assert.equal(conicKind(q(3)), 'hyperbola');
+  assert.equal(conicKind(cubic), null);
+});
+
+test('a heavier weight pulls the curve toward its control point', () => {
+  const q = (w) => [{ x: 0, y: 0 }, { x: 1, y: 2, w }, { x: 2, y: 0 }];
+  assert.ok(pointAt(q(4), 0.5).y > pointAt(q(1), 0.5).y);
+  assert.ok(pointAt(q(0.25), 0.5).y < pointAt(q(1), 0.5).y);
+});

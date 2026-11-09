@@ -36,6 +36,18 @@ export const SCENES = [
     points: [[100, 440], [470, 170], [130, 170], [500, 440]],
   },
   {
+    id: 'circle',
+    name: 'A quarter circle',
+    note: 'No polynomial curve is exactly a circle, but a weighted one is. With the middle weight at cos 45° ≈ 0.707 this quadratic is a true quarter circle: the comb is a band of equal teeth. Change the weight and it becomes an ellipse or a hyperbola.',
+    points: [[120, 480], [120, 120, Math.SQRT1_2], [480, 120]],
+  },
+  {
+    id: 'pull',
+    name: 'Weighted cubic',
+    note: 'A heavy weight pulls the curve toward its control point and a light one lets it go. Weights change the curve without moving any point. Rational curves can draw exact circles and other conics, which is why CAD programs build their shapes from them (as NURBS).',
+    points: [[90, 480], [170, 130, 3], [430, 130, 0.4], [510, 480]],
+  },
+  {
     id: 'wave',
     name: 'Seven points',
     note: 'A degree-six curve. Each control point pulls on the whole curve, but most strongly near its own share of the parameter, so the curve smooths the polygon out.',
@@ -48,11 +60,41 @@ export function sceneById(id) {
 }
 
 export function scenePoints(scene) {
-  return scene.points.map(([x, y]) => ({ x, y }));
+  return scene.points.map(([x, y, w]) => (w === undefined ? { x, y } : { x, y, w }));
 }
 
-// A new control point goes halfway along the last leg, pushed a little off it,
-// so the curve visibly changes.
+export const MIN_WEIGHT = 0.25;
+export const MAX_WEIGHT = 4;
+
+// Weights move on a log scale, so halving and doubling are equal steps.
+export function weightFromSlider(v) {
+  return Math.pow(2, v);
+}
+
+export function sliderFromWeight(w) {
+  return Math.log2(w === undefined ? 1 : w);
+}
+
+export function withWeight(points, index, w) {
+  const clamped = Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, w));
+  return points.map((p, i) => (i === index ? { ...p, w: clamped } : p));
+}
+
+// Shortens the longer leg until both legs are equally long, then gives the
+// middle point the weight that makes the quadratic a circular arc. Points only
+// move toward the middle point, so they stay on the board.
+export function asCircularArc(points, circleWeight) {
+  if (points.length !== 3) return points;
+  const [a, b, c] = points;
+  const legA = Math.hypot(a.x - b.x, a.y - b.y);
+  const legC = Math.hypot(c.x - b.x, c.y - b.y);
+  if (legA < 1 || legC < 1) return points;
+  const leg = Math.min(legA, legC);
+  const along = (p, len) => ({ x: b.x + ((p.x - b.x) / len) * leg, y: b.y + ((p.y - b.y) / len) * leg });
+  const even = [along(a, legA), { x: b.x, y: b.y }, along(c, legC)];
+  return withWeight(even, 1, circleWeight(even));
+}
+
 export function withExtraPoint(points) {
   if (points.length >= MAX_POINTS) return points;
   const a = points[points.length - 2];
@@ -71,6 +113,7 @@ export function withoutPoint(points, index) {
 
 export function clampToBoard(p, margin = 8) {
   return {
+    ...p,
     x: Math.min(BOARD - margin, Math.max(margin, p.x)),
     y: Math.min(BOARD - margin, Math.max(margin, p.y)),
   };

@@ -40,6 +40,19 @@
         </div>
         <p class="hint">Double-click a control point, or press Delete on it, to remove it. Raising the degree adds a point without changing the curve.</p>
 
+        <fieldset class="weights">
+          <legend>Weight of point <span id="w-index">1</span></legend>
+          <div class="weight-row">
+            <input id="weight" type="range" min="-2" max="2" step="0.01" value="0" aria-describedby="w-help">
+            <output id="w-value" for="weight">1.00</output>
+          </div>
+          <p id="w-help" class="hint">A heavier point pulls the curve toward itself. Focus or drag a point to choose it.</p>
+          <div class="row">
+            <button id="reset-weights" type="button">All weights 1</button>
+            <button id="circle" type="button">Make a circular arc</button>
+          </div>
+        </fieldset>
+
         <fieldset>
           <legend>Show</legend>
           <label class="check"><input id="show-construction" type="checkbox" checked> The construction at <i>t</i></label>
@@ -49,6 +62,7 @@
 
         <dl class="readout">
           <div><dt>Degree</dt><dd id="r-degree"></dd></div>
+          <div><dt>Kind</dt><dd id="r-kind"></dd></div>
           <div><dt>Point at <i>t</i></dt><dd id="r-point"></dd></div>
           <div><dt>Speed</dt><dd id="r-speed"></dd></div>
           <div><dt>Curvature</dt><dd id="r-curvature"></dd></div>
@@ -64,6 +78,7 @@
         <li><b>The construction.</b> Each coloured level is one round of in-between points. A curve with <i>n</i> + 1 control points needs <i>n</i> rounds. The last segment drawn touches the curve: it is the tangent, and its length times <i>n</i> is the speed of the moving point.</li>
         <li><b>The curvature comb.</b> Each tooth stands on the curve, at right angles to it, with a length proportional to the curvature there: one over the radius of the circle that best fits the curve at that point. Long teeth mark tight turns; where the teeth cross to the other side, the curve inflects.</li>
         <li><b>The two halves.</b> The outer edges of the construction are themselves control polygons: the left edge draws the curve up to <i>t</i>, the right edge the rest. Splitting this way is how drawing programs cut a curve without changing its shape.</li>
+        <li><b>Weights.</b> Give each control point a weight and do the construction one dimension up: lift each point to (<i>x</i>·<i>w</i>, <i>y</i>·<i>w</i>, <i>w</i>), interpolate as before, then divide by the last coordinate. The result is a rational Bézier curve. A quadratic with end weights 1 is a parabola when the middle weight is 1, a piece of an ellipse below 1 and of a hyperbola above; with equal legs and the middle weight equal to the cosine of half the arc's angle, it is an exact circle.</li>
       </ul>
       <p>Lengths are in board units; the board is 600 units across.</p>
     </section>
