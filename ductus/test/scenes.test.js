@@ -50,3 +50,36 @@ test('removing stops at two points and clamping keeps points on the board', () =
   assert.equal(withoutPoint(scenePoints(sceneById('cubic')), 1).length, 3);
   assert.deepEqual(clampToBoard({ x: -5, y: 900 }), { x: 8, y: BOARD - 8 });
 });
+
+test('weighted scenes keep their weights and the slider runs on a log scale', async () => {
+  const { weightFromSlider, sliderFromWeight, withWeight, MIN_WEIGHT, MAX_WEIGHT } = await import('../src/scenes.js');
+  const pts = scenePoints(sceneById('circle'));
+  assert.equal(pts[1].w, Math.SQRT1_2);
+  assert.equal(pts[0].w, undefined);
+  assert.equal(weightFromSlider(1), 2);
+  assert.equal(weightFromSlider(sliderFromWeight(0.3)), 0.3);
+  assert.equal(sliderFromWeight(undefined), 0);
+  assert.equal(withWeight(pts, 0, 99)[0].w, MAX_WEIGHT);
+  assert.equal(withWeight(pts, 0, 0)[0].w, MIN_WEIGHT);
+  assert.equal(clampToBoard({ x: 10, y: 10, w: 3 }).w, 3);
+});
+
+test('snapping to a circular arc gives equal legs and a curve of constant curvature', async () => {
+  const { asCircularArc } = await import('../src/scenes.js');
+  const { circleWeight } = await import('../src/bezier.js');
+  const start = [{ x: 100, y: 500 }, { x: 250, y: 120 }, { x: 560, y: 330 }];
+  const arc = asCircularArc(start, circleWeight);
+  const leg = (p) => Math.hypot(p.x - arc[1].x, p.y - arc[1].y);
+  assert.ok(Math.abs(leg(arc[0]) - leg(arc[2])) < 1e-9);
+  const k0 = curvature(arc, 0);
+  for (const t of [0.2, 0.5, 0.9]) assert.ok(Math.abs(curvature(arc, t) - k0) < 1e-9 * Math.abs(k0) * 1e3);
+  for (const p of arc) assert.ok(p.x >= 0 && p.x <= BOARD && p.y >= 0 && p.y <= BOARD);
+  assert.deepEqual(asCircularArc(scenePoints(sceneById('cubic')), circleWeight).length, 4);
+});
+
+test('the quarter-circle scene is already a circle', () => {
+  const pts = scenePoints(sceneById('circle'));
+  const k0 = curvature(pts, 0);
+  assert.ok(Math.abs(Math.abs(k0) - 1 / 360) < 1e-9);
+  assert.ok(Math.abs(curvature(pts, 0.5) - k0) < 1e-12);
+});
