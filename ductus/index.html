@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ductus: how a Bézier curve is drawn</title>
+  <meta name="description" content="Bézier curves in the browser: drag control points, watch de Casteljau's construction trace the curve, and read its curvature from a comb.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>ductus</h1>
+    <p>A Bézier curve is nothing but repeated in-between points. Take each leg of the control polygon, mark the point a fraction <i>t</i> of the way along it, join those points, and do it again until one point is left: that point is on the curve. Drag the control points and slide <i>t</i>.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="board-title">
+      <div class="board-column">
+        <h2 id="board-title" class="visually-hidden">Curve</h2>
+        <div id="board" class="board">
+          <canvas id="canvas" class="canvas" width="600" height="600" aria-hidden="true"></canvas>
+          <div id="handles" class="handles" role="group" aria-label="Control points. Drag them, or focus one and use the arrow keys."></div>
+        </div>
+        <div class="t-row">
+          <button id="play" type="button" aria-pressed="false">Play</button>
+          <label class="t-label" for="t">t = <output id="t-value" for="t">0.40</output></label>
+          <input id="t" type="range" min="0" max="1" step="0.001" value="0.4">
+        </div>
+        <p id="scene-note" class="note"></p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Starting curve
+          <select id="scene"></select>
+        </label>
+        <div class="row">
+          <button id="add" type="button">Add a point</button>
+          <button id="elevate" type="button">Raise the degree</button>
+        </div>
+        <p class="hint">Double-click a control point, or press Delete on it, to remove it. Raising the degree adds a point without changing the curve.</p>
+
+        <fieldset>
+          <legend>Show</legend>
+          <label class="check"><input id="show-construction" type="checkbox" checked> The construction at <i>t</i></label>
+          <label class="check"><input id="show-comb" type="checkbox"> The curvature comb</label>
+          <label class="check"><input id="show-split" type="checkbox"> The two halves at <i>t</i></label>
+        </fieldset>
+
+        <dl class="readout">
+          <div><dt>Degree</dt><dd id="r-degree"></dd></div>
+          <div><dt>Point at <i>t</i></dt><dd id="r-point"></dd></div>
+          <div><dt>Speed</dt><dd id="r-speed"></dd></div>
+          <div><dt>Curvature</dt><dd id="r-curvature"></dd></div>
+          <div><dt>Radius of the turn</dt><dd id="r-radius"></dd></div>
+          <div><dt>Length of the curve</dt><dd id="r-length"></dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="explain" aria-labelledby="explain-title">
+      <h2 id="explain-title">Reading the picture</h2>
+      <ul>
+        <li><b>The construction.</b> Each coloured level is one round of in-between points. A curve with <i>n</i> + 1 control points needs <i>n</i> rounds. The last segment drawn touches the curve: it is the tangent, and its length times <i>n</i> is the speed of the moving point.</li>
+        <li><b>The curvature comb.</b> Each tooth stands on the curve, at right angles to it, with a length proportional to the curvature there: one over the radius of the circle that best fits the curve at that point. Long teeth mark tight turns; where the teeth cross to the other side, the curve inflects.</li>
+        <li><b>The two halves.</b> The outer edges of the construction are themselves control polygons: the left edge draws the curve up to <i>t</i>, the right edge the rest. Splitting this way is how drawing programs cut a curve without changing its shape.</li>
+      </ul>
+      <p>Lengths are in board units; the board is 600 units across.</p>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/ductus">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
