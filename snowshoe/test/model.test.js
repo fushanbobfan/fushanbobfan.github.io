@@ -11,6 +11,7 @@ import {
   measureCycle,
   orbitExtent,
   niceCeil,
+  predatorShareOfCatch,
 } from '../src/model.js';
 
 const close = (actual, expected, tol, msg) =>
@@ -116,4 +117,39 @@ test('niceCeil rounds up to a round axis limit', () => {
   assert.equal(niceCeil(37), 50);
   assert.equal(niceCeil(51), 100);
   assert.equal(niceCeil(0), 1);
+});
+
+test('no fishing gives the original equations', () => {
+  const fished = { ...P, f: 0 };
+  const plain = { r: P.r, a: P.a, e: P.e, m: P.m };
+  assert.deepEqual(rates(fished, 30, 12), rates(plain, 30, 12));
+  assert.deepEqual(equilibrium(plain), equilibrium(fished));
+});
+
+test('fishing raises the prey balance and lowers the predator balance', () => {
+  const calm = equilibrium(P);
+  const fished = equilibrium({ ...P, f: 0.2 });
+  close(fished.x, (P.m + 0.2) / (P.e * P.a), 1e-12, 'prey');
+  close(fished.y, (P.r - 0.2) / P.a, 1e-12, 'predators');
+  assert.ok(fished.x > calm.x && fished.y < calm.y);
+  assert.ok(predatorShareOfCatch({ ...P, f: 0.2 }) < predatorShareOfCatch(P));
+});
+
+test('fishing at or above the prey birth rate leaves no balance point', () => {
+  assert.equal(equilibrium({ ...P, f: P.r }), null);
+  assert.equal(smallSwingPeriod({ ...P, f: 1.2 }), Infinity);
+  assert.equal(predatorShareOfCatch({ ...P, f: 1.2 }), 0);
+});
+
+test('a fished orbit still conserves its invariant and averages to the fished balance', () => {
+  const p = { ...P, f: 0.3 };
+  const eq = equilibrium(p);
+  const run = simulate(p, 50, 10, 80, 0.005);
+  const v0 = invariant(p, 50, 10);
+  const vMin = invariant(p, eq.x, eq.y);
+  const last = run.x.length - 1;
+  assert.ok(Math.abs(invariant(p, run.x[last], run.y[last]) - v0) / (v0 - vMin) < 1e-5);
+  const cycle = measureCycle(run.t, run.x, run.y);
+  close(cycle.meanX, eq.x, 0.005 * eq.x, 'mean prey');
+  close(cycle.meanY, eq.y, 0.005 * eq.y, 'mean predators');
 });
