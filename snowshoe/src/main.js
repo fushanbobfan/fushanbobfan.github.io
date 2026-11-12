@@ -1,5 +1,6 @@
 import {
   rk4Step, equilibrium, invariant, smallSwingPeriod, measureCycle, orbitExtent, niceCeil, rates,
+  netRates, predatorShareOfCatch,
 } from './model.js';
 import { PRESETS, RATE_SLIDERS } from './presets.js';
 
@@ -18,7 +19,7 @@ const MAX_ORBITS = 6;
 const TIME_PER_SECOND = 2;    // model time units per second at 1x
 
 const state = {
-  params: { ...PRESETS[0].params },
+  params: { f: 0, ...PRESETS[0].params },
   orbits: [],
   playing: true,
   speed: 1,
@@ -77,9 +78,9 @@ function advance(o, steps) {
 function fitView() {
   const p = state.params;
   const eq = equilibrium(p);
-  let maxX = eq.x * 2;
-  let maxY = eq.y * 2;
-  const span = 3 * smallSwingPeriod(p);
+  let maxX = eq ? eq.x * 2 : 10;
+  let maxY = eq ? eq.y * 2 : 10;
+  const span = Math.min(60, 3 * smallSwingPeriod(p));
   for (const o of state.orbits) {
     const ext = orbitExtent(p, o.x0, o.y0, span);
     maxX = Math.max(maxX, ext.maxX, o.x0);
@@ -129,6 +130,11 @@ function fmt(v) {
   return v.toPrecision(3);
 }
 
+// Axis labels: round numbers without trailing zeros.
+function tickLabel(v) {
+  return String(Number(v.toPrecision(6)));
+}
+
 function drawPlane() {
   const f = planeFrame();
   const p = state.params;
@@ -147,7 +153,7 @@ function drawPlane() {
     pctx.moveTo(x, PAD.top);
     pctx.lineTo(x, PAD.top + f.ih);
     pctx.stroke();
-    pctx.fillText(fmt(v), x, PAD.top + f.ih + 4);
+    pctx.fillText(tickLabel(v), x, PAD.top + f.ih + 4);
   }
   pctx.textAlign = 'right';
   pctx.textBaseline = 'middle';
@@ -157,7 +163,7 @@ function drawPlane() {
     pctx.moveTo(PAD.left, y);
     pctx.lineTo(PAD.left + f.iw, y);
     pctx.stroke();
-    pctx.fillText(fmt(v), PAD.left - 6, y);
+    pctx.fillText(tickLabel(v), PAD.left - 6, y);
   }
   pctx.textAlign = 'center';
   pctx.textBaseline = 'bottom';
@@ -203,14 +209,15 @@ function drawPlane() {
 
   // Nullclines and the balance point.
   const eq = equilibrium(p);
+  const unfished = p.f > 0 ? equilibrium({ ...p, f: 0 }) : null;
   pctx.strokeStyle = cssVar('--muted');
   pctx.setLineDash([5, 4]);
   pctx.beginPath();
-  if (eq.x <= maxX) {
+  if (eq && eq.x <= maxX) {
     pctx.moveTo(f.px(eq.x), PAD.top);
     pctx.lineTo(f.px(eq.x), PAD.top + f.ih);
   }
-  if (eq.y <= maxY) {
+  if (eq && eq.y <= maxY) {
     pctx.moveTo(PAD.left, f.py(eq.y));
     pctx.lineTo(PAD.left + f.iw, f.py(eq.y));
   }
@@ -221,7 +228,16 @@ function drawPlane() {
   pctx.beginPath();
   pctx.rect(PAD.left, PAD.top, f.iw, f.ih);
   pctx.clip();
-  if (eq.x <= maxX && eq.y <= maxY) {
+  if (unfished) {
+    // Where the balance point would sit without fishing.
+    pctx.strokeStyle = cssVar('--ink');
+    pctx.lineWidth = 1.5;
+    pctx.beginPath();
+    pctx.arc(f.px(unfished.x), f.py(unfished.y), 5, 0, Math.PI * 2);
+    pctx.stroke();
+    pctx.lineWidth = 1;
+  }
+  if (eq && eq.x <= maxX && eq.y <= maxY) {
     pctx.fillStyle = cssVar('--ink');
     pctx.beginPath();
     pctx.arc(f.px(eq.x), f.py(eq.y), 3.5, 0, Math.PI * 2);
@@ -261,10 +277,11 @@ function drawSeries() {
   sctx.font = '12px Georgia, serif';
   sctx.lineWidth = 1;
 
-  const span = Math.max(20, 4 * smallSwingPeriod(state.params));
+  const span = Math.min(60, Math.max(20, 4 * smallSwingPeriod(state.params)));
+  const eq = equilibrium(state.params);
   const tEnd = o ? Math.max(o.t, span) : span;
   const tStart = tEnd - span;
-  let maxV = Math.max(equilibrium(state.params).x, equilibrium(state.params).y) * 1.5;
+  let maxV = eq ? Math.max(eq.x, eq.y) * 1.5 : 10;
   if (o) {
     for (let i = 0; i < o.ts.length; i++) {
       if (o.ts[i] >= tStart) maxV = Math.max(maxV, o.xs[i], o.ys[i]);
@@ -283,18 +300,17 @@ function drawSeries() {
     sctx.moveTo(left, sy(v));
     sctx.lineTo(left + iw, sy(v));
     sctx.stroke();
-    sctx.fillText(fmt(v), left - 6, sy(v));
+    sctx.fillText(tickLabel(v), left - 6, sy(v));
   }
   sctx.textAlign = 'center';
   sctx.textBaseline = 'top';
   const tStep = niceCeil(span / 6);
   for (let t = Math.ceil(tStart / tStep) * tStep; t <= tEnd + 1e-9; t += tStep) {
-    sctx.fillText(fmt(t), sx(t), top + ih + 4);
+    sctx.fillText(tickLabel(t), sx(t), top + ih + 4);
   }
 
-  const eq = equilibrium(state.params);
   sctx.setLineDash([5, 4]);
-  for (const [v, name] of [[eq.x, '--prey'], [eq.y, '--pred']]) {
+  for (const [v, name] of eq ? [[eq.x, '--prey'], [eq.y, '--pred']] : []) {
     if (v > maxV) continue;
     sctx.strokeStyle = cssVar(name);
     sctx.globalAlpha = 0.7;
@@ -332,8 +348,13 @@ function updateReadout() {
   const p = state.params;
   const eq = equilibrium(p);
   const o = state.orbits.at(-1);
-  $('r-eq').textContent = `${fmt(eq.x)} prey, ${fmt(eq.y)} predators`;
-  $('r-small').textContent = smallSwingPeriod(p).toFixed(2);
+  $('r-eq').textContent = eq ? `${fmt(eq.x)} prey, ${fmt(eq.y)} predators` : 'none: predators die out';
+  $('r-small').textContent = eq ? smallSwingPeriod(p).toFixed(2) : '–';
+  $('r-share').textContent = !eq
+    ? 'none in the long run'
+    : p.f > 0
+    ? `${(100 * predatorShareOfCatch(p)).toFixed(1)}% (unfished balance ${(100 * predatorShareOfCatch({ ...p, f: 0 })).toFixed(1)}%)`
+    : `no fishing (balance ${(100 * predatorShareOfCatch(p)).toFixed(1)}%)`;
   if (!o) {
     for (const id of ['r-time', 'r-prey', 'r-pred', 'r-period', 'r-mean', 'r-v']) $(id).textContent = '–';
     return;
@@ -345,6 +366,10 @@ function updateReadout() {
   $('r-period').textContent = cycle ? cycle.period.toFixed(2) : 'after two prey peaks';
   $('r-mean').textContent = cycle ? `${fmt(cycle.meanX)} prey, ${fmt(cycle.meanY)} predators` : '–';
   const v = invariant(p, o.x, o.y);
+  if (!eq || !(o.x > 0 && o.y > 0)) {
+    $('r-v').textContent = 'not conserved without a balance point';
+    return;
+  }
   const depth = o.v0 - invariant(p, eq.x, eq.y);
   const drift = depth > 1e-12 ? Math.abs(v - o.v0) / depth : 0;
   $('r-v').textContent = `${v.toFixed(4)} (drift ${drift.toExponential(1)})`;
@@ -405,7 +430,7 @@ function syncSliders() {
 
 function applyPreset(id) {
   const preset = PRESETS.find((q) => q.id === id) || PRESETS[0];
-  state.params = { ...preset.params };
+  state.params = { f: 0, ...preset.params };
   state.orbits = [];
   state.nextColor = 0;
   for (const [x, y] of preset.starts) release(x, y);
@@ -463,7 +488,7 @@ function init() {
   applyPreset(PRESETS[0].id);
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     // Draw a few finished loops instead of animating them.
-    const steps = Math.round((3 * smallSwingPeriod(state.params)) / DT);
+    const steps = Math.round(Math.min(60, 3 * smallSwingPeriod(state.params)) / DT);
     for (const o of state.orbits) advance(o, steps);
     setPlaying(false);
     updateReadout();
