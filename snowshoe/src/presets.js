@@ -43,6 +43,20 @@ export const PRESETS = [
     starts: [[45, 10]],
     note: "Fishing takes the same share of prey and predators. Drag the fishing effort down to zero, as when the First World War kept Adriatic boats in port: the balance point moves to fewer prey and more predators, and the predators' share of the catch rises. The hollow ring marks the unfished balance point.",
   },
+  {
+    id: 'crowded',
+    name: 'Crowded prey',
+    params: { r: 1, a: 0.05, e: 0.4, m: 0.5, K: 100 },
+    starts: [[60, 8], [10, 30]],
+    note: 'Give the prey a carrying capacity of 100 and the closed loops become spirals that wind into the balance point. The endless cycles of the classical equations rely on prey that could grow without limit.',
+  },
+  {
+    id: 'starved',
+    name: 'Too little room',
+    params: { r: 1, a: 0.05, e: 0.4, m: 0.5, K: 20 },
+    starts: [[15, 10]],
+    note: 'Predators need 25 prey to replace their deaths, but there is room for only 20. The predators dwindle away and the prey settle at their carrying capacity, marked on the axis.',
+  },
 ];
 
 export const RATE_SLIDERS = [
