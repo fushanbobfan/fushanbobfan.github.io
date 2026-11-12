@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PRESETS, RATE_SLIDERS } from '../src/presets.js';
-import { smallSwingPeriod } from '../src/model.js';
+import { smallSwingPeriod, equilibrium } from '../src/model.js';
 
 test('every preset sets rates inside the slider ranges', () => {
   for (const preset of PRESETS) {
@@ -27,4 +27,12 @@ test('the ten-year preset has small swings of about nine and a half years', () =
 test('the fishing preset starts fished, so lowering the effort shows the shift', () => {
   const p = PRESETS.find((q) => q.id === 'adriatic').params;
   assert.ok(p.f > 0 && p.f < p.r);
+});
+
+test('the crowding setups land on either side of feeding the predators', () => {
+  const crowded = PRESETS.find((q) => q.id === 'crowded').params;
+  const starved = PRESETS.find((q) => q.id === 'starved').params;
+  assert.ok(equilibrium(crowded) !== null);
+  assert.equal(equilibrium(starved), null);
+  for (const p of [crowded, starved]) assert.ok(p.K >= 20 && p.K <= 400);
 });
