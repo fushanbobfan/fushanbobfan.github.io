@@ -1,14 +1,20 @@
 // The Lotka-Volterra predator-prey equations.
 //
-//   prey      dx/dt = r x - a x y - f x
+//   prey      dx/dt = r x (1 - x/K) - a x y - f x
 //   predators dy/dt = e a x y - m y - f y
 //
 // r: prey birth rate, a: attack rate, e: share of eaten prey turned into new
 // predators, m: predator death rate, f: fishing effort, which removes the
-// same share of both populations per unit time. Populations are in arbitrary
+// same share of both populations per unit time, K: carrying capacity of the
+// prey (Infinity for the classical equations). Populations are in arbitrary
 // units.
 
-export const DEFAULT_PARAMS = Object.freeze({ r: 1, a: 0.05, e: 0.4, m: 0.5, f: 0 });
+export const DEFAULT_PARAMS = Object.freeze({ r: 1, a: 0.05, e: 0.4, m: 0.5, f: 0, K: Infinity });
+
+// Prey crowding: the per-capita birth rate falls by r/K per prey.
+function crowding(p) {
+  return Number.isFinite(p.K) && p.K > 0 ? p.r / p.K : 0;
+}
 
 // Fishing acts like a lower prey birth rate and a higher predator death rate.
 export function netRates(p) {
@@ -19,7 +25,7 @@ export function netRates(p) {
 export function rates(p, x, y) {
   const { r, m } = netRates(p);
   const eaten = p.a * x * y;
-  return [r * x - eaten, p.e * eaten - m * y];
+  return [r * x - crowding(p) * x * x - eaten, p.e * eaten - m * y];
 }
 
 // One classical Runge-Kutta step. Populations never go below zero.
@@ -48,26 +54,57 @@ export function simulate(p, x0, y0, duration, dt = 0.01) {
   return { t, x, y };
 }
 
-// The coexistence point, where both rates vanish. Once fishing takes the prey
-// faster than they breed (f >= r) there is none: predators die out.
+// The coexistence point, where both rates vanish. There is none when the
+// prey cannot feed enough predators to replace their deaths: fishing faster
+// than the prey breed (f >= r), or a carrying capacity at or below the prey
+// level the predators need. Then the predators die out.
 export function equilibrium(p) {
   const { r, m } = netRates(p);
-  if (!(r > 0)) return null;
-  return { x: m / (p.e * p.a), y: r / p.a };
+  const x = m / (p.e * p.a);
+  const y = (r - crowding(p) * x) / p.a;
+  return y > 0 ? { x, y } : null;
 }
 
-// V is constant along every orbit and smallest at the equilibrium, so each
-// orbit is a closed level curve of V around it.
+// Where the prey settle once the predators are gone.
+export function preyAlone(p) {
+  const { r } = netRates(p);
+  if (!(r > 0)) return 0;
+  const c = crowding(p);
+  return c > 0 ? r / c : Infinity;
+}
+
+// V = e a (x - x* ln x) + a (y - y* ln y), built on the balance point (x*, y*),
+// is smallest there. Without crowding it is constant along every orbit, so each
+// orbit is a closed loop; with crowding it falls at the rate e a (r/K)(x - x*)^2,
+// so every orbit spirals in. Null when there is no balance point.
 export function invariant(p, x, y) {
-  const { r, m } = netRates(p);
-  return p.e * p.a * x - m * Math.log(x) + p.a * y - r * Math.log(y);
+  const eq = equilibrium(p);
+  if (!eq) return null;
+  return p.e * p.a * (x - eq.x * Math.log(x)) + p.a * (y - eq.y * Math.log(y));
 }
 
-// Small swings around the equilibrium are ellipses with this period.
-// Infinity when there is no equilibrium to swing around.
+export function invariantRate(p, x) {
+  const eq = equilibrium(p);
+  if (!eq) return null;
+  return -p.e * p.a * crowding(p) * (x - eq.x) ** 2;
+}
+
+// Linearised motion near the balance point: an oscillation with this angular
+// frequency that decays at this rate. Without crowding it does not decay and
+// small swings are ellipses.
+export function smallSwing(p) {
+  const eq = equilibrium(p);
+  if (!eq) return null;
+  const trace = -crowding(p) * eq.x;
+  const det = p.e * p.a * p.a * eq.x * eq.y;
+  const disc = det - (trace * trace) / 4;
+  return { omega: disc > 0 ? Math.sqrt(disc) : 0, decay: -trace / 2 };
+}
+
+// Period of small swings; Infinity when there is no oscillation.
 export function smallSwingPeriod(p) {
-  const { r, m } = netRates(p);
-  return r > 0 ? (2 * Math.PI) / Math.sqrt(r * m) : Infinity;
+  const s = smallSwing(p);
+  return s && s.omega > 0 ? (2 * Math.PI) / s.omega : Infinity;
 }
 
 // Fishing catches both populations in proportion to their numbers, so over a

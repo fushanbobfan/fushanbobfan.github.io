@@ -12,6 +12,9 @@ import {
   orbitExtent,
   niceCeil,
   predatorShareOfCatch,
+  preyAlone,
+  invariantRate,
+  smallSwing,
 } from '../src/model.js';
 
 const close = (actual, expected, tol, msg) =>
@@ -152,4 +155,72 @@ test('a fished orbit still conserves its invariant and averages to the fished ba
   const cycle = measureCycle(run.t, run.x, run.y);
   close(cycle.meanX, eq.x, 0.005 * eq.x, 'mean prey');
   close(cycle.meanY, eq.y, 0.005 * eq.y, 'mean predators');
+});
+
+test('an infinite carrying capacity gives the classical equations', () => {
+  const capped = { ...P, K: Infinity };
+  assert.deepEqual(rates(capped, 30, 12), rates(P, 30, 12));
+  assert.equal(smallSwing(capped).decay, 0);
+});
+
+test('crowding lowers the predator balance and leaves the prey balance alone', () => {
+  const p = { ...P, K: 100 };
+  const eq = equilibrium(p);
+  close(eq.x, 25, 1e-12, 'prey');
+  close(eq.y, (1 - 25 / 100) / P.a, 1e-12, 'predators');
+  const [dx, dy] = rates(p, eq.x, eq.y);
+  close(dx, 0, 1e-12, 'prey rate');
+  close(dy, 0, 1e-12, 'predator rate');
+});
+
+test('with crowding V only falls and the orbit spirals into the balance point', () => {
+  const p = { ...P, K: 100 };
+  const eq = equilibrium(p);
+  const run = simulate(p, 60, 8, 150, 0.01);
+  let prev = invariant(p, run.x[0], run.y[0]);
+  for (let i = 100; i < run.x.length; i += 100) {
+    const v = invariant(p, run.x[i], run.y[i]);
+    assert.ok(v <= prev + 1e-9, `V rose at step ${i}`);
+    prev = v;
+  }
+  const last = run.x.length - 1;
+  close(run.x[last], eq.x, 0.02 * eq.x, 'prey settles');
+  close(run.y[last], eq.y, 0.02 * eq.y, 'predators settle');
+});
+
+test('invariantRate matches the change of V along an orbit', () => {
+  const p = { ...P, K: 80 };
+  const [x, y] = [40, 12];
+  const h = 1e-4;
+  const [x2, y2] = rk4Step(p, x, y, h);
+  const numeric = (invariant(p, x2, y2) - invariant(p, x, y)) / h;
+  close(numeric, invariantRate(p, x), 1e-4 * Math.abs(invariantRate(p, x)) + 1e-9, 'dV/dt');
+});
+
+test('the linearised decay rate matches the shrinking of small swings', () => {
+  const p = { ...P, K: 200 };
+  const eq = equilibrium(p);
+  const s = smallSwing(p);
+  const run = simulate(p, eq.x + 0.5, eq.y, 60, 0.005);
+  const peaks = [];
+  for (let i = 1; i < run.x.length - 1; i++) {
+    if (run.x[i] > run.x[i - 1] && run.x[i] >= run.x[i + 1]) peaks.push(i);
+  }
+  const [i1, i2] = [peaks[1], peaks[3]];
+  const measured = Math.log((run.x[i1] - eq.x) / (run.x[i2] - eq.x)) / (run.t[i2] - run.t[i1]);
+  close(measured, s.decay, 0.03 * s.decay, 'decay rate');
+  close((run.t[i2] - run.t[i1]) / 2, smallSwingPeriod(p), 0.01 * smallSwingPeriod(p), 'period');
+});
+
+test('a carrying capacity too small to feed the predators leaves prey alone', () => {
+  const p = { ...P, K: 20 };
+  assert.equal(equilibrium(p), null);
+  assert.equal(invariant(p, 10, 10), null);
+  close(preyAlone(p), 20, 1e-12, 'prey level without predators');
+  const run = simulate(p, 15, 10, 200, 0.01);
+  const last = run.x.length - 1;
+  close(run.x[last], 20, 0.2, 'prey reach K');
+  assert.ok(run.y[last] < 0.01, `predators ${run.y[last]}`);
+  assert.equal(preyAlone(P), Infinity);
+  close(preyAlone({ ...P, K: 100, f: 0.25 }), 75, 1e-12, 'fished prey level');
 });
