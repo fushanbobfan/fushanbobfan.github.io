@@ -1,0 +1,20 @@
+{
+  "name": "snowshoe",
+  "version": "0.1.0",
+  "description": "Predators and prey in the browser: the Lotka-Volterra equations as a phase plane of closed orbits and the boom-and-bust time series they trace.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "lotka-volterra",
+    "predator-prey",
+    "population-dynamics",
+    "phase-plane",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
