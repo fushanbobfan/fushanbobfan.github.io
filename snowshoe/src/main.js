@@ -1,6 +1,6 @@
 import {
   rk4Step, equilibrium, invariant, smallSwingPeriod, measureCycle, orbitExtent, niceCeil, rates,
-  netRates, predatorShareOfCatch,
+  netRates, predatorShareOfCatch, preyAlone, smallSwing,
 } from './model.js';
 import { PRESETS, RATE_SLIDERS } from './presets.js';
 
@@ -19,7 +19,7 @@ const MAX_ORBITS = 6;
 const TIME_PER_SECOND = 2;    // model time units per second at 1x
 
 const state = {
-  params: { f: 0, ...PRESETS[0].params },
+  params: { f: 0, K: Infinity, ...PRESETS[0].params },
   orbits: [],
   playing: true,
   speed: 1,
@@ -78,7 +78,8 @@ function advance(o, steps) {
 function fitView() {
   const p = state.params;
   const eq = equilibrium(p);
-  let maxX = eq ? eq.x * 2 : 10;
+  const alone = preyAlone(p);
+  let maxX = eq ? eq.x * 2 : Number.isFinite(alone) ? alone : 10;
   let maxY = eq ? eq.y * 2 : 10;
   const span = Math.min(60, 3 * smallSwingPeriod(p));
   for (const o of state.orbits) {
@@ -210,24 +211,35 @@ function drawPlane() {
   // Nullclines and the balance point.
   const eq = equilibrium(p);
   const unfished = p.f > 0 ? equilibrium({ ...p, f: 0 }) : null;
-  pctx.strokeStyle = cssVar('--muted');
-  pctx.setLineDash([5, 4]);
-  pctx.beginPath();
-  if (eq && eq.x <= maxX) {
-    pctx.moveTo(f.px(eq.x), PAD.top);
-    pctx.lineTo(f.px(eq.x), PAD.top + f.ih);
-  }
-  if (eq && eq.y <= maxY) {
-    pctx.moveTo(PAD.left, f.py(eq.y));
-    pctx.lineTo(PAD.left + f.iw, f.py(eq.y));
-  }
-  pctx.stroke();
-  pctx.setLineDash([]);
-
+  // Predators hold steady on a vertical line; prey on a line that falls with
+  // crowding and is flat without it.
+  const { r: netR, m: netM } = netRates(p);
+  const crowd = Number.isFinite(p.K) ? p.r / p.K : 0;
   pctx.save();
   pctx.beginPath();
   pctx.rect(PAD.left, PAD.top, f.iw, f.ih);
   pctx.clip();
+  pctx.strokeStyle = cssVar('--muted');
+  pctx.setLineDash([5, 4]);
+  pctx.beginPath();
+  const xStill = netM / (p.e * p.a);
+  pctx.moveTo(f.px(xStill), PAD.top);
+  pctx.lineTo(f.px(xStill), PAD.top + f.ih);
+  if (netR > 0) {
+    pctx.moveTo(f.px(0), f.py(netR / p.a));
+    pctx.lineTo(f.px(maxX), f.py((netR - crowd * maxX) / p.a));
+  }
+  pctx.stroke();
+  pctx.setLineDash([]);
+  if (!eq && netR > 0 && crowd > 0) {
+    // With no balance point the prey settle alone at this level.
+    pctx.strokeStyle = cssVar('--prey');
+    pctx.lineWidth = 2;
+    pctx.beginPath();
+    pctx.arc(f.px(preyAlone(p)), f.py(0), 5, 0, Math.PI * 2);
+    pctx.stroke();
+    pctx.lineWidth = 1;
+  }
   if (unfished) {
     // Where the balance point would sit without fishing.
     pctx.strokeStyle = cssVar('--ink');
@@ -348,8 +360,23 @@ function updateReadout() {
   const p = state.params;
   const eq = equilibrium(p);
   const o = state.orbits.at(-1);
-  $('r-eq').textContent = eq ? `${fmt(eq.x)} prey, ${fmt(eq.y)} predators` : 'none: predators die out';
-  $('r-small').textContent = eq ? smallSwingPeriod(p).toFixed(2) : '–';
+  const alone = preyAlone(p);
+  $('r-eq').textContent = eq
+    ? `${fmt(eq.x)} prey, ${fmt(eq.y)} predators`
+    : Number.isFinite(alone) && alone > 0
+    ? `none: predators die out, prey settle at ${fmt(alone)}`
+    : alone === Infinity
+    ? 'none: predators die out, prey grow without limit'
+    : 'none: fishing outpaces prey births, both die out';
+  const swing = smallSwing(p);
+  const period = smallSwingPeriod(p);
+  $('r-small').textContent = !swing
+    ? '–'
+    : !Number.isFinite(period)
+    ? 'no swing: orbits creep straight in'
+    : swing.decay > 0
+    ? `${period.toFixed(2)}; swings halve every ${(Math.LN2 / swing.decay).toFixed(1)}`
+    : period.toFixed(2);
   $('r-share').textContent = !eq
     ? 'none in the long run'
     : p.f > 0
@@ -365,12 +392,17 @@ function updateReadout() {
   const cycle = measureCycle(o.ts, o.xs, o.ys);
   $('r-period').textContent = cycle ? cycle.period.toFixed(2) : 'after two prey peaks';
   $('r-mean').textContent = cycle ? `${fmt(cycle.meanX)} prey, ${fmt(cycle.meanY)} predators` : '–';
-  const v = invariant(p, o.x, o.y);
-  if (!eq || !(o.x > 0 && o.y > 0)) {
-    $('r-v').textContent = 'not conserved without a balance point';
+  if (!eq || !(o.x > 0 && o.y > 0) || o.v0 === null) {
+    $('r-v').textContent = 'undefined without a balance point';
     return;
   }
+  const v = invariant(p, o.x, o.y);
   const depth = o.v0 - invariant(p, eq.x, eq.y);
+  if (Number.isFinite(p.K)) {
+    const left = depth > 1e-12 ? (v - invariant(p, eq.x, eq.y)) / depth : 0;
+    $('r-v').textContent = `${v.toFixed(4)} (falling, ${(100 * left).toFixed(1)}% of its start above the minimum)`;
+    return;
+  }
   const drift = depth > 1e-12 ? Math.abs(v - o.v0) / depth : 0;
   $('r-v').textContent = `${v.toFixed(4)} (drift ${drift.toExponential(1)})`;
 }
@@ -426,11 +458,25 @@ function syncSliders() {
     s.input.value = state.params[s.key];
     s.output.textContent = s.input.value;
   }
+  const capped = Number.isFinite(state.params.K);
+  $('cap-on').checked = capped;
+  $('cap-k').disabled = !capped;
+  if (capped) $('cap-k').value = state.params.K;
+  $('cap-k-out').textContent = capped ? $('cap-k').value : 'none';
+}
+
+function applyCapacity() {
+  const capped = $('cap-on').checked;
+  state.params.K = capped ? Number($('cap-k').value) : Infinity;
+  $('cap-k').disabled = !capped;
+  $('cap-k-out').textContent = capped ? $('cap-k').value : 'none';
+  restartOrbits();
+  updateReadout();
 }
 
 function applyPreset(id) {
   const preset = PRESETS.find((q) => q.id === id) || PRESETS[0];
-  state.params = { f: 0, ...preset.params };
+  state.params = { f: 0, K: Infinity, ...preset.params };
   state.orbits = [];
   state.nextColor = 0;
   for (const [x, y] of preset.starts) release(x, y);
@@ -452,6 +498,9 @@ function init() {
   for (const preset of PRESETS) select.add(new Option(preset.name, preset.id));
   select.addEventListener('change', () => applyPreset(select.value));
   buildSliders();
+  $('cap-on').addEventListener('change', () => { applyCapacity(); fitView(); });
+  $('cap-k').addEventListener('input', applyCapacity);
+  $('cap-k').addEventListener('change', fitView);
 
   $('play').addEventListener('click', () => setPlaying(!state.playing));
   $('clear').addEventListener('click', () => {
