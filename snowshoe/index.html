@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>snowshoe: predators, prey and the cycles between them</title>
+  <meta name="description" content="Predators and prey in the browser: the Lotka-Volterra equations as a phase plane of closed orbits and the boom-and-bust time series they trace.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>snowshoe</h1>
+    <p>Prey breed; predators eat them and breed on what they eat; without prey the predators die off. Those three sentences, written as the Lotka–Volterra equations, already give endless cycles of boom and bust. Click the plane to release a population and watch where it goes.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="plane-title">
+      <div class="plots">
+        <h2 id="plane-title" class="visually-hidden">Phase plane</h2>
+        <div class="plane-wrap">
+          <canvas id="plane" class="plane" width="600" height="600" role="img" aria-label="Phase plane: prey across, predators up."></canvas>
+        </div>
+        <div class="series-head">
+          <h2 id="series-title">Over time</h2>
+          <p class="legend"><span class="key key-prey"></span> prey <span class="key key-pred"></span> predators <span class="key key-eq"></span> balance levels</p>
+        </div>
+        <canvas id="series" class="series" width="600" height="200" role="img" aria-labelledby="series-title"></canvas>
+        <p id="preset-note" class="note"></p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Starting setup
+          <select id="preset"></select>
+        </label>
+        <div class="row">
+          <button id="play" type="button" aria-pressed="true">Pause</button>
+          <button id="clear" type="button">Clear orbits</button>
+          <button id="fit" type="button">Fit the view</button>
+        </div>
+        <label class="field">Speed
+          <select id="speed">
+            <option value="0.25">¼×</option>
+            <option value="0.5">½×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </label>
+
+        <fieldset>
+          <legend>Rates</legend>
+          <div id="sliders" class="sliders"></div>
+          <p class="hint">Changing a rate restarts every orbit from where it began.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Release a population</legend>
+          <div class="start-row">
+            <label>Prey <input id="start-x" type="number" min="0.1" step="any" value="60"></label>
+            <label>Predators <input id="start-y" type="number" min="0.1" step="any" value="8"></label>
+            <button id="release" type="button">Release</button>
+          </div>
+          <p class="hint">Or click anywhere on the plane.</p>
+        </fieldset>
+
+        <dl class="readout" aria-live="off">
+          <div><dt>Time</dt><dd id="r-time"></dd></div>
+          <div><dt>Prey</dt><dd id="r-prey"></dd></div>
+          <div><dt>Predators</dt><dd id="r-pred"></dd></div>
+          <div><dt>Balance point</dt><dd id="r-eq"></dd></div>
+          <div><dt>Period of small swings</dt><dd id="r-small"></dd></div>
+          <div><dt>Period of this orbit</dt><dd id="r-period"></dd></div>
+          <div><dt>Average over a cycle</dt><dd id="r-mean"></dd></div>
+          <div><dt>Conserved quantity <i>V</i></dt><dd id="r-v"></dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="explain" aria-labelledby="explain-title">
+      <h2 id="explain-title">Reading the picture</h2>
+      <ul>
+        <li><b>The equations.</b> Prey <i>x</i> grow at rate <i>r</i> and are caught at rate <i>a·x·y</i>; a share <i>e</i> of what is caught becomes new predators <i>y</i>, which die at rate <i>m</i>: <i>x′</i> = <i>r x</i> − <i>a x y</i>, <i>y′</i> = <i>e a x y</i> − <i>m y</i>.</li>
+        <li><b>The phase plane.</b> Every point is a pair of populations, and the small arrows show which way that pair moves. An orbit is the path one population traces. Time is not drawn here; the panel below shows it.</li>
+        <li><b>The dashed lines.</b> On the horizontal one the prey stop changing (just enough predators to eat every newborn), and on the vertical one the predators stop changing (just enough prey to replace the dead). Where they cross is the balance point: <i>x</i> = <i>m</i> / (<i>e a</i>), <i>y</i> = <i>r</i> / <i>a</i>. Orbits turn counter-clockwise around it.</li>
+        <li><b>Closed loops.</b> The quantity <i>V</i> = <i>e a x</i> − <i>m</i> ln <i>x</i> + <i>a y</i> − <i>r</i> ln <i>y</i> never changes along an orbit, so each population returns exactly to where it started and loops forever. The readout shows how far the numerical solution lets <i>V</i> drift.</li>
+        <li><b>Averages.</b> However wild the swings, the populations averaged over one full cycle equal the balance point. Volterra built on this to explain why predatory fish made up a larger share of the Adriatic catch when fishing fell during the First World War.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/snowshoe">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
