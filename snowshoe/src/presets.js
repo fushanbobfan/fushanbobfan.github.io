@@ -36,6 +36,13 @@ export const PRESETS = [
     starts: [[30, 10]],
     note: 'Predators that die slowly keep eating long after the prey have collapsed, so the prey sit near zero for most of the cycle and the orbit hugs both axes.',
   },
+  {
+    id: 'adriatic',
+    name: 'Fishing and the war',
+    params: { r: 1, a: 0.05, e: 0.4, m: 0.5, f: 0.3 },
+    starts: [[45, 10]],
+    note: "Fishing takes the same share of prey and predators. Drag the fishing effort down to zero, as when the First World War kept Adriatic boats in port: the balance point moves to fewer prey and more predators, and the predators' share of the catch rises. The hollow ring marks the unfished balance point.",
+  },
 ];
 
 export const RATE_SLIDERS = [
@@ -43,4 +50,5 @@ export const RATE_SLIDERS = [
   { key: 'a', label: 'Attack rate', symbol: 'a', min: 0.005, max: 0.1, step: 0.001 },
   { key: 'e', label: 'Prey eaten that become predators', symbol: 'e', min: 0.05, max: 1, step: 0.01 },
   { key: 'm', label: 'Predator death rate', symbol: 'm', min: 0.05, max: 1.5, step: 0.01 },
+  { key: 'f', label: 'Fishing effort', symbol: 'f', min: 0, max: 1.2, step: 0.01 },
 ];

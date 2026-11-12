@@ -6,7 +6,7 @@ import { smallSwingPeriod } from '../src/model.js';
 test('every preset sets rates inside the slider ranges', () => {
   for (const preset of PRESETS) {
     for (const s of RATE_SLIDERS) {
-      const v = preset.params[s.key];
+      const v = preset.params[s.key] ?? 0;
       assert.ok(v >= s.min && v <= s.max, `${preset.id}.${s.key} = ${v}`);
     }
     assert.ok(preset.starts.length >= 1 && preset.starts.length <= 6, preset.id);
@@ -22,4 +22,9 @@ test('the ten-year preset has small swings of about nine and a half years', () =
   const p = PRESETS.find((q) => q.id === 'hare-lynx').params;
   const period = smallSwingPeriod(p);
   assert.ok(period > 9 && period < 10, String(period));
+});
+
+test('the fishing preset starts fished, so lowering the effort shows the shift', () => {
+  const p = PRESETS.find((q) => q.id === 'adriatic').params;
+  assert.ok(p.f > 0 && p.f < p.r);
 });
