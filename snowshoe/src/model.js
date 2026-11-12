@@ -1,16 +1,25 @@
 // The Lotka-Volterra predator-prey equations.
 //
-//   prey      dx/dt = r x - a x y
-//   predators dy/dt = e a x y - m y
+//   prey      dx/dt = r x - a x y - f x
+//   predators dy/dt = e a x y - m y - f y
 //
 // r: prey birth rate, a: attack rate, e: share of eaten prey turned into new
-// predators, m: predator death rate. Populations are in arbitrary units.
+// predators, m: predator death rate, f: fishing effort, which removes the
+// same share of both populations per unit time. Populations are in arbitrary
+// units.
 
-export const DEFAULT_PARAMS = Object.freeze({ r: 1, a: 0.05, e: 0.4, m: 0.5 });
+export const DEFAULT_PARAMS = Object.freeze({ r: 1, a: 0.05, e: 0.4, m: 0.5, f: 0 });
+
+// Fishing acts like a lower prey birth rate and a higher predator death rate.
+export function netRates(p) {
+  const f = p.f || 0;
+  return { r: p.r - f, m: p.m + f };
+}
 
 export function rates(p, x, y) {
+  const { r, m } = netRates(p);
   const eaten = p.a * x * y;
-  return [p.r * x - eaten, p.e * eaten - p.m * y];
+  return [r * x - eaten, p.e * eaten - m * y];
 }
 
 // One classical Runge-Kutta step. Populations never go below zero.
@@ -39,20 +48,33 @@ export function simulate(p, x0, y0, duration, dt = 0.01) {
   return { t, x, y };
 }
 
-// The coexistence point, where both rates vanish.
+// The coexistence point, where both rates vanish. Once fishing takes the prey
+// faster than they breed (f >= r) there is none: predators die out.
 export function equilibrium(p) {
-  return { x: p.m / (p.e * p.a), y: p.r / p.a };
+  const { r, m } = netRates(p);
+  if (!(r > 0)) return null;
+  return { x: m / (p.e * p.a), y: r / p.a };
 }
 
 // V is constant along every orbit and smallest at the equilibrium, so each
 // orbit is a closed level curve of V around it.
 export function invariant(p, x, y) {
-  return p.e * p.a * x - p.m * Math.log(x) + p.a * y - p.r * Math.log(y);
+  const { r, m } = netRates(p);
+  return p.e * p.a * x - m * Math.log(x) + p.a * y - r * Math.log(y);
 }
 
 // Small swings around the equilibrium are ellipses with this period.
+// Infinity when there is no equilibrium to swing around.
 export function smallSwingPeriod(p) {
-  return (2 * Math.PI) / Math.sqrt(p.r * p.m);
+  const { r, m } = netRates(p);
+  return r > 0 ? (2 * Math.PI) / Math.sqrt(r * m) : Infinity;
+}
+
+// Fishing catches both populations in proportion to their numbers, so over a
+// full cycle the predators' share of the catch is set by the balance point.
+export function predatorShareOfCatch(p) {
+  const eq = equilibrium(p);
+  return eq ? eq.y / (eq.x + eq.y) : 0;
 }
 
 // Period and time averages from the last two prey peaks of a sampled orbit.
