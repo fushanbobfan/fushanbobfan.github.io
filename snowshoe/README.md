@@ -34,12 +34,19 @@ Run the tests with `npm test` (Node 20 or later).
 - **Fishing.** Effort *f* removes the same share of prey and predators per
   unit time, which amounts to a prey birth rate of r − f and a predator death
   rate of m + f. The balance point moves to more prey and fewer predators; a
-  hollow ring marks where it sits without fishing. At f ≥ r the predators die
-  out.
+  hollow ring marks where it sits without fishing. At f ≥ r the prey die faster
+  than they breed and both populations vanish.
+- **Crowding.** An optional carrying capacity *K* makes the prey birth rate
+  fall as they fill up, r x (1 − x/K). The prey nullcline tilts, V only falls
+  (at the rate e a (r/K)(x − x*)²), and every loop becomes a spiral into the
+  balance point. When K is below the prey level the predators need, there is
+  no balance point: the predators die out and the prey settle at K, marked on
+  the axis.
 - **Readout.** The period of small swings around the balance point
   (2π / √(r m)), the measured period of the current orbit, its averages over
   one cycle (which equal the balance point on every orbit), and the conserved
-  quantity V = e a x − m ln x + a y − r ln y with its numerical drift. With
+  quantity V = e a x − m ln x + a y − r ln y with its numerical drift (or,
+  with crowding, how far it has fallen). With
   fishing on, the predators' share of the catch over a cycle, beside its
   unfished value.
 
@@ -52,6 +59,8 @@ Run the tests with `npm test` (Node 20 or later).
 | Boom and bust | Both populations spend most of the cycle near zero. |
 | A ten-year cycle | Rates giving swings of about nine and a half time units, close to the hare and lynx cycle in Canadian fur records when time is read in years. |
 | Long-lived predators | A slow predator death rate pins the prey near zero. |
+| Crowded prey | With K = 100 the loops wind into the balance point; swings halve about every 5.5 time units. |
+| Too little room | K = 20 is below the 25 prey the predators need, so they vanish. |
 | Fishing and the war | Lower the fishing effort to zero and the predators' share of the catch rises, the effect Volterra used to explain Adriatic fish-market records from the First World War. |
 
 ## Numerics
