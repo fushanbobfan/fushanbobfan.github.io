@@ -66,7 +66,7 @@ export const PRESETS = [
     n: 24,
     params: { coupling: 1, anchor: 0, damping: 0 },
     init: { type: 'strike', at: 0.12 },
-    note: 'The same spot struck instead of plucked: one bead is knocked sideways from rest, like a piano hammer hitting a string. A blow shares its energy evenly among the modes, so the upper half of them gets half of it, against about 6% for the pluck. Turn on the sound to hear the brighter tone.',
+    note: 'The same spot struck instead of plucked: one bead is knocked sideways from rest, like a piano hammer hitting a string. A blow gives each mode energy in proportion to the square of that mode’s height at the struck bead, no matter how fast the mode is, so the bars form an even comb and the upper half of the modes gets half the energy, against about 6% for the pluck. Turn on the sound to hear the brighter tone.',
   },
   {
     id: 'zigzag',

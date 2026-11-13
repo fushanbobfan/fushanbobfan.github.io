@@ -24,7 +24,8 @@ Run the tests with `npm test` (Node 20 or later).
 
 - **The string.** Up to 48 beads between two walls. Drag any bead to pluck:
   either the whole string is pulled into a corner at that bead, or that bead
-  alone moves. Release and it swings.
+  alone moves. Release and it swings. Or strike: click a bead and it is
+  knocked sideways from rest, faster the farther from the line you click.
 - **Along the string, over time.** Each row is the string at one moment,
   orange above the line and blue below, newest at the bottom. The strip spans
   60 time units, enough to watch a pulse cross the string, flip over at a wall
@@ -57,6 +58,7 @@ Run the tests with `npm test` (Node 20 or later).
 | The fundamental | One arch, every bead in step. |
 | Plucked in the middle | Only odd-numbered modes carry energy; the even ones are lopsided and a centred pluck cannot reach them. |
 | Plucked near the end | Many overtones; the corner runs back and forth. |
+| Struck near the end | The same spot hit from rest: the bars form an even comb and the upper half of the modes holds half the energy, against about 6% for the pluck. |
 | Neighbours opposed | The highest mode, just under twice the coupling. |
 | A pulse and its echo | A bump splits in two; each half comes back upside down from a wall. |
 | A pulse on a row of pendulums | The same bump with anchors: most of it rings in place and leaks away as ripples. |
