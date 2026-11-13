@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [beadstring](https://fushanbobfan.github.io/beadstring/) | A string of beads in the browser: pluck it, split the motion into normal modes, and see how beads bend the overtones away from whole multiples. | [`beadstring/`](beadstring/) |
 | [snowshoe](https://fushanbobfan.github.io/snowshoe/) | Predators and prey in the browser: the Lotka-Volterra equations as a phase plane of closed orbits and the boom-and-bust cycles they trace. | [`snowshoe/`](snowshoe/) |
 | [ductus](https://fushanbobfan.github.io/ductus/) | Bézier curves in the browser: drag control points, watch de Casteljau's construction trace the curve, and read its curvature from a comb. | [`ductus/`](ductus/) |
 | [hustings](https://fushanbobfan.github.io/hustings/) | Who wins depends on how you count: drag candidates across a political map and compare plurality, runoffs, Borda, approval and Condorcet voting. | [`hustings/`](hustings/) |
