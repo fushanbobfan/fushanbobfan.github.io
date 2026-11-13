@@ -3,6 +3,7 @@ import {
   modeFrequency, continuumFrequency, overtoneRatios, beatPeriod, pluckShape, nudgeShape, modeOnly,
 } from './model.js';
 import { PRESETS, SLIDERS, BEADS, initialShape } from './presets.js';
+import { partials, amplitudeSum, createVoice } from './sound.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -31,6 +32,10 @@ const state = {
   start: null,
   string: null,
   eRef: 0,
+  aRef: 0,
+  voice: null,
+  listening: false,
+  smoothTune: false,
   playing: !reducedMotion,
   speed: 1,
   held: null,
@@ -64,12 +69,45 @@ function readColors() {
 
 // ---- state changes -------------------------------------------------------
 
+// The bars and the sound level are measured against the motion at its
+// start, so damping visibly and audibly fades it.
 function resetScale() {
-  state.eRef = Math.max(...modeEnergies(state.string), 0);
+  const e = modeEnergies(state.string);
+  state.eRef = Math.max(...e, 0);
+  state.aRef = amplitudeSum(e, state.string.omega);
 }
 
 function growScale() {
-  state.eRef = Math.max(state.eRef, ...modeEnergies(state.string));
+  const e = modeEnergies(state.string);
+  state.eRef = Math.max(state.eRef, ...e);
+  state.aRef = Math.max(state.aRef, amplitudeSum(e, state.string.omega));
+}
+
+// A held or paused string is silent; otherwise every mode sounds.
+function updateSound() {
+  if (!state.voice || !state.listening) return;
+  const s = state.string;
+  const moving = state.playing && state.held === null;
+  const list = partials(modeEnergies(s), s.omega, state.aRef, { smooth: state.smoothTune });
+  state.voice.set(moving ? list : list.map((p) => ({ ...p, gain: 0 })));
+}
+
+async function setListening(on) {
+  if (on && !state.voice) state.voice = createVoice();
+  if (!state.voice) {
+    $('listen').checked = false;
+    $('listen').disabled = true;
+    $('listen-hint').textContent = 'This browser cannot play sound from a page.';
+    return;
+  }
+  state.listening = on;
+  $('smooth-tune').disabled = !on;
+  if (on) {
+    updateSound();
+    await state.voice.on();
+  } else {
+    state.voice.off();
+  }
 }
 
 function startFrom(shape, velocity = null) {
@@ -185,6 +223,9 @@ function buildControls() {
   $('restart').addEventListener('click', () => startFrom(state.start));
   $('still').addEventListener('click', () => startFrom(new Float64Array(state.n)));
   $('speed').addEventListener('change', (e) => { state.speed = Number(e.target.value); });
+
+  $('listen').addEventListener('change', (e) => setListening(e.target.checked));
+  $('smooth-tune').addEventListener('change', (e) => { state.smoothTune = e.target.checked; });
 
   for (const radio of document.querySelectorAll('input[name="grab"]')) {
     radio.addEventListener('change', () => { if (radio.checked) state.grab = radio.value; });
@@ -574,6 +615,7 @@ function frame(now) {
   drawString();
   drawSpectrum();
   drawDispersion();
+  updateSound();
   sinceReadout += seconds;
   if (sinceReadout > 0.1) {
     sinceReadout = 0;

@@ -87,6 +87,13 @@
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend>Listen</legend>
+          <label class="check"><input id="listen" type="checkbox"> Play each mode as a tone</label>
+          <label class="check"><input id="smooth-tune" type="checkbox" disabled> Tune the overtones as a smooth string</label>
+          <p id="listen-hint" class="hint">The lowest mode sounds at G3 (196 Hz) and the others at their true frequency ratios. Switch the tuning to hear the same mix with whole-number overtones.</p>
+        </fieldset>
+
         <dl class="readout" aria-live="off">
           <div><dt>Time</dt><dd id="r-time"></dd></div>
           <div><dt>Lowest frequency</dt><dd id="r-low"></dd></div>
