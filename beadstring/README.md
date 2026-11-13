@@ -34,8 +34,8 @@ Run the tests with `npm test` (Node 20 or later).
   alone, or shift-click to add it to what is already moving.
 - **Frequency of each mode.** Dots for the beaded string, a dashed line for a
   smooth string of the same length and weight. The dots follow the line for
-  long waves and level off below twice the coupling as the waves shrink toward
-  the bead spacing.
+  long waves and level off as the waves shrink toward the bead spacing: below
+  twice the coupling *c*, or below √(a² + 4c²) with an anchor *a*.
 - **Anchors.** An optional spring on every bead turns the string into a row of
   pendulums joined by springs. Every frequency is lifted to at least the
   anchor frequency, and waves of different lengths travel at very different
