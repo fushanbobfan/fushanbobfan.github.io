@@ -34,6 +34,7 @@ const state = {
   playing: !reducedMotion,
   speed: 1,
   held: null,
+  pointer: null,
   grab: 'pluck',
   sinceRow: 0,
 };
@@ -76,7 +77,7 @@ function startFrom(shape, velocity = null) {
   state.string = createString(state.n, state.params, shape, velocity);
   resetScale();
   clearStrip();
-  if (!state.playing) prefillStrip();
+  if (reducedMotion && !state.playing) prefillStrip();
   updateReadout();
 }
 
@@ -85,13 +86,20 @@ function applyPreset(preset) {
   state.n = preset.n;
   state.params = { ...preset.params };
   syncControls();
-  $('preset-note').textContent = preset.note;
+  showNote();
   startFrom(initialShape(preset.init, state.n));
+}
+
+function showNote() {
+  const p = state.preset;
+  const changed = state.n === p.n ? '' : ` This setup was written for ${p.n} ${p.n === 1 ? 'bead' : 'beads'}; the string now has ${state.n}.`;
+  $('preset-note').textContent = p.note + changed;
 }
 
 function setBeadCount(n) {
   state.n = n;
   syncControls();
+  showNote();
   startFrom(initialShape(state.preset.init, n));
 }
 
@@ -110,8 +118,10 @@ function playMode(k, add) {
   const y = positions(state.string);
   const v = velocities(state.string);
   for (let j = 0; j < state.n; j++) y[j] += fresh[j];
+  const t = state.string.t;
   state.start = Float64Array.from(y);
   state.string = createString(state.n, state.params, y, v);
+  state.string.t = t;
   growScale();
   updateReadout();
 }
@@ -250,8 +260,11 @@ function heightAt(y) {
 
 // ---- pointer -------------------------------------------------------------
 
+// One pointer at a time holds a bead; a second finger is ignored.
 stringCanvas.addEventListener('pointerdown', (e) => {
+  if (state.held !== null) return;
   const [x, y] = canvasPoint(stringCanvas, e);
+  state.pointer = e.pointerId;
   state.held = nearestBead(x);
   stringCanvas.setPointerCapture(e.pointerId);
   stringCanvas.classList.add('held');
@@ -259,14 +272,15 @@ stringCanvas.addEventListener('pointerdown', (e) => {
 });
 
 stringCanvas.addEventListener('pointermove', (e) => {
-  if (state.held === null) return;
+  if (state.held === null || e.pointerId !== state.pointer) return;
   const [, y] = canvasPoint(stringCanvas, e);
   state.string = createString(state.n, state.params, grabShape(state.held, heightAt(y)));
 });
 
-function release() {
-  if (state.held === null) return;
+function release(e) {
+  if (state.held === null || e.pointerId !== state.pointer) return;
   state.held = null;
+  state.pointer = null;
   stringCanvas.classList.remove('held');
   startFrom(positions(state.string));
 }
@@ -364,14 +378,13 @@ function stripRow(y) {
   }
 }
 
-// With motion reduced the page starts paused, so draw a stretch of history
-// straight away instead of leaving the strip empty.
+// With motion reduced the page starts paused, so run the first stretch at
+// once and draw it, leaving the string where that stretch ends.
 function prefillStrip() {
-  const copy = createString(state.n, state.params, positions(state.string), velocities(state.string));
   const rows = Math.floor(strip.height / ROW);
   for (let i = 0; i < rows; i++) {
-    stripRow(positions(copy));
-    step(copy, ROW_DT);
+    if (i > 0) step(state.string, ROW_DT);
+    stripRow(positions(state.string));
   }
 }
 
