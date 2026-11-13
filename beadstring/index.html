@@ -70,14 +70,15 @@
         </fieldset>
 
         <fieldset>
-          <legend>Plucking</legend>
-          <div class="radios" role="radiogroup" aria-label="What dragging a bead does">
+          <legend>Plucking and striking</legend>
+          <div class="radios" role="radiogroup" aria-label="What pressing on the string does">
             <label><input type="radio" name="grab" value="pluck" checked> Pull the string into a corner</label>
             <label><input type="radio" name="grab" value="nudge"> Move one bead only</label>
+            <label><input type="radio" name="grab" value="strike"> Strike one bead from rest</label>
           </div>
           <div class="start-row">
             <label>Bead <input id="pluck-bead" type="number" min="1" max="48" step="1" value="3"></label>
-            <label>Height <input id="pluck-height" type="number" min="-1" max="1" step="0.1" value="0.6"></label>
+            <label><span id="pluck-size-label">Height</span> <input id="pluck-height" type="number" min="-1" max="1" step="0.1" value="0.6"></label>
             <button id="pluck" type="button">Pluck</button>
           </div>
           <div class="start-row">
@@ -112,6 +113,7 @@
         <li><b>The equation.</b> Each bead is pulled toward its two neighbours by the string and, if the anchor is on, back toward the axis by a spring of its own: <i>y<sub>j</sub>″</i> = <i>c</i>²(<i>y</i><sub><i>j</i>−1</sub> − 2<i>y<sub>j</sub></i> + <i>y</i><sub><i>j</i>+1</sub>) − <i>a</i>² <i>y<sub>j</sub></i> − <i>γ y<sub>j</sub>′</i>, with the walls held at zero. <i>c</i> is the coupling, <i>a</i> the anchor and <i>γ</i> the damping.</li>
         <li><b>Normal modes.</b> With <i>n</i> beads there are exactly <i>n</i> patterns in which every bead swings at one shared frequency: sine-shaped arches with 1, 2, …, <i>n</i> humps. Any motion at all is a mix of them, and with no damping each mode keeps its energy forever, so the bars do not change while the string writhes.</li>
         <li><b>Why beads bend the overtones.</b> On a smooth string the <i>k</i>-th mode swings exactly <i>k</i> times as fast as the first, which is why a guitar string sounds a clean note. On a beaded string the frequency is 2<i>c</i> sin(<i>kπ</i> / 2(<i>n</i>+1)): close to <i>k</i> times the first for long waves, then falling behind and levelling off below 2<i>c</i> as the waves shrink toward the bead spacing. The readout compares the first overtones with the whole numbers a smooth string would give.</li>
+        <li><b>Plucking and striking.</b> A pluck starts the string bent and still; a strike starts it straight with one bead moving. A strike at one bead gives mode <i>k</i> a share of energy proportional to the square of that mode's height at the bead, whatever its frequency, so on average the high modes get as much as the low ones. A plucked triangle is smooth everywhere except its corner, so it contains little of the tightly wiggling high modes, and their energy falls off quickly with <i>k</i>. That is why a hammered string sounds brighter than a plucked one.</li>
         <li><b>Anchors.</b> Hanging each bead on its own spring turns the string into a row of pendulums joined by springs. Every frequency rises to √(<i>a</i>² + 4<i>c</i>² sin²(<i>kπ</i> / 2(<i>n</i>+1))), so even the longest wave cannot swing slower than <i>a</i>. Waves of different lengths now travel at very different speeds, which is why a pulse on the pendulums frays.</li>
         <li><b>Beats.</b> With two beads, weak coupling and a strong anchor, the two modes have nearly equal frequencies. Starting one bead alone mixes both modes; as they drift in and out of step, the motion passes to the other bead and back once every 2π / (<i>ω</i>₂ − <i>ω</i>₁).</li>
         <li><b>Damping.</b> A drag proportional to each bead's speed removes energy from every mode that still swings at the same average rate, the damping <i>γ</i>, so the energy halves every ln 2 / <i>γ</i> time units. A mode whose frequency is below <i>γ</i> / 2 no longer swings at all; it creeps back to the line, and the slower it is, the longer it takes.</li>
