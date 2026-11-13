@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>beadstring: normal modes of a string of beads</title>
+  <meta name="description" content="A string of beads in the browser: pluck it, split the motion into normal modes, and see how beads bend the overtones away from whole multiples.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>beadstring</h1>
+    <p>Thread a few beads on a taut string and pluck it. However tangled the motion looks, it is a sum of a few simple patterns, the normal modes, each swinging at its own steady frequency. Drag a bead to pluck the string, or click a bar to play one mode alone.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="string-title">
+      <div class="plots">
+        <h2 id="string-title" class="visually-hidden">The string</h2>
+        <canvas id="string" class="string" width="640" height="260" role="img" aria-label="The string of beads between two walls. Drag a bead up or down to pluck it."></canvas>
+        <div class="panel-head">
+          <h2 id="strip-title">Along the string, over time</h2>
+          <p class="legend"><span class="swatch swatch-up"></span> above the line <span class="swatch swatch-down"></span> below <span class="muted">· newest at the bottom, 60 time units tall</span></p>
+        </div>
+        <canvas id="strip" class="strip" width="640" height="200" role="img" aria-labelledby="strip-title"></canvas>
+        <p id="preset-note" class="note"></p>
+
+        <div class="pair">
+          <figure>
+            <figcaption id="spectrum-title">Energy in each mode</figcaption>
+            <canvas id="spectrum" class="spectrum" width="310" height="200" role="img" aria-labelledby="spectrum-title"></canvas>
+          </figure>
+          <figure>
+            <figcaption id="dispersion-title">Frequency of each mode</figcaption>
+            <canvas id="dispersion" class="dispersion" width="310" height="200" role="img" aria-labelledby="dispersion-title"></canvas>
+          </figure>
+        </div>
+        <p class="hint">Click a bar to play that mode alone; shift-click to add it to the motion. On the right, dots are the beaded string and the dashed line is a smooth string of the same length and weight.</p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Starting setup
+          <select id="preset"></select>
+        </label>
+        <div class="row">
+          <button id="play" type="button" aria-pressed="true">Pause</button>
+          <button id="restart" type="button">Restart</button>
+          <button id="still" type="button">Still</button>
+        </div>
+        <label class="field">Speed
+          <select id="speed">
+            <option value="0.25">¼×</option>
+            <option value="0.5">½×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </label>
+
+        <fieldset>
+          <legend>The string</legend>
+          <div class="slider">
+            <label for="beads">Beads</label>
+            <input id="beads" type="range" min="1" max="48" step="1" value="12">
+            <output id="beads-out" for="beads">12</output>
+          </div>
+          <div id="sliders" class="sliders"></div>
+          <p class="hint">Changing the number of beads restarts the setup; the other sliders act on the moving string.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Plucking</legend>
+          <div class="radios" role="radiogroup" aria-label="What dragging a bead does">
+            <label><input type="radio" name="grab" value="pluck" checked> Pull the string into a corner</label>
+            <label><input type="radio" name="grab" value="nudge"> Move one bead only</label>
+          </div>
+          <div class="start-row">
+            <label>Bead <input id="pluck-bead" type="number" min="1" max="48" step="1" value="3"></label>
+            <label>Height <input id="pluck-height" type="number" min="-1" max="1" step="0.1" value="0.6"></label>
+            <button id="pluck" type="button">Pluck</button>
+          </div>
+          <div class="start-row">
+            <label>Mode <input id="mode-k" type="number" min="1" max="48" step="1" value="2"></label>
+            <span></span>
+            <button id="mode-play" type="button">Play mode</button>
+          </div>
+        </fieldset>
+
+        <dl class="readout" aria-live="off">
+          <div><dt>Time</dt><dd id="r-time"></dd></div>
+          <div><dt>Lowest frequency</dt><dd id="r-low"></dd></div>
+          <div><dt>Overtones ÷ lowest</dt><dd id="r-ratios"></dd></div>
+          <div><dt>Smooth string would give</dt><dd id="r-smooth"></dd></div>
+          <div><dt>Highest frequency</dt><dd id="r-high"></dd></div>
+          <div><dt>Energy</dt><dd id="r-energy"></dd></div>
+          <div><dt>Beat period</dt><dd id="r-beat"></dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="explain" aria-labelledby="explain-title">
+      <h2 id="explain-title">Reading the picture</h2>
+      <ul>
+        <li><b>The equation.</b> Each bead is pulled toward its two neighbours by the string and, if the anchor is on, back toward the axis by a spring of its own: <i>y<sub>j</sub>″</i> = <i>c</i>²(<i>y</i><sub><i>j</i>−1</sub> − 2<i>y<sub>j</sub></i> + <i>y</i><sub><i>j</i>+1</sub>) − <i>a</i>² <i>y<sub>j</sub></i> − <i>γ y<sub>j</sub>′</i>, with the walls held at zero. <i>c</i> is the coupling, <i>a</i> the anchor and <i>γ</i> the damping.</li>
+        <li><b>Normal modes.</b> With <i>n</i> beads there are exactly <i>n</i> patterns in which every bead swings at one shared frequency: sine-shaped arches with 1, 2, …, <i>n</i> humps. Any motion at all is a mix of them, and with no damping each mode keeps its energy forever, so the bars do not change while the string writhes.</li>
+        <li><b>Why beads bend the overtones.</b> On a smooth string the <i>k</i>-th mode swings exactly <i>k</i> times as fast as the first, which is why a guitar string sounds a clean note. On a beaded string the frequency is 2<i>c</i> sin(<i>kπ</i> / 2(<i>n</i>+1)): close to <i>k</i> times the first for long waves, then falling behind and levelling off below 2<i>c</i> as the waves shrink toward the bead spacing. The readout compares the first overtones with the whole numbers a smooth string would give.</li>
+        <li><b>Anchors.</b> Hanging each bead on its own spring turns the string into a row of pendulums joined by springs. Every frequency rises to √(<i>a</i>² + 4<i>c</i>² sin²(<i>kπ</i> / 2(<i>n</i>+1))), so even the longest wave cannot swing slower than <i>a</i>. Waves of different lengths now travel at very different speeds, which is why a pulse on the pendulums frays.</li>
+        <li><b>Beats.</b> With two beads, weak coupling and a strong anchor, the two modes have nearly equal frequencies. Starting one bead alone mixes both modes; as they drift in and out of step, the motion passes to the other bead and back once every 2π / (<i>ω</i>₂ − <i>ω</i>₁).</li>
+        <li><b>Damping.</b> A drag proportional to each bead's speed removes energy from every mode at the same average rate, the damping <i>γ</i>, so the energy halves every ln 2 / <i>γ</i> time units.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/beadstring">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
