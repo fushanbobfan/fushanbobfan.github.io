@@ -20,10 +20,19 @@ export function initialShape(init, n) {
     case 'bump':
       return bumpShape(n, init.at * (n + 1), Math.max(1, init.width * (n + 1)), amp);
     case 'still':
+    case 'strike':
       return new Float64Array(n);
     default:
       throw new Error(`unknown start ${init.type}`);
   }
+}
+
+// A strike starts the string from rest with one bead moving; every other
+// start has no initial motion.
+export function initialVelocity(init, n) {
+  if (init.type !== 'strike') return null;
+  const bead = Math.min(n, Math.max(1, Math.round(init.at * (n + 1))));
+  return nudgeShape(n, bead, init.amp ?? 0.6);
 }
 
 export const PRESETS = [
@@ -50,6 +59,14 @@ export const PRESETS = [
     params: { coupling: 1, anchor: 0, damping: 0 },
     init: { type: 'pluck', at: 0.12 },
     note: 'A pluck close to a wall puts energy into many overtones. The corner of the triangle runs back and forth along the string.',
+  },
+  {
+    id: 'struck',
+    name: 'Struck near the end',
+    n: 24,
+    params: { coupling: 1, anchor: 0, damping: 0 },
+    init: { type: 'strike', at: 0.12 },
+    note: 'The same spot struck instead of plucked: one bead is knocked sideways from rest, like a piano hammer hitting a string. A blow gives each mode energy in proportion to the square of that mode’s height at the struck bead, no matter how fast the mode is, so the bars form an even comb and the upper half of the modes gets half the energy, against about 6% for the pluck. Turn on the sound to hear the brighter tone.',
   },
   {
     id: 'zigzag',

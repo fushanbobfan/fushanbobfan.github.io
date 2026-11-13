@@ -2,7 +2,7 @@ import {
   createString, step, setParams, positions, velocities, modeEnergies, totalEnergy,
   modeFrequency, continuumFrequency, overtoneRatios, beatPeriod, pluckShape, nudgeShape, modeOnly,
 } from './model.js';
-import { PRESETS, SLIDERS, BEADS, initialShape } from './presets.js';
+import { PRESETS, SLIDERS, BEADS, initialShape, initialVelocity } from './presets.js';
 import { partials, amplitudeSum, createVoice } from './sound.js';
 
 const $ = (id) => document.getElementById(id);
@@ -30,6 +30,7 @@ const state = {
   n: PRESETS[0].n,
   params: { ...PRESETS[0].params },
   start: null,
+  startVelocity: null,
   string: null,
   eRef: 0,
   aRef: 0,
@@ -112,6 +113,7 @@ async function setListening(on) {
 
 function startFrom(shape, velocity = null) {
   state.start = Float64Array.from(shape);
+  state.startVelocity = velocity ? Float64Array.from(velocity) : null;
   state.string = createString(state.n, state.params, shape, velocity);
   resetScale();
   clearStrip();
@@ -125,7 +127,7 @@ function applyPreset(preset) {
   state.params = { ...preset.params };
   syncControls();
   showNote();
-  startFrom(initialShape(preset.init, state.n));
+  startFrom(initialShape(preset.init, state.n), initialVelocity(preset.init, state.n));
 }
 
 function showNote() {
@@ -138,7 +140,16 @@ function setBeadCount(n) {
   state.n = n;
   syncControls();
   showNote();
-  startFrom(initialShape(state.preset.init, n));
+  startFrom(initialShape(state.preset.init, n), initialVelocity(state.preset.init, n));
+}
+
+function restart() {
+  startFrom(state.start, state.startVelocity);
+}
+
+// A strike knocks one bead sideways from rest at the given speed.
+function strike(bead, speed) {
+  startFrom(new Float64Array(state.n), nudgeShape(state.n, bead, speed));
 }
 
 function grabShape(bead, height) {
@@ -158,6 +169,7 @@ function playMode(k, add) {
   for (let j = 0; j < state.n; j++) y[j] += fresh[j];
   const t = state.string.t;
   state.start = Float64Array.from(y);
+  state.startVelocity = Float64Array.from(v);
   state.string = createString(state.n, state.params, y, v);
   state.string.t = t;
   growScale();
@@ -220,7 +232,7 @@ function buildControls() {
   });
 
   $('play').addEventListener('click', () => setPlaying(!state.playing));
-  $('restart').addEventListener('click', () => startFrom(state.start));
+  $('restart').addEventListener('click', restart);
   $('still').addEventListener('click', () => startFrom(new Float64Array(state.n)));
   $('speed').addEventListener('change', (e) => { state.speed = Number(e.target.value); });
 
@@ -228,14 +240,21 @@ function buildControls() {
   $('smooth-tune').addEventListener('change', (e) => { state.smoothTune = e.target.checked; });
 
   for (const radio of document.querySelectorAll('input[name="grab"]')) {
-    radio.addEventListener('change', () => { if (radio.checked) state.grab = radio.value; });
+    radio.addEventListener('change', () => {
+      if (!radio.checked) return;
+      state.grab = radio.value;
+      const striking = radio.value === 'strike';
+      $('pluck').textContent = striking ? 'Strike' : 'Pluck';
+      $('pluck-size-label').textContent = striking ? 'Speed' : 'Height';
+    });
   }
 
   $('pluck').addEventListener('click', () => {
     const bead = clampInt($('pluck-bead').value, 1, state.n);
     const height = Math.max(-1, Math.min(1, Number($('pluck-height').value) || 0));
     $('pluck-bead').value = bead;
-    startFrom(grabShape(bead, height));
+    if (state.grab === 'strike') strike(bead, height);
+    else startFrom(grabShape(bead, height));
   });
   $('mode-play').addEventListener('click', () => {
     const k = clampInt($('mode-k').value, 1, state.n);
@@ -250,7 +269,7 @@ function buildControls() {
       e.preventDefault();
       setPlaying(!state.playing);
     } else if (e.key === 'r') {
-      startFrom(state.start);
+      restart();
     }
   });
 }
@@ -305,6 +324,10 @@ function heightAt(y) {
 stringCanvas.addEventListener('pointerdown', (e) => {
   if (state.held !== null) return;
   const [x, y] = canvasPoint(stringCanvas, e);
+  if (state.grab === 'strike') {
+    strike(nearestBead(x), heightAt(y));
+    return;
+  }
   state.pointer = e.pointerId;
   state.held = nearestBead(x);
   stringCanvas.setPointerCapture(e.pointerId);

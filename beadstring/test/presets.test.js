@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PRESETS, SLIDERS, BEADS, initialShape } from '../src/presets.js';
+import { PRESETS, SLIDERS, BEADS, initialShape, initialVelocity } from '../src/presets.js';
 import {
   createString, step, modeEnergies, modeFrequency, positions, velocities, beadEnergies, beatPeriod,
 } from '../src/model.js';
@@ -19,8 +19,11 @@ test('every preset builds a string with motion inside the drawable range', () =>
     }
     const shape = initialShape(p.init, p.n);
     assert.equal(shape.length, p.n);
-    const peak = Math.max(...shape.map(Math.abs));
+    const velocity = initialVelocity(p.init, p.n);
+    const start = velocity ?? shape;
+    const peak = Math.max(...start.map(Math.abs));
     assert.ok(peak > 0.2 && peak <= 1, `${p.id} peak ${peak}`);
+    if (velocity) assert.ok(shape.every((v) => v === 0), `${p.id} starts from rest`);
     assert.ok(p.note.length > 40);
   }
 });
@@ -30,6 +33,8 @@ test('starting shapes adapt to any number of beads', () => {
     for (let n = BEADS.min; n <= BEADS.max; n++) {
       const shape = initialShape(p.init, n);
       assert.equal(shape.length, n);
+      const velocity = initialVelocity(p.init, n);
+      if (velocity) assert.equal(velocity.length, n);
       assert.ok(shape.every(Number.isFinite), `${p.id} n=${n}`);
       assert.ok(Math.max(...shape.map(Math.abs)) <= 1, `${p.id} n=${n}`);
     }
@@ -115,4 +120,24 @@ test('the plain pulse keeps most of its height as it travels', () => {
   step(s, 20);
   const peak = Math.max(...positions(s).map(Math.abs));
   assert.ok(peak > 0.25 && peak <= 0.3, `each half is at most half the bump: ${peak}`);
+});
+
+test('a strike shares its energy evenly; a pluck at the same place does not', () => {
+  const p = byId('struck');
+  const struck = createString(p.n, p.params, initialShape(p.init, p.n), initialVelocity(p.init, p.n));
+  const plucked = createString(p.n, p.params, initialShape(byId('near-end').init, p.n));
+  const upperShare = (s) => {
+    const e = modeEnergies(s);
+    return e.slice(p.n / 2).reduce((a, b) => a + b, 0) / e.reduce((a, b) => a + b, 0);
+  };
+  assert.ok(Math.abs(upperShare(struck) - 0.5) < 0.005, `struck ${upperShare(struck)}`);
+  assert.ok(Math.abs(upperShare(plucked) - 0.06) < 0.005, `plucked ${upperShare(plucked)}`);
+  // Struck where the near-end pluck has its corner.
+  assert.equal(initialVelocity(p.init, p.n).indexOf(0.6) + 1, 3);
+  let peak = 0;
+  for (let i = 0; i < 2000; i++) {
+    step(struck, 0.05);
+    peak = Math.max(peak, ...positions(struck).map(Math.abs));
+  }
+  assert.ok(peak < 1, `stays on the canvas: ${peak}`);
 });
