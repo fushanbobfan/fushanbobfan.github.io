@@ -40,6 +40,12 @@ Run the tests with `npm test` (Node 20 or later).
   pendulums joined by springs. Every frequency is lifted to at least the
   anchor frequency, and waves of different lengths travel at very different
   speeds.
+- **Listen.** Each mode becomes a sine tone at a level set by its amplitude.
+  The lowest mode sounds at G3 (196 Hz) and the others at their true
+  frequency ratios; a second switch retunes them to whole multiples, the
+  overtones of a smooth string. With few beads the difference is plain: with
+  four, the first overtone is 87 cents, almost a semitone, flat of the octave. A paused or
+  held string is silent, and a damped one fades.
 - **Readout.** The lowest frequency and its period, the first overtones as
   multiples of it beside what a smooth string would give, the highest
   frequency, the total energy, and for two beads the beat period.

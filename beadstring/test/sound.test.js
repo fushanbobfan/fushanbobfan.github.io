@@ -93,3 +93,9 @@ test('the voice grows tones on demand and silences the ones no longer used', asy
   assert.equal(ctx.nodes[0].gain.value, 0);
   assert.equal(createVoice(undefined), null);
 });
+
+test('with four beads the first overtone is 87 cents flat of the octave', async () => {
+  const { modeFrequency } = await import('../src/model.js');
+  const cents = 1200 * Math.log2(2 / (modeFrequency(4, 2) / modeFrequency(4, 1)));
+  assert.equal(Math.round(cents), 87);
+});
