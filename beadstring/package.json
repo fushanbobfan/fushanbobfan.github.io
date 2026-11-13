@@ -1,0 +1,20 @@
+{
+  "name": "beadstring",
+  "version": "0.1.0",
+  "description": "A string of beads in the browser: pluck it, split the motion into normal modes, and see how beads bend the overtones away from whole multiples.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "normal-modes",
+    "coupled-oscillators",
+    "waves",
+    "dispersion",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
