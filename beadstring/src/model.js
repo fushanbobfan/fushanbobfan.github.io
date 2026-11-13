@@ -85,13 +85,19 @@ export function evolveMode(q, p, w, g, dt) {
     const sn = Math.sin(wd * dt);
     return [decay * (q * cs + (lead / wd) * sn), decay * (p * cs - (wd * q + (c * lead) / wd) * sn)];
   }
+  // Overdamped: two decaying exponentials, written so that neither factor
+  // overflows on a long step (r < c, so both exponents are negative).
   const r = Math.sqrt(-s);
-  const ch = Math.cosh(r * dt);
-  const sh = Math.sinh(r * dt);
-  return [decay * (q * ch + (lead / r) * sh), decay * (p * ch + (r * q - (c * lead) / r) * sh)];
+  const slow = Math.exp((r - c) * dt);
+  const fast = Math.exp(-(r + c) * dt);
+  const plus = q + lead / r;
+  const minus = q - lead / r;
+  return [0.5 * (plus * slow + minus * fast), 0.5 * ((r - c) * plus * slow - (r + c) * minus * fast)];
 }
 
-// Initial shapes, each given at beads 1..n with amplitude `amp`.
+// Initial shapes, each given at beads 1..n with amplitude `amp`. A pluck may
+// sit between beads (a fractional `bead`): the string is pulled into a
+// triangle with its corner there, sampled at the beads.
 export function pluckShape(n, bead, amp) {
   const out = new Float64Array(n);
   for (let j = 1; j <= n; j++) {

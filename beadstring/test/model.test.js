@@ -93,6 +93,16 @@ test('the damped step is continuous through critical damping', () => {
   close(pa, pb, 1e-6); close(pc, pb, 1e-6);
 });
 
+test('a long overdamped step stays finite and exact', () => {
+  assert.deepEqual(evolveMode(1, 0, 0, 0.5, 4000), [1, 0]);
+  const [q, p] = evolveMode(0.4, 0.1, 0.05, 2, 1e5);
+  assert.ok(Number.isFinite(q) && Number.isFinite(p));
+  // Overdamped and underdamped results meet as the damping crosses 2w.
+  const [qa] = evolveMode(0.7, -0.3, 1, 2 + 1e-6, 50);
+  const [qb] = evolveMode(0.7, -0.3, 1, 2 - 1e-6, 50);
+  close(qa, qb, 1e-5);
+});
+
 test('energy is conserved without damping and falls with it', () => {
   const s = createString(12, { coupling: 1, anchor: 0.5, damping: 0 }, pluckShape(12, 4, 1));
   const e0 = totalEnergy(s);
