@@ -36,10 +36,28 @@ test('starting shapes adapt to any number of beads', () => {
   }
 });
 
-test('the middle pluck excites only odd modes', () => {
+test('the middle pluck excites only odd modes, for any number of beads', () => {
   const p = byId('middle');
-  const e = modeEnergies(createString(p.n, p.params, initialShape(p.init, p.n)));
-  e.forEach((v, i) => ((i + 1) % 2 === 0 ? assert.ok(v < 1e-24) : assert.ok(v > 0)));
+  for (let n = 2; n <= BEADS.max; n++) {
+    const e = modeEnergies(createString(n, p.params, initialShape(p.init, n)));
+    e.forEach((v, i) => ((i + 1) % 2 === 0 ? assert.ok(v < 1e-24, `n=${n} mode ${i + 1}`) : assert.ok(v > 0)));
+  }
+});
+
+test('the opposed-neighbours setup stays the top mode for any number of beads', () => {
+  const p = byId('zigzag');
+  for (let n = 1; n <= BEADS.max; n++) {
+    const e = modeEnergies(createString(n, p.params, initialShape(p.init, n)));
+    e.forEach((v, i) => (i === n - 1 ? assert.ok(v > 0) : assert.ok(v < 1e-24, `n=${n} mode ${i + 1}`)));
+  }
+});
+
+test('plucks keep the corner where the setup put it', () => {
+  const p = byId('near-end');
+  const shape = initialShape(p.init, 24);
+  const peakAt = shape.indexOf(Math.max(...shape)) + 1;
+  assert.equal(peakAt, 3);
+  assert.ok(Math.abs(Math.max(...shape) - 0.6) < 1e-12);
 });
 
 test('the opposed-neighbours preset is the top mode, just under twice the coupling', () => {

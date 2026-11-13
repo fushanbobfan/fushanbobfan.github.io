@@ -4,12 +4,17 @@ import { pluckShape, nudgeShape, bumpShape, modeOnly } from './model.js';
 // change in the number of beads.
 export function initialShape(init, n) {
   const amp = init.amp ?? 0.6;
-  const bead = (at) => Math.min(n, Math.max(1, Math.round(at * (n + 1))));
   switch (init.type) {
     case 'mode':
-      return modeOnly(n, Math.min(n, init.k), amp);
-    case 'pluck':
-      return pluckShape(n, bead(init.at), amp);
+      return modeOnly(n, init.k === 'top' ? n : Math.min(n, init.k), amp);
+    case 'pluck': {
+      // Keep the corner where it was along the string, even between beads,
+      // so a centred pluck stays symmetric for any number of beads.
+      const corner = Math.min(n + 0.5, Math.max(0.5, init.at * (n + 1)));
+      const shape = pluckShape(n, corner, amp);
+      const peak = Math.max(...shape);
+      return peak > 0 ? shape.map((v) => (v * amp) / peak) : shape;
+    }
     case 'nudge':
       return nudgeShape(n, Math.min(n, init.bead), amp);
     case 'bump':
@@ -51,7 +56,7 @@ export const PRESETS = [
     name: 'Neighbours opposed',
     n: 12,
     params: { coupling: 1, anchor: 0, damping: 0 },
-    init: { type: 'mode', k: 12 },
+    init: { type: 'mode', k: 'top' },
     note: 'The highest mode: each bead swings against its neighbours. Its frequency is just under twice the coupling, the most a string of beads can carry, because no wave can be shorter than two beads.',
   },
   {
