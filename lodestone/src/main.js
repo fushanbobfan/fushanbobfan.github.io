@@ -1,6 +1,7 @@
 import { makeSystem, step, trappedBy } from './model.js';
 import { BasinMap, paint, hexToRgb } from './basins.js';
 import { PRESETS, presetById } from './presets.js';
+import { companionStarts, tally, tallyWords, SPREAD } from './companions.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,7 +13,6 @@ const MAGNET_COLORS = [
 ];
 const RGB = MAGNET_COLORS.map((c) => hexToRgb(c.hex));
 const WHOLE_VIEW = { cx: 0, cy: 0, half: 2.5 };
-const TWIN_OFFSET = 0.01;
 const MIN_GAP = 0.15; // closest two magnets may be placed
 const STEPS_PER_FRAME = 2;
 const AFTER_CATCH = 4; // time units a caught bob keeps swinging on screen
@@ -158,15 +158,16 @@ function showParams() {
 
 // --- bobs --------------------------------------------------------------------
 
-function newBob(x, y, twin) {
-  return { s: { x, y, vx: 0, vy: 0 }, x0: x, y0: y, trail: [[x, y]], t: 0, caught: -1, caughtAt: 0, done: false, twin };
+// role: 'main', 'twin' or 'fan' (one of the bobs round the main one).
+function newBob(x, y, role) {
+  return { s: { x, y, vx: 0, vy: 0 }, x0: x, y0: y, trail: [[x, y]], t: 0, caught: -1, caughtAt: 0, done: false, role };
 }
 
 function release(x, y) {
   $('start-x').value = fmt(x, 3);
   $('start-y').value = fmt(y, 3);
-  state.bobs = [newBob(x, y, false)];
-  if ($('twin').checked) state.bobs.push(newBob(x + TWIN_OFFSET, y, true));
+  const mode = $('company').value;
+  state.bobs = companionStarts(x, y, mode).map(([bx, by], i) => newBob(bx, by, i === 0 ? 'main' : mode));
   if (reduceMotion.matches) {
     for (const b of state.bobs) while (!b.done) advance(b, 1);
   }
@@ -213,10 +214,21 @@ function describeFate() {
   if (state.bobs.length) {
     const [a, b] = state.bobs;
     text = fateText(a, `Released at (${fmt(a.x0)}, ${fmt(a.y0)}):`);
-    if (b) {
-      text += ' ' + fateText(b, `Its twin, ${TWIN_OFFSET} to the right:`);
+    if (b && b.role === 'twin') {
+      text += ' ' + fateText(b, `Its twin, ${SPREAD} to the right:`);
       if (a.caught >= 0 && b.caught >= 0) {
         text += a.caught === b.caught ? ' Same magnet.' : ' Different magnets.';
+      }
+    } else if (b) {
+      const t = tally(state.bobs, state.magnets.length);
+      const names = MAGNET_COLORS.map((c) => c.name);
+      const settledCount = t.total - t.moving;
+      text += ` Of all ${t.total} bobs within ${SPREAD} of that start, `;
+      if (t.moving > 0) {
+        text += settledCount ? `${settledCount} have landed so far: ${tallyWords(t, names)}.` : 'none has landed yet.';
+      } else {
+        const split = t.caught.filter((n) => n > 0).length + (t.lost > 0 ? 1 : 0);
+        text += `${tallyWords(t, names)}${split > 1 ? '.' : ': all the same.'}`;
       }
     }
   }
@@ -306,8 +318,33 @@ function draw() {
   const size = (mv.half / state.view.half) * W;
   ctx.drawImage(offscreen, ix, iy, size, size);
 
+  // The fan first, thin, so the main bob stays on top.
   for (const bob of state.bobs) {
-    const twin = bob.twin;
+    if (bob.role !== 'fan') continue;
+    if (bob.trail.length > 1) {
+      ctx.beginPath();
+      bob.trail.forEach(([x, y], i) => {
+        const [px, py] = worldToCanvas(x, y);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(251, 249, 243, 0.55)';
+      ctx.stroke();
+    }
+    const [bx, by] = worldToCanvas(bob.s.x, bob.s.y);
+    ctx.beginPath();
+    ctx.arc(bx, by, 3.5, 0, 2 * Math.PI);
+    ctx.fillStyle = bob.caught >= 0 ? MAGNET_COLORS[bob.caught].hex : '#fbf9f3';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#1d1b17';
+    ctx.stroke();
+  }
+
+  for (const bob of state.bobs) {
+    if (bob.role === 'fan') continue;
+    const twin = bob.role === 'twin';
     strokeTrail(bob.trail, twin ? '#fbf9f3' : '#1d1b17', twin ? '#1d1b17' : '#fbf9f3', twin ? [5, 4] : []);
     const [sx, sy] = worldToCanvas(bob.x0, bob.y0);
     ctx.fillStyle = twin ? '#1d1b17' : '#fbf9f3';
