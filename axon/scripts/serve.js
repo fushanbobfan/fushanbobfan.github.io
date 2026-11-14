@@ -40,5 +40,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`nimber dev server: http://localhost:${PORT}`);
+  console.log(`axon dev server: http://localhost:${PORT}`);
 });
