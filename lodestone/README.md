@@ -66,9 +66,8 @@ bob's plane and the magnets, and *sᵢ* the strength of magnet *i* at
 **When is a bob caught?** Around each magnet is a disc whose rim has a
 lowest point of potential. Friction only ever drains energy, so once the bob is
 inside the disc with less energy than that lowest rim point, it can never
-leave. The map stops following a bob at that moment, which is far sooner than
-waiting for it to come to rest, and the answer is exact rather than a guess
-from where it happens to be.
+leave. The map stops following a bob at that moment, long before it would come
+to rest, and the magnet it names is certain.
 
 ## Files
 
