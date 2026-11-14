@@ -13,6 +13,7 @@ const MAGNET_COLORS = [
 const RGB = MAGNET_COLORS.map((c) => hexToRgb(c.hex));
 const WHOLE_VIEW = { cx: 0, cy: 0, half: 2.5 };
 const TWIN_OFFSET = 0.01;
+const MIN_GAP = 0.15; // closest two magnets may be placed
 const STEPS_PER_FRAME = 2;
 const AFTER_CATCH = 4; // time units a caught bob keeps swinging on screen
 const MAX_TRAIL = 8000;
@@ -37,7 +38,7 @@ const state = {
   paintedRows: -1,
   bobs: [],
   speed: 1,
-  drag: null,
+  drag: null, // { magnet, pointer } while a magnet is held
 };
 
 function fmt(v, digits = 2) {
@@ -63,8 +64,19 @@ function eventToCanvas(e) {
 
 // --- building the system and the map --------------------------------------
 
-function rebuild() {
+// The physics changes at once, so a bob released now uses the new settings;
+// only the slow map waits for the sliders or the wheel to settle.
+function rebuildSystem() {
   state.sys = makeSystem(state.magnets, state.params);
+}
+
+function rebuild() {
+  rebuildSystem();
+  rebuildMap();
+}
+
+function rebuildMap() {
+  clearTimeout(rebuildTimer);
   state.map = new BasinMap(state.sys, state.detail, state.view);
   offscreen.width = offscreen.height = state.detail;
   state.image = off.createImageData(state.detail, state.detail);
@@ -73,9 +85,9 @@ function rebuild() {
 }
 
 let rebuildTimer = 0;
-function rebuildSoon(delay = 180) {
+function rebuildMapSoon(delay = 180) {
   clearTimeout(rebuildTimer);
-  rebuildTimer = setTimeout(rebuild, delay);
+  rebuildTimer = setTimeout(rebuildMap, delay);
 }
 
 function loadPreset(p) {
@@ -83,11 +95,59 @@ function loadPreset(p) {
   state.magnets = p.magnets.map((m) => ({ ...m }));
   state.params = { pull: p.pull, friction: p.friction, height: p.height };
   state.view = { ...WHOLE_VIEW };
+  state.drag = null;
+  canvas.classList.remove('dragging');
   for (const key of ['pull', 'friction', 'height']) $(key).value = state.params[key];
   showParams();
   $('preset-note').textContent = p.note;
   clearBobs();
+  buildMagnetFields();
   rebuild();
+}
+
+// Number fields for every magnet, so magnets can be placed without a pointer.
+function buildMagnetFields() {
+  const box = $('magnet-fields');
+  box.textContent = '';
+  state.magnets.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    for (const axis of ['x', 'y']) {
+      const label = document.createElement('label');
+      label.className = 'field small';
+      label.textContent = `${MAGNET_COLORS[i].name} ${axis}`;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.05';
+      input.dataset.magnet = String(i);
+      input.dataset.axis = axis;
+      input.addEventListener('change', () => {
+        const v = Number(input.value);
+        const moved = { ...state.magnets[i], [axis]: v };
+        if (Number.isFinite(v) && placeable(i, moved.x, moved.y)) {
+          state.magnets[i] = moved;
+          clearBobs();
+          rebuild();
+        }
+        showMagnetFields();
+      });
+      label.append(input);
+      row.append(label);
+    }
+    box.append(row);
+  });
+  showMagnetFields();
+}
+
+function showMagnetFields() {
+  for (const input of $('magnet-fields').querySelectorAll('input')) {
+    input.value = fmt(state.magnets[Number(input.dataset.magnet)][input.dataset.axis]);
+  }
+}
+
+// Magnets stacked on top of each other would leave no room for a trap.
+function placeable(i, x, y) {
+  return state.magnets.every((m, j) => j === i || Math.hypot(m.x - x, m.y - y) >= MIN_GAP);
 }
 
 function showParams() {
@@ -147,6 +207,7 @@ function fateText(bob, label) {
 }
 
 let lastFate = '';
+let lastSpoken = '';
 function describeFate() {
   let text = 'No bob released yet.';
   if (state.bobs.length) {
@@ -159,10 +220,19 @@ function describeFate() {
       }
     }
   }
-  // Rewrite the live region only when the words change, not on every frame.
   if (text !== lastFate) {
     lastFate = text;
     $('fate').textContent = text;
+  }
+  // Screen readers hear the release and the outcome, not the running clock.
+  const settled = state.bobs.every((b) => b.caught >= 0 || b.done);
+  let spoken = '';
+  if (state.bobs.length) {
+    spoken = settled ? text : `Released at (${fmt(state.bobs[0].x0)}, ${fmt(state.bobs[0].y0)}).`;
+  }
+  if (spoken !== lastSpoken) {
+    lastSpoken = spoken;
+    $('announce').textContent = spoken;
   }
 }
 
@@ -230,7 +300,11 @@ function strokeTrail(trail, under, over, dash) {
 function draw() {
   ctx.clearRect(0, 0, W, W);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(offscreen, 0, 0, W, W);
+  // While a zoomed map is still pending, show the old one where it belongs.
+  const mv = state.map.view;
+  const [ix, iy] = worldToCanvas(mv.cx - mv.half, mv.cy + mv.half);
+  const size = (mv.half / state.view.half) * W;
+  ctx.drawImage(offscreen, ix, iy, size, size);
 
   for (const bob of state.bobs) {
     const twin = bob.twin;
@@ -289,9 +363,10 @@ function magnetAt(px, py) {
 
 canvas.addEventListener('pointerdown', (e) => {
   const [px, py] = eventToCanvas(e);
+  if (state.drag) return;
   const i = magnetAt(px, py);
   if (i >= 0) {
-    state.drag = i;
+    state.drag = { magnet: i, pointer: e.pointerId };
     canvas.setPointerCapture(e.pointerId);
     canvas.classList.add('dragging');
     clearBobs();
@@ -303,23 +378,29 @@ canvas.addEventListener('pointerdown', (e) => {
 
 canvas.addEventListener('pointermove', (e) => {
   const [px, py] = eventToCanvas(e);
-  if (state.drag === null) {
+  if (!state.drag) {
     canvas.classList.toggle('over-magnet', magnetAt(px, py) >= 0);
     return;
   }
+  if (e.pointerId !== state.drag.pointer) return;
   const [x, y] = canvasToWorld(px, py);
-  state.magnets[state.drag].x = x;
-  state.magnets[state.drag].y = y;
+  const i = state.drag.magnet;
+  if (placeable(i, x, y)) {
+    state.magnets[i].x = x;
+    state.magnets[i].y = y;
+  }
 });
 
-function endDrag() {
-  if (state.drag === null) return;
+function endDrag(e) {
+  if (!state.drag || e.pointerId !== state.drag.pointer) return;
   state.drag = null;
   canvas.classList.remove('dragging');
+  showMagnetFields();
   rebuild();
 }
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('lostpointercapture', endDrag);
 
 function zoom(factor, px = W / 2, py = W / 2) {
   const [x, y] = canvasToWorld(px, py);
@@ -327,7 +408,7 @@ function zoom(factor, px = W / 2, py = W / 2) {
   // Keep the point under the pointer fixed while the scale changes.
   state.view = { cx: x - (px / W - 0.5) * 2 * half, cy: y + (py / W - 0.5) * 2 * half, half };
   updateView();
-  rebuildSoon();
+  rebuildMapSoon();
 }
 
 canvas.addEventListener('wheel', (e) => {
@@ -340,15 +421,16 @@ $('zoom-in').addEventListener('click', () => zoom(0.5));
 $('zoom-out').addEventListener('click', () => zoom(2));
 $('zoom-reset').addEventListener('click', () => {
   state.view = { ...WHOLE_VIEW };
-  rebuild();
+  rebuildMap();
 });
 
 for (const key of ['pull', 'friction', 'height']) {
   $(key).addEventListener('input', () => {
     state.params[key] = Number($(key).value);
     showParams();
+    rebuildSystem();
     clearBobs();
-    rebuildSoon();
+    rebuildMapSoon();
   });
 }
 
@@ -358,7 +440,7 @@ select.addEventListener('change', () => loadPreset(presetById(select.value)));
 
 $('detail').addEventListener('change', () => {
   state.detail = Number($('detail').value);
-  rebuild();
+  rebuildMap();
 });
 
 $('shade').addEventListener('change', () => {
