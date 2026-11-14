@@ -37,9 +37,10 @@ test('each finished cell holds the fate of its own starting point', () => {
 test('work stops when the budget runs out and resumes where it left off', () => {
   const map = new BasinMap(sys, 16);
   let clock = 0;
-  const rows = map.work(5, () => (clock += 3));
-  assert.equal(rows, 2);
-  assert.ok(!map.complete);
+  // The clock is read once at the start and after every cell: 3, 6, 9.
+  assert.equal(map.work(5, () => (clock += 3)), 0);
+  assert.equal(map.col, 2, 'stopped two cells into the first row');
+  assert.ok(map.progress > 0 && map.progress < 1 / 16);
   while (!map.complete) map.work(1000);
   assert.ok(map.done.every((d) => d === 1));
   assert.equal(map.progress, 1);

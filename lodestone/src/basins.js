@@ -27,7 +27,8 @@ export class BasinMap {
     this.magnet = new Int8Array(size * size).fill(-2); // -2: not computed yet
     this.time = new Float32Array(size * size);
     this.order = rowOrder(size);
-    this.next = 0;
+    this.next = 0; // index into order of the row being filled
+    this.col = 0; // next column of that row
     this.done = new Uint8Array(size);
   }
 
@@ -36,7 +37,7 @@ export class BasinMap {
   }
 
   get progress() {
-    return this.next / this.order.length;
+    return (this.next + this.col / this.size) / this.order.length;
   }
 
   // Pixel column/row to the plane; row 0 is the top, so y grows upward.
@@ -52,24 +53,33 @@ export class BasinMap {
     return [((x - cx + half) / (2 * half)) * s - 0.5, ((cy + half - y) / (2 * half)) * s - 0.5];
   }
 
+  computeCell(row, col) {
+    const [x, y] = this.toWorld(col, row);
+    const r = fate(this.sys, x, y);
+    this.magnet[row * this.size + col] = r.magnet;
+    this.time[row * this.size + col] = r.time;
+  }
+
   computeRow(row) {
-    const s = this.size;
-    for (let col = 0; col < s; col++) {
-      const [x, y] = this.toWorld(col, row);
-      const r = fate(this.sys, x, y);
-      this.magnet[row * s + col] = r.magnet;
-      this.time[row * s + col] = r.time;
-    }
+    for (let col = 0; col < this.size; col++) this.computeCell(row, col);
     this.done[row] = 1;
   }
 
-  // Compute rows until the budget (in ms) runs out; returns the rows done.
+  // Compute cells until the budget (in ms) runs out, checking the clock after
+  // every cell, since one slow row could otherwise hold up the page.
+  // Returns the number of rows finished.
   work(budgetMs = 12, now = () => performance.now()) {
     const start = now();
     let rows = 0;
     while (!this.complete) {
-      this.computeRow(this.order[this.next++]);
-      rows++;
+      const row = this.order[this.next];
+      this.computeCell(row, this.col++);
+      if (this.col === this.size) {
+        this.done[row] = 1;
+        this.col = 0;
+        this.next++;
+        rows++;
+      }
       if (now() - start >= budgetMs) break;
     }
     return rows;
