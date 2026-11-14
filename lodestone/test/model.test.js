@@ -96,3 +96,53 @@ test('traps never overlap, however close the magnets', () => {
   const [a, b] = magnetTraps(sys);
   assert.ok(a.radius + b.radius < 0.3);
 });
+
+test('the trap level sits below every point of the rim, not only the sampled ones', () => {
+  const ms = regularMagnets(3);
+  ms[0].x = 6;
+  const sys = makeSystem(ms);
+  for (const t of sys.traps) {
+    for (let k = 0; k < 20000; k++) {
+      const a = (2 * Math.PI * k) / 20000;
+      assert.ok(potential(sys, t.x + t.radius * Math.cos(a), t.y + t.radius * Math.sin(a)) > t.rim);
+    }
+  }
+});
+
+test('a start next to a moved magnet is not claimed by it too early', () => {
+  const ms = regularMagnets(3);
+  ms[0].x = 6;
+  const sys = makeSystem(ms);
+  assert.equal(fate(sys, 5.408403508125052, 0.8999920458100705).magnet, 1);
+});
+
+test('a well pushed off its magnet by the other forces still catches the bob', () => {
+  const sys = makeSystem(regularMagnets(3), { height: 0.6 });
+  assert.ok(sys.traps.every((t) => t.hasWell));
+  assert.equal(fate(sys, 0, 1).magnet, 0);
+});
+
+test('close passes are cut into finer steps, so friction never adds energy', () => {
+  const sys = makeSystem(regularMagnets(3), { height: 0.1, friction: 0.04 });
+  const s = { x: 1.8, y: -1.2, vx: 0, vy: 0 };
+  let e = energy(sys, s);
+  for (let n = 0; n < 10000; n++) {
+    step(sys, s);
+    const e2 = energy(sys, s);
+    assert.ok(e2 <= e + 1e-9, `energy rose at step ${n}`);
+    e = e2;
+  }
+});
+
+test('a bob that comes to rest between the magnets is reported as not caught', () => {
+  const sys = makeSystem(regularMagnets(3), { pull: 2, height: 0.6 });
+  const r = fate(sys, 0.1, 0);
+  assert.equal(r.magnet, -1);
+  assert.ok(r.time < sys.maxTime, 'stops once at rest');
+});
+
+test('two magnets crowded together leave a distant magnet its full trap', () => {
+  const sys = makeSystem([{ x: 0, y: 1, strength: 1 }, { x: -1, y: -0.5, strength: 1 }, { x: -0.95, y: -0.5, strength: 1 }]);
+  assert.equal(sys.traps[0].radius, 0.6);
+  assert.ok(sys.traps[1].radius < 0.03);
+});

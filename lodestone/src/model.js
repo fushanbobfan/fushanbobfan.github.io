@@ -62,8 +62,7 @@ export function energy(sys, s) {
 
 const k1 = [0, 0], k2 = [0, 0], k3 = [0, 0], k4 = [0, 0];
 
-// One classical Runge-Kutta step of the state {x, y, vx, vy}, in place.
-export function step(sys, s, dt = sys.dt) {
+function rk4(sys, s, dt) {
   const { x, y, vx, vy } = s;
   const h = dt / 2;
   acceleration(sys, x, y, vx, vy, k1);
@@ -77,30 +76,77 @@ export function step(sys, s, dt = sys.dt) {
   s.y = y + (dt / 6) * (vy + 2 * vy2 + 2 * vy3 + vy4);
   s.vx = vx + (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
   s.vy = vy + (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+}
+
+// How many pieces to cut a step into. Close to a magnet the pull changes over
+// a time of about q^(3/4) / sqrt(s), with q the squared distance plus h^2;
+// each piece is kept to a small fraction of that, and of the bob's crossing time.
+export function substeps(sys, s, dt = sys.dt) {
+  const h2 = sys.height * sys.height;
+  const speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
+  let tau = Infinity;
+  for (const m of sys.magnets) {
+    const dx = m.x - s.x;
+    const dy = m.y - s.y;
+    const r = Math.sqrt(dx * dx + dy * dy + h2);
+    tau = Math.min(tau, (r * Math.sqrt(r)) / Math.sqrt(Math.abs(m.strength) || 1e-12));
+    if (speed > 0) tau = Math.min(tau, r / speed);
+  }
+  const n = Math.ceil(dt / (0.1 * tau));
+  return n <= 1 ? 1 : Math.min(64, n);
+}
+
+// Advance the state {x, y, vx, vy} by dt in place, with classical Runge-Kutta
+// steps, cut finer when the bob passes close to a magnet.
+export function step(sys, s, dt = sys.dt) {
+  const n = substeps(sys, s, dt);
+  for (let i = 0; i < n; i++) rk4(sys, s, dt / n);
   return s;
 }
 
-// A trap is a disc around a magnet with the lowest potential on its rim.
-// Friction only ever lowers the energy, so a bob inside the disc whose energy
-// is below that rim can never climb out: its fate is settled from that moment.
-export function magnetTraps(sys, samples = 72) {
+// Steepest the potential can be anywhere near magnet m within distance R:
+// the centre pull is at most k (|m| + R), and each magnet's pull at most
+// s * 2 / (3 sqrt 3 h^2), the peak of d / (d^2 + h^2)^(3/2).
+function slopeBound(sys, m, radius) {
+  const h2 = sys.height * sys.height;
+  let g = sys.pull * (Math.hypot(m.x, m.y) + radius);
+  for (const o of sys.magnets) g += (Math.abs(o.strength) * 2) / (3 * Math.sqrt(3) * h2);
+  return g;
+}
+
+// A trap is a disc around a magnet and a level below every point of its rim.
+// Friction only ever lowers the energy, so a bob inside the disc with energy
+// under that level can never climb out: its fate is settled from that moment.
+// The rim is sampled, and the level is the lowest sample minus the most the
+// potential can fall between neighbouring samples, so it is a true lower bound.
+export function magnetTraps(sys, samples = 720) {
   const ms = sys.magnets;
-  let spacing = Infinity;
-  for (let i = 0; i < ms.length; i++) {
-    for (let j = i + 1; j < ms.length; j++) {
-      spacing = Math.min(spacing, Math.hypot(ms[i].x - ms[j].x, ms[i].y - ms[j].y));
+  return ms.map((m, i) => {
+    let nearest = Infinity;
+    for (let j = 0; j < ms.length; j++) {
+      if (j !== i) nearest = Math.min(nearest, Math.hypot(ms[i].x - ms[j].x, ms[i].y - ms[j].y));
     }
-  }
-  const radius = Math.min(0.45 * spacing, 0.6);
-  return ms.map((m) => {
-    let rim = Infinity;
+    // Neighbouring discs reach at most 0.45 of the gap each, so they never overlap.
+    const radius = Math.min(0.45 * nearest, 0.6);
+    let lowest = Infinity;
     for (let k = 0; k < samples; k++) {
       const a = (2 * Math.PI * k) / samples;
-      rim = Math.min(rim, potential(sys, m.x + radius * Math.cos(a), m.y + radius * Math.sin(a)));
+      lowest = Math.min(lowest, potential(sys, m.x + radius * Math.cos(a), m.y + radius * Math.sin(a)));
     }
-    // Inside the disc the potential must dip below the rim, or there is no well.
-    const hasWell = potential(sys, m.x, m.y) < rim;
-    return { x: m.x, y: m.y, radius, rim, hasWell };
+    const gap = (Math.PI * radius) / samples; // farthest any rim point is from a sample
+    const rim = lowest - slopeBound(sys, m, radius) * gap;
+    // Whether the potential dips under that level anywhere in the disc; if not,
+    // no bob can ever meet the trap's condition. For display and tests only.
+    let floor = Infinity;
+    const n = 24;
+    for (let a = 0; a <= n; a++) {
+      for (let b = 0; b <= n; b++) {
+        const dx = radius * (2 * a / n - 1);
+        const dy = radius * (2 * b / n - 1);
+        if (dx * dx + dy * dy <= radius * radius) floor = Math.min(floor, potential(sys, m.x + dx, m.y + dy));
+      }
+    }
+    return { x: m.x, y: m.y, radius, rim, hasWell: floor < rim };
   });
 }
 
@@ -108,7 +154,7 @@ export function trappedBy(sys, s) {
   const e = energy(sys, s);
   for (let i = 0; i < sys.traps.length; i++) {
     const t = sys.traps[i];
-    if (!t.hasWell || e >= t.rim) continue;
+    if (e >= t.rim) continue;
     const dx = s.x - t.x;
     const dy = s.y - t.y;
     if (dx * dx + dy * dy < t.radius * t.radius) return i;
@@ -116,14 +162,23 @@ export function trappedBy(sys, s) {
   return -1;
 }
 
+const acc = [0, 0];
+
 // Release the bob at rest from (x, y) and follow it until a magnet traps it.
-// Returns the magnet's index (or -1 if none did by maxTime) and the time taken.
+// Returns the magnet's index and the time taken, or -1 if no magnet caught it:
+// either it came to rest somewhere else, or maxTime ran out.
 export function fate(sys, x, y, vx = 0, vy = 0) {
   const s = { x, y, vx, vy };
   const steps = Math.ceil(sys.maxTime / sys.dt);
   for (let n = 0; n <= steps; n++) {
     const i = trappedBy(sys, s);
     if (i >= 0) return { magnet: i, time: n * sys.dt };
+    if (n % 50 === 0) {
+      acceleration(sys, s.x, s.y, s.vx, s.vy, acc);
+      if (s.vx * s.vx + s.vy * s.vy < 1e-14 && acc[0] * acc[0] + acc[1] * acc[1] < 1e-14) {
+        return { magnet: -1, time: n * sys.dt };
+      }
+    }
     step(sys, s);
   }
   return { magnet: -1, time: sys.maxTime };
