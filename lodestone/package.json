@@ -1,0 +1,20 @@
+{
+  "name": "lodestone",
+  "version": "0.1.0",
+  "description": "A pendulum over three magnets in the browser: release the bob anywhere and see which magnet catches it, and how the map of starting points breaks into fractal ribbons.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "chaos",
+    "basins-of-attraction",
+    "fractals",
+    "pendulum",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
