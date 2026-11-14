@@ -49,7 +49,13 @@
             <label class="field small">y <input id="start-y" type="number" step="0.01" value="-1"></label>
             <button id="release" type="button">Release</button>
           </div>
-          <label class="check"><input id="twin" type="checkbox" checked> Release a twin 0.01 to the right</label>
+          <label class="field">Company
+            <select id="company">
+              <option value="alone">Alone</option>
+              <option value="twin" selected>With a twin 0.01 to the right</option>
+              <option value="fan">With 11 others on a circle 0.01 across</option>
+            </select>
+          </label>
           <div class="row">
             <label class="field">Speed
               <select id="speed">
@@ -98,7 +104,7 @@
     <section class="explain" aria-labelledby="about-title">
       <h2 id="about-title">What is going on</h2>
       <p>The bob feels three things: a pull back toward the middle, as a long pendulum does; friction that slows it; and the attraction of each magnet, which sits a little below the bob's plane so the pull stays finite even right on top of it. Friction drains energy all the time, so the bob settles into one of the dips of the combined pull, usually the one over a magnet. With a strong pull to the centre and weak magnets there is also a dip in the middle where a bob can come to rest; the map shows such starting points in grey.</p>
-      <p>The map is drawn by releasing a bob from every pixel. A bob is counted as caught the moment it is close to a magnet with too little energy left to climb out of that magnet's dip, which friction guarantees it never regains. Near a magnet the answer is simple. Farther out a bob swings past several magnets before it slows enough to stay, and two starting points a hair apart can end on different magnets: that is the braided zone, and turning on the twin bob shows it happen.</p>
+      <p>The map is drawn by releasing a bob from every pixel. A bob is counted as caught the moment it is close to a magnet with too little energy left to climb out of that magnet's dip, which friction guarantees it never regains. Near a magnet the answer is simple. Farther out a bob swings past several magnets before it slows enough to stay, and two starting points a hair apart can end on different magnets: that is the braided zone, and the twin or the fan of bobs around the start shows it happen.</p>
     </section>
   </main>
 
