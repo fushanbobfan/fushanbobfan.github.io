@@ -26,9 +26,12 @@ Run the tests with `npm test` (Node 20 or later).
   rest and followed until a magnet catches it; the pixel takes that magnet's
   colour, darker the longer the bob wandered first. The map fills in coarse
   rows first, so a rough picture appears at once and sharpens.
-- **One bob, and its twin.** Click the map to release a bob and watch its
-  path. A twin starts 0.01 to the right; in the braided zone the two often
-  end on different magnets.
+- **One bob, and its company.** Click the map to release a bob and watch its
+  path. It can go alone, with a twin 0.01 to the right, or with 11 others on a
+  circle 0.01 across, each dot turning its magnet's colour when caught. In the
+  braided zone the company splits: from the release fields' starting point,
+  (1.6, −1), the twelve bobs land 5 on orange and 7 on blue. Next to a magnet
+  all twelve land on it.
 - **Magnets.** Drag any magnet to a new spot, or type its position in the
   Magnets fields; the map redraws. Two magnets stay at least 0.15 apart.
 - **Zoom.** Scroll, or use the buttons. The map is recomputed at the new
