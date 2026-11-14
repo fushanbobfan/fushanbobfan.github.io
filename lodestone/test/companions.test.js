@@ -40,3 +40,9 @@ test('in the braided zone a fan 0.01 across splits between magnets, near a magne
   assert.equal(split(0, 1.2), 1);
   assert.ok(split(1.6, -1) > 1, 'the start the page suggests is in the braided zone');
 });
+
+test('the README split from the default start holds: 5 orange and 7 blue', () => {
+  const sys = makeSystem(regularMagnets(3));
+  const bobs = companionStarts(1.6, -1, 'fan').map(([x, y]) => ({ caught: fate(sys, x, y).magnet, done: true }));
+  assert.deepEqual(tally(bobs, 3).caught, [5, 7, 0]);
+});
