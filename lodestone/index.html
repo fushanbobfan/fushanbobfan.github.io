@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lodestone: a pendulum over magnets</title>
+  <meta name="description" content="A pendulum over three magnets in the browser: release the bob anywhere and see which magnet catches it, and how the map of starting points breaks into fractal ribbons.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>lodestone</h1>
+    <p>A pendulum bob swings over a few magnets, slows down and comes to rest over one of them. Which one? Every point on the map is coloured by the magnet that catches a bob let go there, darker where the bob wandered longer. Click anywhere to let one go and follow its path.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="map-title">
+      <div class="plots">
+        <h2 id="map-title" class="visually-hidden">Map of starting points</h2>
+        <canvas id="map" class="map" width="640" height="640" role="img" aria-label="Map of starting points, coloured by the magnet that catches a bob released there. Click to release a bob; drag a magnet to move it; scroll to zoom."></canvas>
+        <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+        <p id="preset-note" class="note"></p>
+        <p class="hint">Click the map to release a bob at rest. Drag a magnet (the ringed dots) to move it. Scroll or use the zoom buttons to look closer; the map redraws at the new scale.</p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Starting setup
+          <select id="preset"></select>
+        </label>
+
+        <fieldset class="group">
+          <legend>The pendulum</legend>
+          <label class="field">Friction <output id="friction-out" for="friction"></output>
+            <input id="friction" type="range" min="0.04" max="0.8" step="0.01">
+          </label>
+          <label class="field">Pull to the centre <output id="pull-out" for="pull"></output>
+            <input id="pull" type="range" min="0.1" max="2" step="0.05">
+          </label>
+          <label class="field">Height above the magnets <output id="height-out" for="height"></output>
+            <input id="height" type="range" min="0.1" max="0.6" step="0.01">
+          </label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Release a bob</legend>
+          <div class="row">
+            <label class="field small">x <input id="start-x" type="number" step="0.01" value="1.8"></label>
+            <label class="field small">y <input id="start-y" type="number" step="0.01" value="-1.2"></label>
+            <button id="release" type="button">Release</button>
+          </div>
+          <label class="check"><input id="twin" type="checkbox" checked> Release a twin 0.01 to the right</label>
+          <div class="row">
+            <label class="field">Speed
+              <select id="speed">
+                <option value="0.5">½×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+              </select>
+            </label>
+            <button id="clear" type="button">Clear paths</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>The map</legend>
+          <div class="row">
+            <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+            <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+            <button id="zoom-reset" type="button">Whole view</button>
+          </div>
+          <label class="field">Detail
+            <select id="detail">
+              <option value="120">Coarse (120 × 120)</option>
+              <option value="200" selected>Medium (200 × 200)</option>
+              <option value="320">Fine (320 × 320)</option>
+            </select>
+          </label>
+          <label class="check"><input id="shade" type="checkbox" checked> Darken slow catches</label>
+        </fieldset>
+
+        <section class="readout" aria-labelledby="readout-title">
+          <h2 id="readout-title">Readout</h2>
+          <p id="fate" aria-live="polite">No bob released yet.</p>
+          <ul id="shares" class="shares"></ul>
+          <p id="view" class="muted"></p>
+        </section>
+      </aside>
+    </section>
+
+    <section class="explain" aria-labelledby="about-title">
+      <h2 id="about-title">What is going on</h2>
+      <p>The bob feels three things: a pull back toward the middle, as a long pendulum does; friction that slows it; and the attraction of each magnet, which sits a little below the bob's plane so the pull stays finite even right on top of it. Friction drains energy all the time, so the bob must end up resting over a magnet.</p>
+      <p>The map is drawn by releasing a bob from every pixel. A bob is counted as caught the moment it is close to a magnet with too little energy left to climb out of that magnet's dip, which friction guarantees it never regains. Near a magnet the answer is simple. Farther out a bob swings past several magnets before it slows enough to stay, and two starting points a hair apart can end on different magnets: that is the braided zone, and turning on the twin bob shows it happen.</p>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/lodestone">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
