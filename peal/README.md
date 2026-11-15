@@ -34,6 +34,12 @@ Run the tests with `npm test` (Node 20 or later).
   hours a full peal of 5040 rows would take. Rows alternate handstroke and
   backstroke, with a one-blow gap before every handstroke. The sheet marks the
   bell striking.
+- **Calls.** Type a calling such as `ppp-` (three plain leads, then a bob)
+  and peal rings it over and over until rounds comes back. Bobs and singles are
+  marked at their lead ends and any row rung twice is framed in red, with the
+  first repeat named in the readout.
+- **An extent.** On five or six bells, peal can search for a calling that
+  rings every possible row exactly once: 120 rows on five bells, 720 on six.
 - **Your own method.** Type a number of bells and a lead of place notation.
   peal rings it until rounds comes back, or stops at 5040 rows, and reports
   whether any row came twice.
@@ -57,6 +63,19 @@ The tests ring each one and check these lengths, the first lead head
 (135264 for Plain Bob Minor, 156342 for Cambridge Surprise Minor, and so on),
 that no row repeats, that no bell ever moves more than one place, and that each
 hunt bell repeats its path every lead.
+
+## Calls and the extent search
+
+A call replaces the last change of a lead. Plain Bob Doubles uses `145` for a
+bob and `123` for a single; the six- and eight-bell Plain Bob and Cambridge
+methods use `14` and `1234`. Grandsire and Stedman calls change more than one
+change, so those methods ring only their plain courses here.
+
+The search goes lead by lead, trying a plain lead, then a bob, then a single,
+and backs off the moment a lead would repeat a row or reach rounds too early.
+For Plain Bob Minor it finds a 720 after trying 1209 leads, well under a
+second. On seven or eight bells the extent has 5040 or 40320 rows and the
+search is not offered.
 
 ## Place notation
 
