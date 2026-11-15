@@ -34,6 +34,20 @@
         </label>
 
         <fieldset class="group">
+          <legend>Calls</legend>
+          <label class="field">Calling, one sign per lead end
+            <input id="calling" class="mono" type="text" spellcheck="false" autocomplete="off" value="ppp-" aria-describedby="touch-help">
+          </label>
+          <p id="touch-help" class="hint"></p>
+          <div class="row">
+            <button id="touch" type="button">Ring touch</button>
+            <button id="plain" type="button">Plain course</button>
+          </div>
+          <button id="extent" type="button">Find a true extent</button>
+          <p id="touch-error" class="hint" role="status"></p>
+        </fieldset>
+
+        <fieldset class="group">
           <legend>Your own method</legend>
           <div class="row">
             <label class="field small">Bells <input id="custom-stage" type="number" min="3" max="12" step="1" value="6"></label>
@@ -76,6 +90,7 @@
       <h2 id="about-title">How to read it</h2>
       <p>Each line of numbers is a row: the order in which the bells strike, the treble (1) highest and the tenor lowest. Start from rounds, 123456, and apply the method's changes. Place notation says which places stay put in each change; every other bell swaps with its neighbour. An <code>x</code> means every pair swaps. <code>x16x16x16,12</code> is Plain Bob Minor: the part before the comma is rung forwards and back again, then <code>12</code> ends the lead.</p>
       <p>One lead is printed per column. The row at the foot of a column is the lead head, repeated at the top of the next column. The methods here keep going lead after lead until rounds comes back, which is called the plain course. A sequence is <em>true</em> if no row in it comes twice; every plain course in the list is.</p>
+      <p>A plain course is short. To go further, the conductor calls a <em>bob</em> or a <em>single</em> at a lead end: one change is replaced, two or three bells swap work, and the band carries on into rows the plain course never reaches. In the calling, <code>-</code> is a bob, <code>s</code> a single and <code>p</code> a plain lead; the calling repeats until rounds comes back. Ringing all 720 rows of six bells, each exactly once, is an <em>extent</em>. The search tries plain leads, bobs and singles lead by lead and backs off as soon as a row would come twice. Repeated rows are framed in red on the sheet.</p>
       <p>Ringers learn a method by its line: the path one bell takes through the rows. The line drawn here is the bell you follow; the red line is the treble. Places, where a line goes straight down for two rows, and dodges, where it steps back one place and forward again, are the landmarks a ringer remembers.</p>
     </section>
   </main>
