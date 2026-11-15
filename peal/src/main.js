@@ -371,7 +371,11 @@ function tick() {
     $('now').textContent = state.complete
       ? `Rounds again: the ${plain ? 'plain course' : 'touch'} is complete.`
       : 'Stopped at the row limit before rounds came back.';
-    if (wasSelf) $('striking-final').textContent = `Finished. ${$('striking').textContent}`;
+    if (wasSelf) {
+      // the course is over: every blow not struck by now is missed
+      showStriking(Infinity);
+      $('striking-final').textContent = `Finished. ${$('striking').textContent}`;
+    }
     return;
   }
   // in the handstroke gap the last blow rung stays marked
@@ -443,8 +447,14 @@ function showStriking(elapsed) {
   $('striking').textContent = `Your blows: ${parts.join(', ')}${mean}.`;
 }
 
+let lastPull = -Infinity;
+
 function pull() {
   if (!state.playing || !state.self) return;
+  // one physical press can arrive as pointerdown, keydown and click; real
+  // blows of one bell are always more than a second apart
+  if (performance.now() - lastPull < 250) return;
+  lastPull = performance.now();
   ensureAudio();
   if (audio) strike(state.follow, audio.currentTime);
   state.presses.push(now() - state.startTime);
@@ -491,15 +501,12 @@ function init() {
     e.preventDefault();
     pull();
   });
-  $('pull').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') pull();
-  });
+  $('pull').addEventListener('click', pull);
   document.addEventListener('keydown', (e) => {
-    if (e.code !== 'Space' || e.repeat || !state.playing || !state.self) return;
-    const tag = e.target.tagName;
-    if (tag === 'INPUT' && e.target.type === 'text') return;
+    if (e.code !== 'Space' || !state.playing || !state.self) return;
+    if (e.target.matches?.('input[type="text"], input[type="number"], textarea, select')) return;
     e.preventDefault();
-    pull();
+    if (!e.repeat) pull();
   });
   $('sound').addEventListener('change', () => {
     if (master) master.gain.value = $('sound').checked ? 0.5 : 0;
