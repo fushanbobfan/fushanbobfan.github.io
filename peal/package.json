@@ -1,0 +1,20 @@
+{
+  "name": "peal",
+  "version": "0.1.0",
+  "description": "Change ringing in the browser: see and hear the methods English bell ringers ring, follow one bell's line through the rows, and check a touch is true.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "change-ringing",
+    "bells",
+    "permutations",
+    "music",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
