@@ -27,13 +27,21 @@ test('places stay put and the rest swap in pairs', () => {
   assert.equal(ring(rounds(5), '3'), '21354');
 });
 
-test('places the notation leaves out are filled in', () => {
-  // "1" on six: the sixth bell has no partner, so it lies behind.
+test('lead and lie places the notation leaves out are filled in', () => {
+  // "1" on six is "16": five bells behind the lead would leave one alone.
   assert.equal(ring(rounds(6), '1'), '132546');
-  // "4" on six: the third cannot swap with the fourth, so it makes thirds too.
-  assert.equal(ring(rounds(6), '4'), '213465');
+  // "4" on six is "14", not a made-up thirds place.
+  assert.equal(ring(rounds(6), '4'), '132465');
+  assert.equal(ring(rounds(6), '3'), ring(rounds(6), '36'));
   // "5" on five: 12 and 34 swap.
   assert.equal(ring(rounds(5), '5'), '21435');
+});
+
+test('an odd gap between two written places is refused', () => {
+  assert.throws(() => parseChange('13', 6), /odd number/);
+  assert.throws(() => parseChange('15', 8), /odd number/);
+  assert.equal(ring(rounds(8), '25'), ring(rounds(8), '1258'));
+  assert.doesNotThrow(() => parseChange('1458', 8));
 });
 
 test('a place beyond the stage is refused', () => {
@@ -51,6 +59,11 @@ test('the ampersand form reflects and a plain list is read as written', () => {
   assert.deepEqual(expandNotation('&x1x1x1+2'), ['x', '1', 'x', '1', 'x', '1', 'x', '1', 'x', '1', 'x', '2']);
   assert.deepEqual(expandNotation('3.1.5'), ['3', '1', '5']);
   assert.deepEqual(expandNotation('-14-'), ['x', '14', 'x']);
+});
+
+test('spaces anywhere in the notation are ignored', () => {
+  assert.deepEqual(expandNotation('&x16x16x16, &12'), expandNotation('x16x16x16,12'));
+  assert.deepEqual(expandNotation(' 3.1 .5 '), ['3', '1', '5']);
 });
 
 // Published lengths and first lead heads of each method's plain course.
@@ -119,7 +132,21 @@ test('a course longer than the row limit is reported as unfinished', () => {
   const pb = methodById('plain-bob-minor');
   const course = plainCourse(leadChanges(pb.notation, pb.stage), pb.stage, 20);
   assert.equal(course.complete, false);
-  assert.ok(course.rows.length <= 21 + 12);
+  assert.equal(course.rows.length, 21);
+});
+
+test('the row limit holds inside a single long lead', () => {
+  const course = plainCourse(leadChanges('x'.repeat(6000), 6), 6);
+  assert.equal(course.complete, false);
+  assert.equal(course.rows.length, 5041);
+});
+
+test('in Grandsire the second follows the treble two rows behind', () => {
+  const g = methodById('grandsire-doubles');
+  const { rows } = plainCourse(leadChanges(g.notation, g.stage), g.stage);
+  const treble = bellPath(rows, 1);
+  const second = bellPath(rows, 2);
+  for (let i = 2; i < rows.length; i++) assert.equal(second[i], treble[i - 2]);
 });
 
 test('an unknown method id falls back to the first method', () => {

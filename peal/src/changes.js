@@ -27,10 +27,12 @@ export function sameRow(a, b) {
 }
 
 // Turn one change written as places ("14", "x", "-") into the list of
-// positions (0-based) each place takes its next bell from. Places the
-// notation leaves out are filled in the usual way: a bell that cannot swap
-// because its neighbour is making a place, or because it is last, makes a
-// place too.
+// positions (0-based) each place takes its next bell from. Every bell not
+// making a place swaps with a neighbour. Notation may leave out lead and
+// lie places: if an odd number of bells sit in front of the first place
+// written, the bell in front makes a place too (so "4" on six is "14"), and
+// likewise at the back (so "1" on six is "16"). An odd gap between two places
+// written cannot be filled and is refused.
 export function parseChange(token, stage) {
   const places = new Set();
   if (token !== 'x' && token !== 'X' && token !== '-') {
@@ -42,10 +44,22 @@ export function parseChange(token, stage) {
   } else if (stage % 2 === 1) {
     throw new Error('a cross change needs an even number of bells');
   }
+  if (places.size > 0) {
+    const sorted = [...places].sort((a, b) => a - b);
+    if (sorted[0] % 2 === 1) places.add(0);
+    if ((stage - 1 - sorted[sorted.length - 1]) % 2 === 1) places.add(stage - 1);
+    for (let k = 1; k < sorted.length; k++) {
+      if ((sorted[k] - sorted[k - 1] - 1) % 2 === 1) {
+        throw new Error(`"${token}" leaves an odd number of bells between two places`);
+      }
+    }
+  } else if (stage % 2 === 1) {
+    places.add(stage - 1);
+  }
   const perm = new Array(stage);
   let i = 0;
   while (i < stage) {
-    if (places.has(i) || i === stage - 1 || places.has(i + 1)) {
+    if (places.has(i)) {
       perm[i] = i;
       i += 1;
     } else {
@@ -91,7 +105,7 @@ function reflect(tokens) {
 // palindrome, so it reads as &x16x16x16 followed by &12.
 // "&x1x1x1.2" style is also accepted, as is a plain list "3.1.5.3.1".
 export function expandNotation(text) {
-  const trimmed = text.trim();
+  const trimmed = text.replace(/\s+/g, '');
   if (trimmed.includes(',')) {
     return trimmed.split(',').flatMap((part) => reflect(splitTokens(part.replace(/^&/, ''))));
   }
@@ -110,22 +124,22 @@ export function leadChanges(text, stage) {
 
 // Ring a method's plain course: lead after lead from rounds until rounds
 // comes back. Returns every row rung, ending with the closing rounds, and the
-// lead heads met on the way. Stops after maxRows so a mistyped method cannot
-// run forever.
+// lead heads met on the way. Stops after maxRows changes so a mistyped
+// method cannot run forever.
 export function plainCourse(changes, stage, maxRows = 5040) {
   const start = rounds(stage);
   const rows = [start];
   const leadHeads = [start];
   let row = start;
-  while (rows.length <= maxRows) {
+  for (;;) {
     for (const perm of changes) {
+      if (rows.length > maxRows) return { rows, leadHeads, complete: false };
       row = applyChange(row, perm);
       rows.push(row);
     }
     if (sameRow(row, start)) return { rows, leadHeads, complete: true };
     leadHeads.push(row);
   }
-  return { rows, leadHeads, complete: false };
 }
 
 // A touch is true when no row appears twice. The closing rounds is the
