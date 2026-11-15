@@ -61,9 +61,10 @@ hunt bell repeats its path every lead.
 ## Place notation
 
 Each change lists the places that stay put; every other bell swaps with its
-neighbour. `x` (or `-`) swaps every pair. A bell that cannot swap, because it
-is last or its neighbour is making a place, makes a place too, so `1` on six
-bells also keeps the sixth bell behind.
+neighbour. `x` (or `-`) swaps every pair. Places at the front or back may be
+left out when they are forced: `1` on six bells is read as `16`, and `4` as
+`14`. A change that leaves an odd number of bells between two places, such as
+`13`, is refused.
 
 `x16x16x16,12` is the short form most method collections use: each side of the
 comma is a palindrome, rung forwards and back without repeating its middle
@@ -76,8 +77,9 @@ as written.
 Each bell is a sum of seven sine partials at the ratios of a tuned church bell:
 hum and prime two and one octaves below the strike note, a tierce a minor
 third above the prime, the quint, the strike note itself and two partials above
-it, with the lower ones ringing longest. The bells are tuned to the top notes
-of a major scale, the treble highest.
+it, with the lower ones ringing longest. The bells are tuned to a major scale
+with the tenor as its keynote: six bells run from doh up to lah, eight make a
+full octave.
 
 ## Files
 

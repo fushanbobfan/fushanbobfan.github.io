@@ -32,7 +32,7 @@ export const METHODS = [
     stage: 5,
     notation: '3,1.5.1.5.1',
     hunt: 1,
-    note: 'Two bells hunt: the treble and the second, which only starts working after the first change. Thirds place is made at every lead end.',
+    note: 'Two bells hunt: the treble, and the second, which follows the same path two rows behind it. Thirds place is made at every lead end.',
   },
   {
     id: 'stedman-doubles',
@@ -40,7 +40,7 @@ export const METHODS = [
     stage: 5,
     notation: '3.1.5.3.1.3.1.3.5.1.3.1',
     hunt: null,
-    note: 'Built from sixes: groups of three rows at the front rung forwards, then backwards, while the back bells dodge. No bell plain hunts.',
+    note: 'Built from sixes: blocks of six rows in which the front three bells ring every order of themselves, alternately forwards and backwards, while the back bells dodge. No bell plain hunts.',
   },
   {
     id: 'plain-bob-minor',
