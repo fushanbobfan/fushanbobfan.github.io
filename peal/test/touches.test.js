@@ -60,7 +60,7 @@ test('a touch that has not come round by the row limit says so', () => {
   const [v, n] = variantsOf('plain-bob-major');
   const touch = ringTouch(v, ['p'], n, 50);
   assert.equal(touch.complete, false);
-  assert.ok(touch.rows.length - 1 <= 50);
+  assert.equal(touch.rows.length - 1, 50, 'rung right up to the limit, partway through a lead');
 });
 
 test('the search finds a true extent of Plain Bob Doubles and of the minor methods', () => {

@@ -48,8 +48,8 @@ export function ringTouch(variants, calls, stage, maxRows = 5040) {
   for (let k = 0; ; k++) {
     const call = calls[k % calls.length];
     const lead = variants[call];
-    if (rows.length - 1 + lead.length > maxRows) return { rows, leads, complete: false };
     for (const perm of lead) {
+      if (rows.length > maxRows) return { rows, leads, complete: false };
       row = applyChange(row, perm);
       rows.push(row);
     }
