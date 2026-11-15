@@ -45,7 +45,8 @@ export function bellFrequency(bell, trebleHz = 880) {
 
 // The main partials of a tuned church bell relative to its strike note
 // (the nominal): hum two octaves below, prime an octave below, a tierce a
-// minor third above the prime, quint, the nominal and two partials above it. Lower partials ring on longer.
+// minor third above the prime, quint, the nominal and two partials above
+// it. Lower partials ring on longer.
 export const PARTIALS = [
   { name: 'hum', ratio: 0.25, gain: 0.35, decay: 3.2 },
   { name: 'prime', ratio: 0.5, gain: 0.45, decay: 2.2 },

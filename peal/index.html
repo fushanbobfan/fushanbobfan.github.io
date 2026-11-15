@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>peal: change ringing in the browser</title>
+  <meta name="description" content="Change ringing in the browser: see and hear the methods English bell ringers ring, follow one bell's line through the rows, and check that no row comes twice.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>peal</h1>
+    <p>In an English bell tower each ringer handles one bell, and the bells strike one after another in a row. Rows change by bells swapping places with a neighbour, never moving more than one place at a time, and a band tries to ring a long sequence of rows without ever repeating one. Choose a method, pick a bell to follow, and listen.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="sheet-title">
+      <div class="plots">
+        <h2 id="sheet-title" class="visually-hidden">Method sheet</h2>
+        <div class="sheet-wrap">
+          <canvas id="sheet" class="sheet" width="640" height="480" role="img" aria-label="The rows of the plain course, one lead per column, with the followed bell's path drawn through them."></canvas>
+        </div>
+        <p id="method-note" class="note"></p>
+        <details class="rows-text">
+          <summary>The rows as text</summary>
+          <pre id="rows-text"></pre>
+        </details>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Method
+          <select id="method"></select>
+        </label>
+
+        <fieldset class="group">
+          <legend>Your own method</legend>
+          <div class="row">
+            <label class="field small">Bells <input id="custom-stage" type="number" min="3" max="12" step="1" value="6"></label>
+            <label class="field grow">Place notation <input id="custom-notation" type="text" spellcheck="false" autocomplete="off" value="x16x16x16,12"></label>
+          </div>
+          <button id="custom-ring" type="button">Ring it</button>
+          <p id="custom-error" class="error" role="alert"></p>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Follow</legend>
+          <label class="field">Bell
+            <select id="follow"></select>
+          </label>
+          <label class="check"><input id="show-treble" type="checkbox" checked> Draw the treble's line too</label>
+          <label class="check"><input id="show-numbers" type="checkbox" checked> Show every number</label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Listen</legend>
+          <div class="row">
+            <button id="play" type="button" aria-pressed="false">Ring</button>
+            <label class="check"><input id="sound" type="checkbox" checked> Sound</label>
+          </div>
+          <label class="field">Speed <output id="speed-out" for="speed"></output>
+            <input id="speed" type="range" min="2" max="5" step="0.25" value="3">
+          </label>
+          <p class="hint">Speed is given the way ringers quote it: the hours a full peal of 5040 rows would take at this pace.</p>
+        </fieldset>
+
+        <section class="readout" aria-labelledby="readout-title">
+          <h2 id="readout-title">The plain course</h2>
+          <ul id="facts" class="facts"></ul>
+          <p id="now" class="muted"></p>
+        </section>
+      </aside>
+    </section>
+
+    <section class="explain" aria-labelledby="about-title">
+      <h2 id="about-title">How to read it</h2>
+      <p>Each line of numbers is a row: the order in which the bells strike, the treble (1) highest and the tenor lowest. Start from rounds, 123456, and apply the method's changes. Place notation says which places stay put in each change; every other bell swaps with its neighbour. An <code>x</code> means every pair swaps. <code>x16x16x16,12</code> is Plain Bob Minor: the part before the comma is rung forwards and back again, then <code>12</code> ends the lead.</p>
+      <p>One lead is printed per column. The row at the foot of a column is the lead head, repeated at the top of the next column. The methods here keep going lead after lead until rounds comes back, which is called the plain course. A sequence is <em>true</em> if no row in it comes twice; every plain course in the list is.</p>
+      <p>Ringers learn a method by its line: the path one bell takes through the rows. The line drawn here is the bell you follow; the red line is the treble. Places, where a line goes straight down for two rows, and dodges, where it steps back one place and forward again, are the landmarks a ringer remembers.</p>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/peal">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
