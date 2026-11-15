@@ -31,16 +31,17 @@ export function intervalForPealSpeed(hours, stage, gap = 1) {
   return (hours * 3600) / blows;
 }
 
-// A ring of bells is tuned to the top notes of a major scale: the treble is
-// the highest, the tenor the lowest. Returns semitones below the treble.
-const SCALE_FROM_TOP = [0, 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 19];
+// A ring of bells is tuned to a major scale with the tenor as its keynote:
+// six bells are doh to lah, eight a full octave, twelve run on above it.
+// Returns semitones above the tenor for bell `bell` of a ring of `stage`.
+const MAJOR_FROM_KEYNOTE = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19];
 
-export function semitonesBelowTreble(bell) {
-  return SCALE_FROM_TOP[bell - 1];
+export function semitonesAboveTenor(bell, stage) {
+  return MAJOR_FROM_KEYNOTE[stage - bell];
 }
 
-export function bellFrequency(bell, trebleHz = 880) {
-  return trebleHz * 2 ** (-semitonesBelowTreble(bell) / 12);
+export function bellFrequency(bell, stage, tenorHz = 330) {
+  return tenorHz * 2 ** (semitonesAboveTenor(bell, stage) / 12);
 }
 
 // The main partials of a tuned church bell relative to its strike note

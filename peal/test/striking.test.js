@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  blowTime, blowAt, intervalForPealSpeed, bellFrequency, semitonesBelowTreble, PARTIALS,
+  blowTime, blowAt, intervalForPealSpeed, bellFrequency, semitonesAboveTenor, PARTIALS,
 } from '../src/striking.js';
 
 test('a handstroke row opens with a one-blow gap, a backstroke follows on at once', () => {
@@ -38,10 +38,16 @@ test('a three-hour peal on eight bells strikes about four blows a second', () =>
   assert.ok(interval > 0.24 && interval < 0.26);
 });
 
-test('the bells form a descending major scale from the treble', () => {
-  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8].map(semitonesBelowTreble), [0, 1, 3, 5, 7, 8, 10, 12]);
-  assert.ok(Math.abs(bellFrequency(8, 880) - 440) < 1e-9, 'the tenor of eight is an octave below the treble');
-  for (let b = 2; b <= 12; b++) assert.ok(bellFrequency(b) < bellFrequency(b - 1));
+test('a ring is a major scale up from the tenor as keynote', () => {
+  const up = (n) => Array.from({ length: n }, (_, i) => semitonesAboveTenor(n - i, n));
+  assert.deepEqual(up(6), [0, 2, 4, 5, 7, 9], 'six bells: doh to lah');
+  assert.deepEqual(up(8), [0, 2, 4, 5, 7, 9, 11, 12]);
+  assert.deepEqual(up(5), [0, 2, 4, 5, 7]);
+  assert.ok(Math.abs(bellFrequency(1, 8, 220) - 440) < 1e-9, 'the treble of eight is an octave above the tenor');
+  for (const n of [5, 6, 8, 12]) {
+    assert.equal(bellFrequency(n, n, 300), 300);
+    for (let b = 2; b <= n; b++) assert.ok(bellFrequency(b, n) < bellFrequency(b - 1, n));
+  }
 });
 
 test('bell partials: hum and prime are octaves below the nominal, the tierce a minor third above the prime', () => {
