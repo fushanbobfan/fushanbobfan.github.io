@@ -361,8 +361,9 @@ function tick() {
   const pos = blowAt(elapsed, state.stage, interval());
   if (pos.row >= state.rows.length) {
     stop();
+    const plain = state.calls.length === 1 && state.calls[0] === 'p';
     $('now').textContent = state.complete
-      ? 'Rounds again: the plain course is complete.'
+      ? `Rounds again: the ${plain ? 'plain course' : 'touch'} is complete.`
       : 'Stopped at the row limit before rounds came back.';
     return;
   }

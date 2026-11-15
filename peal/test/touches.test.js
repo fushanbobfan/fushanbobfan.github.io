@@ -43,6 +43,17 @@ test('ringing repeats the calling until rounds comes back at a lead end', () => 
   assert.deepEqual(judgeTouch(touch, n).repeats, []);
 });
 
+test('a touch ends where rounds comes back, even partway through a lead', () => {
+  const [v, n] = variantsOf('plain-bob-doubles');
+  const touch = ringTouch(v, parseCalling('s-'), n);
+  assert.ok(touch.complete);
+  assert.equal(touch.rows.length - 1, 29);
+  // the touch is false, but rounds itself is never counted as a repeat
+  assert.ok(judgeTouch(touch, n).repeats.every((r) => r.row !== '12345'));
+  assert.equal(touch.leads.at(-1).call, null, 'the call due at that lead end is never made');
+  assert.deepEqual(touch.leads.map((l) => l.call), ['s', 'b', null]);
+});
+
 test('the single in Cambridge Surprise Minor brings repeated rows', () => {
   const [v, n] = variantsOf('cambridge-surprise-minor');
   const verdict = judgeTouch(ringTouch(v, ['s'], n), n);

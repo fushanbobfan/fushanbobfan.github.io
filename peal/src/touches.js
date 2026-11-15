@@ -33,8 +33,8 @@ export function leadVariants(changes, callNotation, stage) {
   return variants;
 }
 
-// Ring the calling over and over until rounds comes back at a lead end, or
-// the row limit is reached. Returns the rows, one entry per lead with its
+// Ring the calling over and over until rounds comes back, or the row limit
+// is reached. Returns the rows, one entry per lead with its
 // call, and whether the touch came round.
 export function ringTouch(variants, calls, stage, maxRows = 5040) {
   if (calls.length === 0) throw new Error('the calling is empty');
@@ -48,13 +48,18 @@ export function ringTouch(variants, calls, stage, maxRows = 5040) {
   for (let k = 0; ; k++) {
     const call = calls[k % calls.length];
     const lead = variants[call];
-    for (const perm of lead) {
+    for (let i = 0; i < lead.length; i++) {
       if (rows.length > maxRows) return { rows, leads, complete: false };
-      row = applyChange(row, perm);
+      row = applyChange(row, lead[i]);
       rows.push(row);
+      // rounds can come back partway through a lead; the touch ends there,
+      // and a call due at that lead's end is never made
+      if (sameRow(row, start)) {
+        leads.push({ call: i === lead.length - 1 ? call : null, end: rows.length - 1 });
+        return { rows, leads, complete: true };
+      }
     }
     leads.push({ call, end: rows.length - 1 });
-    if (sameRow(row, start)) return { rows, leads, complete: true };
   }
 }
 
