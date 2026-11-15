@@ -1,5 +1,6 @@
 // A small library of methods, with the place notation for one lead.
 // stage: number of bells. hunt: the bell whose path repeats every lead.
+// calls: the change a bob or a single puts in place of the lead's last change.
 
 export const METHODS = [
   {
@@ -23,6 +24,7 @@ export const METHODS = [
     name: 'Plain Bob Doubles',
     stage: 5,
     notation: '5.1.5.1.5,125',
+    calls: { bob: '145', single: '123' },
     hunt: 1,
     note: 'The treble plain hunts. When it leads, the bell in second place makes a place and the others dodge, so the working bells swap jobs each lead.',
   },
@@ -47,6 +49,7 @@ export const METHODS = [
     name: 'Plain Bob Minor',
     stage: 6,
     notation: 'x16x16x16,12',
+    calls: { bob: '14', single: '1234' },
     hunt: 1,
     note: 'The method most ringers learn first on six bells: plain hunting, with seconds place and a dodge whenever the treble leads.',
   },
@@ -55,6 +58,7 @@ export const METHODS = [
     name: 'Cambridge Surprise Minor',
     stage: 6,
     notation: 'x36x14x12x36x14x56,12',
+    calls: { bob: '14', single: '1234' },
     hunt: 1,
     note: 'Places made inside the row while the treble moves between them: the first surprise method most bands ring. The working bells make long runs of dodges and places.',
   },
@@ -63,6 +67,7 @@ export const METHODS = [
     name: 'Plain Bob Major',
     stage: 8,
     notation: 'x18x18x18x18,12',
+    calls: { bob: '14', single: '1234' },
     hunt: 1,
     note: 'Plain Bob on eight bells: seven leads of sixteen rows, so 112 rows before rounds returns.',
   },
@@ -79,6 +84,7 @@ export const METHODS = [
     name: 'Cambridge Surprise Major',
     stage: 8,
     notation: 'x38x14x1258x36x14x58x16x78,12',
+    calls: { bob: '14', single: '1234' },
     hunt: 1,
     note: 'Cambridge extended to eight bells. Its plain course is 224 rows long.',
   },
