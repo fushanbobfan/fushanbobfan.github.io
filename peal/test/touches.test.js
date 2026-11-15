@@ -88,3 +88,11 @@ test('the search gives up at once when whole leads cannot make the extent', () =
   assert.equal(r.found, null);
   assert.equal(r.nodes, 0);
 });
+
+test('the README figure holds: Plain Bob Minor gives up a 720 after 1209 leads', () => {
+  const [v, n] = variantsOf('plain-bob-minor');
+  const search = extentSearch(v, n);
+  let r;
+  do r = search.step(50000); while (!r.done);
+  assert.equal(r.nodes, 1209);
+});
