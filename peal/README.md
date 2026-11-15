@@ -34,6 +34,10 @@ Run the tests with `npm test` (Node 20 or later).
   hours a full peal of 5040 rows would take. Rows alternate handstroke and
   backstroke, with a one-blow gap before every handstroke. The sheet marks the
   bell striking.
+- **Ring a bell yourself.** Tick *I ring the bell I follow* and your bell
+  falls silent. Strike it with Space or the Pull button each time it is due
+  while the others ring on; the readout counts good, early, late, missed and
+  extra blows and the average error.
 - **Calls.** Type a calling such as `ppp-` (three plain leads, then a bob)
   and peal rings it over and over until rounds comes back. Bobs and singles are
   marked at their lead ends and any row rung twice is framed in red, with the
@@ -63,6 +67,15 @@ The tests ring each one and check these lengths, the first lead head
 (135264 for Plain Bob Minor, 156342 for Cambridge Surprise Minor, and so on),
 that no row repeats, that no bell ever moves more than one place, and that each
 hunt bell repeats its path every lead.
+
+## Striking
+
+Each press is matched to the nearest moment your bell was due, within half
+the shortest gap between two of its blows, (bells − 1) / 2 blows either side.
+A due blow takes only its closest press; any other press is an extra. A blow
+is good within a quarter of the gap between two bells: about 80 ms at
+three-hour peal speed on six bells. Ringing yourself starts after a pause of
+1.5 seconds, and the speed is fixed until you stand.
 
 ## Calls and the extent search
 
@@ -105,6 +118,8 @@ full octave.
 - `src/changes.js`: rows, place notation, the plain course and repeated rows.
 - `src/methods.js`: the method library.
 - `src/striking.js`: when each blow falls, peal speed, tuning and partials.
+- `src/touches.js`: callings, touches and the extent search.
+- `src/ringer.js`: matching your blows to your bell and scoring them.
 - `src/sheet.js`: the layout of the method sheet.
 - `src/main.js`: drawing, sound and input.
 

@@ -6,6 +6,7 @@ import {
   blowTime, blowAt, intervalForPealSpeed, bellFrequency, PARTIALS,
 } from './striking.js';
 import { sheetLayout, fitSheet, cellCentre, columnsThatFit } from './sheet.js';
+import { bellBlowTimes, matchWindow, matchPresses, strikingReport } from './ringer.js';
 import {
   parseCalling, callingString, leadVariants, ringTouch, judgeTouch, extentSearch, factorial,
 } from './touches.js';
@@ -24,6 +25,9 @@ const state = {
   calls: ['p'],
   leads: [],
   repeats: [],
+  self: false,
+  presses: [],
+  selfInterval: 0,
   follow: 2,
   playing: false,
   startTime: 0,
@@ -349,7 +353,8 @@ function schedule() {
     const place = scheduledUpTo % state.stage;
     const t = state.startTime + blowTime(row, place, state.stage, dt);
     if (t > horizon) break;
-    strike(state.rows[row][place], Math.max(t, audio.currentTime));
+    const bell = state.rows[row][place];
+    if (!(state.self && bell === state.follow)) strike(bell, Math.max(t, audio.currentTime));
     scheduledUpTo += 1;
   }
 }
@@ -360,11 +365,17 @@ function tick() {
   const elapsed = now() - state.startTime;
   const pos = blowAt(elapsed, state.stage, interval());
   if (pos.row >= state.rows.length) {
+    const wasSelf = state.self;
     stop();
     const plain = state.calls.length === 1 && state.calls[0] === 'p';
     $('now').textContent = state.complete
       ? `Rounds again: the ${plain ? 'plain course' : 'touch'} is complete.`
       : 'Stopped at the row limit before rounds came back.';
+    if (wasSelf) {
+      // the course is over: every blow not struck by now is missed
+      showStriking(Infinity);
+      $('striking-final').textContent = `Finished. ${$('striking').textContent}`;
+    }
     return;
   }
   // in the handstroke gap the last blow rung stays marked
@@ -378,6 +389,7 @@ function tick() {
     draw();
     const lead = Math.floor(Math.max(pos.row - 1, 0) / state.leadLength) + 1;
     $('now').textContent = `Row ${pos.row} of ${state.rows.length - 1}, lead ${lead}: ${rowString(state.rows[pos.row])}`;
+    if (state.self) showStriking(elapsed);
   }
   frame = requestAnimationFrame(tick);
 }
@@ -387,7 +399,14 @@ function play() {
   if (audio && audio.state === 'suspended') audio.resume();
   state.playing = true;
   scheduledUpTo = 0;
-  state.startTime = now() + 0.15;
+  state.self = $('self').checked;
+  state.presses = [];
+  state.selfInterval = interval();
+  $('speed').disabled = state.self;
+  $('striking-final').textContent = '';
+  if (state.self) showStriking(0);
+  // ringing yourself gets a moment to get ready
+  state.startTime = now() + (state.self ? 1.5 : 0.15);
   $('play').textContent = 'Stand';
   $('play').setAttribute('aria-pressed', 'true');
   frame = requestAnimationFrame(tick);
@@ -406,8 +425,47 @@ function stop() {
   state.playing = false;
   cancelAnimationFrame(frame);
   cutQueued();
+  $('speed').disabled = false;
   $('play').textContent = 'Ring';
   $('play').setAttribute('aria-pressed', 'false');
+}
+
+// --- ringing a bell yourself ---------------------------------------------------
+
+function selfBlows() {
+  return bellBlowTimes(state.rows, state.follow, state.selfInterval);
+}
+
+function showStriking(elapsed) {
+  const dt = state.selfInterval;
+  const window = matchWindow(state.stage, dt);
+  const blows = selfBlows();
+  const r = strikingReport(blows, matchPresses(blows, state.presses, window), dt, window, elapsed);
+  const parts = [`${r.good} good`, `${r.early} early`, `${r.late} late`, `${r.missed} missed`];
+  if (r.extras) parts.push(`${r.extras} extra`);
+  const mean = r.meanError === null ? '' : ` · ${Math.round(r.meanError * 1000)} ms off on average`;
+  $('striking').textContent = `Your blows: ${parts.join(', ')}${mean}.`;
+}
+
+let lastPull = -Infinity;
+
+function pull() {
+  if (!state.playing || !state.self) return;
+  // one physical press can arrive as pointerdown, keydown and click; real
+  // blows of one bell are always more than a second apart
+  if (performance.now() - lastPull < 250) return;
+  lastPull = performance.now();
+  ensureAudio();
+  if (audio) strike(state.follow, audio.currentTime);
+  state.presses.push(now() - state.startTime);
+  showStriking(now() - state.startTime);
+}
+
+function showSelfControls() {
+  const on = $('self').checked;
+  $('pull').hidden = !on;
+  $('self-help').hidden = !on;
+  $('striking').hidden = !on;
 }
 
 // --- controls ----------------------------------------------------------------
@@ -427,6 +485,7 @@ function init() {
   sel.addEventListener('change', () => setMethod(methodById(sel.value)));
 
   $('follow').addEventListener('change', () => {
+    if (state.playing && state.self) stop();
     state.follow = Number($('follow').value);
     draw();
   });
@@ -434,6 +493,21 @@ function init() {
   $('show-numbers').addEventListener('change', draw);
 
   $('play').addEventListener('click', () => (state.playing ? stop() : play()));
+  $('self').addEventListener('change', () => {
+    if (state.playing) stop();
+    showSelfControls();
+  });
+  $('pull').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    pull();
+  });
+  $('pull').addEventListener('click', pull);
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || !state.playing || !state.self) return;
+    if (e.target.matches?.('input[type="text"], input[type="number"], textarea, select')) return;
+    e.preventDefault();
+    if (!e.repeat) pull();
+  });
   $('sound').addEventListener('change', () => {
     if (master) master.gain.value = $('sound').checked ? 0.5 : 0;
   });
