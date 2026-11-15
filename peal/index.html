@@ -76,6 +76,11 @@
             <input id="speed" type="range" min="2" max="5" step="0.25" value="3">
           </label>
           <p class="hint">Speed is given the way ringers quote it: the hours a full peal of 5040 rows would take at this pace.</p>
+          <label class="check"><input id="self" type="checkbox"> I ring the bell I follow</label>
+          <button id="pull" type="button" class="pull" hidden>Pull (Space)</button>
+          <p id="self-help" class="hint" hidden>Your bell is silent until you strike it: press Space or the Pull button each time it is due. The others ring on their own. Speed is fixed while you ring.</p>
+          <p id="striking" class="striking" hidden></p>
+          <p id="striking-final" class="visually-hidden" aria-live="polite"></p>
         </fieldset>
 
         <section class="readout" aria-labelledby="readout-title">
@@ -91,6 +96,7 @@
       <p>Each line of numbers is a row: the order in which the bells strike, the treble (1) highest and the tenor lowest. Start from rounds, 123456, and apply the method's changes. Place notation says which places stay put in each change; every other bell swaps with its neighbour. An <code>x</code> means every pair swaps. <code>x16x16x16,12</code> is Plain Bob Minor: the part before the comma is rung forwards and back again, then <code>12</code> ends the lead.</p>
       <p>One lead is printed per column. The row at the foot of a column is the lead head, repeated at the top of the next column. The methods here keep going lead after lead until rounds comes back, which is called the plain course. A sequence is <em>true</em> if no row in it comes twice; every plain course in the list is.</p>
       <p>A plain course is short. To go further, the conductor calls a <em>bob</em> or a <em>single</em> at a lead end: one change is replaced, two or three bells swap work, and the band carries on into rows the plain course never reaches. In the calling, <code>-</code> is a bob, <code>s</code> a single and <code>p</code> a plain lead; the calling repeats until rounds comes back. Ringing all 720 rows of six bells, each exactly once, is an <em>extent</em>. The search tries plain leads, bobs and singles lead by lead and backs off as soon as a row would come twice. Repeated rows are framed in red on the sheet.</p>
+      <p>To try it yourself, tick <em>I ring the bell I follow</em> and press Ring. The band starts after a short pause, and your bell sounds only when you strike it. Each blow is matched to the moment your bell was due. It counts as good within a quarter of the gap between two bells: about 80 ms at three-hour peal speed on six bells.</p>
       <p>Ringers learn a method by its line: the path one bell takes through the rows. The line drawn here is the bell you follow; the red line is the treble. Places, where a line goes straight down for two rows, and dodges, where it steps back one place and forward again, are the landmarks a ringer remembers.</p>
     </section>
   </main>

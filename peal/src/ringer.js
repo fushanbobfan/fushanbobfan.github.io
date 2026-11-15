@@ -61,7 +61,7 @@ function nearestIndex(sortedTimes, t) {
 
 // A summary of the striking so far. Only blows whose window has closed by
 // `now` count as missed. A blow is "good" within a quarter of the gap
-// between two bells, the tolerance a band would barely hear.
+// between two bells.
 export function strikingReport(blowTimes, match, interval, window, now = Infinity) {
   let struck = 0;
   let missed = 0;
