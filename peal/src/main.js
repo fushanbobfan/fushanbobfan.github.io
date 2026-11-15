@@ -35,7 +35,7 @@ function colours() {
     muted: css.getPropertyValue('--muted').trim(),
     rule: css.getPropertyValue('--rule').trim(),
     line: css.getPropertyValue('--accent').trim(),
-    treble: '#c0392b',
+    treble: css.getPropertyValue('--treble').trim(),
     now: css.getPropertyValue('--rule').trim(),
   };
 }
@@ -66,7 +66,6 @@ function fillFollow() {
     sel.add(new Option(label, String(b)));
   }
   state.follow = Math.min(Math.max(keep, 1), state.stage);
-  if (state.follow === 1 && state.stage > 1) state.follow = 2;
   sel.value = String(state.follow);
 }
 
@@ -207,8 +206,9 @@ function ensureAudio() {
 }
 
 function strike(bell, when) {
-  const trebleHz = 1100 * 2 ** (-(12 - state.stage) / 24);
-  const nominal = bellFrequency(bell, trebleHz);
+  // heavier rings sound lower: the tenor of eight is a fourth below that of six
+  const tenorHz = 392 * 2 ** (-(state.stage - 5) * 2.5 / 12);
+  const nominal = bellFrequency(bell, state.stage, tenorHz);
   const level = 0.11;
   for (const p of PARTIALS) {
     const osc = audio.createOscillator();
@@ -252,7 +252,14 @@ function tick() {
   const pos = blowAt(elapsed, state.stage, interval());
   if (pos.row >= state.rows.length) {
     stop();
-    $('now').textContent = 'Rounds again: the plain course is complete.';
+    $('now').textContent = state.complete
+      ? 'Rounds again: the plain course is complete.'
+      : 'Stopped at the row limit before rounds came back.';
+    return;
+  }
+  // in the handstroke gap the last blow rung stays marked
+  if (pos.inGap) {
+    frame = requestAnimationFrame(tick);
     return;
   }
   const changed = !state.current || state.current.row !== pos.row || state.current.place !== pos.place;
@@ -276,15 +283,19 @@ function play() {
   frame = requestAnimationFrame(tick);
 }
 
+// Silence every blow already queued, by swapping in a fresh output.
+function cutQueued() {
+  if (!master || !audio) return;
+  master.disconnect();
+  master = audio.createGain();
+  master.gain.value = $('sound').checked ? 0.5 : 0;
+  master.connect(audio.destination);
+}
+
 function stop() {
   state.playing = false;
   cancelAnimationFrame(frame);
-  if (master && audio) {
-    master.disconnect();
-    master = audio.createGain();
-    master.gain.value = $('sound').checked ? 0.5 : 0;
-    master.connect(audio.destination);
-  }
+  cutQueued();
   $('play').textContent = 'Ring';
   $('play').setAttribute('aria-pressed', 'false');
 }
@@ -322,6 +333,7 @@ function init() {
       // keep the current blow where it is when the pace changes
       const cur = state.current;
       if (cur) state.startTime = now() - blowTime(cur.row, cur.place, state.stage, interval());
+      cutQueued();
       scheduledUpTo = cur ? cur.row * state.stage + cur.place + 1 : 0;
     }
   });
