@@ -60,6 +60,21 @@ test('the twins\' worldlines meet at both ends', () => {
   assert.ok(properTimeAlong(away.points) < properTimeAlong(home.points));
 });
 
+test('endless objects reach past the diagram edge from any frame the slider allows', () => {
+  const lines = [];
+  for (const s of SCENES) {
+    for (const b of s.bands) lines.push(b.back, b.front);
+    for (const p of s.paths) if (!p.clocks) lines.push(p.points);
+  }
+  assert.ok(lines.length > 0);
+  for (const pts of lines) {
+    for (const viewBeta of [-0.9, 0.9]) {
+      const ts = [pts[0], pts.at(-1)].map((p) => boost(p, viewBeta).t);
+      assert.ok(Math.min(...ts) < -5 && Math.max(...ts) > 5, `${viewBeta}: ${ts}`);
+    }
+  }
+});
+
 test('unknown scene ids fall back to the free scene', () => {
   assert.equal(sceneById('nope').id, 'free');
 });

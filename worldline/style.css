@@ -167,3 +167,9 @@ select { padding: 5px; background: var(--paper); border: 1px solid var(--rule); 
 .gaps th, .gaps td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule); }
 .gaps th { font-weight: 600; font-size: 0.88rem; color: var(--muted); }
 #pair-facts p { margin: 8px 0 0; max-width: 72ch; }
+
+.swatch.light { background: var(--light); }
+.story { max-width: 640px; margin-top: 10px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+.story h2 { font-size: 1.05rem; margin: 0 0 6px; }
+.story p { margin: 6px 0 0; }
+.key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.9rem; color: var(--muted); }

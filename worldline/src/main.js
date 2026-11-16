@@ -4,16 +4,14 @@ import {
 } from './diagram.js';
 import { describePair, fmt, fmtBeta } from './readout.js';
 import { selectIndex, afterRemoval, focusAfterRemoval } from './selection.js';
+import { SCENES, sceneById } from './scenes.js';
+import { clockTicks } from './worldlines.js';
 
 const $ = (id) => document.getElementById(id);
 
 const HALF = 5; // light-seconds from the centre to each edge
 const MAX_EVENTS = 12;
 const NUDGE = 0.1;
-const START = {
-  rocket: 0.5,
-  events: [{ t: 0, x: -2 }, { t: 1, x: 2.5 }, { t: 3, x: 0.5 }],
-};
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 const canvas = $('diagram');
@@ -22,9 +20,10 @@ const view = makeView(canvas.width, HALF);
 
 const state = {
   viewBeta: 0,
-  rocketBeta: START.rocket,
-  events: START.events.map((e) => ({ ...e })),
-  selected: [0, 1], // up to two event indices, the most recent last
+  scene: SCENES[0],
+  rocketBeta: SCENES[0].rocketBeta,
+  events: SCENES[0].events.map((e) => ({ ...e })),
+  selected: [...SCENES[0].selected], // up to two event indices, the most recent last
   drag: null,
   tween: null,
 };
@@ -118,6 +117,8 @@ function draw() {
     drawLabel(f.labels[1], edgePoint(ax.space[1]), c[f.color], 'space');
   }
 
+  drawScene(c, vb);
+
   const active = state.selected[state.selected.length - 1];
   if (active !== undefined && state.events[active]) {
     const e = state.events[active];
@@ -168,6 +169,48 @@ function draw() {
     ctx.font = 'bold 15px Georgia, serif';
     ctx.fillText(labelFor(i), x + 10, y - 9);
   });
+}
+
+function fillBand(back, front) {
+  const pts = [...back, ...[...front].reverse()].map((p) => view.toCanvas(toView(p, state.viewBeta)));
+  ctx.beginPath();
+  pts.forEach(([x, y], k) => (k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawScene(c, vb) {
+  const sc = state.scene;
+  for (const b of sc.bands) {
+    ctx.fillStyle = c[b.color];
+    ctx.globalAlpha = 0.16;
+    fillBand(b.back, b.front);
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = c[b.color];
+    ctx.lineWidth = 1.5;
+    polyline(b.back.map((p) => toView(p, vb)));
+    polyline(b.front.map((p) => toView(p, vb)));
+    ctx.globalAlpha = 1;
+  }
+  ctx.strokeStyle = c.light;
+  ctx.lineWidth = 2;
+  for (const r of sc.rays) line(toView(r.from, vb), toView(r.to, vb));
+  const clocks = $('show-clocks').checked;
+  for (const p of sc.paths) {
+    ctx.strokeStyle = c[p.color];
+    ctx.lineWidth = 3;
+    polyline(p.points.map((q) => toView(q, vb)));
+    if (!clocks || !p.clocks) continue;
+    ctx.fillStyle = c[p.color];
+    ctx.font = '12px Georgia, serif';
+    for (const k of clockTicks(p.points, 1)) {
+      const [x, y] = view.toCanvas(toView(k, vb));
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillText(String(k.reading), x + 6, y + 4);
+    }
+  }
 }
 
 function cone(at, dir) {
@@ -300,17 +343,56 @@ function updatePair() {
     facts.append(p);
   }
   const target = info.kind === 'spacelike' ? info.simultaneousBeta : info.kind === 'timelike' ? info.colocatedBeta : null;
-  if (target !== null && Math.abs(target) <= 0.9) {
+  const alreadyThere = target !== null && Math.abs(target - vb) < 0.005;
+  if (target === null || alreadyThere) return;
+  if (Math.abs(target) <= 0.9) {
     boostBtn.hidden = false;
     boostBtn.dataset.beta = String(target);
     boostBtn.textContent = info.kind === 'spacelike'
       ? `Look from the frame where they happen together (${fmtBeta(target)})`
       : `Look from the frame where they happen at one place (${fmtBeta(target)})`;
-  } else if (target !== null) {
+  } else {
     const p = document.createElement('p');
     p.className = 'muted';
     p.textContent = `That frame moves at ${fmtBeta(target)}, faster than the slider reaches.`;
     facts.append(p);
+  }
+}
+
+function updateStory() {
+  const sc = state.scene;
+  const box = $('story');
+  box.replaceChildren();
+  box.hidden = sc.story.length === 0;
+  if (box.hidden) return;
+  const h = document.createElement('h2');
+  h.textContent = sc.name;
+  box.append(h);
+  if (sc.paths.length || sc.bands.length) {
+    const key = document.createElement('ul');
+    key.className = 'key';
+    for (const item of [...sc.paths, ...sc.bands]) {
+      const li = document.createElement('li');
+      const sw = document.createElement('span');
+      sw.className = `swatch ${item.color}`;
+      sw.setAttribute('aria-hidden', 'true');
+      li.append(sw, ` ${item.name}`);
+      key.append(li);
+    }
+    if (sc.rays.length) {
+      const li = document.createElement('li');
+      const sw = document.createElement('span');
+      sw.className = 'swatch light';
+      sw.setAttribute('aria-hidden', 'true');
+      li.append(sw, ' Flashes of light');
+      key.append(li);
+    }
+    box.append(key);
+  }
+  for (const text of sc.story) {
+    const p = document.createElement('p');
+    p.textContent = text;
+    box.append(p);
   }
 }
 
@@ -323,6 +405,7 @@ function updateSliders() {
 
 function refresh() {
   updateSliders();
+  $('scene').value = state.scene.id;
   updateNote();
   updateEventList();
   updatePair();
@@ -456,7 +539,7 @@ $('rocket-beta').addEventListener('input', (e) => {
 $('view-lab').addEventListener('click', () => lookFrom(0));
 $('view-rocket').addEventListener('click', () => lookFrom(state.rocketBeta));
 $('boost-to').addEventListener('click', (e) => lookFrom(Number(e.currentTarget.dataset.beta)));
-for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper']) {
+for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper', 'show-clocks']) {
   $(id).addEventListener('change', draw);
 }
 $('add-form').addEventListener('submit', (e) => {
@@ -475,13 +558,30 @@ $('clear-events').addEventListener('click', () => {
   state.selected = [];
   refresh();
 });
-$('reset').addEventListener('click', () => {
-  state.events = START.events.map((e) => ({ ...e }));
-  state.selected = [0, 1];
-  state.rocketBeta = START.rocket;
+function loadScene(sc) {
+  if (state.drag) {
+    if (canvas.hasPointerCapture(state.drag.id)) canvas.releasePointerCapture(state.drag.id);
+    canvas.classList.remove('dragging');
+    state.drag = null;
+  }
+  state.scene = sc;
+  state.events = sc.events.map((e) => ({ ...e }));
+  state.selected = [...sc.selected];
+  state.rocketBeta = sc.rocketBeta;
+  updateStory();
   lookFrom(0);
   refresh();
-});
+}
+
+for (const sc of SCENES) {
+  const opt = document.createElement('option');
+  opt.value = sc.id;
+  opt.textContent = sc.name;
+  $('scene').append(opt);
+}
+$('scene').addEventListener('change', (e) => loadScene(sceneById(e.target.value)));
+$('reset').addEventListener('click', () => loadScene(state.scene));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
 
+updateStory();
 refresh();

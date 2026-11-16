@@ -20,10 +20,15 @@
         <h2 id="diagram-title" class="visually-hidden">Spacetime diagram</h2>
         <canvas id="diagram" class="map" width="640" height="640" tabindex="0" role="img" aria-label="Spacetime diagram. Time runs up, space runs across, in seconds and light-seconds. Click an empty spot to add an event, drag an event to move it, and use the arrow keys to nudge the selected event."></canvas>
         <p id="frame-note" class="note" aria-live="polite"></p>
+        <div id="story" class="story" hidden></div>
         <p class="hint">Click an empty spot to add an event; click an event to select it; drag to move it. With the diagram focused, arrow keys nudge the selected event and Delete removes it. Units: seconds up, light-seconds across, so light moves one square per square.</p>
       </div>
 
       <aside class="controls" aria-label="Settings">
+        <label class="field">Scene
+          <select id="scene"></select>
+        </label>
+
         <fieldset class="group">
           <legend>Look from</legend>
           <label class="field">Observer's speed relative to the lab <output id="view-beta-out" for="view-beta"></output>
@@ -49,6 +54,7 @@
           <label class="check"><input id="show-cone" type="checkbox" checked> Light cone of the selected event</label>
           <label class="check"><input id="show-sim" type="checkbox" checked> Lines of "now" through the selected event</label>
           <label class="check"><input id="show-hyper" type="checkbox"> Hyperbolas of equal interval from the origin</label>
+          <label class="check"><input id="show-clocks" type="checkbox" checked> Clock ticks on worldlines, one per second of their own time</label>
         </fieldset>
 
         <fieldset class="group">
@@ -63,7 +69,7 @@
           <p id="add-status" class="hint" role="status"></p>
           <div class="row">
             <button id="clear-events" type="button">Remove all</button>
-            <button id="reset" type="button">Start over</button>
+            <button id="reset" type="button">Reload scene</button>
           </div>
         </fieldset>
       </aside>

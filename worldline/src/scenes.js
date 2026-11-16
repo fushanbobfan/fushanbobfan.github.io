@@ -5,7 +5,9 @@ import { gamma, boost } from './lorentz.js';
 import { properTimeAlong, uniform, lightMeets } from './worldlines.js';
 import { fmt } from './readout.js';
 
-const SPAN = 4.9; // lab times a worldline is drawn between
+// Things that exist the whole time are drawn between these lab times, far enough out
+// that their ends stay off the diagram even when seen from a fast frame.
+const SPAN = 60;
 
 function freeScene() {
   return {
@@ -82,8 +84,8 @@ function barnScene() {
     numbers: { ladderLab, barnInLadder: (barn.to - barn.from) / g, insideLab, inLadder },
     story: [
       `A ${fmt(ladderRest)} light-second ladder runs at ${fmt(beta)}c through a barn ${fmt(barn.to - barn.from)} light-seconds long. A: the back of the ladder enters. B: the front reaches the far door.`,
-      `In the lab the ladder is only ${fmt(ladderLab)} long, so A comes first and for ${fmt(insideLab)} s the whole ladder is inside.`,
-      `Riding with the ladder, the barn is the short one, ${fmt((barn.to - barn.from) / g)} long, and B comes ${fmt(-inLadder)} s before A: the front leaves before the back is in. Both are right, because A and B are spacelike apart. Press "The rocket" to see it.`,
+      `In the lab the ladder is only ${fmt(ladderLab)} light-seconds long, so A comes first and for ${fmt(insideLab)} s the whole ladder is inside.`,
+      `Riding with the ladder, the barn is the short one, ${fmt((barn.to - barn.from) / g)} light-seconds long, and B comes ${fmt(-inLadder)} s before A: the front leaves before the back is in. Both are right, because A and B are spacelike apart. Press "The rocket" to see it.`,
     ],
   };
 }
