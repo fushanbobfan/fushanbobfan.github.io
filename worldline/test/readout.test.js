@@ -47,3 +47,11 @@ test('a lightlike pair says light connects them', () => {
   assert.equal(facts.kind, 'lightlike');
   assert.match(facts.sentences[0], /leaving B arrives exactly at A/);
 });
+
+test('a pair already simultaneous or colocated in the lab says so plainly', () => {
+  const sim = describePair({ t: 0, x: -1 }, { t: 0, x: 1 }, frames).facts.sentences.join(' ');
+  assert.match(sim, /The lab itself sees them happen at the same moment/);
+  assert.doesNotMatch(sim, /0\.00c/);
+  const same = describePair({ t: 0, x: 1 }, { t: 3, x: 1 }, frames).facts.sentences.join(' ');
+  assert.match(same, /A clock at rest in the lab is present at both/);
+});

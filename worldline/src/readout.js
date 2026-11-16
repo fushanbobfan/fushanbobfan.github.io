@@ -39,7 +39,7 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
     const first = b.t > a.t ? na : nb;
     const second = first === na ? nb : na;
     say(`Timelike: a clock can travel from ${first} to ${second}. Every observer agrees that ${first} comes first.`);
-    say(`A clock moving at ${fmtBeta(beta)} relative to the lab is present at both and ticks off ${fmt(tau)} s between them, the longest time any clock can measure from one to the other.`);
+    say(`${Math.abs(beta) < 0.005 ? 'A clock at rest in the lab' : `A clock moving at ${fmtBeta(beta)} relative to the lab`} is present at both and ticks off ${fmt(tau)} s between them, the longest time any clock can measure from one to the other.`);
   } else if (kind === 'spacelike') {
     const d = properDistance(a, b);
     const beta = simultaneousFrame(a, b);
@@ -49,7 +49,7 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
     const later = betaRangeWhereLater(a, b);
     const below = later.from === -1 ? nb : na; // who comes second for observers below the flip speed
     const firstBelow = below === nb ? na : nb;
-    say(`An observer moving at ${fmtBeta(beta)} relative to the lab sees them happen at the same moment, ${fmt(d)} light-seconds apart.`);
+    say(`${Math.abs(beta) < 0.005 ? 'The lab itself' : `An observer moving at ${fmtBeta(beta)} relative to the lab`} sees them happen at the same moment, ${fmt(d)} light-seconds apart.`);
     say(`Observers moving slower than that (counting leftward speeds as negative) see ${firstBelow} first; faster ones see ${below} first.`);
   } else {
     say(`Lightlike: a flash of light leaving ${b.t >= a.t ? na : nb} arrives exactly at ${b.t >= a.t ? nb : na}. The interval is zero for every observer.`);
