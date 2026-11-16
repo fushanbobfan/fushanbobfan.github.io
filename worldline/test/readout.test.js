@@ -36,6 +36,12 @@ test('a timelike pair keeps its order in every row', () => {
   assert.match(facts.sentences[0], /P comes first/);
 });
 
+test('two events on one point are not described as joined by light', () => {
+  const { facts } = describePair({ t: 1, x: 1 }, { t: 1, x: 1 }, frames);
+  assert.equal(facts.kind, 'same');
+  assert.doesNotMatch(facts.sentences.join(' '), /light/);
+});
+
 test('a lightlike pair says light connects them', () => {
   const { facts } = describePair({ t: 2, x: 1 }, { t: 0, x: 3 }, frames);
   assert.equal(facts.kind, 'lightlike');

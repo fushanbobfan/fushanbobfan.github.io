@@ -28,7 +28,10 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
   const facts = { kind, s2, sentences: [] };
   const say = (text) => facts.sentences.push(text);
 
-  if (kind === 'timelike') {
+  if (Math.abs(a.t - b.t) < 1e-9 && Math.abs(a.x - b.x) < 1e-9) {
+    facts.kind = 'same';
+    say(`${na} and ${nb} sit on the same point: one event, at the same time and place for every observer.`);
+  } else if (kind === 'timelike') {
     const tau = properTime(a, b);
     const beta = colocatedFrame(a, b);
     facts.properTime = tau;
