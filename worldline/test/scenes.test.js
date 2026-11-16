@@ -78,3 +78,19 @@ test('endless objects reach past the diagram edge from any frame the slider allo
 test('unknown scene ids fall back to the free scene', () => {
   assert.equal(sceneById('nope').id, 'free');
 });
+
+test('the twins count each other\'s flashes: 1 + 7 for the traveller, 3 + 3 at home', () => {
+  const s = sceneById('twins');
+  close(s.numbers.doppler, 0.5);
+  close(s.numbers.homeSeesTurn, 6.4);
+  assert.deepEqual(s.numbers.flashes, { travellerOut: 1, travellerBack: 7, homeSlow: 3, homeFast: 3 });
+  assert.match(s.story.join(' '), /once every 2\.00 s; closing in, 2\.00 a second/);
+  assert.match(s.story.join(' '), /1 \+ 7 = 8 flashes.*3 \+ 3 = 6/);
+});
+
+test('every scene lists its signals, and they name real worldlines', () => {
+  for (const s of SCENES) {
+    assert.ok(Array.isArray(s.signals), s.id);
+    for (const sig of s.signals) assert.ok(s.paths[sig.from] && s.paths[sig.to], s.id);
+  }
+});

@@ -2,7 +2,7 @@
 // and the events that matter, each with a short account computed from the geometry.
 
 import { gamma, boost } from './lorentz.js';
-import { properTimeAlong, uniform, lightMeets } from './worldlines.js';
+import { properTimeAlong, uniform, lightMeets, signals } from './worldlines.js';
 import { fmt } from './readout.js';
 
 // Things that exist the whole time are drawn between these lab times, far enough out
@@ -19,6 +19,7 @@ function freeScene() {
     paths: [],
     bands: [],
     rays: [],
+    signals: [],
     story: [],
   };
 }
@@ -35,6 +36,18 @@ function twinsScene() {
   // Where each leg's line of "now" through the turn meets the home worldline (x = 0).
   const homeBefore = turn.t - beta * turn.x - depart.t;
   const homeAfter = turn.t + beta * turn.x - depart.t;
+  // Flashes sent once a second of each twin's own time.
+  const doppler = Math.sqrt((1 - beta) / (1 + beta));
+  const travellerTurn = properTimeAlong([depart, turn]);
+  const homeSeesTurn = turn.t + turn.x - depart.t; // light from the turnaround reaches home
+  const toTraveller = signals(home, away).filter((s) => s.receive);
+  const toHome = signals(away, home).filter((s) => s.receive);
+  const flashes = {
+    travellerOut: toTraveller.filter((s) => s.receivedAt <= travellerTurn + 1e-9).length,
+    travellerBack: toTraveller.filter((s) => s.receivedAt > travellerTurn + 1e-9).length,
+    homeSlow: toHome.filter((s) => s.receivedAt <= homeSeesTurn + 1e-9).length,
+    homeFast: toHome.filter((s) => s.receivedAt > homeSeesTurn + 1e-9).length,
+  };
   return {
     id: 'twins',
     name: 'The twins',
@@ -47,11 +60,13 @@ function twinsScene() {
     ],
     bands: [],
     rays: [],
-    numbers: { tHome, tAway, homeBefore, homeAfter },
+    signals: [{ from: 0, to: 1 }, { from: 1, to: 0 }],
+    numbers: { tHome, tAway, homeBefore, homeAfter, doppler, homeSeesTurn, flashes },
     story: [
       `A: one twin leaves at ${fmt(beta)}c. B: the turnaround. C: they meet again.`,
       `The clock that stays home ticks off ${fmt(tHome)} s; the travelling clock, ${fmt(tAway)} s. Count the tick marks on each worldline.`,
       `On the way out, each twin sees the other's clock run slow, so why is the traveller the younger one? Select B and look at the rocket's line of "now": it meets the home clock at ${fmt(homeBefore)} s. Set the rocket to −${fmt(beta)}c, the return leg, and the line swings to ${fmt(homeAfter)} s. Only the traveller changes frames, and that jump is the missing time.`,
+      `Or count flashes: turn on "Flashes", and each twin sends one per second of their own time. Moving apart, each sees the other's flashes arrive once every ${fmt(1 / doppler)} s; closing in, ${fmt(1 / doppler)} a second. The traveller switches at the turn, halfway through the trip, and collects ${flashes.travellerOut} + ${flashes.travellerBack} = ${flashes.travellerOut + flashes.travellerBack} flashes. The twin at home keeps seeing slow flashes until light from the turnaround arrives at ${fmt(homeSeesTurn)} s, and collects ${flashes.homeSlow} + ${flashes.homeFast} = ${flashes.homeSlow + flashes.homeFast}.`,
     ],
   };
 }
@@ -81,6 +96,7 @@ function barnScene() {
       { name: 'Ladder', color: 'rocket', back: uniform(beta, backAt0, -SPAN, SPAN), front: uniform(beta, frontAt0, -SPAN, SPAN) },
     ],
     rays: [],
+    signals: [],
     numbers: { ladderLab, barnInLadder: (barn.to - barn.from) / g, insideLab, inLadder },
     story: [
       `A ${fmt(ladderRest)} light-second ladder runs at ${fmt(beta)}c through a barn ${fmt(barn.to - barn.from)} light-seconds long. A: the back of the ladder enters. B: the front reaches the far door.`,
@@ -119,6 +135,7 @@ function lightningScene() {
       { from: front, to: passengerSeesFront },
       { from: front, to: platformSeesBoth },
     ],
+    signals: [],
     numbers: { inTrain, platform: platformSeesBoth.t, passengerFront: passengerSeesFront.t, passengerRear: passengerSeesRear.t },
     story: [
       `A ${fmt(trainRest)} light-second train passes at ${fmt(beta)}c. Lightning hits its rear (A) and its front (B) just as they line up with marks on the platform.`,
