@@ -4,9 +4,16 @@ import {
   boost, interval, separation, properTime, properDistance, simultaneousFrame, colocatedFrame, betaRangeWhereLater,
 } from './lorentz.js';
 
+// Below this, a difference is rounding noise and counts as zero.
+export const EXACT = 1e-6;
+
+// Fixed decimals, except that a real but tiny value keeps two significant figures
+// instead of rounding to a misleading 0.00.
 export function fmt(v, digits = 2) {
-  const s = Number(v).toFixed(digits);
-  return s === `-${(0).toFixed(digits)}` ? (0).toFixed(digits) : s;
+  const n = Number(v);
+  if (Math.abs(n) < EXACT) return (0).toFixed(digits);
+  if (Math.abs(n) < 0.5 * 10 ** -digits) return n.toPrecision(2);
+  return n.toFixed(digits);
 }
 
 export function fmtBeta(beta) {
@@ -39,7 +46,7 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
     const first = b.t > a.t ? na : nb;
     const second = first === na ? nb : na;
     say(`Timelike: a clock can travel from ${first} to ${second}. Every observer agrees that ${first} comes first.`);
-    say(`A clock moving at ${fmtBeta(beta)} relative to the lab is present at both and ticks off ${fmt(tau)} s between them, the longest time any clock can measure from one to the other.`);
+    say(`${Math.abs(beta) < EXACT ? 'A clock at rest in the lab' : `A clock moving at ${fmtBeta(beta)} relative to the lab`} is present at both and ticks off ${fmt(tau)} s between them, the longest time any clock can measure from one to the other.`);
   } else if (kind === 'spacelike') {
     const d = properDistance(a, b);
     const beta = simultaneousFrame(a, b);
@@ -49,7 +56,7 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
     const later = betaRangeWhereLater(a, b);
     const below = later.from === -1 ? nb : na; // who comes second for observers below the flip speed
     const firstBelow = below === nb ? na : nb;
-    say(`An observer moving at ${fmtBeta(beta)} relative to the lab sees them happen at the same moment, ${fmt(d)} light-seconds apart.`);
+    say(`${Math.abs(beta) < EXACT ? 'The lab itself' : `An observer moving at ${fmtBeta(beta)} relative to the lab`} sees them happen at the same moment, ${fmt(d)} light-seconds apart.`);
     say(`Observers moving slower than that (counting leftward speeds as negative) see ${firstBelow} first; faster ones see ${below} first.`);
   } else {
     say(`Lightlike: a flash of light leaving ${b.t >= a.t ? na : nb} arrives exactly at ${b.t >= a.t ? nb : na}. The interval is zero for every observer.`);
@@ -58,6 +65,6 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
 }
 
 function whenWords(dt, na, nb) {
-  if (Math.abs(dt) < 5e-3) return 'together';
+  if (Math.abs(dt) < EXACT) return 'together';
   return dt > 0 ? `${na} first` : `${nb} first`;
 }

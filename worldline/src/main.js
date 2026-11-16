@@ -2,18 +2,17 @@ import { clampBeta, rapidity, betaFromRapidity, relativeVelocity } from './loren
 import {
   makeView, toView, fromView, frameGrid, frameAxes, simultaneityLine, invariantHyperbola, pick, labelFor,
 } from './diagram.js';
-import { describePair, fmt, fmtBeta } from './readout.js';
+import { describePair, fmt, fmtBeta, EXACT } from './readout.js';
 import { selectIndex, afterRemoval, focusAfterRemoval } from './selection.js';
+import { SCENES, sceneById } from './scenes.js';
+import { clockTicks } from './worldlines.js';
 
 const $ = (id) => document.getElementById(id);
 
 const HALF = 5; // light-seconds from the centre to each edge
 const MAX_EVENTS = 12;
 const NUDGE = 0.1;
-const START = {
-  rocket: 0.5,
-  events: [{ t: 0, x: -2 }, { t: 1, x: 2.5 }, { t: 3, x: 0.5 }],
-};
+const DRAG_START = 3; // pixels a press must travel before it drags
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 const canvas = $('diagram');
@@ -22,9 +21,11 @@ const view = makeView(canvas.width, HALF);
 
 const state = {
   viewBeta: 0,
-  rocketBeta: START.rocket,
-  events: START.events.map((e) => ({ ...e })),
-  selected: [0, 1], // up to two event indices, the most recent last
+  scene: SCENES[0],
+  sceneEdited: false, // events moved or removed since the scene loaded
+  rocketBeta: SCENES[0].rocketBeta,
+  events: SCENES[0].events.map((e) => ({ ...e })),
+  selected: [...SCENES[0].selected], // up to two event indices, the most recent last
   drag: null,
   tween: null,
 };
@@ -118,6 +119,8 @@ function draw() {
     drawLabel(f.labels[1], edgePoint(ax.space[1]), c[f.color], 'space');
   }
 
+  drawScene(c, vb);
+
   const active = state.selected[state.selected.length - 1];
   if (active !== undefined && state.events[active]) {
     const e = state.events[active];
@@ -170,6 +173,48 @@ function draw() {
   });
 }
 
+function fillBand(back, front) {
+  const pts = [...back, ...[...front].reverse()].map((p) => view.toCanvas(toView(p, state.viewBeta)));
+  ctx.beginPath();
+  pts.forEach(([x, y], k) => (k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawScene(c, vb) {
+  const sc = state.scene;
+  for (const b of sc.bands) {
+    ctx.fillStyle = c[b.color];
+    ctx.globalAlpha = 0.16;
+    fillBand(b.back, b.front);
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = c[b.color];
+    ctx.lineWidth = 1.5;
+    polyline(b.back.map((p) => toView(p, vb)));
+    polyline(b.front.map((p) => toView(p, vb)));
+    ctx.globalAlpha = 1;
+  }
+  ctx.strokeStyle = c.light;
+  ctx.lineWidth = 2;
+  for (const r of sc.rays) line(toView(r.from, vb), toView(r.to, vb));
+  const clocks = $('show-clocks').checked;
+  for (const p of sc.paths) {
+    ctx.strokeStyle = c[p.color];
+    ctx.lineWidth = 3;
+    polyline(p.points.map((q) => toView(q, vb)));
+    if (!clocks || !p.clocks) continue;
+    ctx.fillStyle = c[p.color];
+    ctx.font = '12px Georgia, serif';
+    for (const k of clockTicks(p.points, 1)) {
+      const [x, y] = view.toCanvas(toView(k, vb));
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillText(String(k.reading), x + 6, y + 4);
+    }
+  }
+}
+
 function cone(at, dir) {
   const far = Math.abs(at.t) + Math.abs(at.x) + HALF * 3; // reaches every corner of the view
   const pts = [at, { t: at.t + dir * far, x: at.x - far }, { t: at.t + dir * far, x: at.x + far }];
@@ -197,8 +242,8 @@ function drawLabel(text, p, color, which) {
 // --- panels ----------------------------------------------------------------
 
 function frameName(beta) {
-  if (Math.abs(beta) < 0.005) return 'the lab';
-  if (Math.abs(beta - state.rocketBeta) < 0.005) return 'the rocket';
+  if (Math.abs(beta) < EXACT) return 'the lab';
+  if (Math.abs(beta - state.rocketBeta) < EXACT) return 'the rocket';
   return `an observer moving at ${fmtBeta(beta)} relative to the lab`;
 }
 
@@ -207,9 +252,9 @@ function updateNote() {
   const rel = relativeVelocity(state.rocketBeta, vb);
   const labRel = relativeVelocity(0, vb);
   const parts = [`Looking from ${frameName(vb)}.`];
-  if (Math.abs(vb) >= 0.005) parts.push(`The lab moves at ${fmtBeta(labRel)} here.`);
-  if (Math.abs(vb - state.rocketBeta) >= 0.005) parts.push(`The rocket moves at ${fmtBeta(rel)} here.`);
-  if (Math.abs(vb) < 0.005 && Math.abs(state.rocketBeta) < 0.005) parts.push('The rocket is parked in the lab.');
+  if (Math.abs(vb) >= EXACT) parts.push(`The lab moves at ${fmtBeta(labRel)} here.`);
+  if (Math.abs(vb - state.rocketBeta) >= EXACT) parts.push(`The rocket moves at ${fmtBeta(rel)} here.`);
+  if (Math.abs(vb) < EXACT && Math.abs(state.rocketBeta) < EXACT) parts.push('The rocket is parked in the lab.');
   $('frame-note').textContent = parts.join(' ');
 }
 
@@ -279,7 +324,7 @@ function updatePair() {
   $('pair-table').hidden = false;
   const fs = frames().map(({ name, beta }) => ({ name: `${name} (${fmtBeta(beta)})`, beta }));
   const vb = state.viewBeta;
-  const nearOne = fs.some((f) => Math.abs(f.beta - vb) < 0.005);
+  const nearOne = fs.some((f) => Math.abs(f.beta - vb) < EXACT);
   if (!nearOne) fs.push({ name: `This view (${fmtBeta(vb)})`, beta: vb });
   const { rows, facts: info } = describePair(state.events[i], state.events[j], fs, names);
   for (const r of rows) {
@@ -300,17 +345,71 @@ function updatePair() {
     facts.append(p);
   }
   const target = info.kind === 'spacelike' ? info.simultaneousBeta : info.kind === 'timelike' ? info.colocatedBeta : null;
-  if (target !== null && Math.abs(target) <= 0.9) {
+  const alreadyThere = target !== null && Math.abs(target - vb) < EXACT;
+  if (target === null || alreadyThere) return;
+  if (Math.abs(target) <= 0.9) {
     boostBtn.hidden = false;
     boostBtn.dataset.beta = String(target);
     boostBtn.textContent = info.kind === 'spacelike'
       ? `Look from the frame where they happen together (${fmtBeta(target)})`
       : `Look from the frame where they happen at one place (${fmtBeta(target)})`;
-  } else if (target !== null) {
+  } else {
     const p = document.createElement('p');
     p.className = 'muted';
     p.textContent = `That frame moves at ${fmtBeta(target)}, faster than the slider reaches.`;
     facts.append(p);
+  }
+}
+
+function markEdited() {
+  if (state.sceneEdited || !state.scene.story.length) return;
+  state.sceneEdited = true;
+  updateStory();
+}
+
+function updateStory() {
+  const sc = state.scene;
+  const box = $('story');
+  box.replaceChildren();
+  box.hidden = sc.story.length === 0;
+  if (box.hidden) return;
+  if (state.sceneEdited) {
+    const h = document.createElement('h2');
+    h.textContent = sc.name;
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = 'The events have been moved or removed, so the account of this scene no longer matches them. "Reload scene" brings it back.';
+    box.append(h, p);
+    return;
+  }
+  const h = document.createElement('h2');
+  h.textContent = sc.name;
+  box.append(h);
+  if (sc.paths.length || sc.bands.length) {
+    const key = document.createElement('ul');
+    key.className = 'key';
+    for (const item of [...sc.paths, ...sc.bands]) {
+      const li = document.createElement('li');
+      const sw = document.createElement('span');
+      sw.className = `swatch ${item.color}`;
+      sw.setAttribute('aria-hidden', 'true');
+      li.append(sw, ` ${item.name}`);
+      key.append(li);
+    }
+    if (sc.rays.length) {
+      const li = document.createElement('li');
+      const sw = document.createElement('span');
+      sw.className = 'swatch light';
+      sw.setAttribute('aria-hidden', 'true');
+      li.append(sw, ' Flashes of light');
+      key.append(li);
+    }
+    box.append(key);
+  }
+  for (const text of sc.story) {
+    const p = document.createElement('p');
+    p.textContent = text;
+    box.append(p);
   }
 }
 
@@ -323,6 +422,7 @@ function updateSliders() {
 
 function refresh() {
   updateSliders();
+  $('scene').value = state.scene.id;
   updateNote();
   updateEventList();
   updatePair();
@@ -337,6 +437,7 @@ function select(i) {
 
 function removeEvent(i) {
   state.events.splice(i, 1);
+  markEdited();
   const next = afterRemoval(state, i);
   state.selected = next.selected;
   if (state.drag && !next.drag) {
@@ -370,7 +471,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (i < 0) i = addEvent(view.fromCanvas(px, py));
   if (i < 0) return;
   select(i);
-  state.drag = { index: i, id: e.pointerId };
+  state.drag = { index: i, id: e.pointerId, from: [px, py], moved: false };
   canvas.setPointerCapture(e.pointerId);
   canvas.classList.add('dragging');
   refresh();
@@ -382,7 +483,11 @@ canvas.addEventListener('pointermove', (e) => {
     canvas.classList.toggle('over-event', pick(state.events, state.viewBeta, view, px, py, 14) >= 0);
     return;
   }
+  // A click that wobbles a pixel or two selects; it should not move the event.
+  if (!state.drag.moved && Math.hypot(px - state.drag.from[0], py - state.drag.from[1]) < DRAG_START) return;
+  state.drag.moved = true;
   state.events[state.drag.index] = fromView(clampToView(view.fromCanvas(px, py)), state.viewBeta);
+  markEdited();
   updatePair();
   updateEventList();
   draw();
@@ -406,6 +511,7 @@ canvas.addEventListener('keydown', (e) => {
     const [dt, dx] = moves[e.key];
     const p = toView(state.events[active], state.viewBeta);
     state.events[active] = fromView(clampToView({ t: p.t + dt, x: p.x + dx }), state.viewBeta);
+    markEdited();
     refresh();
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
@@ -456,7 +562,7 @@ $('rocket-beta').addEventListener('input', (e) => {
 $('view-lab').addEventListener('click', () => lookFrom(0));
 $('view-rocket').addEventListener('click', () => lookFrom(state.rocketBeta));
 $('boost-to').addEventListener('click', (e) => lookFrom(Number(e.currentTarget.dataset.beta)));
-for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper']) {
+for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper', 'show-clocks']) {
   $(id).addEventListener('change', draw);
 }
 $('add-form').addEventListener('submit', (e) => {
@@ -472,16 +578,35 @@ $('add-form').addEventListener('submit', (e) => {
 });
 $('clear-events').addEventListener('click', () => {
   state.events = [];
+  markEdited();
   state.selected = [];
   refresh();
 });
-$('reset').addEventListener('click', () => {
-  state.events = START.events.map((e) => ({ ...e }));
-  state.selected = [0, 1];
-  state.rocketBeta = START.rocket;
+function loadScene(sc) {
+  if (state.drag) {
+    if (canvas.hasPointerCapture(state.drag.id)) canvas.releasePointerCapture(state.drag.id);
+    canvas.classList.remove('dragging');
+    state.drag = null;
+  }
+  state.scene = sc;
+  state.sceneEdited = false;
+  state.events = sc.events.map((e) => ({ ...e }));
+  state.selected = [...sc.selected];
+  state.rocketBeta = sc.rocketBeta;
+  updateStory();
   lookFrom(0);
   refresh();
-});
+}
+
+for (const sc of SCENES) {
+  const opt = document.createElement('option');
+  opt.value = sc.id;
+  opt.textContent = sc.name;
+  $('scene').append(opt);
+}
+$('scene').addEventListener('change', (e) => loadScene(sceneById(e.target.value)));
+$('reset').addEventListener('click', () => loadScene(state.scene));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
 
+updateStory();
 refresh();

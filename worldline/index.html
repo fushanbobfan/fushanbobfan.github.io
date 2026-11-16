@@ -20,10 +20,15 @@
         <h2 id="diagram-title" class="visually-hidden">Spacetime diagram</h2>
         <canvas id="diagram" class="map" width="640" height="640" tabindex="0" role="img" aria-label="Spacetime diagram. Time runs up, space runs across, in seconds and light-seconds. Click an empty spot to add an event, drag an event to move it, and use the arrow keys to nudge the selected event."></canvas>
         <p id="frame-note" class="note" aria-live="polite"></p>
+        <div id="story" class="story" hidden></div>
         <p class="hint">Click an empty spot to add an event; click an event to select it; drag to move it. With the diagram focused, arrow keys nudge the selected event and Delete removes it. Units: seconds up, light-seconds across, so light moves one square per square.</p>
       </div>
 
       <aside class="controls" aria-label="Settings">
+        <label class="field">Scene
+          <select id="scene"></select>
+        </label>
+
         <fieldset class="group">
           <legend>Look from</legend>
           <label class="field">Observer's speed relative to the lab <output id="view-beta-out" for="view-beta"></output>
@@ -49,6 +54,7 @@
           <label class="check"><input id="show-cone" type="checkbox" checked> Light cone of the selected event</label>
           <label class="check"><input id="show-sim" type="checkbox" checked> Lines of "now" through the selected event</label>
           <label class="check"><input id="show-hyper" type="checkbox"> Hyperbolas of equal interval from the origin</label>
+          <label class="check"><input id="show-clocks" type="checkbox" checked> Clock ticks on worldlines, one per second of their own time</label>
         </fieldset>
 
         <fieldset class="group">
@@ -63,7 +69,7 @@
           <p id="add-status" class="hint" role="status"></p>
           <div class="row">
             <button id="clear-events" type="button">Remove all</button>
-            <button id="reset" type="button">Start over</button>
+            <button id="reset" type="button">Reload scene</button>
           </div>
         </fieldset>
       </aside>
@@ -83,6 +89,7 @@
       <h2>Reading the diagram</h2>
       <p>The blue grid belongs to the lab. Its vertical lines are clocks bolted to the lab floor, one light-second apart; its horizontal lines are the lab's moments. The orange grid belongs to a rocket. A clock riding in the rocket traces a tilted line, and the rocket's moments, the events it calls simultaneous, tilt by the same angle toward the light line. That second tilt is the relativity of simultaneity.</p>
       <p>The interval, time apart squared minus distance apart squared, comes out the same for every observer. When it is positive the events are timelike: a clock can be at both, and everyone agrees which came first. When it is negative they are spacelike: no signal joins them, and observers moving fast enough in opposite directions disagree on their order. Pick two events and slide "Look from" to watch it happen.</p>
+      <p>The scenes are the standard puzzles of the subject. In each one the numbers in the account come from the same formulas that draw the picture, so moving the observer changes how the scene looks and leaves every interval and every clock reading where it was.</p>
     </section>
   </main>
 

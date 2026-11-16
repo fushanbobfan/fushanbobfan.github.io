@@ -48,6 +48,26 @@ Run the tests with `npm test` (Node 20 or later).
 - **Hyperbolas.** Optional curves of equal interval from the origin. Change
   the view and every event slides along its own hyperbola.
 
+## Scenes
+
+The Scene menu loads a worked situation. Its objects are drawn on the
+diagram and a short account under it gives the numbers, computed from the
+same geometry the diagram uses. Events stay editable; once one is moved or
+removed the account steps aside, and "Reload scene" puts everything back.
+
+- **The twins.** One twin leaves at 0.6c, turns round, and comes home. Dots
+  on each worldline mark one second of that twin's own time: 8 at home, 6.4
+  on the trip. The rocket's line of "now" through the turnaround shows where
+  the difference comes from when the rocket is switched from 0.6c to −0.6c.
+- **A ladder in a barn.** A 2.5 light-second ladder at 0.8c and a 2
+  light-second barn. In the lab the ladder fits; riding with the ladder, its
+  front leaves before its back is in. The two door events are spacelike apart,
+  so both orders are correct.
+- **Lightning on a train.** Strikes at both ends of a train that the platform
+  calls simultaneous, the flashes travelling to a watcher on the platform and
+  a passenger in the middle of the train, and the 2 seconds by which the
+  train's own clocks say the front was struck first.
+
 ## Units and conventions
 
 Time is in seconds and distance in light-seconds, so the speed of light is 1
@@ -64,6 +84,8 @@ src/lorentz.js    boosts, intervals, proper time, simultaneous and colocated fra
 src/diagram.js    view mapping, frame grids and axes, simultaneity lines, hyperbolas
 src/readout.js    plain-language comparison of two events
 src/selection.js  which events are selected or held when one is removed
+src/worldlines.js paths with carried clocks: proper time, tick marks, where light meets them
+src/scenes.js     the twins, the ladder and barn, lightning on a train
 src/main.js       drawing and interaction
 test/             node:test suites
 ```
