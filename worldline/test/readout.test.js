@@ -4,9 +4,21 @@ import { describePair, fmt } from '../src/readout.js';
 
 const frames = [{ name: 'Lab', beta: 0 }, { name: 'Rocket', beta: 0.6 }];
 
-test('fmt never shows negative zero', () => {
-  assert.equal(fmt(-0.0001), '0.00');
+test('fmt never shows negative zero, and keeps tiny real values visible', () => {
+  assert.equal(fmt(-1e-12), '0.00');
   assert.equal(fmt(-1.234), '-1.23');
+  assert.equal(fmt(0.0025), '0.0025');
+  assert.equal(fmt(-0.0001), '-0.00010');
+});
+
+test('a nearly simultaneous pair is not called simultaneous in the lab', () => {
+  const { rows, facts } = describePair({ t: 0, x: -4 }, { t: 0.02, x: 4 }, frames);
+  const text = facts.sentences.join(' ');
+  assert.doesNotMatch(text, /The lab itself/);
+  assert.match(text, /0\.0025c/);
+  assert.equal(rows[0].when, 'A first');
+  const clock = describePair({ t: -4, x: 0 }, { t: 4, x: 0.02 }, frames).facts.sentences.join(' ');
+  assert.doesNotMatch(clock, /at rest in the lab/);
 });
 
 test('a spacelike pair names the frame where it is simultaneous', () => {
