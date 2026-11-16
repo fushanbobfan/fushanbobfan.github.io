@@ -17,6 +17,13 @@ test('a spacelike pair names the frame where it is simultaneous', () => {
   assert.equal(rows[0].when, 'A first');
   assert.equal(rows[1].when, 'B first'); // the rocket at 0.6c is past the flip at 0.5c
   assert.match(facts.sentences.join(' '), /0\.50c/);
+  assert.match(facts.sentences.join(' '), /slower than that .* see A first; faster ones see B first/);
+});
+
+test('the order sentence follows the side the later event is on', () => {
+  const { facts } = describePair({ t: 0, x: 0 }, { t: 1, x: -2 }, frames);
+  assert.equal(facts.simultaneousBeta, -0.5);
+  assert.match(facts.sentences.join(' '), /slower than that .* see B first; faster ones see A first/);
 });
 
 test('a timelike pair keeps its order in every row', () => {

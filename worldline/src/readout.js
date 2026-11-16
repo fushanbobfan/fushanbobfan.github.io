@@ -1,7 +1,7 @@
 // Plain-language description of two events, for the readout panel.
 
 import {
-  boost, interval, separation, properTime, properDistance, simultaneousFrame, colocatedFrame,
+  boost, interval, separation, properTime, properDistance, simultaneousFrame, colocatedFrame, betaRangeWhereLater,
 } from './lorentz.js';
 
 export function fmt(v, digits = 2) {
@@ -36,16 +36,18 @@ export function describePair(a, b, frames, names = ['A', 'B']) {
     const first = b.t > a.t ? na : nb;
     const second = first === na ? nb : na;
     say(`Timelike: a clock can travel from ${first} to ${second}. Every observer agrees that ${first} comes first.`);
-    say(`A clock moving at ${fmtBeta(beta)} is present at both and ticks off ${fmt(tau)} s between them, the longest time any clock can measure from one to the other.`);
+    say(`A clock moving at ${fmtBeta(beta)} relative to the lab is present at both and ticks off ${fmt(tau)} s between them, the longest time any clock can measure from one to the other.`);
   } else if (kind === 'spacelike') {
     const d = properDistance(a, b);
     const beta = simultaneousFrame(a, b);
     facts.properDistance = d;
     facts.simultaneousBeta = beta;
     say(`Spacelike: not even light can get from one to the other, so neither can cause the other.`);
-    if (Math.abs(beta) < 1) {
-      say(`An observer moving at ${fmtBeta(beta)} sees them happen at the same moment, ${fmt(d)} light-seconds apart. Faster than that one way and the order reverses.`);
-    }
+    const later = betaRangeWhereLater(a, b);
+    const below = later.from === -1 ? nb : na; // who comes second for observers below the flip speed
+    const firstBelow = below === nb ? na : nb;
+    say(`An observer moving at ${fmtBeta(beta)} relative to the lab sees them happen at the same moment, ${fmt(d)} light-seconds apart.`);
+    say(`Observers moving slower than that (counting leftward speeds as negative) see ${firstBelow} first; faster ones see ${below} first.`);
   } else {
     say(`Lightlike: a flash of light leaving ${b.t >= a.t ? na : nb} arrives exactly at ${b.t >= a.t ? nb : na}. The interval is zero for every observer.`);
   }
