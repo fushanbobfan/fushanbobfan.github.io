@@ -52,8 +52,8 @@ Run the tests with `npm test` (Node 20 or later).
 
 The Scene menu loads a worked situation. Its objects are drawn on the
 diagram and a short account under it gives the numbers, computed from the
-same geometry the diagram uses. Events stay editable; "Reload scene" puts
-them back.
+same geometry the diagram uses. Events stay editable; once one is moved or
+removed the account steps aside, and "Reload scene" puts everything back.
 
 - **The twins.** One twin leaves at 0.6c, turns round, and comes home. Dots
   on each worldline mark one second of that twin's own time: 8 at home, 6.4
