@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>worldline: spacetime diagrams</title>
+  <meta name="description" content="Minkowski spacetime diagrams in the browser: place events, change frames, and watch simultaneity, time dilation and length contraction fall out of the geometry.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>worldline</h1>
+    <p>A spacetime diagram puts time up the page and space across it. Every dot is an event: something that happens at one place at one moment. Light always travels along the 45° lines. Change who is looking and the dots slide along hyperbolas, but light stays at 45°, and which events count as "at the same time" tilts with the observer.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="diagram-title">
+      <div class="plots">
+        <h2 id="diagram-title" class="visually-hidden">Spacetime diagram</h2>
+        <canvas id="diagram" class="map" width="640" height="640" tabindex="0" role="img" aria-label="Spacetime diagram. Time runs up, space runs across, in seconds and light-seconds. Click an empty spot to add an event, drag an event to move it, and use the arrow keys to nudge the selected event."></canvas>
+        <p id="frame-note" class="note" aria-live="polite"></p>
+        <p class="hint">Click an empty spot to add an event; click an event to select it; drag to move it. With the diagram focused, arrow keys nudge the selected event and Delete removes it. Units: seconds up, light-seconds across, so light moves one square per square.</p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <fieldset class="group">
+          <legend>Look from</legend>
+          <label class="field">Observer's speed relative to the lab <output id="view-beta-out" for="view-beta"></output>
+            <input id="view-beta" type="range" min="-0.9" max="0.9" step="0.01" value="0">
+          </label>
+          <div class="row">
+            <button id="view-lab" type="button">The lab</button>
+            <button id="view-rocket" type="button">The rocket</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>The rocket</legend>
+          <label class="field">Speed relative to the lab <output id="rocket-beta-out" for="rocket-beta"></output>
+            <input id="rocket-beta" type="range" min="-0.9" max="0.9" step="0.01" value="0.5">
+          </label>
+          <label class="check"><input id="show-lab-grid" type="checkbox" checked> Lab grid <span class="swatch lab" aria-hidden="true"></span></label>
+          <label class="check"><input id="show-rocket-grid" type="checkbox" checked> Rocket grid <span class="swatch rocket" aria-hidden="true"></span></label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Draw</legend>
+          <label class="check"><input id="show-cone" type="checkbox" checked> Light cone of the selected event</label>
+          <label class="check"><input id="show-sim" type="checkbox" checked> Lines of "now" through the selected event</label>
+          <label class="check"><input id="show-hyper" type="checkbox"> Hyperbolas of equal interval from the origin</label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Events</legend>
+          <p class="hint">Times and places as the current observer measures them.</p>
+          <ul id="event-list" class="events"></ul>
+          <form id="add-form" class="row">
+            <label class="field small">t (s) <input id="add-t" type="number" step="0.1" min="-4.9" max="4.9" value="2"></label>
+            <label class="field small">x (ls) <input id="add-x" type="number" step="0.1" min="-4.9" max="4.9" value="-1"></label>
+            <button id="add-event" type="submit">Add event</button>
+          </form>
+          <p id="add-status" class="hint" role="status"></p>
+          <div class="row">
+            <button id="clear-events" type="button">Remove all</button>
+            <button id="reset" type="button">Start over</button>
+          </div>
+        </fieldset>
+      </aside>
+    </section>
+
+    <section class="readout pair" aria-labelledby="pair-title" aria-live="polite">
+      <h2 id="pair-title">Two events</h2>
+      <table id="pair-table" class="gaps">
+        <thead><tr><th scope="col">Measured by</th><th scope="col">Time apart</th><th scope="col">Distance apart</th><th scope="col">Which first</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="pair-facts"></div>
+      <div class="row"><button id="boost-to" type="button" hidden></button></div>
+    </section>
+
+    <section class="explain">
+      <h2>Reading the diagram</h2>
+      <p>The blue grid belongs to the lab. Its vertical lines are clocks bolted to the lab floor, one light-second apart; its horizontal lines are the lab's moments. The orange grid belongs to a rocket. A clock riding in the rocket traces a tilted line, and the rocket's moments, the events it calls simultaneous, tilt by the same angle toward the light line. That second tilt is the relativity of simultaneity.</p>
+      <p>The interval, time apart squared minus distance apart squared, comes out the same for every observer. When it is positive the events are timelike: a clock can be at both, and everyone agrees which came first. When it is negative they are spacelike: no signal joins them, and observers moving fast enough in opposite directions disagree on their order. Pick two events and slide "Look from" to watch it happen.</p>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/worldline">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "worldline",
+  "version": "0.1.0",
+  "description": "Minkowski spacetime diagrams in the browser: place events, change frames, and watch simultaneity, time dilation and length contraction fall out of the geometry.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "special-relativity",
+    "spacetime",
+    "minkowski",
+    "physics",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
