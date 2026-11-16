@@ -5,7 +5,7 @@ import {
 import { describePair, fmt, fmtBeta, EXACT } from './readout.js';
 import { selectIndex, afterRemoval, focusAfterRemoval } from './selection.js';
 import { SCENES, sceneById } from './scenes.js';
-import { clockTicks } from './worldlines.js';
+import { clockTicks, signals } from './worldlines.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -197,6 +197,24 @@ function drawScene(c, vb) {
   ctx.strokeStyle = c.light;
   ctx.lineWidth = 2;
   for (const r of sc.rays) line(toView(r.from, vb), toView(r.to, vb));
+  if ($('show-signals').checked) {
+    for (const { from, to } of sc.signals) {
+      const sender = sc.paths[from];
+      ctx.strokeStyle = c[sender.color];
+      ctx.fillStyle = c[sender.color];
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = 0.75;
+      for (const sig of signals(sender.points, sc.paths[to].points)) {
+        if (!sig.receive) continue;
+        line(toView(sig.send, vb), toView(sig.receive, vb));
+        const [x, y] = view.toCanvas(toView(sig.receive, vb));
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
   const clocks = $('show-clocks').checked;
   for (const p of sc.paths) {
     ctx.strokeStyle = c[p.color];
@@ -562,7 +580,7 @@ $('rocket-beta').addEventListener('input', (e) => {
 $('view-lab').addEventListener('click', () => lookFrom(0));
 $('view-rocket').addEventListener('click', () => lookFrom(state.rocketBeta));
 $('boost-to').addEventListener('click', (e) => lookFrom(Number(e.currentTarget.dataset.beta)));
-for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper', 'show-clocks']) {
+for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper', 'show-clocks', 'show-signals']) {
   $(id).addEventListener('change', draw);
 }
 $('add-form').addEventListener('submit', (e) => {
@@ -593,6 +611,7 @@ function loadScene(sc) {
   state.events = sc.events.map((e) => ({ ...e }));
   state.selected = [...sc.selected];
   state.rocketBeta = sc.rocketBeta;
+  $('show-signals').disabled = sc.signals.length === 0;
   updateStory();
   lookFrom(0);
   refresh();
@@ -608,5 +627,6 @@ $('scene').addEventListener('change', (e) => loadScene(sceneById(e.target.value)
 $('reset').addEventListener('click', () => loadScene(state.scene));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
 
+$('show-signals').disabled = state.scene.signals.length === 0;
 updateStory();
 refresh();

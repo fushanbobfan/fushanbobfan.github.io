@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isCausalPath, properTimeAlong, clockTicks, positionAt, uniform, lightMeets,
+  readingAt, lightArrival, signals,
 } from '../src/worldlines.js';
 
 const close = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) < tol, `${a} vs ${b}`);
@@ -59,4 +60,40 @@ test('a flash catches a slower walker', () => {
   close(meet.x, 2);
   assert.equal(lightMeets({ t: 0, x: 0 }, 1, 1, 1), null);
   assert.equal(lightMeets({ t: 0, x: 0 }, -1, 0, 1), null, 'a leftward flash never reaches something on its right');
+});
+
+const home = [{ t: -4, x: 0 }, { t: 4, x: 0 }];
+const away = [{ t: -4, x: 0 }, { t: 0, x: 2.4 }, { t: 4, x: 0 }];
+
+test('readingAt gives the carried clock at a point on the path', () => {
+  close(readingAt(away, { t: 0, x: 2.4 }), 3.2);
+  close(readingAt(away, { t: 2, x: 1.2 }), 4.8);
+  close(readingAt(home, { t: 1, x: 0 }), 5);
+  assert.equal(readingAt(home, { t: 1, x: 1 }), null);
+});
+
+test('lightArrival finds the first point a flash reaches, either way', () => {
+  // the flash cannot catch the outbound traveller before the turn, so it meets the return leg
+  const hit = lightArrival({ t: -2, x: 0 }, away);
+  close(hit.t, 0.25);
+  close(hit.x, 2.25);
+  const back = lightArrival({ t: 0, x: 2.4 }, home);
+  close(back.t, 2.4);
+  close(back.x, 0);
+  assert.equal(lightArrival({ t: 5, x: 0 }, home), null);
+});
+
+test('the traveller gets home flashes every 2 s on the way out and every 0.5 s on the way back', () => {
+  const got = signals(home, away).map((s) => s.receivedAt);
+  assert.equal(got.length, 8);
+  close(got[0], 2); // flash 1, the only one before the turn at 3.2 s
+  for (let r = 2; r <= 8; r++) close(got[r - 1], 2.4 + 0.5 * r);
+  close(got[7], 6.4); // the last flash is sent and received at the reunion
+});
+
+test('the home twin sees the traveller slowly for 6.4 s, then quickly for 1.6 s', () => {
+  const at = signals(away, home).map((s) => s.receivedAt);
+  assert.equal(at.length, 6);
+  for (let k = 1; k <= 3; k++) close(at[k - 1], 2 * k);
+  for (let k = 4; k <= 6; k++) close(at[k - 1], 4.8 + 0.5 * k);
 });
