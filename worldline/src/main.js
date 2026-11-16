@@ -2,7 +2,7 @@ import { clampBeta, rapidity, betaFromRapidity, relativeVelocity } from './loren
 import {
   makeView, toView, fromView, frameGrid, frameAxes, simultaneityLine, invariantHyperbola, pick, labelFor,
 } from './diagram.js';
-import { describePair, fmt, fmtBeta } from './readout.js';
+import { describePair, fmt, fmtBeta, EXACT } from './readout.js';
 import { selectIndex, afterRemoval, focusAfterRemoval } from './selection.js';
 import { SCENES, sceneById } from './scenes.js';
 import { clockTicks } from './worldlines.js';
@@ -12,6 +12,7 @@ const $ = (id) => document.getElementById(id);
 const HALF = 5; // light-seconds from the centre to each edge
 const MAX_EVENTS = 12;
 const NUDGE = 0.1;
+const DRAG_START = 3; // pixels a press must travel before it drags
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 const canvas = $('diagram');
@@ -21,6 +22,7 @@ const view = makeView(canvas.width, HALF);
 const state = {
   viewBeta: 0,
   scene: SCENES[0],
+  sceneEdited: false, // events moved or removed since the scene loaded
   rocketBeta: SCENES[0].rocketBeta,
   events: SCENES[0].events.map((e) => ({ ...e })),
   selected: [...SCENES[0].selected], // up to two event indices, the most recent last
@@ -240,8 +242,8 @@ function drawLabel(text, p, color, which) {
 // --- panels ----------------------------------------------------------------
 
 function frameName(beta) {
-  if (Math.abs(beta) < 0.005) return 'the lab';
-  if (Math.abs(beta - state.rocketBeta) < 0.005) return 'the rocket';
+  if (Math.abs(beta) < EXACT) return 'the lab';
+  if (Math.abs(beta - state.rocketBeta) < EXACT) return 'the rocket';
   return `an observer moving at ${fmtBeta(beta)} relative to the lab`;
 }
 
@@ -250,9 +252,9 @@ function updateNote() {
   const rel = relativeVelocity(state.rocketBeta, vb);
   const labRel = relativeVelocity(0, vb);
   const parts = [`Looking from ${frameName(vb)}.`];
-  if (Math.abs(vb) >= 0.005) parts.push(`The lab moves at ${fmtBeta(labRel)} here.`);
-  if (Math.abs(vb - state.rocketBeta) >= 0.005) parts.push(`The rocket moves at ${fmtBeta(rel)} here.`);
-  if (Math.abs(vb) < 0.005 && Math.abs(state.rocketBeta) < 0.005) parts.push('The rocket is parked in the lab.');
+  if (Math.abs(vb) >= EXACT) parts.push(`The lab moves at ${fmtBeta(labRel)} here.`);
+  if (Math.abs(vb - state.rocketBeta) >= EXACT) parts.push(`The rocket moves at ${fmtBeta(rel)} here.`);
+  if (Math.abs(vb) < EXACT && Math.abs(state.rocketBeta) < EXACT) parts.push('The rocket is parked in the lab.');
   $('frame-note').textContent = parts.join(' ');
 }
 
@@ -322,7 +324,7 @@ function updatePair() {
   $('pair-table').hidden = false;
   const fs = frames().map(({ name, beta }) => ({ name: `${name} (${fmtBeta(beta)})`, beta }));
   const vb = state.viewBeta;
-  const nearOne = fs.some((f) => Math.abs(f.beta - vb) < 0.005);
+  const nearOne = fs.some((f) => Math.abs(f.beta - vb) < EXACT);
   if (!nearOne) fs.push({ name: `This view (${fmtBeta(vb)})`, beta: vb });
   const { rows, facts: info } = describePair(state.events[i], state.events[j], fs, names);
   for (const r of rows) {
@@ -343,7 +345,7 @@ function updatePair() {
     facts.append(p);
   }
   const target = info.kind === 'spacelike' ? info.simultaneousBeta : info.kind === 'timelike' ? info.colocatedBeta : null;
-  const alreadyThere = target !== null && Math.abs(target - vb) < 0.005;
+  const alreadyThere = target !== null && Math.abs(target - vb) < EXACT;
   if (target === null || alreadyThere) return;
   if (Math.abs(target) <= 0.9) {
     boostBtn.hidden = false;
@@ -359,12 +361,27 @@ function updatePair() {
   }
 }
 
+function markEdited() {
+  if (state.sceneEdited || !state.scene.story.length) return;
+  state.sceneEdited = true;
+  updateStory();
+}
+
 function updateStory() {
   const sc = state.scene;
   const box = $('story');
   box.replaceChildren();
   box.hidden = sc.story.length === 0;
   if (box.hidden) return;
+  if (state.sceneEdited) {
+    const h = document.createElement('h2');
+    h.textContent = sc.name;
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = 'The events have been moved or removed, so the account of this scene no longer matches them. "Reload scene" brings it back.';
+    box.append(h, p);
+    return;
+  }
   const h = document.createElement('h2');
   h.textContent = sc.name;
   box.append(h);
@@ -420,6 +437,7 @@ function select(i) {
 
 function removeEvent(i) {
   state.events.splice(i, 1);
+  markEdited();
   const next = afterRemoval(state, i);
   state.selected = next.selected;
   if (state.drag && !next.drag) {
@@ -453,7 +471,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (i < 0) i = addEvent(view.fromCanvas(px, py));
   if (i < 0) return;
   select(i);
-  state.drag = { index: i, id: e.pointerId };
+  state.drag = { index: i, id: e.pointerId, from: [px, py], moved: false };
   canvas.setPointerCapture(e.pointerId);
   canvas.classList.add('dragging');
   refresh();
@@ -465,7 +483,11 @@ canvas.addEventListener('pointermove', (e) => {
     canvas.classList.toggle('over-event', pick(state.events, state.viewBeta, view, px, py, 14) >= 0);
     return;
   }
+  // A click that wobbles a pixel or two selects; it should not move the event.
+  if (!state.drag.moved && Math.hypot(px - state.drag.from[0], py - state.drag.from[1]) < DRAG_START) return;
+  state.drag.moved = true;
   state.events[state.drag.index] = fromView(clampToView(view.fromCanvas(px, py)), state.viewBeta);
+  markEdited();
   updatePair();
   updateEventList();
   draw();
@@ -489,6 +511,7 @@ canvas.addEventListener('keydown', (e) => {
     const [dt, dx] = moves[e.key];
     const p = toView(state.events[active], state.viewBeta);
     state.events[active] = fromView(clampToView({ t: p.t + dt, x: p.x + dx }), state.viewBeta);
+    markEdited();
     refresh();
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
@@ -555,6 +578,7 @@ $('add-form').addEventListener('submit', (e) => {
 });
 $('clear-events').addEventListener('click', () => {
   state.events = [];
+  markEdited();
   state.selected = [];
   refresh();
 });
@@ -565,6 +589,7 @@ function loadScene(sc) {
     state.drag = null;
   }
   state.scene = sc;
+  state.sceneEdited = false;
   state.events = sc.events.map((e) => ({ ...e }));
   state.selected = [...sc.selected];
   state.rocketBeta = sc.rocketBeta;
