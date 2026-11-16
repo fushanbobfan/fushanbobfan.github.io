@@ -69,3 +69,54 @@ export function lightMeets(from, dir, v, x0) {
   if (t < from.t - 1e-12) return null;
   return { t, x: x0 + v * t };
 }
+
+// Reading of the clock carried along `points` at an event on the path, or null if it is not on it.
+export function readingAt(points, event, start = 0) {
+  let reading = start;
+  for (let k = 1; k < points.length; k++) {
+    const a = points[k - 1];
+    const b = points[k];
+    const tau = properTime(a, b) ?? 0;
+    if (event.t >= a.t - 1e-9 && event.t <= b.t + 1e-9) {
+      const f = b.t === a.t ? 0 : (event.t - a.t) / (b.t - a.t);
+      const x = a.x + f * (b.x - a.x);
+      if (Math.abs(x - event.x) < 1e-6) return reading + f * tau;
+    }
+    reading += tau;
+  }
+  return null;
+}
+
+// First event on the path that a flash sent from `from` (both ways at once) reaches, or null.
+export function lightArrival(from, points) {
+  let best = null;
+  for (let k = 1; k < points.length; k++) {
+    const a = points[k - 1];
+    const b = points[k];
+    const v = (b.x - a.x) / (b.t - a.t);
+    const x0 = a.x - v * a.t; // segment line: x = x0 + v t
+    for (const dir of [1, -1]) {
+      const hit = lightMeets(from, dir, v, x0);
+      if (!hit || hit.t < a.t - 1e-9 || hit.t > b.t + 1e-9) continue;
+      if (!best || hit.t < best.t) best = hit;
+    }
+  }
+  return best;
+}
+
+// A flash sent from `source` each time its clock passes a multiple of `step`, and where each
+// one reaches `target`. Flashes that never arrive (target already gone) have receive = null.
+export function signals(source, target, step = 1) {
+  return clockTicks(source, step)
+    .filter((tick) => tick.reading > 0)
+    .map((tick) => {
+      const send = { t: tick.t, x: tick.x };
+      const receive = lightArrival(send, target);
+      return {
+        reading: tick.reading,
+        send,
+        receive,
+        receivedAt: receive ? readingAt(target, receive) : null,
+      };
+    });
+}
