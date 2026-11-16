@@ -59,6 +59,11 @@ removed the account steps aside, and "Reload scene" puts everything back.
   on each worldline mark one second of that twin's own time: 8 at home, 6.4
   on the trip. The rocket's line of "now" through the turnaround shows where
   the difference comes from when the rocket is switched from 0.6c to −0.6c.
+  With "Flashes" on, each twin also sends a light signal once per second of
+  their own time. Moving apart, each receives the other's flashes once every
+  2 seconds; closing in, twice a second. The traveller switches rates at the
+  turn and collects 8 flashes; the twin at home keeps receiving slow ones
+  until light from the turnaround arrives, and collects 6.
 - **A ladder in a barn.** A 2.5 light-second ladder at 0.8c and a 2
   light-second barn. In the lab the ladder fits; riding with the ladder, its
   front leaves before its back is in. The two door events are spacelike apart,
@@ -84,7 +89,7 @@ src/lorentz.js    boosts, intervals, proper time, simultaneous and colocated fra
 src/diagram.js    view mapping, frame grids and axes, simultaneity lines, hyperbolas
 src/readout.js    plain-language comparison of two events
 src/selection.js  which events are selected or held when one is removed
-src/worldlines.js paths with carried clocks: proper time, tick marks, where light meets them
+src/worldlines.js paths with carried clocks: proper time, tick marks, light signals between them
 src/scenes.js     the twins, the ladder and barn, lightning on a train
 src/main.js       drawing and interaction
 test/             node:test suites
