@@ -31,8 +31,9 @@ Run the tests with `npm test` (Node 20 or later).
 - **Look from anywhere.** The "Look from" slider redraws the diagram as an
   observer moving at that speed relative to the lab measures it. The buttons
   jump to the lab or the rocket, easing through the change of frame.
-- **Events.** Click an empty spot to add one, drag to move it, or focus the
-  diagram and use the arrow keys. Delete removes the selected event. The
+- **Events.** Click an empty spot to add one, or type a time and place into
+  the fields under the event list. Drag an event to move it, or focus the
+  diagram and use the arrow keys; Delete removes the selected event. The
   event list gives each event's time and place as the current observer
   measures them.
 - **Pairs.** Select two events and the panel below compares them: how far
@@ -62,6 +63,7 @@ style.css         light and dark themes
 src/lorentz.js    boosts, intervals, proper time, simultaneous and colocated frames
 src/diagram.js    view mapping, frame grids and axes, simultaneity lines, hyperbolas
 src/readout.js    plain-language comparison of two events
+src/selection.js  which events are selected or held when one is removed
 src/main.js       drawing and interaction
 test/             node:test suites
 ```

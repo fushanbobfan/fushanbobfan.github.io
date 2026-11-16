@@ -3,6 +3,7 @@ import {
   makeView, toView, fromView, frameGrid, frameAxes, simultaneityLine, invariantHyperbola, pick, labelFor,
 } from './diagram.js';
 import { describePair, fmt, fmtBeta } from './readout.js';
+import { selectIndex, afterRemoval, focusAfterRemoval } from './selection.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -170,7 +171,7 @@ function draw() {
 }
 
 function cone(at, dir) {
-  const far = HALF * 4;
+  const far = Math.abs(at.t) + Math.abs(at.x) + HALF * 3; // reaches every corner of the view
   const pts = [at, { t: at.t + dir * far, x: at.x - far }, { t: at.t + dir * far, x: at.x + far }];
   ctx.beginPath();
   pts.forEach((p, k) => {
@@ -226,6 +227,7 @@ function updateEventList() {
     b.addEventListener('click', () => {
       select(i);
       refresh();
+      focusRow(i);
     });
     const r = document.createElement('button');
     r.type = 'button';
@@ -235,6 +237,7 @@ function updateEventList() {
     r.addEventListener('click', () => {
       removeEvent(i);
       refresh();
+      focusRow(focusAfterRemoval(state.events.length, i));
     });
     li.append(b, r);
     list.append(li);
@@ -242,9 +245,16 @@ function updateEventList() {
   if (!state.events.length) {
     const li = document.createElement('li');
     li.className = 'muted';
-    li.textContent = 'No events. Click the diagram to add one.';
+    li.textContent = 'No events. Click the diagram or use the fields below to add one.';
     list.append(li);
   }
+}
+
+// The list is rebuilt on every change, so put keyboard focus back where the user was.
+function focusRow(i) {
+  const rows = $('event-list').querySelectorAll('.pick');
+  if (i >= 0 && rows[i]) rows[i].focus();
+  else $('add-t').focus();
 }
 
 function updatePair() {
@@ -322,14 +332,26 @@ function refresh() {
 // --- events ----------------------------------------------------------------
 
 function select(i) {
-  state.selected = state.selected.filter((k) => k !== i);
-  state.selected.push(i);
-  if (state.selected.length > 2) state.selected.shift();
+  state.selected = selectIndex(state.selected, i);
 }
 
 function removeEvent(i) {
   state.events.splice(i, 1);
-  state.selected = state.selected.filter((k) => k !== i).map((k) => (k > i ? k - 1 : k));
+  const next = afterRemoval(state, i);
+  state.selected = next.selected;
+  if (state.drag && !next.drag) {
+    if (canvas.hasPointerCapture(state.drag.id)) canvas.releasePointerCapture(state.drag.id);
+    canvas.classList.remove('dragging');
+  }
+  state.drag = next.drag;
+}
+
+function addEvent(point) {
+  if (state.events.length >= MAX_EVENTS) return -1;
+  state.events.push(fromView(clampToView(point), state.viewBeta));
+  const i = state.events.length - 1;
+  select(i);
+  return i;
 }
 
 function clampToView(p) {
@@ -345,11 +367,8 @@ function pointerToCanvas(e) {
 canvas.addEventListener('pointerdown', (e) => {
   const [px, py] = pointerToCanvas(e);
   let i = pick(state.events, state.viewBeta, view, px, py, 14);
-  if (i < 0) {
-    if (state.events.length >= MAX_EVENTS) return;
-    state.events.push(fromView(clampToView(view.fromCanvas(px, py)), state.viewBeta));
-    i = state.events.length - 1;
-  }
+  if (i < 0) i = addEvent(view.fromCanvas(px, py));
+  if (i < 0) return;
   select(i);
   state.drag = { index: i, id: e.pointerId };
   canvas.setPointerCapture(e.pointerId);
@@ -440,6 +459,17 @@ $('boost-to').addEventListener('click', (e) => lookFrom(Number(e.currentTarget.d
 for (const id of ['show-lab-grid', 'show-rocket-grid', 'show-cone', 'show-sim', 'show-hyper']) {
   $(id).addEventListener('change', draw);
 }
+$('add-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const t = Number($('add-t').value);
+  const x = Number($('add-x').value);
+  if (!Number.isFinite(t) || !Number.isFinite(x)) return;
+  const i = addEvent({ t, x });
+  $('add-status').textContent = i < 0
+    ? `At most ${MAX_EVENTS} events; remove one first.`
+    : `Added ${labelFor(i)}.`;
+  refresh();
+});
 $('clear-events').addEventListener('click', () => {
   state.events = [];
   state.selected = [];
