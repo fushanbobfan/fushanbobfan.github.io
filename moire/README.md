@@ -1,0 +1,76 @@
+# moire
+
+Moiré patterns in the browser. Two printed transparencies lie on a light box:
+bars, rings or dot screens. Turn or stretch the top sheet a little and broad
+bands appear that are on neither sheet, swinging and spreading far more than
+the sheet itself moved.
+
+**Live demo:** https://fushanbobfan.github.io/moire/
+
+No build step and no dependencies. The grating model, the renderer and the
+fringe predictions are plain ES modules covered by a Node test suite; only
+`src/main.js` touches the page.
+
+## Quick start
+
+Open `index.html` through any static server, or run:
+
+```bash
+npm run serve
+# then visit http://localhost:8080
+```
+
+Run the tests with `npm test` (Node 20 or later).
+
+## What it shows
+
+- **Two sheets.** Each has a pattern (bars, rings or dots), a spacing, a turn
+  and an ink width. Drag the view to slide a sheet; with the view focused,
+  arrow keys slide it a pixel at a time and `[` `]` turn the top sheet by
+  0.1°.
+- **The readout.** Under the view, a sentence says what the main beat of the
+  two sheets should show: the fringe spacing and direction for bars, how far
+  the fringes travel when the top sheet slides one pixel, the cell size of the
+  beat lattice for dots, and the fringe count between two ring centres.
+- **Predicted fringes.** A checkbox draws the centres of the bright fringes
+  from the formulas, on top of the rendered sheets.
+- **Squint.** A blur a little wider than one mark washes out the fine pattern
+  and leaves only the slow beat.
+- **Scenes.** Turned gratings, a vernier, two ring centres, rings in rings,
+  rings over bars, and two kinds of dot screen.
+
+## How it works
+
+A grating is described by its spatial frequency: an arrow across its marks,
+one over the spacing long. Where two sheets overlap, the product of their
+transmissions contains a term at the difference of their frequencies, and that
+slow term is the fringe pattern. Two equal gratings turned by θ give fringes
+spaced p / (2 sin θ/2); parallel gratings with spacings a and b give
+ab / |a − b|. For rings the local frequency changes from place to place, and
+both the difference and the sum of the two phases can be slow, so the fringe
+phase takes whichever is slower at each point. With equal spacings these are
+hyperbolas to the sides of the centres and ellipses between them.
+
+Each device pixel's ink is the sheet's square wave averaged across the marks
+over the pixel's width, which keeps the pattern the sheets make with the
+screen's own pixel grid faint next to the moiré being shown. The tests check
+the predictions against the renderer: render two sheets, blur them, and compare the remaining
+brightness with the predicted fringe phase.
+
+## Layout
+
+```
+index.html        page markup
+style.css         layout and theme
+src/gratings.js   sheet model: phase, pixel coverage
+src/render.js     ink per pixel, light-box compositing, box blur
+src/moire.js      fringe spacing, direction and phase for each pair of sheets
+src/readout.js    plain-language account of the fringes
+src/scenes.js     preset pairs of sheets
+src/main.js       canvas, controls and interaction
+test/             Node test suite
+```
+
+## License
+
+MIT
