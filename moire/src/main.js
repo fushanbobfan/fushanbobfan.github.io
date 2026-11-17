@@ -185,7 +185,10 @@ function bindSheet(k) {
     requestDraw();
   });
   c.angle.addEventListener('input', () => {
-    state.layers[k].angle = Number(c.angle.value) * DEG;
+    // Apply the slider's change to the unfolded angle, so a sheet turned past
+    // 90° keeps turning smoothly instead of jumping by half a turn.
+    const l = state.layers[k];
+    l.angle += (Number(c.angle.value) - foldDegrees(l.angle / DEG)) * DEG;
     syncControls();
     requestDraw();
   });
