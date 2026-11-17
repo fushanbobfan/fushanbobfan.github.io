@@ -35,7 +35,7 @@ export function describe(a, b) {
       if (r.spacing === Infinity) return 'Identical rings on the same centre: no fringes. Drag the top sheet to separate the centres.';
       return `Same centre, different spacings: broad rings every ${fmt(r.spacing)} px.`;
     }
-    return `Centres ${fmt(r.distance)} px apart. ${r.crossings} hyperbolic fringes cross the line between them, the way bright lines fan out between two wave sources. Between the centres the fringes bend into ellipses.`;
+    return `Centres ${fmt(r.distance)} px apart. ${r.crossings} hyperbolic fringes cross the line between them, the way bright lines fan out between two wave sources. Close to the centres they give way to faint ellipses.`;
   }
   if (a.kind === 'dots' || b.kind === 'dots') {
     return 'Dots over bars or rings beat too, but the fringe prediction here covers dots over dots only.';

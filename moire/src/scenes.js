@@ -24,7 +24,7 @@ export const SCENES = [
   {
     id: 'two-centres',
     name: 'Two sets of rings',
-    note: 'Rings around two centres 80 px apart. Hyperbolas fan out on both sides like the bright lines of two-source interference; ellipses wrap the space between the centres.',
+    note: 'Rings around two centres 80 px apart. Hyperbolas fan out on both sides like the bright lines of two-source interference. Between the centres the beat turns fine and faint ellipses wrap the gap.',
     layers: [
       { kind: 'rings', period: 10, dx: -40, dy: 0, duty: 0.5 },
       { kind: 'rings', period: 10, dx: 40, dy: 0, duty: 0.5 },

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>moire: fringes from two gratings</title>
+  <meta name="description" content="Moiré patterns in the browser: lay one grating over another, turn or stretch it, and watch broad fringes appear whose spacing and direction follow from the difference of the two gratings.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>moire</h1>
+    <p>Lay one printed grating over another and broad bands appear that are on neither sheet. Where the marks fall on top of each other, light gets through; where they fall in each other's gaps, it is blocked. Turn or stretch the top sheet a little and the bands swing and spread a lot.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="view-title">
+      <div class="plots">
+        <h2 id="view-title" class="visually-hidden">Two sheets on a light box</h2>
+        <div class="viewport">
+          <canvas id="sheets" class="map" width="640" height="640" tabindex="0" role="img" aria-label="Two patterned transparent sheets stacked on a light box. Drag to slide a sheet; with the view focused, arrow keys slide it one pixel and the square bracket keys turn the top sheet."></canvas>
+          <canvas id="fringes" class="overlay" width="640" height="640" aria-hidden="true"></canvas>
+        </div>
+        <p id="readout" class="note" aria-live="polite"></p>
+        <p id="scene-note" class="hint"></p>
+        <p class="hint">Drag to slide a sheet. With the view focused, arrow keys slide it 1 px (Shift: 10 px), and [ and ] turn the top sheet by 0.1° (Shift: 1°).</p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Scene
+          <select id="scene"></select>
+        </label>
+
+        <fieldset class="group sheet" data-sheet="0">
+          <legend><span class="swatch bottom" aria-hidden="true"></span> Bottom sheet</legend>
+          <label class="field">Pattern
+            <select id="kind-0"><option value="lines">Bars</option><option value="rings">Rings</option><option value="dots">Dots</option></select>
+          </label>
+          <label class="field">Spacing <output id="period-0-out" for="period-0"></output>
+            <input id="period-0" type="range" min="3" max="30" step="0.1" value="8">
+          </label>
+          <label class="field">Turn <output id="angle-0-out" for="angle-0"></output>
+            <input id="angle-0" type="range" min="-90" max="90" step="0.1" value="0">
+          </label>
+          <label class="field">Ink <output id="duty-0-out" for="duty-0"></output>
+            <input id="duty-0" type="range" min="0.1" max="0.9" step="0.01" value="0.5">
+          </label>
+        </fieldset>
+
+        <fieldset class="group sheet" data-sheet="1">
+          <legend><span class="swatch top" aria-hidden="true"></span> Top sheet</legend>
+          <label class="field">Pattern
+            <select id="kind-1"><option value="lines">Bars</option><option value="rings">Rings</option><option value="dots">Dots</option></select>
+          </label>
+          <label class="field">Spacing <output id="period-1-out" for="period-1"></output>
+            <input id="period-1" type="range" min="3" max="30" step="0.1" value="8">
+          </label>
+          <label class="field">Turn <output id="angle-1-out" for="angle-1"></output>
+            <input id="angle-1" type="range" min="-90" max="90" step="0.1" value="5">
+          </label>
+          <label class="field">Ink <output id="duty-1-out" for="duty-1"></output>
+            <input id="duty-1" type="range" min="0.1" max="0.9" step="0.01" value="0.5">
+          </label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Drag moves</legend>
+          <label class="check"><input type="radio" name="moving" value="1" id="move-top" checked> The top sheet</label>
+          <label class="check"><input type="radio" name="moving" value="0" id="move-bottom"> The bottom sheet</label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Show</legend>
+          <label class="check"><input id="show-blur" type="checkbox"> Blur away the fine marks, as if squinting</label>
+          <label class="check"><input id="show-predict" type="checkbox"> Predicted centres of the bright fringes</label>
+          <label class="check"><input id="show-tint" type="checkbox"> Colour the two sheets</label>
+        </fieldset>
+
+        <div class="row">
+          <button id="spin" type="button" aria-pressed="false">Turn slowly</button>
+          <button id="reset" type="button">Reload scene</button>
+          <button id="save" type="button">Save PNG</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="explain">
+      <h2>Why the bands appear</h2>
+      <p>Each sheet is a grating: marks repeating at a fixed spacing. Describe a grating by an arrow that points across its marks, one over the spacing long. Two sheets fall in and out of step along the difference of their arrows, so the bands are a grating too, with spacing one over the length of that difference. Two equal gratings turned by a small angle θ give bands spaced p / (2 sin θ/2), nearly at right angles to the marks; two parallel gratings with spacings a and b give bands spaced ab / |a − b|.</p>
+      <p>Small causes, large effects: that is what makes moiré useful. Slide the top sheet of a vernier by a fraction of a mark and the bands travel many times as far, the principle behind the vernier scale on calipers and behind optical encoders that read positions finer than their own markings. Turn it by a fraction of a degree and the bands swing through a large angle.</p>
+      <p>Rings around two centres beat in two ways at once: by the difference of the distances to the centres, which traces hyperbolas, and by their sum, which traces ellipses. Each family shows where it changes slowly, so the hyperbolas fan out to the sides and the ellipses wrap the gap between the centres. Turn on the predicted centres to see both drawn from the formulas.</p>
+      <p>The blur option averages over a little more than one mark, the way an eye at a distance or a camera sensor does. What survives is only the slow beat. A camera photographing a striped shirt does the same thing with the stripes and its own grid of pixels, which is why such photographs shimmer.</p>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Source on <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/moire">GitHub</a> · MIT License</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

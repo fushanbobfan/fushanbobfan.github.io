@@ -1,0 +1,294 @@
+import { makeLayer } from './gratings.js';
+import { boxBlur, composite, renderInks, toRGBA } from './render.js';
+import { fringeMask } from './moire.js';
+import { SCENES, sceneById, sceneLayers } from './scenes.js';
+import { describe } from './readout.js';
+
+const $ = (id) => document.getElementById(id);
+
+const canvas = $('sheets');
+const overlay = $('fringes');
+const ctx = canvas.getContext('2d');
+const octx = overlay.getContext('2d');
+
+const LIGHT_BOX = [250, 248, 242];
+const PLAIN_INK = [[34, 32, 28], [34, 32, 28]];
+const TINTED_INK = [[47, 100, 168], [214, 108, 48]];
+const FRINGE_COLOUR = [200, 20, 110];
+
+const DEG = Math.PI / 180;
+const SPIN_PER_SECOND = 1.2 * DEG;
+
+const state = {
+  scene: SCENES[0],
+  layers: [],
+  css: 0,
+  scale: 1,
+  moving: 1,
+  blur: false,
+  predict: false,
+  tint: false,
+  spinning: false,
+};
+
+const sheetControls = [0, 1].map((k) => ({
+  kind: $(`kind-${k}`),
+  period: $(`period-${k}`),
+  periodOut: $(`period-${k}-out`),
+  angle: $(`angle-${k}`),
+  angleOut: $(`angle-${k}-out`),
+  duty: $(`duty-${k}`),
+  dutyOut: $(`duty-${k}-out`),
+}));
+
+// Each sheet's ink only changes when that sheet changes, so dragging the top
+// sheet leaves the bottom one's pixels alone.
+const inkCache = [null, null];
+
+function inkFor(k, w) {
+  const l = state.layers[k];
+  const key = [l.kind, l.period, l.angle, l.x, l.y, l.duty, w, state.scale].join('|');
+  if (inkCache[k]?.key !== key) {
+    inkCache[k] = { key, ink: renderInks(w, w, [l], state.scale)[0] };
+  }
+  return inkCache[k].ink;
+}
+
+function fitCanvas() {
+  const css = Math.max(1, Math.round(canvas.clientWidth));
+  const scale = Math.min(2, window.devicePixelRatio || 1);
+  if (css === state.css && scale === state.scale) return;
+  // Keep the sheets where they were relative to the middle of the view.
+  if (state.css) {
+    const shift = (css - state.css) / 2;
+    for (const l of state.layers) {
+      l.x += shift;
+      l.y += shift;
+    }
+  }
+  state.css = css;
+  state.scale = scale;
+  canvas.width = canvas.height = Math.round(css * scale);
+  overlay.width = overlay.height = css;
+}
+
+let frameQueued = false;
+function requestDraw() {
+  if (frameQueued) return;
+  frameQueued = true;
+  requestAnimationFrame(draw);
+}
+
+let lastFrame = 0;
+function draw(now) {
+  frameQueued = false;
+  if (state.spinning) {
+    const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
+    lastFrame = now;
+    const top = state.layers[1];
+    top.angle += SPIN_PER_SECOND * dt;
+    if (top.angle > 90 * DEG) top.angle -= 180 * DEG;
+    syncControls();
+    requestDraw();
+  }
+  const w = canvas.width;
+  const n = w * w;
+  const inks = [inkFor(0, w), inkFor(1, w)];
+  let rgb = composite(inks, state.tint ? TINTED_INK : PLAIN_INK, LIGHT_BOX, n);
+  if (state.blur) {
+    const coarsest = Math.max(state.layers[0].period, state.layers[1].period);
+    rgb = boxBlur(rgb, w, w, Math.max(1, Math.round((coarsest * state.scale) / 2)), 3);
+  }
+  const image = ctx.createImageData(w, w);
+  toRGBA(rgb, n, image.data);
+  ctx.putImageData(image, 0, 0);
+  $('readout').textContent = describe(state.layers[0], state.layers[1]);
+  scheduleFringes();
+}
+
+// The fringe prediction costs a few phase evaluations per pixel, so it waits
+// until the sheets stop moving and is drawn at CSS resolution.
+let fringeTimer = 0;
+function scheduleFringes() {
+  clearTimeout(fringeTimer);
+  octx.clearRect(0, 0, overlay.width, overlay.height);
+  if (!state.predict) return;
+  fringeTimer = setTimeout(drawFringes, state.spinning ? 400 : 120);
+}
+
+function drawFringes() {
+  const w = overlay.width;
+  const [a, b] = state.layers;
+  const mask = fringeMask(w, w, a, b, 1);
+  const image = octx.createImageData(w, w);
+  for (let p = 0; p < mask.length; p++) {
+    image.data[p * 4] = FRINGE_COLOUR[0];
+    image.data[p * 4 + 1] = FRINGE_COLOUR[1];
+    image.data[p * 4 + 2] = FRINGE_COLOUR[2];
+    image.data[p * 4 + 3] = mask[p] * 0.9;
+  }
+  octx.putImageData(image, 0, 0);
+}
+
+function syncControls() {
+  state.layers.forEach((l, k) => {
+    const c = sheetControls[k];
+    c.kind.value = l.kind;
+    c.period.value = l.period;
+    c.periodOut.textContent = `${l.period.toFixed(1)} px`;
+    const deg = l.angle / DEG;
+    c.angle.value = deg.toFixed(1);
+    c.angleOut.textContent = l.kind === 'rings' ? 'rings look the same at any turn' : `${deg.toFixed(1)}°`;
+    c.angle.disabled = l.kind === 'rings';
+    c.duty.value = l.duty;
+    c.dutyOut.textContent = `${Math.round(l.duty * 100)}% of each ${l.kind === 'dots' ? 'cell' : 'period'}`;
+  });
+  // Turning rings changes nothing, so there is nothing to animate.
+  const spinnable = state.layers[1].kind !== 'rings';
+  if (!spinnable && state.spinning) {
+    state.spinning = false;
+    $('spin').setAttribute('aria-pressed', 'false');
+  }
+  $('spin').disabled = !spinnable;
+}
+
+function loadScene(scene) {
+  state.scene = scene;
+  fitCanvas();
+  state.layers = sceneLayers(scene, state.css, state.css);
+  $('scene').value = scene.id;
+  $('scene-note').textContent = scene.note;
+  syncControls();
+  requestDraw();
+}
+
+function bindSheet(k) {
+  const c = sheetControls[k];
+  c.kind.addEventListener('change', () => {
+    const l = state.layers[k];
+    state.layers[k] = makeLayer({ ...l, kind: c.kind.value });
+    syncControls();
+    requestDraw();
+  });
+  c.period.addEventListener('input', () => {
+    state.layers[k].period = Number(c.period.value);
+    syncControls();
+    requestDraw();
+  });
+  c.angle.addEventListener('input', () => {
+    state.layers[k].angle = Number(c.angle.value) * DEG;
+    syncControls();
+    requestDraw();
+  });
+  c.duty.addEventListener('input', () => {
+    state.layers[k].duty = Number(c.duty.value);
+    syncControls();
+    requestDraw();
+  });
+}
+
+function moveSheet(dx, dy) {
+  const l = state.layers[state.moving];
+  l.x += dx;
+  l.y += dy;
+  requestDraw();
+}
+
+function turnTop(deltaDeg) {
+  const top = state.layers[1];
+  if (top.kind === 'rings') return;
+  top.angle = Math.max(-90 * DEG, Math.min(90 * DEG, top.angle + deltaDeg * DEG));
+  syncControls();
+  requestDraw();
+}
+
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  canvas.classList.add('dragging');
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag || drag.id !== e.pointerId) return;
+  const box = canvas.getBoundingClientRect();
+  const k = state.css / box.width;
+  moveSheet((e.clientX - drag.x) * k, (e.clientY - drag.y) * k);
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+});
+function endDrag(e) {
+  if (!drag || drag.id !== e.pointerId) return;
+  drag = null;
+  canvas.classList.remove('dragging');
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+canvas.addEventListener('keydown', (e) => {
+  const step = e.shiftKey ? 10 : 1;
+  const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+  if (moves[e.key]) {
+    moveSheet(...moves[e.key]);
+  } else if (e.key === '[' || e.key === '{') {
+    turnTop(e.shiftKey ? -1 : -0.1);
+  } else if (e.key === ']' || e.key === '}') {
+    turnTop(e.shiftKey ? 1 : 0.1);
+  } else {
+    return;
+  }
+  e.preventDefault();
+});
+
+for (const radio of document.querySelectorAll('input[name="moving"]')) {
+  radio.addEventListener('change', () => {
+    if (radio.checked) state.moving = Number(radio.value);
+  });
+}
+
+$('show-blur').addEventListener('change', (e) => {
+  state.blur = e.target.checked;
+  requestDraw();
+});
+$('show-predict').addEventListener('change', (e) => {
+  state.predict = e.target.checked;
+  scheduleFringes();
+});
+$('show-tint').addEventListener('change', (e) => {
+  state.tint = e.target.checked;
+  requestDraw();
+});
+
+$('spin').addEventListener('click', () => {
+  state.spinning = !state.spinning;
+  lastFrame = 0;
+  $('spin').setAttribute('aria-pressed', String(state.spinning));
+  requestDraw();
+});
+
+$('reset').addEventListener('click', () => loadScene(state.scene));
+
+$('save').addEventListener('click', () => {
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `moire-${state.scene.id}.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
+});
+
+const sceneSelect = $('scene');
+for (const scene of SCENES) sceneSelect.add(new Option(scene.name, scene.id));
+sceneSelect.addEventListener('change', () => loadScene(sceneById(sceneSelect.value)));
+
+bindSheet(0);
+bindSheet(1);
+
+new ResizeObserver(() => {
+  const before = [state.css, state.scale];
+  fitCanvas();
+  if (before[0] !== state.css || before[1] !== state.scale) requestDraw();
+}).observe(canvas);
+
+loadScene(SCENES[0]);
