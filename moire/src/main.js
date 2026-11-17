@@ -86,8 +86,10 @@ function draw(now) {
     const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
     lastFrame = now;
     const top = state.layers[1];
+    // Folding the angle back by 180° would flip the bars' phase about their
+    // anchor and make the pattern jump, so the angle keeps growing and only
+    // the slider shows it folded.
     top.angle += SPIN_PER_SECOND * dt;
-    if (top.angle > 90 * DEG) top.angle -= 180 * DEG;
     syncControls();
     requestDraw();
   }
@@ -130,13 +132,18 @@ function drawFringes() {
   octx.putImageData(image, 0, 0);
 }
 
+// The slider runs from −90° to 90°; bars and dot screens look alike every 180°.
+function foldDegrees(deg) {
+  return deg - 180 * Math.round(deg / 180);
+}
+
 function syncControls() {
   state.layers.forEach((l, k) => {
     const c = sheetControls[k];
     c.kind.value = l.kind;
     c.period.value = l.period;
     c.periodOut.textContent = `${l.period.toFixed(1)} px`;
-    const deg = l.angle / DEG;
+    const deg = foldDegrees(l.angle / DEG);
     c.angle.value = deg.toFixed(1);
     c.angleOut.textContent = l.kind === 'rings' ? 'rings look the same at any turn' : `${deg.toFixed(1)}°`;
     c.angle.disabled = l.kind === 'rings';
@@ -199,7 +206,7 @@ function moveSheet(dx, dy) {
 function turnTop(deltaDeg) {
   const top = state.layers[1];
   if (top.kind === 'rings') return;
-  top.angle = Math.max(-90 * DEG, Math.min(90 * DEG, top.angle + deltaDeg * DEG));
+  top.angle += deltaDeg * DEG;
   syncControls();
   requestDraw();
 }
