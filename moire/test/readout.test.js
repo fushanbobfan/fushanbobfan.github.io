@@ -36,11 +36,18 @@ test('mixed sheets get a qualitative account', () => {
   assert.match(describe(makeLayer(), makeLayer({ kind: 'rings' })), /nearly parallel/);
 });
 
-test('a fine main beat is reported without ruling out harmonic beats', () => {
+test('a fine main beat hands over to a broad harmonic beat', () => {
   const text = describe(makeLayer({ period: 8, duty: 0.3 }), makeLayer({ period: 15.6, duty: 0.3 }));
-  assert.match(text, /main beat/);
-  assert.match(text, /whole multiple/);
-  assert.doesNotMatch(text, /no broad fringes form/);
+  assert.match(text, /main beat repeats every 16\.4 px, too fine/);
+  assert.match(text, /2 bars of the bottom sheet span about as far as 1 of the top/);
+  assert.match(text, /every 312 px/);
+  assert.match(text, /move 40\.0 px/);
+  assert.match(text, /about 59% of a main beat's contrast/);
+});
+
+test('with half of each top period inked the second harmonic is gone', () => {
+  const text = describe(makeLayer({ period: 8, duty: 0.3 }), makeLayer({ period: 15.6, duty: 0.5 }));
+  assert.match(text, /no beat between the bars' harmonics up to the fourth is broad/);
 });
 
 test('unequal ring spacings are not called hyperbolas', () => {
