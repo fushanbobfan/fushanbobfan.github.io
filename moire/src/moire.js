@@ -139,4 +139,3 @@ export function fringeMask(w, h, a, b, scale = 1, { lineWidth = 1.2, dotRadius =
   }
   return mask;
 }
-

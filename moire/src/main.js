@@ -1,4 +1,4 @@
-import { makeLayer } from './gratings.js';
+import { makeLayer, MAX_DOT_DUTY } from './gratings.js';
 import { boxBlur, composite, renderInks, toRGBA } from './render.js';
 import { fringeMask } from './moire.js';
 import { SCENES, sceneById, sceneLayers } from './scenes.js';
@@ -141,7 +141,9 @@ function syncControls() {
     c.angleOut.textContent = l.kind === 'rings' ? 'rings look the same at any turn' : `${deg.toFixed(1)}°`;
     c.angle.disabled = l.kind === 'rings';
     c.duty.value = l.duty;
-    c.dutyOut.textContent = `${Math.round(l.duty * 100)}% of each ${l.kind === 'dots' ? 'cell' : 'period'}`;
+    // Dots wider than MAX_DOT_DUTY would touch, so the model caps them there.
+    const shown = l.kind === 'dots' ? Math.min(l.duty, MAX_DOT_DUTY) : l.duty;
+    c.dutyOut.textContent = `${Math.round(shown * 100)}% of each ${l.kind === 'dots' ? 'cell' : 'period'}`;
   });
   // Turning rings changes nothing, so there is nothing to animate.
   const spinnable = state.layers[1].kind !== 'rings';
@@ -210,8 +212,7 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 canvas.addEventListener('pointermove', (e) => {
   if (!drag || drag.id !== e.pointerId) return;
-  const box = canvas.getBoundingClientRect();
-  const k = state.css / box.width;
+  const k = state.css / Math.max(1, canvas.clientWidth);
   moveSheet((e.clientX - drag.x) * k, (e.clientY - drag.y) * k);
   drag.x = e.clientX;
   drag.y = e.clientY;
