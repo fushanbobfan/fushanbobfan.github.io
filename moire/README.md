@@ -37,6 +37,9 @@ Run the tests with `npm test` (Node 20 or later).
   from the formulas, on top of the rendered sheets.
 - **Squint.** A blur a little wider than one mark washes out the fine pattern
   and leaves only the slow beat.
+- **Links.** The address bar always describes the current view: both sheets,
+  the scene and the display options. "Copy link" puts it on the clipboard, and
+  opening the link restores the same two sheets.
 - **Scenes.** Turned gratings, a vernier, bars at almost double the spacing,
   two ring centres, rings in rings, rings over bars, and two kinds of dot
   screen.
@@ -79,6 +82,7 @@ src/render.js     ink per pixel, light-box compositing, box blur
 src/moire.js      fringe spacing, direction and phase for each pair of sheets
 src/readout.js    plain-language account of the fringes
 src/scenes.js     preset pairs of sheets
+src/permalink.js  the view as a link fragment
 src/main.js       canvas, controls and interaction
 test/             Node test suite
 ```
