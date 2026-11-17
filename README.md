@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [moire](https://fushanbobfan.github.io/moire/) | Moiré patterns in the browser: lay one grating over another, turn or slide it a little, and watch broad fringes swing and travel far more than the sheet moved. | [`moire/`](moire/) |
 | [worldline](https://fushanbobfan.github.io/worldline/) | Spacetime diagrams in the browser: place events, change who is looking, and watch which events count as simultaneous tilt with the observer while light stays at 45°. | [`worldline/`](worldline/) |
 | [peal](https://fushanbobfan.github.io/peal/) | Change ringing in the browser: see and hear the methods English bell ringers ring, follow one bell's line through the rows, and check that no row comes twice. | [`peal/`](peal/) |
 | [lodestone](https://fushanbobfan.github.io/lodestone/) | A pendulum over magnets in the browser: release the bob anywhere, see which magnet catches it, and watch the map of starting points break into braided ribbons. | [`lodestone/`](lodestone/) |
