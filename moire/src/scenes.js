@@ -42,7 +42,7 @@ export const SCENES = [
   {
     id: 'rings-lines',
     name: 'Rings over straight bars',
-    note: 'The fringes gather where the rings run nearly parallel to the bars with nearly the same spacing, the way a zone plate focuses light.',
+    note: 'The fringes gather where the rings run nearly parallel to the bars with nearly the same spacing: in a band through the ring centre, running across the bars.',
     layers: [
       { kind: 'lines', period: 10, angle: 0, duty: 0.5 },
       { kind: 'rings', period: 10, duty: 0.5 },

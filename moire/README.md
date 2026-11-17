@@ -28,10 +28,10 @@ Run the tests with `npm test` (Node 20 or later).
   and an ink width. Drag the view to slide a sheet; with the view focused,
   arrow keys slide it a pixel at a time and `[` `]` turn the top sheet by
   0.1°.
-- **The readout.** Under the view, a sentence says what the pair should show:
-  the fringe spacing and direction for bars, how far the fringes travel when
-  the top sheet slides one pixel, the cell size of the beat lattice for dots,
-  and the fringe count between two ring centres.
+- **The readout.** Under the view, a sentence says what the main beat of the
+  two sheets should show: the fringe spacing and direction for bars, how far
+  the fringes travel when the top sheet slides one pixel, the cell size of the
+  beat lattice for dots, and the fringe count between two ring centres.
 - **Predicted fringes.** A checkbox draws the centres of the bright fringes
   from the formulas, on top of the rendered sheets.
 - **Squint.** A blur a little wider than one mark washes out the fine pattern
@@ -48,13 +48,13 @@ slow term is the fringe pattern. Two equal gratings turned by θ give fringes
 spaced p / (2 sin θ/2); parallel gratings with spacings a and b give
 ab / |a − b|. For rings the local frequency changes from place to place, and
 both the difference and the sum of the two phases can be slow, so the fringe
-phase takes whichever is slower at each point: hyperbolas to the sides of the
-centres, ellipses between them.
+phase takes whichever is slower at each point. With equal spacings these are
+hyperbolas to the sides of the centres and ellipses between them.
 
-Each device pixel's ink is the exact average of the sheet's square wave over
-the pixel's footprint, so the sheets themselves add no aliasing pattern of
-their own on top of the moiré being shown. The tests check the predictions
-against the renderer: render two sheets, blur them, and compare the remaining
+Each device pixel's ink is the sheet's square wave averaged across the marks
+over the pixel's width, which keeps the pattern the sheets make with the
+screen's own pixel grid faint next to the moiré being shown. The tests check
+the predictions against the renderer: render two sheets, blur them, and compare the remaining
 brightness with the predicted fringe phase.
 
 ## Layout

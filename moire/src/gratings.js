@@ -65,8 +65,10 @@ export function phaseGradient(layer, px, py) {
   return [Math.cos(layer.angle) / layer.period, Math.sin(layer.angle) / layer.period];
 }
 
-// How much of a square pixel of side `foot`, centred on (px, py), is covered
-// by ink, from 0 (clear) to 1 (opaque).
+// About how much of a pixel of side `foot`, centred on (px, py), is covered by
+// ink, from 0 (clear) to 1 (opaque). Bars and rings average the square wave
+// across the marks over the pixel's width; dots soften their edge over one
+// pixel.
 export function inkAt(layer, px, py, foot = 1) {
   const p = phases(layer, px, py);
   if (layer.kind === 'lines') {
