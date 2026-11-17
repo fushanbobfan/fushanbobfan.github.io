@@ -28,16 +28,18 @@ Run the tests with `npm test` (Node 20 or later).
   and an ink width. Drag the view to slide a sheet; with the view focused,
   arrow keys slide it a pixel at a time and `[` `]` turn the top sheet by
   0.1°.
-- **The readout.** Under the view, a sentence says what the main beat of the
-  two sheets should show: the fringe spacing and direction for bars, how far
-  the fringes travel when the top sheet slides one pixel, the cell size of the
-  beat lattice for dots, and the fringe count between two ring centres.
+- **The readout.** Under the view, a sentence says what the two sheets should
+  show: the fringe spacing and direction for bars, harmonic beats included,
+  how far the fringes travel when the top sheet slides one pixel, the cell
+  size of the beat lattice for dots, and the fringe count between two ring
+  centres.
 - **Predicted fringes.** A checkbox draws the centres of the bright fringes
   from the formulas, on top of the rendered sheets.
 - **Squint.** A blur a little wider than one mark washes out the fine pattern
   and leaves only the slow beat.
-- **Scenes.** Turned gratings, a vernier, two ring centres, rings in rings,
-  rings over bars, and two kinds of dot screen.
+- **Scenes.** Turned gratings, a vernier, bars at almost double the spacing,
+  two ring centres, rings in rings, rings over bars, and two kinds of dot
+  screen.
 
 ## How it works
 
@@ -46,7 +48,17 @@ one over the spacing long. Where two sheets overlap, the product of their
 transmissions contains a term at the difference of their frequencies, and that
 slow term is the fringe pattern. Two equal gratings turned by θ give fringes
 spaced p / (2 sin θ/2); parallel gratings with spacings a and b give
-ab / |a − b|. For rings the local frequency changes from place to place, and
+ab / |a − b|.
+
+Bars are square waves, so each sheet also carries harmonics at 2, 3, 4 times
+its own frequency, the m-th with amplitude 2·sin(π·m·d)/(π·m) for ink width d.
+Every pair m·fA − n·fB up to the fourth order is a candidate beat, with
+contrast half the product of the two amplitudes; the readout and the fringe
+trace use the highest-contrast beat that is at least twice as wide as the
+coarser bars. That is how bars 8 px and 15.6 px apart, whose own beat is a
+16.4 px blur, still show fringes 312 px apart.
+
+For rings the local frequency changes from place to place, and
 both the difference and the sum of the two phases can be slow, so the fringe
 phase takes whichever is slower at each point. With equal spacings these are
 hyperbolas to the sides of the centres and ellipses between them.
