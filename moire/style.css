@@ -124,6 +124,7 @@ legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
 
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.92rem; }
 .field output { font-variant-numeric: tabular-nums; color: var(--muted); }
+.field-head { display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; }
 .field input[type="range"] { width: 100%; }
 .field input:disabled { opacity: 0.45; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }

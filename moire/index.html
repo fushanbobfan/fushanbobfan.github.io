@@ -37,15 +37,18 @@
           <label class="field">Pattern
             <select id="kind-0"><option value="lines">Bars</option><option value="rings">Rings</option><option value="dots">Dots</option></select>
           </label>
-          <label class="field">Spacing <output id="period-0-out" for="period-0"></output>
+          <div class="field">
+            <span class="field-head"><label for="period-0">Spacing</label> <output id="period-0-out" for="period-0"></output></span>
             <input id="period-0" type="range" min="3" max="30" step="0.1" value="8">
-          </label>
-          <label class="field">Turn <output id="angle-0-out" for="angle-0"></output>
+          </div>
+          <div class="field">
+            <span class="field-head"><label for="angle-0">Turn</label> <output id="angle-0-out" for="angle-0"></output></span>
             <input id="angle-0" type="range" min="-90" max="90" step="0.1" value="0">
-          </label>
-          <label class="field">Ink <output id="duty-0-out" for="duty-0"></output>
+          </div>
+          <div class="field">
+            <span class="field-head"><label for="duty-0">Ink</label> <output id="duty-0-out" for="duty-0"></output></span>
             <input id="duty-0" type="range" min="0.1" max="0.9" step="0.01" value="0.5">
-          </label>
+          </div>
         </fieldset>
 
         <fieldset class="group sheet" data-sheet="1">
@@ -53,15 +56,18 @@
           <label class="field">Pattern
             <select id="kind-1"><option value="lines">Bars</option><option value="rings">Rings</option><option value="dots">Dots</option></select>
           </label>
-          <label class="field">Spacing <output id="period-1-out" for="period-1"></output>
+          <div class="field">
+            <span class="field-head"><label for="period-1">Spacing</label> <output id="period-1-out" for="period-1"></output></span>
             <input id="period-1" type="range" min="3" max="30" step="0.1" value="8">
-          </label>
-          <label class="field">Turn <output id="angle-1-out" for="angle-1"></output>
+          </div>
+          <div class="field">
+            <span class="field-head"><label for="angle-1">Turn</label> <output id="angle-1-out" for="angle-1"></output></span>
             <input id="angle-1" type="range" min="-90" max="90" step="0.1" value="5">
-          </label>
-          <label class="field">Ink <output id="duty-1-out" for="duty-1"></output>
+          </div>
+          <div class="field">
+            <span class="field-head"><label for="duty-1">Ink</label> <output id="duty-1-out" for="duty-1"></output></span>
             <input id="duty-1" type="range" min="0.1" max="0.9" step="0.01" value="0.5">
-          </label>
+          </div>
         </fieldset>
 
         <fieldset class="group">
@@ -89,7 +95,7 @@
       <h2>Why the bands appear</h2>
       <p>Each sheet is a grating: marks repeating at a fixed spacing. Describe a grating by an arrow that points across its marks, one over the spacing long. Two sheets fall in and out of step along the difference of their arrows, so the bands are a grating too, with spacing one over the length of that difference. Two equal gratings turned by a small angle θ give bands spaced p / (2 sin θ/2), nearly at right angles to the marks; two parallel gratings with spacings a and b give bands spaced ab / |a − b|.</p>
       <p>Small causes, large effects: that is what makes moiré useful. Slide the top sheet of a vernier by a fraction of a mark and the bands travel many times as far, the principle behind the vernier scale on calipers and behind optical encoders that read positions finer than their own markings. Turn it by a fraction of a degree and the bands swing through a large angle.</p>
-      <p>Rings around two centres beat in two ways at once: by the difference of the distances to the centres, which traces hyperbolas, and by their sum, which traces ellipses. Each family shows where it changes slowly, so the hyperbolas fan out to the sides and the ellipses wrap the gap between the centres. Turn on the predicted centres to see both drawn from the formulas.</p>
+      <p>Rings around two centres beat in two ways at once: by the difference of the distances to the centres and by their sum. With equal spacings the first traces hyperbolas and the second ellipses. Each family shows where it changes slowly, so the hyperbolas fan out to the sides and the ellipses wrap the gap between the centres. With unequal spacings the same two beats bend into other curves. Turn on the predicted centres to see them drawn from the formulas.</p>
       <p>The blur option averages over a little more than one mark, the way an eye at a distance or a camera sensor does. What survives is only the slow beat. A camera photographing a striped shirt does the same thing with the stripes and its own grid of pixels, which is why such photographs shimmer.</p>
     </section>
   </main>
