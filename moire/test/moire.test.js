@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeLayer } from '../src/gratings.js';
 import { boxBlur, composite, renderInks } from '../src/render.js';
-import { fringeMask, fringePhase, latticeMoire, lineMoire, ringMoire } from '../src/moire.js';
+import { fringeMask, fringePhase, harmonicAmplitude, latticeMoire, lineBeats, lineMoire, ringMoire, visibleBeat } from '../src/moire.js';
 
 const deg = (d) => (d * Math.PI) / 180;
 const close = (a, b, eps) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
@@ -156,4 +156,58 @@ test('ring fringe count follows the ink widths as fringePhase measures them', ()
     prev = diff;
   }
   assert.equal(crossings, 16);
+});
+
+test('harmonic amplitudes of a square wave', () => {
+  close(harmonicAmplitude(1, 0.5), 2 / Math.PI, 1e-12);
+  close(harmonicAmplitude(2, 0.5), 0, 1e-12);
+  close(harmonicAmplitude(3, 0.5), -2 / (3 * Math.PI), 1e-12);
+  assert.ok(harmonicAmplitude(2, 0.7) < 0);
+});
+
+test('the visible beat of ordinary pairs is the main beat', () => {
+  const a = makeLayer({ period: 10 });
+  for (const b of [makeLayer({ period: 10.5 }), makeLayer({ period: 10, angle: deg(5) }), makeLayer({ period: 10, angle: deg(183) })]) {
+    const beat = visibleBeat(a, b);
+    const main = lineMoire(a, b);
+    assert.equal(beat.m, 1);
+    assert.equal(Math.abs(beat.n), 1);
+    close(beat.period, main.period, 1e-6);
+    close(beat.magnification, main.magnification, 1e-6);
+  }
+});
+
+test('beats with a common factor are left out', () => {
+  const beats = lineBeats(makeLayer({ period: 8 }), makeLayer({ period: 9 }));
+  assert.ok(!beats.some((x) => x.m === 2 && Math.abs(x.n) === 2));
+  assert.ok(beats.some((x) => x.m === 3 && x.n === -2));
+  for (let k = 1; k < beats.length; k++) assert.ok(beats[k - 1].period >= beats[k].period);
+});
+
+test('bars at nearly double the spacing beat through a harmonic', () => {
+  const a = makeLayer({ period: 8, duty: 0.3 });
+  const b = makeLayer({ period: 15.6, duty: 0.3 });
+  assert.ok(lineMoire(a, b).period < 20);
+  const beat = visibleBeat(a, b);
+  assert.deepEqual([beat.m, beat.n], [1, 2]);
+  close(beat.period, 312, 1e-6);
+  // Sliding the top sheet one pixel moves these fringes 2 × 312 / 15.6 = 40 px.
+  close(beat.magnification, 40, 1e-6);
+  assert.ok(agreement(a, b, 420, 8) > 0.9);
+});
+
+test('a harmonic with negative amplitude moves the bright fringes half a step', () => {
+  const a = makeLayer({ period: 8, duty: 0.3 });
+  const b = makeLayer({ period: 15.6, duty: 0.7, x: 3 });
+  const beat = visibleBeat(a, b);
+  assert.deepEqual([beat.m, beat.n], [1, 2]);
+  assert.ok(beat.flipped);
+  assert.ok(agreement(a, b, 420, 8) > 0.9);
+});
+
+test('the fringe mask traces a harmonic beat', () => {
+  const a = makeLayer({ period: 8, duty: 0.3 });
+  const b = makeLayer({ period: 15.6, duty: 0.3, angle: deg(1) });
+  const mask = fringeMask(200, 200, a, b);
+  assert.ok(mask.some((v) => v > 128));
 });

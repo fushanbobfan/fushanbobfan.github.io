@@ -22,6 +22,15 @@ export const SCENES = [
     ],
   },
   {
+    id: 'harmonic',
+    name: 'Bars at almost double the spacing',
+    note: 'Bars 8 px apart under bars 15.6 px apart. Their own spacings beat every 16.4 px, too fine to see, but two bottom bars span almost exactly one top bar, and that beat gives fringes 312 px apart. With exactly half of each top period inked, the top sheet has no second harmonic and these fringes vanish: set its ink to 50% to watch.',
+    layers: [
+      { kind: 'lines', period: 8, angle: 0, duty: 0.3 },
+      { kind: 'lines', period: 15.6, angle: 0, duty: 0.3 },
+    ],
+  },
+  {
     id: 'two-centres',
     name: 'Two sets of rings',
     note: 'Rings around two centres 80 px apart. Hyperbolas fan out on both sides like the bright lines of two-source interference. Between the centres the beat turns fine and faint ellipses wrap the gap.',

@@ -1,4 +1,4 @@
-import { latticeMoire, lineMoire, ringMoire } from './moire.js';
+import { harmonicAmplitude, latticeMoire, lineMoire, ringMoire, visibleBeat } from './moire.js';
 
 // Plain-language account of what the two sheets should show.
 
@@ -19,8 +19,16 @@ export function describe(a, b) {
   if (a.kind === 'lines' && b.kind === 'lines') {
     const m = lineMoire(a, b);
     if (m.period === Infinity) return 'The two sheets have the same spacing and direction, so they never fall out of step: no fringes.';
-    if (tooFine(m.period, a, b)) return `The main beat repeats every ${fmt(m.period)} px, about as fine as the bars themselves, so it makes no broad fringes. ${HARMONICS}`;
-    return `Fringes every ${fmt(m.period)} px, running at ${m.stripeAngle.toFixed(1)}° from horizontal. Slide the top sheet 1 px across its bars and the fringes move ${fmt(m.magnification)} px.`;
+    const beat = visibleBeat(a, b);
+    if (!beat) {
+      return `The main beat repeats every ${fmt(m.period)} px, about as fine as the bars themselves, so it makes no broad fringes, and no beat between the bars' harmonics up to the fourth is broad either.`;
+    }
+    const fringes = `fringes every ${fmt(beat.period)} px, running at ${beat.stripeAngle.toFixed(1)}° from horizontal. Slide the top sheet 1 px across its bars and the fringes move ${fmt(beat.magnification)} px.`;
+    if (beat.m === 1 && Math.abs(beat.n) === 1) return fringes[0].toUpperCase() + fringes.slice(1);
+    const n = Math.abs(beat.n);
+    const main = Math.abs(harmonicAmplitude(1, a.duty) * harmonicAmplitude(1, b.duty)) / 2;
+    const share = Math.round((100 * beat.contrast) / main);
+    return `The main beat repeats every ${fmt(m.period)} px, too fine to see. But ${n} ${n === 1 ? 'bar' : 'bars'} of the bottom sheet span about as far as ${beat.m} of the top, and that beat between the bars' harmonics gives fainter ${fringes} These fringes have about ${share}% of a main beat's contrast.`;
   }
   if (a.kind === 'dots' && b.kind === 'dots') {
     const m = latticeMoire(a, b);

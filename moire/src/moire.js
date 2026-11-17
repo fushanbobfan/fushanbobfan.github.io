@@ -63,6 +63,60 @@ export function latticeMoire(a, b) {
   return { edges: [e1, e2], sides: [Math.hypot(...e1), Math.hypot(...e2)], turnDegrees: turn };
 }
 
+// Bars are a square wave, not a pure stripe: besides its own spacing p, a
+// sheet carries fainter stripes at p/2, p/3 and so on. The m-th has amplitude
+// 2·sin(π·m·duty)/(π·m), measured from the middle of the bars, so with half
+// the period inked the even ones vanish. Any harmonic of one sheet can beat
+// with any harmonic of the other: m·fA − n·fB. The beat's contrast is half the
+// product of the two amplitudes, and its sign says whether the bright fringes
+// sit where the phase m·cA − n·cB is whole or half way between.
+export function harmonicAmplitude(m, duty) {
+  return (2 * Math.sin(Math.PI * m * duty)) / (Math.PI * m);
+}
+
+function gcd(x, y) {
+  return y === 0 ? Math.abs(x) : gcd(y, x % y);
+}
+
+export const MAX_ORDER = 4;
+
+// Every beat of two bar sheets up to MAX_ORDER, slowest first. A pair with a
+// common factor is a harmonic of a slower beat and is left out.
+export function lineBeats(a, b, maxOrder = MAX_ORDER) {
+  const beats = [];
+  for (let m = 1; m <= maxOrder; m++) {
+    for (let n = -maxOrder; n <= maxOrder; n++) {
+      if (n === 0 || gcd(m, n) !== 1) continue;
+      const fx = (m * Math.cos(a.angle)) / a.period - (n * Math.cos(b.angle)) / b.period;
+      const fy = (m * Math.sin(a.angle)) / a.period - (n * Math.sin(b.angle)) / b.period;
+      const mag = Math.hypot(fx, fy);
+      const contrast = (harmonicAmplitude(m, a.duty) * harmonicAmplitude(Math.abs(n), b.duty)) / 2;
+      beats.push({
+        m,
+        n,
+        period: mag < 1e-9 ? Infinity : 1 / mag,
+        stripeAngle: mag < 1e-9 ? null : stripeDegrees(fx, fy),
+        contrast: Math.abs(contrast),
+        flipped: contrast < 0,
+        magnification: mag < 1e-9 ? Infinity : Math.abs(n) / mag / b.period,
+      });
+    }
+  }
+  return beats.sort((p, q) => q.period - p.period);
+}
+
+// The beat that shows as broad fringes: the highest-contrast one at least
+// twice as wide as the coarser sheet's bars. Null when none is.
+export function visibleBeat(a, b, maxOrder = MAX_ORDER) {
+  const coarsest = Math.max(a.period, b.period);
+  let best = null;
+  for (const beat of lineBeats(a, b, maxOrder)) {
+    if (beat.period === Infinity || beat.period < 2 * coarsest || beat.contrast < 1e-3) continue;
+    if (!best || beat.contrast > best.contrast) best = beat;
+  }
+  return best;
+}
+
 function wholeNumbersBetween(lo, hi) {
   return Math.max(0, Math.floor(hi + 1e-9) - Math.ceil(lo - 1e-9) + 1);
 }
@@ -91,10 +145,11 @@ export function ringMoire(a, b) {
 // most clear space. One number for lines and rings, two for dot lattices.
 //
 // Two sheets beat both at the difference of their phases and at the sum. For
-// line gratings the slow one is fixed by their angles; for rings it changes
-// from place to place (hyperbolas on either side, ellipses between the
-// centres), so the slower of the two is taken at each point.
-export function fringePhase(a, b, x, y) {
+// bars the visible beat is fixed by the two sheets, harmonics included (pass
+// it as `beat` to skip the search); for rings it changes from place to place
+// (hyperbolas on either side, ellipses between the centres), so the slower of
+// the two is taken at each point.
+export function fringePhase(a, b, x, y, beat) {
   if (a.kind === 'dots' && b.kind === 'dots') {
     const bb = { ...b, angle: b.angle - (alignedTurns(a, b) * Math.PI) / 2 };
     const pa = phases(a, x, y);
@@ -105,6 +160,12 @@ export function fringePhase(a, b, x, y) {
   // Measure each sheet from the middle of its marks.
   const ca = phases(a, x, y)[0] - a.duty / 2;
   const cb = phases(b, x, y)[0] - b.duty / 2;
+  if (a.kind === 'lines' && b.kind === 'lines') {
+    const chosen = beat === undefined ? visibleBeat(a, b) : beat;
+    if (chosen) return [chosen.m * ca - chosen.n * cb + (chosen.flipped ? 0.5 : 0)];
+    // Nothing broad: fall back to the main beat, which the mask will skip.
+    return [alignedTurns(a, b) % 2 === 0 ? ca - cb : ca + cb];
+  }
   const ga = phaseGradient(a, x, y);
   const gb = phaseGradient(b, x, y);
   const diff = Math.hypot(ga[0] - gb[0], ga[1] - gb[1]);
@@ -118,15 +179,16 @@ export function fringePhase(a, b, x, y) {
 export function fringeMask(w, h, a, b, scale = 1, { lineWidth = 1.2, dotRadius = 3.5 } = {}) {
   const mask = new Uint8ClampedArray(w * h);
   if (!fringePhase(a, b, 0, 0)) return mask;
+  const beat = a.kind === 'lines' && b.kind === 'lines' ? visibleBeat(a, b) : undefined;
   const coarsest = Math.max(a.period, b.period);
   const eps = 0.5;
   for (let j = 0; j < h; j++) {
     const y = (j + 0.5) / scale;
     for (let i = 0; i < w; i++) {
       const x = (i + 0.5) / scale;
-      const p = fringePhase(a, b, x, y);
-      const px = fringePhase(a, b, x + eps, y);
-      const py = fringePhase(a, b, x, y + eps);
+      const p = fringePhase(a, b, x, y, beat);
+      const px = fringePhase(a, b, x + eps, y, beat);
+      const py = fringePhase(a, b, x, y + eps, beat);
       let dist2 = 0;
       let fine = false;
       for (let k = 0; k < p.length; k++) {

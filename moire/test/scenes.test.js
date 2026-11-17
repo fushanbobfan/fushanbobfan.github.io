@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { KINDS } from '../src/gratings.js';
 import { SCENES, sceneById, sceneLayers } from '../src/scenes.js';
 import { describe } from '../src/readout.js';
-import { latticeMoire, lineMoire, ringMoire } from '../src/moire.js';
+import { latticeMoire, lineMoire, ringMoire, visibleBeat } from '../src/moire.js';
 
 test('every scene has two valid layers and a note', () => {
   const ids = new Set();
@@ -36,6 +36,9 @@ test('the numbers quoted in scene notes match the model', () => {
   const turned = latticeMoire(da, db);
   assert.equal(Math.round(turned.sides[0]), 129);
   assert.ok(Math.abs(turned.turnDegrees - 2) < 1e-9);
+  const [ha, hb] = sceneLayers(sceneById('harmonic'), 600, 600);
+  assert.ok(Math.abs(lineMoire(ha, hb).period - 16.42) < 0.01);
+  assert.ok(Math.abs(visibleBeat(ha, hb).period - 312) < 1e-6);
   const [sa, sb] = sceneLayers(sceneById('dots-stretched'), 600, 600);
   assert.ok(Math.abs(latticeMoire(sa, sb).sides[0] - 171) < 1e-6);
 });
