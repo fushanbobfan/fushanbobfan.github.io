@@ -53,6 +53,18 @@ export function phases(layer, px, py) {
   return [u, (-dx * s + dy * c) / layer.period];
 }
 
+// How fast the phase of a line or ring grating changes at (px, py), in cycles
+// per pixel: the local spatial frequency, pointing across the marks.
+export function phaseGradient(layer, px, py) {
+  if (layer.kind === 'rings') {
+    const dx = px - layer.x;
+    const dy = py - layer.y;
+    const r = Math.hypot(dx, dy) || 1e-9;
+    return [dx / r / layer.period, dy / r / layer.period];
+  }
+  return [Math.cos(layer.angle) / layer.period, Math.sin(layer.angle) / layer.period];
+}
+
 // How much of a square pixel of side `foot`, centred on (px, py), is covered
 // by ink, from 0 (clear) to 1 (opaque).
 export function inkAt(layer, px, py, foot = 1) {
