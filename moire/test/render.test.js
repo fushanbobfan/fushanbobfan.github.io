@@ -15,9 +15,10 @@ test('high-density rendering keeps the period in CSS pixels', () => {
   // Vertical bars, period 10 CSS px, ink on [0, 5): at scale 2 the first ten
   // device pixels are inked and the next ten are clear.
   const [ink] = renderInks(40, 1, [makeLayer({ period: 10 })], 2);
-  for (let i = 0; i < 10; i++) assert.equal(ink[i], 1);
-  for (let i = 10; i < 20; i++) assert.equal(ink[i], 0);
-  assert.equal(ink[20], 1);
+  const near = (v, want) => assert.ok(Math.abs(v - want) < 1e-6, `${v} vs ${want}`);
+  for (let i = 0; i < 10; i++) near(ink[i], 1);
+  for (let i = 10; i < 20; i++) near(ink[i], 0);
+  near(ink[20], 1);
 });
 
 test('overlapping inks multiply on the light box', () => {
@@ -65,4 +66,26 @@ test('blur works on interleaved channels independently', () => {
 test('RGBA output is opaque', () => {
   const out = toRGBA(Float32Array.from([10, 20, 30]), 1);
   assert.deepEqual([...out], [10, 20, 30, 255]);
+});
+
+test('the fast renderer matches the per-pixel model', async () => {
+  const { inkAt } = await import('../src/gratings.js');
+  const layers = [
+    makeLayer({ period: 7.3, angle: 0.41, duty: 0.37, x: 11, y: -4 }),
+    makeLayer({ period: 9, angle: -2.2, duty: 0.6 }),
+    makeLayer({ kind: 'rings', period: 6.5, duty: 0.3, x: 20, y: 17 }),
+    makeLayer({ kind: 'dots', period: 8, angle: 0.2, duty: 0.4 }),
+  ];
+  for (const scale of [1, 2, 1.5]) {
+    const w = 37;
+    const inks = renderInks(w, w, layers, scale);
+    layers.forEach((layer, k) => {
+      for (let j = 0; j < w; j++) {
+        for (let i = 0; i < w; i++) {
+          const want = inkAt(layer, (i + 0.5) / scale, (j + 0.5) / scale, 1 / scale);
+          assert.ok(Math.abs(inks[k][j * w + i] - want) < 1e-4, `${layer.kind} at ${i},${j}`);
+        }
+      }
+    });
+  }
 });

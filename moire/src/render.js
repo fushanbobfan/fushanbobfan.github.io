@@ -1,18 +1,73 @@
-import { inkAt } from './gratings.js';
+import { MAX_DOT_DUTY } from './gratings.js';
 
 // Ink coverage of each layer for every device pixel of a w×h image. `scale` is
 // device pixels per CSS pixel, so a period of 10 stays 10 CSS pixels on a
 // high-density screen and each device pixel is filtered at its own size.
 export function renderInks(w, h, layers, scale = 1) {
+  return layers.map((layer) => renderInk(w, h, layer, scale));
+}
+
+// Same result as calling inkAt for every pixel, with the per-pixel work
+// unrolled: this runs on every frame of a drag.
+function renderInk(w, h, layer, scale) {
   const foot = 1 / scale;
-  return layers.map((layer) => {
-    const ink = new Float32Array(w * h);
+  const ink = new Float32Array(w * h);
+  const { period, duty } = layer;
+  if (layer.kind === 'lines') {
+    const c = Math.cos(layer.angle);
+    const s = Math.sin(layer.angle);
+    const width = (foot * (Math.abs(c) + Math.abs(s))) / period;
+    const half = width / 2;
+    const stepX = (c * foot) / period;
     for (let j = 0; j < h; j++) {
-      const y = (j + 0.5) * foot;
-      for (let i = 0; i < w; i++) ink[j * w + i] = inkAt(layer, (i + 0.5) * foot, y, foot);
+      const dy = (j + 0.5) * foot - layer.y;
+      let t = (((0.5 * foot - layer.x) * c + dy * s) / period);
+      for (let i = 0; i < w; i++, t += stepX) {
+        const lo = t - half;
+        const hi = t + half;
+        const nl = Math.floor(lo);
+        const nh = Math.floor(hi);
+        const upLo = nl * duty + Math.min(lo - nl, duty);
+        const upHi = nh * duty + Math.min(hi - nh, duty);
+        ink[j * w + i] = (upHi - upLo) / width;
+      }
     }
     return ink;
-  });
+  }
+  if (layer.kind === 'rings') {
+    const width = foot / period;
+    const half = width / 2;
+    for (let j = 0; j < h; j++) {
+      const dy = (j + 0.5) * foot - layer.y;
+      const dy2 = dy * dy;
+      for (let i = 0; i < w; i++) {
+        const dx = (i + 0.5) * foot - layer.x;
+        const t = Math.sqrt(dx * dx + dy2) / period;
+        const lo = t - half;
+        const hi = t + half;
+        const nl = Math.floor(lo);
+        const nh = Math.floor(hi);
+        ink[j * w + i] = (nh * duty + Math.min(hi - nh, duty) - nl * duty - Math.min(lo - nl, duty)) / width;
+      }
+    }
+    return ink;
+  }
+  const c = Math.cos(layer.angle) / period;
+  const s = Math.sin(layer.angle) / period;
+  const radius = period * Math.sqrt(Math.min(duty, MAX_DOT_DUTY) / Math.PI);
+  for (let j = 0; j < h; j++) {
+    const dy = (j + 0.5) * foot - layer.y;
+    for (let i = 0; i < w; i++) {
+      const dx = (i + 0.5) * foot - layer.x;
+      const u = dx * c + dy * s;
+      const v = dy * c - dx * s;
+      const du = (u - Math.round(u)) * period;
+      const dv = (v - Math.round(v)) * period;
+      const edge = (radius - Math.sqrt(du * du + dv * dv)) / foot + 0.5;
+      ink[j * w + i] = edge <= 0 ? 0 : edge >= 1 ? 1 : edge;
+    }
+  }
+  return ink;
 }
 
 // Stack the sheets on a light box: each one passes its ink colour where it is
