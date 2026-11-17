@@ -3,7 +3,7 @@ import { boxBlur, composite, renderInks, toRGBA } from './render.js';
 import { fringeMask } from './moire.js';
 import { SCENES, sceneById, sceneLayers } from './scenes.js';
 import { describe } from './readout.js';
-import { decodeState, encodeState } from './permalink.js';
+import { decodeState, encodeState, LIMITS } from './permalink.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -90,7 +90,7 @@ function draw(now) {
     // Folding the angle back by 180° would flip the bars' phase about their
     // anchor and make the pattern jump, so the angle keeps growing and only
     // the slider shows it folded.
-    top.angle += SPIN_PER_SECOND * dt;
+    top.angle = wrapTurn(top.angle + SPIN_PER_SECOND * dt);
     syncControls();
     requestDraw();
   }
@@ -129,10 +129,13 @@ function currentLink() {
   });
 }
 
+// At most four writes a second, and a steady stream of frames (turning
+// slowly) still gets one.
 let linkTimer = 0;
 function scheduleLink() {
-  clearTimeout(linkTimer);
+  if (linkTimer) return;
   linkTimer = setTimeout(() => {
+    linkTimer = 0;
     history.replaceState(null, '', `#${currentLink()}`);
   }, 250);
 }
@@ -245,7 +248,7 @@ function bindSheet(k) {
     // Apply the slider's change to the unfolded angle, so a sheet turned past
     // 90° keeps turning smoothly instead of jumping by half a turn.
     const l = state.layers[k];
-    l.angle += (Number(c.angle.value) - foldDegrees(l.angle / DEG)) * DEG;
+    l.angle = wrapTurn(l.angle + (Number(c.angle.value) - foldDegrees(l.angle / DEG)) * DEG);
     syncControls();
     requestDraw();
   });
@@ -258,15 +261,23 @@ function bindSheet(k) {
 
 function moveSheet(dx, dy) {
   const l = state.layers[state.moving];
-  l.x += dx;
-  l.y += dy;
+  const half = state.css / 2;
+  const [lo, hi] = LIMITS.offset;
+  l.x = half + Math.min(hi, Math.max(lo, l.x - half + dx));
+  l.y = half + Math.min(hi, Math.max(lo, l.y - half + dy));
   requestDraw();
+}
+
+// A whole turn leaves every pattern exactly as it was, so angles are kept
+// within half a turn of zero without any visible change.
+function wrapTurn(angle) {
+  return angle - 2 * Math.PI * Math.round(angle / (2 * Math.PI));
 }
 
 function turnTop(deltaDeg) {
   const top = state.layers[1];
   if (top.kind === 'rings') return;
-  top.angle += deltaDeg * DEG;
+  top.angle = wrapTurn(top.angle + deltaDeg * DEG);
   syncControls();
   requestDraw();
 }
@@ -349,6 +360,7 @@ $('save').addEventListener('click', () => {
 
 $('copy-link').addEventListener('click', async () => {
   clearTimeout(linkTimer);
+  linkTimer = 0;
   history.replaceState(null, '', `#${currentLink()}`);
   const status = $('link-status');
   try {

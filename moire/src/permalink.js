@@ -14,7 +14,9 @@ export const LIMITS = {
   period: [3, 30],
   duty: [0.1, 0.9],
   offset: [-4000, 4000],
-  angle: [-36000, 36000],
+  // The page keeps angles within half a turn; anything else in a link is
+  // folded the same way when it is decoded.
+  angle: [-180, 180],
 };
 
 const clamp = (v, [lo, hi]) => Math.min(hi, Math.max(lo, v));
@@ -31,6 +33,13 @@ export function encodeSheet({ kind, period, angleDeg, duty, dx, dy }) {
   return [LETTER[kind], num(period, 2), num(angleDeg, 2), num(duty, 2), num(dx, 1), num(dy, 1)].join(',');
 }
 
+// Angles already within half a turn pass through untouched, so they round-trip
+// exactly; others fold by whole turns, which leaves the pattern unchanged.
+function foldTurn(deg) {
+  if (deg >= -180 && deg <= 180) return deg;
+  return ((((deg + 180) % 360) + 360) % 360) - 180;
+}
+
 export function decodeSheet(text) {
   const parts = String(text).split(',');
   if (parts.length !== 6) return null;
@@ -42,7 +51,7 @@ export function decodeSheet(text) {
   return {
     kind,
     period: clamp(period, LIMITS.period),
-    angleDeg: clamp(angleDeg, LIMITS.angle),
+    angleDeg: foldTurn(angleDeg),
     duty: clamp(duty, LIMITS.duty),
     dx: clamp(dx, LIMITS.offset),
     dy: clamp(dy, LIMITS.offset),

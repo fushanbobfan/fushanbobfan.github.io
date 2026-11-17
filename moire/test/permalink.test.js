@@ -7,7 +7,7 @@ const sheet = (props) => ({ kind: 'lines', period: 8, angleDeg: 0, duty: 0.5, dx
 test('a view survives the round trip through a link', () => {
   const state = {
     scene: 'two-centres',
-    sheets: [sheet({ kind: 'rings', period: 10, dx: -40 }), sheet({ kind: 'dots', period: 9.25, angleDeg: 183.4, duty: 0.35, dx: 12.5, dy: -3 })],
+    sheets: [sheet({ kind: 'rings', period: 10, dx: -40 }), sheet({ kind: 'dots', period: 9.25, angleDeg: 173.4, duty: 0.35, dx: 12.5, dy: -3 })],
     blur: true,
     predict: false,
     tint: true,
@@ -43,4 +43,16 @@ test('malformed links fall back to nothing', () => {
   assert.equal(state.sheets, null);
   assert.equal(state.scene, 'turned');
   assert.deepEqual(decodeState(''), { scene: null, sheets: null, blur: false, predict: false, tint: false });
+});
+
+test('angles beyond a whole turn fold back without changing the pattern', () => {
+  assert.equal(decodeSheet('l,8,365,0.5,0,0').angleDeg, 5);
+  assert.equal(decodeSheet('l,8,-270,0.5,0,0').angleDeg, 90);
+  assert.ok(Math.abs(decodeSheet('l,8,1e300,0.5,0,0').angleDeg) <= 180);
+});
+
+test('the offsets the page allows all survive a link', () => {
+  for (const dx of [-4000, -3999.9, 0, 3999.9, 4000]) {
+    assert.equal(decodeSheet(encodeSheet(sheet({ dx }))).dx, dx);
+  }
 });
