@@ -1,0 +1,20 @@
+{
+  "name": "moire",
+  "version": "0.1.0",
+  "description": "Moiré patterns in the browser: lay one grating over another, turn or stretch it, and watch broad fringes appear whose spacing and direction follow from the difference of the two gratings.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "moire",
+    "optics",
+    "fourier",
+    "visualization",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
