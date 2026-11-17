@@ -35,3 +35,16 @@ test('mixed sheets get a qualitative account', () => {
   assert.match(describe(makeLayer({ kind: 'dots' }), makeLayer()), /dots over dots only/);
   assert.match(describe(makeLayer(), makeLayer({ kind: 'rings' })), /nearly parallel/);
 });
+
+test('a fine main beat is reported without ruling out harmonic beats', () => {
+  const text = describe(makeLayer({ period: 8, duty: 0.3 }), makeLayer({ period: 15.6, duty: 0.3 }));
+  assert.match(text, /main beat/);
+  assert.match(text, /whole multiple/);
+  assert.doesNotMatch(text, /no broad fringes form/);
+});
+
+test('unequal ring spacings are not called hyperbolas', () => {
+  const text = describe(makeLayer({ kind: 'rings', period: 10 }), makeLayer({ kind: 'rings', period: 20, x: 80 }));
+  assert.doesNotMatch(text, /hyperbolic fringes cross/);
+  assert.match(text, /no longer hyperbolas/);
+});

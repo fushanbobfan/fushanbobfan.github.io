@@ -63,18 +63,26 @@ export function latticeMoire(a, b) {
   return { edges: [e1, e2], sides: [Math.hypot(...e1), Math.hypot(...e2)], turnDegrees: turn };
 }
 
-// Two sets of rings. Along the line joining the centres the fringe phase runs
-// from −d/pB to d/pA, so that many whole fringes cross it. With shared centres
-// the fringes are rings again, spaced pA·pB / |pA − pB|.
+function wholeNumbersBetween(lo, hi) {
+  return Math.max(0, Math.floor(hi + 1e-9) - Math.ceil(lo - 1e-9) + 1);
+}
+
+// Two sets of rings. Along the line joining the centres the difference phase,
+// measured from the middle of each sheet's marks as in fringePhase, runs from
+// −d/pB to d/pA plus a shift set by the two ink widths; each whole number in
+// that range is one fringe of the difference family crossing the line. With
+// shared centres the fringes are rings again, spaced pA·pB / |pA − pB|.
 export function ringMoire(a, b) {
   const d = Math.hypot(a.x - b.x, a.y - b.y);
+  const shift = (b.duty - a.duty) / 2;
   const concentric = d < 1e-9;
   const spacing = a.period === b.period ? Infinity : (a.period * b.period) / Math.abs(a.period - b.period);
   return {
     distance: d,
     concentric,
     spacing: concentric ? spacing : null,
-    crossings: concentric ? 0 : Math.floor(d / a.period) + Math.floor(d / b.period) + 1,
+    crossings: concentric ? 0 : wholeNumbersBetween(shift - d / b.period, shift + d / a.period),
+    equalSpacing: a.period === b.period,
   };
 }
 

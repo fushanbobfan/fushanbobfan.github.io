@@ -139,3 +139,21 @@ test('the fringe mask traces curves only where the beat is broad', () => {
   // Identical sheets: no beat, nothing traced.
   assert.ok(fringeMask(40, 40, a, makeLayer({ period: 8 })).every((v) => v === 0));
 });
+
+test('ring fringe count follows the ink widths as fringePhase measures them', () => {
+  const a = makeLayer({ kind: 'rings', period: 10, duty: 0.1, x: 0, y: 0 });
+  const b = makeLayer({ kind: 'rings', period: 10, duty: 0.9, x: 82, y: 0 });
+  // Centred difference phase runs from -7.8 to 8.6: sixteen whole numbers.
+  assert.equal(ringMoire(a, b).crossings, 16);
+  // Count the whole-number crossings of the phase itself along the segment.
+  let crossings = 0;
+  let prev = null;
+  for (let x = 0.01; x <= 81.99; x += 0.01) {
+    const pa = x / 10 - 0.05;
+    const pb = (82 - x) / 10 - 0.45;
+    const diff = pa - pb;
+    if (prev !== null && Math.floor(diff) !== Math.floor(prev)) crossings++;
+    prev = diff;
+  }
+  assert.equal(crossings, 16);
+});
