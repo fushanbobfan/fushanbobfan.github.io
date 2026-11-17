@@ -3,6 +3,7 @@ import { boxBlur, composite, renderInks, toRGBA } from './render.js';
 import { fringeMask } from './moire.js';
 import { SCENES, sceneById, sceneLayers } from './scenes.js';
 import { describe } from './readout.js';
+import { decodeState, encodeState } from './permalink.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -106,6 +107,62 @@ function draw(now) {
   ctx.putImageData(image, 0, 0);
   $('readout').textContent = describe(state.layers[0], state.layers[1]);
   scheduleFringes();
+  scheduleLink();
+}
+
+// Keep the address bar in step with the view, so copying it shares the view.
+function currentLink() {
+  const half = state.css / 2;
+  return encodeState({
+    scene: state.scene.id,
+    sheets: state.layers.map((l) => ({
+      kind: l.kind,
+      period: l.period,
+      angleDeg: l.angle / DEG,
+      duty: l.duty,
+      dx: l.x - half,
+      dy: l.y - half,
+    })),
+    blur: state.blur,
+    predict: state.predict,
+    tint: state.tint,
+  });
+}
+
+let linkTimer = 0;
+function scheduleLink() {
+  clearTimeout(linkTimer);
+  linkTimer = setTimeout(() => {
+    history.replaceState(null, '', `#${currentLink()}`);
+  }, 250);
+}
+
+// Open the view a link describes. Returns false when it describes no sheets.
+function applyLink(hash) {
+  if (!hash || hash === '#') return false;
+  const link = decodeState(hash);
+  state.blur = link.blur;
+  state.predict = link.predict;
+  state.tint = link.tint;
+  $('show-blur').checked = link.blur;
+  $('show-predict').checked = link.predict;
+  $('show-tint').checked = link.tint;
+  const known = SCENES.some((s) => s.id === link.scene);
+  if (!link.sheets) {
+    loadScene(known ? sceneById(link.scene) : SCENES[0]);
+    return true;
+  }
+  state.scene = known ? sceneById(link.scene) : SCENES[0];
+  fitCanvas();
+  const half = state.css / 2;
+  state.layers = link.sheets.map((s) =>
+    makeLayer({ kind: s.kind, period: s.period, angle: s.angleDeg * DEG, duty: s.duty, x: half + s.dx, y: half + s.dy }),
+  );
+  $('scene').value = state.scene.id;
+  $('scene-note').textContent = state.scene.note;
+  syncControls();
+  requestDraw();
+  return true;
 }
 
 // The fringe prediction costs a few phase evaluations per pixel, so it waits
@@ -263,6 +320,7 @@ $('show-blur').addEventListener('change', (e) => {
 $('show-predict').addEventListener('change', (e) => {
   state.predict = e.target.checked;
   scheduleFringes();
+  scheduleLink();
 });
 $('show-tint').addEventListener('change', (e) => {
   state.tint = e.target.checked;
@@ -289,6 +347,20 @@ $('save').addEventListener('click', () => {
   });
 });
 
+$('copy-link').addEventListener('click', async () => {
+  clearTimeout(linkTimer);
+  history.replaceState(null, '', `#${currentLink()}`);
+  const status = $('link-status');
+  try {
+    await navigator.clipboard.writeText(location.href);
+    status.textContent = 'Link copied. Opening it shows these two sheets as they are now.';
+  } catch {
+    status.textContent = `Copy this link: ${location.href}`;
+  }
+});
+
+window.addEventListener('hashchange', () => applyLink(location.hash));
+
 const sceneSelect = $('scene');
 for (const scene of SCENES) sceneSelect.add(new Option(scene.name, scene.id));
 sceneSelect.addEventListener('change', () => loadScene(sceneById(sceneSelect.value)));
@@ -302,4 +374,4 @@ new ResizeObserver(() => {
   if (before[0] !== state.css || before[1] !== state.scale) requestDraw();
 }).observe(canvas);
 
-loadScene(SCENES[0]);
+if (!applyLink(location.hash)) loadScene(SCENES[0]);
