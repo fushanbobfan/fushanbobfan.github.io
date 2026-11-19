@@ -164,6 +164,7 @@ function edit(side, row, pos, delta) {
   const moved = moveChoice(state.prefs, side, row, pos, delta);
   if (moved.prefs === state.prefs) return;
   state.keepPos = moved.pos;
+  state.customPrefs = moved.prefs;
   markCustom();
   useLists(moved.prefs, true);
 }
@@ -253,7 +254,12 @@ function setup() {
   board.setAttribute('viewBox', `0 0 ${WIDTH} ${boardHeight(state.n)}`);
 
   sceneSelect.addEventListener('change', () => {
-    if (sceneSelect.value === CUSTOM) return;
+    if (sceneSelect.value === CUSTOM) {
+      // Back to the lists last edited or opened from a link.
+      chooseScene(CUSTOM);
+      useLists(state.customPrefs);
+      return;
+    }
     chooseScene(sceneSelect.value);
     deal();
   });
@@ -335,6 +341,7 @@ function setup() {
 function openLink(hash) {
   const opened = decodeLink(hash);
   if (!opened) return false;
+  state.customPrefs = opened.prefs;
   markCustom();
   state.proposer = opened.proposer;
   for (const radio of document.querySelectorAll('input[name="proposer"]')) radio.checked = radio.value === opened.proposer;
