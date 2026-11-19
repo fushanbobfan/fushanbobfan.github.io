@@ -30,6 +30,10 @@
           <button id="finish" type="button">Finish</button>
           <span id="counter" class="counter"></span>
         </div>
+        <details class="lists">
+          <summary>Everyone's preferences as text</summary>
+          <div id="pref-table"></div>
+        </details>
         <p class="legend">
           <span class="key key-held"></span> holding an offer
           <span class="key key-away"></span> turned away
@@ -48,7 +52,7 @@
           <select id="scene"></select>
         </label>
         <p id="scene-blurb" class="blurb"></p>
-        <label class="field">People on each side <output id="size-out"></output>
+        <label class="field" for="size">People on each side <output id="size-out" for="size"></output>
           <input id="size" type="range" min="2" max="8" step="1" value="6">
         </label>
         <button id="deal" type="button">Deal new preferences</button>

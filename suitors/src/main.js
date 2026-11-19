@@ -1,6 +1,6 @@
 import { deferredAcceptance, flip, replay } from './matching.js';
 import { SCENES, sceneById, LEFT_NAMES, RIGHT_NAMES } from './scenes.js';
-import { renderBoard, narrate, boardHeight, WIDTH } from './board.js';
+import { renderBoard, narrate, boardHeight, WIDTH, preferenceTable } from './board.js';
 import { compareProposers, summarize, renderComparison } from './results.js';
 
 const $ = (id) => document.getElementById(id);
@@ -21,6 +21,7 @@ const names = () => ({ left: LEFT_NAMES.slice(0, state.n), right: RIGHT_NAMES.sl
 
 function deal() {
   state.prefs = sceneById(state.sceneId).make(state.n, state.seed);
+  $('pref-table').innerHTML = preferenceTable(names(), state.prefs);
   rerun();
   renderResults();
 }

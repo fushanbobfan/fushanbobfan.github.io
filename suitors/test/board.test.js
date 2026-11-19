@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderBoard, narrate, ordinal, boardHeight } from '../src/board.js';
+import { renderBoard, narrate, ordinal, boardHeight, preferenceTable } from '../src/board.js';
 import { compareProposers, summarize, renderComparison } from '../src/results.js';
 import { deferredAcceptance, replay, flip } from '../src/matching.js';
 import { sceneById, LEFT_NAMES, RIGHT_NAMES } from '../src/scenes.js';
@@ -72,4 +72,13 @@ test('the summary says when proposing makes no difference', () => {
   assert.equal(cyc.left.leftAverage, 1);
   assert.equal(cyc.right.rightAverage, 1);
   assert.match(summarize(cyc), /^These lists have 4 stable pairings\./);
+});
+
+test('the preference table lists everyone in order, escaped', () => {
+  const html = preferenceTable(names, small);
+  assert.equal(count(html, /<tr><th scope="row">/g), 6);
+  assert.ok(html.includes('<th scope="row">Ben</th><td>Ivo</td><td>Kai</td><td>June</td>'));
+  assert.ok(html.includes('<th scope="row">Ivo</th><td>Ben</td><td>Ada</td><td>Cass</td>'));
+  const odd = preferenceTable({ left: ['<i>', 'B', 'C'], right: names.right }, small);
+  assert.ok(!odd.includes('<i>'));
 });

@@ -114,3 +114,15 @@ export function ordinal(k) {
   const v = k % 100;
   return k + (s[(v - 20) % 10] || s[v] || s[0]);
 }
+
+// The same lists as a table, for screen readers and for reading them in full.
+export function preferenceTable(names, prefs) {
+  const n = prefs.left.length;
+  const head = Array.from({ length: n }, (_, k) => `<th scope="col">${ordinal(k + 1)}</th>`).join('');
+  const body = (side, other) => prefs[side].map((list, i) => `<tr><th scope="row">${esc(names[side][i])}</th>`
+    + list.map((who) => `<td>${esc(names[other][who])}</td>`).join('') + '</tr>').join('');
+  return `<table><caption>Left side, best first</caption><thead><tr><th scope="col">Person</th>${head}</tr></thead>`
+    + `<tbody>${body('left', 'right')}</tbody></table>`
+    + `<table><caption>Right side, best first</caption><thead><tr><th scope="col">Person</th>${head}</tr></thead>`
+    + `<tbody>${body('right', 'left')}</tbody></table>`;
+}

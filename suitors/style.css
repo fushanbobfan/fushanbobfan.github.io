@@ -131,6 +131,13 @@ h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 8px; }
 .transport { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .counter { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 
+.lists { margin-top: 10px; font-size: 0.9rem; }
+.lists summary { cursor: pointer; color: var(--muted); }
+#pref-table { overflow-x: auto; }
+.lists table { border-collapse: collapse; margin: 8px 16px 4px 0; display: inline-table; font-family: system-ui, sans-serif; font-size: 0.82rem; }
+.lists caption { text-align: left; font-weight: 600; padding-bottom: 2px; }
+.lists th, .lists td { padding: 2px 6px; border-bottom: 1px solid var(--rule); text-align: left; }
+
 .legend { margin: 10px 0 0; color: var(--muted); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .key { display: inline-block; width: 22px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: -6px; }
 .key-held { border-color: var(--held); }
