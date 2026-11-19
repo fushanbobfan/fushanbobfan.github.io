@@ -22,7 +22,11 @@
           <svg id="board" class="board" viewBox="0 0 720 476" role="img" aria-labelledby="narration"></svg>
         </div>
         <p id="narration" class="narration" aria-live="polite"></p>
-        <div class="transport" role="group" aria-label="Step through the proposals">
+        <div id="hand-tools" class="transport" role="group" aria-label="Your pairing" hidden>
+          <button id="clear-hand" type="button">Clear the pairing</button>
+          <span id="hand-count" class="counter"></span>
+        </div>
+        <div id="transport" class="transport" role="group" aria-label="Step through the proposals">
           <button id="reset" type="button">Start over</button>
           <button id="back" type="button">Back</button>
           <button id="play" type="button" class="primary">Play</button>
@@ -34,7 +38,11 @@
           <summary>Everyone's preferences as text</summary>
           <div id="pref-table"></div>
         </details>
-        <p class="legend">
+        <p id="hand-legend" class="legend" hidden>
+          <span class="key key-held"></span> paired
+          <span class="key key-block"></span> blocking pair: both would rather be together
+        </p>
+        <p id="watch-legend" class="legend">
           <span class="key key-held"></span> holding an offer
           <span class="key key-away"></span> turned away
           <span class="key key-letgo"></span> let go
@@ -44,6 +52,11 @@
 
       <aside class="controls" aria-label="Settings">
         <fieldset>
+          <legend>What to do</legend>
+          <label class="check"><input type="radio" name="mode" value="watch" checked> Watch the proposals</label>
+          <label class="check"><input type="radio" name="mode" value="hand"> Pair them yourself</label>
+        </fieldset>
+        <fieldset id="proposer-set">
           <legend>Who proposes</legend>
           <label class="check"><input type="radio" name="proposer" value="left" checked> The left side</label>
           <label class="check"><input type="radio" name="proposer" value="right"> The right side</label>
@@ -68,6 +81,12 @@
       <div id="results" class="results-grid"></div>
     </section>
 
+    <section class="stable" aria-labelledby="stable-title">
+      <h2 id="stable-title">Every stable pairing</h2>
+      <p id="stable-summary"></p>
+      <ol id="stable-list" class="stable-list"></ol>
+    </section>
+
     <section class="notes">
       <h2>How it works</h2>
       <div class="note-columns">
@@ -75,6 +94,8 @@
         <p>It always ends. A proposer never asks the same person twice, so there are at most n × n proposals, and a choosing person, once asked, holds someone from then on. When nobody is left without an offer, the held offers are the pairing.</p>
         <p>The pairing is stable. Suppose a proposer and a chooser would both rather be together. The proposer, working down the list, would have asked that chooser before the partner they ended with, and the chooser only ever trades up. So the chooser ends with someone they like even more, and the pair does not block.</p>
         <p>Of all stable pairings, the one this gives is the best possible for every proposer at once and the worst possible for every chooser at once. Switch who proposes in the Opposed tastes scene to see the two extremes: one side gets all its first choices, then the other does.</p>
+        <p>Pairing by hand shows why stability is hard to hit without the method. Fixing one blocking pair by pairing its two people often breaks two other couples and creates new blocking pairs elsewhere; with a handful of people a side, most pairings have at least one.</p>
+        <p>The list of stable pairings runs from the one best for every person on the left to the one best for every person on the right. Whenever one stable pairing is at least as good as another for everyone on the left, it is at least as bad for everyone on the right: the two sides' interests are exactly opposed. Pairings in between are never what either side's proposals find, and a residency match or a school-choice system has to decide which side proposes.</p>
         <p>David Gale and Lloyd Shapley described the method in 1962. The same idea, found independently, had been matching American medical graduates to hospital residencies since the early 1950s. Shapley and Alvin Roth shared the 2012 Nobel prize in economics for the theory of stable matching and its use in residency matches, school choice and kidney exchange.</p>
       </div>
     </section>
