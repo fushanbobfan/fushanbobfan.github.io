@@ -1,0 +1,20 @@
+{
+  "name": "suitors",
+  "version": "0.1.0",
+  "description": "Stable matching in the browser: watch deferred acceptance pair two groups one proposal at a time, and see how much it matters which side proposes.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "stable-matching",
+    "gale-shapley",
+    "deferred-acceptance",
+    "game-theory",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}

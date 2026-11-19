@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>suitors: stable matching, one proposal at a time</title>
+  <meta name="description" content="Stable matching in the browser: watch deferred acceptance pair two groups one proposal at a time, and see how much it matters which side proposes.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>suitors</h1>
+    <p>Two groups, every person ranking everyone on the other side. Pair them so that no two people would both rather be with each other than with the partners they got. One side proposes, the other holds its best offer so far, and the pairing that falls out is always stable. Which side does the proposing turns out to matter a great deal.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="board-title">
+      <div class="board-column">
+        <h2 id="board-title" class="visually-hidden">The two sides and their preferences</h2>
+        <div class="board-scroll">
+          <svg id="board" class="board" viewBox="0 0 720 476" role="img" aria-labelledby="narration"></svg>
+        </div>
+        <p id="narration" class="narration" aria-live="polite"></p>
+        <div class="transport" role="group" aria-label="Step through the proposals">
+          <button id="reset" type="button">Start over</button>
+          <button id="back" type="button">Back</button>
+          <button id="play" type="button" class="primary">Play</button>
+          <button id="step" type="button">Step</button>
+          <button id="finish" type="button">Finish</button>
+          <span id="counter" class="counter"></span>
+        </div>
+        <details class="lists">
+          <summary>Everyone's preferences as text</summary>
+          <div id="pref-table"></div>
+        </details>
+        <p class="legend">
+          <span class="key key-held"></span> holding an offer
+          <span class="key key-away"></span> turned away
+          <span class="key key-letgo"></span> let go
+          <span class="key key-crossed">X</span> already asked
+        </p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <fieldset>
+          <legend>Who proposes</legend>
+          <label class="check"><input type="radio" name="proposer" value="left" checked> The left side</label>
+          <label class="check"><input type="radio" name="proposer" value="right"> The right side</label>
+        </fieldset>
+        <label class="field">Scene
+          <select id="scene"></select>
+        </label>
+        <p id="scene-blurb" class="blurb"></p>
+        <label class="field" for="size">People on each side <output id="size-out" for="size"></output>
+          <input id="size" type="range" min="2" max="8" step="1" value="6">
+        </label>
+        <button id="deal" type="button">Deal new preferences</button>
+        <label class="field">Speed
+          <input id="speed" type="range" min="1" max="10" step="1" value="5">
+        </label>
+      </aside>
+    </section>
+
+    <section class="results" aria-labelledby="results-title">
+      <h2 id="results-title">Who proposes, who gains</h2>
+      <p id="results-summary"></p>
+      <div id="results" class="results-grid"></div>
+    </section>
+
+    <section class="notes">
+      <h2>How it works</h2>
+      <div class="note-columns">
+        <p>At each step, someone on the proposing side who is not being held proposes to the best person on their list they have not asked yet. A person on the choosing side keeps the best offer they have ever had and turns down the rest. Nobody on the choosing side is ever committed: a better offer later replaces the one they hold.</p>
+        <p>It always ends. A proposer never asks the same person twice, so there are at most n × n proposals, and a choosing person, once asked, holds someone from then on. When nobody is left without an offer, the held offers are the pairing.</p>
+        <p>The pairing is stable. Suppose a proposer and a chooser would both rather be together. The proposer, working down the list, would have asked that chooser before the partner they ended with, and the chooser only ever trades up. So the chooser ends with someone they like even more, and the pair does not block.</p>
+        <p>Of all stable pairings, the one this gives is the best possible for every proposer at once and the worst possible for every chooser at once. Switch who proposes in the Opposed tastes scene to see the two extremes: one side gets all its first choices, then the other does.</p>
+        <p>David Gale and Lloyd Shapley described the method in 1962. The same idea, found independently, had been matching American medical graduates to hospital residencies since the early 1950s. Shapley and Alvin Roth shared the 2012 Nobel prize in economics for the theory of stable matching and its use in residency matches, school choice and kidney exchange.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/suitors">Source</a>
+    <a href="../">More explorables</a>
+  </footer>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
