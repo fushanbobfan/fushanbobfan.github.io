@@ -29,8 +29,12 @@ export function renderBoard(view) {
   const props = proposer;
   const x = { left: LEFT_X, right: RIGHT_X };
 
-  parts.push(`<text class="side-title" x="${LEFT_X}" y="16" text-anchor="middle">${proposer === 'left' ? 'Proposing' : 'Choosing'}</text>`);
-  parts.push(`<text class="side-title" x="${RIGHT_X}" y="16" text-anchor="middle">${proposer === 'right' ? 'Proposing' : 'Choosing'}</text>`);
+  const titles = view.titles || {
+    left: proposer === 'left' ? 'Proposing' : 'Choosing',
+    right: proposer === 'right' ? 'Proposing' : 'Choosing',
+  };
+  parts.push(`<text class="side-title" x="${LEFT_X}" y="16" text-anchor="middle">${esc(titles.left)}</text>`);
+  parts.push(`<text class="side-title" x="${RIGHT_X}" y="16" text-anchor="middle">${esc(titles.right)}</text>`);
 
   // Offers being held.
   holding.forEach((p, r) => {
@@ -60,8 +64,14 @@ export function renderBoard(view) {
       const y = rowY(k);
       const cx = x[side];
       const partner = partnerOf(side, k, props, holding);
-      const active = current && (side === props ? current.proposer === k : current.receiver === k);
-      parts.push(`<g class="person ${side}${active ? ' active' : ''}${partner < 0 ? ' single' : ''}">`);
+      const active = (current && (side === props ? current.proposer === k : current.receiver === k))
+        || (view.selected && view.selected.side === side && view.selected.k === k);
+      // In hand mode each person is a button: pick one on each side to pair them.
+      const button = view.interactive
+        ? ` role="button" tabindex="0" data-side="${side}" data-k="${k}" aria-pressed="${active ? 'true' : 'false'}"`
+          + ` aria-label="${esc(names[side][k])}, ${partner < 0 ? 'unpaired' : `paired with ${esc(names[other][partner])}`}"`
+        : '';
+      parts.push(`<g class="person ${side}${active ? ' active' : ''}${partner < 0 ? ' single' : ''}"${button}>`);
       parts.push(`<circle cx="${cx}" cy="${y}" r="${R}"/>`);
       parts.push(`<text class="initial" x="${cx}" y="${y + 5}" text-anchor="middle">${esc(names[side][k][0])}</text>`);
       // Centred above the circle, clear of the lines that leave from its inner edge.
