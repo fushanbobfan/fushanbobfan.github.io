@@ -183,7 +183,12 @@ select { padding: 5px; background: var(--paper); border: 1px solid var(--rule); 
 
 .results, .stable, .notes { margin-top: 32px; }
 
-.board [data-side] { cursor: pointer; }
+.board [data-side], .board [data-chip-side] { cursor: pointer; }
+.board [data-chip-side]:focus { outline: none; }
+.board [data-chip-side]:focus-visible rect { stroke: var(--accent); stroke-width: 3; }
+.board [data-chip-side]:hover rect { stroke: var(--accent); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.copy-status { color: var(--muted); font-size: 0.9rem; }
 .board [data-side]:focus { outline: none; }
 .board [data-side]:focus-visible circle { stroke: var(--accent); stroke-width: 4; stroke-dasharray: 3 2; }
 
