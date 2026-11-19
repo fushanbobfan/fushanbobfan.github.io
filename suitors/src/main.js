@@ -3,6 +3,7 @@ import { SCENES, sceneById, LEFT_NAMES, RIGHT_NAMES } from './scenes.js';
 import { renderBoard, narrate, boardHeight, WIDTH, preferenceTable } from './board.js';
 import { compareProposers, summarize, renderComparison } from './results.js';
 import { emptyHand, setPair, handVerdict, stableTable } from './hand.js';
+import { moveChoice, encodeLink, decodeLink } from './link.js';
 
 const $ = (id) => document.getElementById(id);
 const board = $('board');
@@ -24,13 +25,43 @@ const state = {
 
 const names = () => ({ left: LEFT_NAMES.slice(0, state.n), right: RIGHT_NAMES.slice(0, state.n) });
 
+const CUSTOM = 'custom';
+
 function deal() {
-  state.prefs = sceneById(state.sceneId).make(state.n, state.seed);
+  if (state.sceneId === CUSTOM) chooseScene('random');
+  useLists(sceneById(state.sceneId).make(state.n, state.seed));
+}
+
+// Install a set of lists: the run, the hand pairing, the tables and the link all start from them.
+function useLists(prefs, keepHand = false) {
+  state.prefs = prefs;
+  state.n = prefs.left.length;
+  $('size').value = state.n;
+  $('size-out').textContent = state.n;
   $('pref-table').innerHTML = preferenceTable(names(), state.prefs);
-  state.hand = emptyHand(state.n);
+  if (!keepHand) state.hand = emptyHand(state.n);
   state.selected = null;
   rerun();
   renderResults();
+}
+
+function chooseScene(id) {
+  state.sceneId = id;
+  $('scene').value = id;
+  $('scene-blurb').textContent = id === CUSTOM
+    ? 'Lists you have edited or opened from a link. Pick a scene or deal to start again.'
+    : sceneById(id).blurb;
+}
+
+function markCustom() {
+  const select = $('scene');
+  if (![...select.options].some((o) => o.value === CUSTOM)) select.add(new Option('Your own lists', CUSTOM));
+  chooseScene(CUSTOM);
+}
+
+function writeLink() {
+  const link = encodeLink({ prefs: state.prefs, proposer: state.proposer, mode: state.mode });
+  history.replaceState(null, '', `#${link}`);
 }
 
 function rerun() {
@@ -43,7 +74,9 @@ function rerun() {
 }
 
 function draw() {
+  writeLink();
   if (state.mode === 'hand') { drawHand(); return; }
+  if (state.mode === 'edit') { drawEdit(); return; }
   board.setAttribute('role', 'img');
   board.setAttribute('aria-labelledby', 'narration');
   board.removeAttribute('aria-label');
@@ -103,6 +136,38 @@ function drawHand() {
   $('clear-hand').disabled = paired === 0;
 }
 
+function drawEdit() {
+  const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('#board [data-chip-side]');
+  const keep = focused ? { side: focused.dataset.chipSide, row: focused.dataset.row, pos: state.keepPos ?? focused.dataset.pos } : null;
+  state.keepPos = null;
+  const { holding } = replay(state.n, state.events, state.events.length);
+  const { height, markup } = renderBoard({
+    names: names(),
+    prefs: state.prefs,
+    proposer: state.proposer,
+    holding,
+    asked: new Array(state.n).fill(0),
+    current: null,
+    editable: true,
+  });
+  board.setAttribute('viewBox', `0 0 ${WIDTH} ${height}`);
+  board.setAttribute('role', 'group');
+  board.removeAttribute('aria-labelledby');
+  board.setAttribute('aria-label', "Everyone's preference lists. Each name is a button that moves it along the list.");
+  board.innerHTML = markup;
+  if (keep) board.querySelector(`[data-chip-side="${keep.side}"][data-row="${keep.row}"][data-pos="${keep.pos}"]`)?.focus();
+  $('narration').textContent = `The lines show the pairing when the ${state.proposer} side proposes, `
+    + `found in ${state.events.length} proposals. Change a list and watch it update.`;
+}
+
+function edit(side, row, pos, delta) {
+  const moved = moveChoice(state.prefs, side, row, pos, delta);
+  if (moved.prefs === state.prefs) return;
+  state.keepPos = moved.pos;
+  markCustom();
+  useLists(moved.prefs, true);
+}
+
 function pick(side, k) {
   if (!state.selected || state.selected.side === side) {
     state.selected = state.selected && state.selected.side === side && state.selected.k === k ? null : { side, k };
@@ -119,9 +184,10 @@ function setMode(mode) {
   stop();
   state.mode = mode;
   for (const radio of document.querySelectorAll('input[name="mode"]')) radio.checked = radio.value === mode;
-  $('transport').hidden = mode === 'hand';
+  $('transport').hidden = mode !== 'watch';
   $('hand-tools').hidden = mode !== 'hand';
-  $('watch-legend').hidden = mode === 'hand';
+  $('edit-tools').hidden = mode !== 'edit';
+  $('watch-legend').hidden = mode !== 'watch';
   $('hand-legend').hidden = mode !== 'hand';
   $('proposer-set').disabled = mode === 'hand';
   draw();
@@ -187,8 +253,8 @@ function setup() {
   board.setAttribute('viewBox', `0 0 ${WIDTH} ${boardHeight(state.n)}`);
 
   sceneSelect.addEventListener('change', () => {
-    state.sceneId = sceneSelect.value;
-    $('scene-blurb').textContent = sceneById(state.sceneId).blurb;
+    if (sceneSelect.value === CUSTOM) return;
+    chooseScene(sceneSelect.value);
     deal();
   });
   $('size').addEventListener('input', () => {
@@ -198,11 +264,7 @@ function setup() {
   });
   $('deal').addEventListener('click', () => {
     state.seed = (state.seed * 7919 + 13) % 1000003;
-    if (sceneById(state.sceneId).id === 'agree' || sceneById(state.sceneId).id === 'cyclic') {
-      state.sceneId = 'random';
-      sceneSelect.value = 'random';
-      $('scene-blurb').textContent = sceneById('random').blurb;
-    }
+    if (state.sceneId === 'agree' || state.sceneId === 'cyclic') chooseScene('random');
     deal();
   });
   for (const radio of document.querySelectorAll('input[name="proposer"]')) {
@@ -222,10 +284,20 @@ function setup() {
     radio.addEventListener('change', () => setMode(radio.value));
   }
   board.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-chip-side]');
+    if (chip) { edit(chip.dataset.chipSide, Number(chip.dataset.row), Number(chip.dataset.pos), -1); return; }
     const g = e.target.closest('[data-side]');
     if (g) pick(g.dataset.side, Number(g.dataset.k));
   });
   board.addEventListener('keydown', (e) => {
+    const chip = e.target.closest('[data-chip-side]');
+    if (chip) {
+      const delta = { ArrowLeft: -1, Enter: -1, ' ': -1, ArrowRight: 1 }[e.key];
+      if (!delta) return;
+      e.preventDefault();
+      edit(chip.dataset.chipSide, Number(chip.dataset.row), Number(chip.dataset.pos), delta);
+      return;
+    }
     const g = e.target.closest('[data-side]');
     if (!g || (e.key !== 'Enter' && e.key !== ' ')) return;
     e.preventDefault();
@@ -245,7 +317,31 @@ function setup() {
     board.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
-  deal();
+  $('copy-link').addEventListener('click', async () => {
+    writeLink();
+    try {
+      await navigator.clipboard.writeText(location.href);
+      $('copy-status').textContent = 'Link copied.';
+    } catch {
+      $('copy-status').textContent = 'Copy the address bar to share these lists.';
+    }
+  });
+  window.addEventListener('hashchange', () => openLink(location.hash));
+
+  if (!openLink(location.hash)) deal();
+}
+
+// Open lists from a link; returns false when the link does not hold valid lists.
+function openLink(hash) {
+  const opened = decodeLink(hash);
+  if (!opened) return false;
+  markCustom();
+  state.proposer = opened.proposer;
+  for (const radio of document.querySelectorAll('input[name="proposer"]')) radio.checked = radio.value === opened.proposer;
+  state.mode = opened.mode;
+  useLists(opened.prefs);
+  setMode(opened.mode);
+  return true;
 }
 
 setup();

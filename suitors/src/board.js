@@ -90,7 +90,12 @@ export function renderBoard(view) {
         const strike = cls.includes('crossed')
           ? `<line class="strike" x1="${chipX + 4}" y1="${y + CHIP / 2 - 4}" x2="${chipX + CHIP - 4}" y2="${y - CHIP / 2 + 4}"/>`
           : '';
-        parts.push(`<g class="${cls}"><rect x="${chipX}" y="${y - CHIP / 2}" width="${CHIP}" height="${CHIP}" rx="4"/>`
+        // In edit mode each name on a list is a button that moves it along the list.
+        const edit = view.editable
+          ? ` role="button" tabindex="0" data-chip-side="${side}" data-row="${k}" data-pos="${pos}"`
+            + ` aria-label="${esc(names[side][k])}'s ${ordinal(pos + 1)} choice: ${esc(names[other][who])}"`
+          : '';
+        parts.push(`<g class="${cls}"${edit}><rect x="${chipX}" y="${y - CHIP / 2}" width="${CHIP}" height="${CHIP}" rx="4"/>`
           + `<text x="${chipX + CHIP / 2}" y="${y + 5}" text-anchor="middle">${esc(names[other][who][0])}</text>${strike}</g>`);
       });
     }

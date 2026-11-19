@@ -26,6 +26,9 @@
           <button id="clear-hand" type="button">Clear the pairing</button>
           <span id="hand-count" class="counter"></span>
         </div>
+        <div id="edit-tools" class="transport" role="group" aria-label="Edit the lists" hidden>
+          <span class="counter">Click a name to move it up one place. With the keyboard, focus a name and press the left or right arrow.</span>
+        </div>
         <div id="transport" class="transport" role="group" aria-label="Step through the proposals">
           <button id="reset" type="button">Start over</button>
           <button id="back" type="button">Back</button>
@@ -55,6 +58,7 @@
           <legend>What to do</legend>
           <label class="check"><input type="radio" name="mode" value="watch" checked> Watch the proposals</label>
           <label class="check"><input type="radio" name="mode" value="hand"> Pair them yourself</label>
+          <label class="check"><input type="radio" name="mode" value="edit"> Edit the lists</label>
         </fieldset>
         <fieldset id="proposer-set">
           <legend>Who proposes</legend>
@@ -69,6 +73,10 @@
           <input id="size" type="range" min="2" max="8" step="1" value="6">
         </label>
         <button id="deal" type="button">Deal new preferences</button>
+        <div class="row">
+          <button id="copy-link" type="button">Copy link</button>
+          <span id="copy-status" class="copy-status" role="status"></span>
+        </div>
         <label class="field">Speed
           <input id="speed" type="range" min="1" max="10" step="1" value="5">
         </label>
