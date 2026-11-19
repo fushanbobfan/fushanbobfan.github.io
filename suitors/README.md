@@ -38,6 +38,12 @@ Run the tests with `npm test` (Node 20 or later).
   each other than with their partners, are drawn as they appear and named
   under the board. While the pairing is unfinished, only pairs of people who
   already have partners count.
+- **Edit the lists.** Click a name on anyone's list to move it up one place,
+  or focus it and use the left and right arrow keys. The lines show the
+  pairing for the current proposing side and update with every change.
+- **Copy link.** The address always carries the lists, the proposing side and
+  the mode, so a link reopens exactly what you see. Links that do not hold a
+  valid set of lists open the default page.
 - **Every stable pairing.** All of them, from best for the left to best for
   the right, each with a button that puts it on the board.
 - **Who proposes, who gains.** Both pairings side by side, with the place on
@@ -62,6 +68,8 @@ Run the tests with `npm test` (Node 20 or later).
   goes first, and reached in at most n² − n + 1 proposals.
 - The pruned search for stable pairings agrees with brute force over all n!.
 - Blocking pairs, narration for both proposing sides, board markup and escaping.
+- Moving names along a list, and links that round-trip every scene and size
+  while refusing malformed lists.
 - Pairing and splitting by hand, the verdict text for empty, partial,
   unstable and stable pairings, and the people as labelled buttons.
 
