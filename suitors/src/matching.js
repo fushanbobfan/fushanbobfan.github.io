@@ -28,8 +28,9 @@ export function flip(prefs) {
 }
 
 // Deferred acceptance. Returns every proposal in order, so the page can replay it one step at a time.
-// Each event: { proposer, receiver, outcome: 'held' | 'swapped' | 'rejected', dropped }
-// where dropped is the proposer the receiver let go ('swapped'), or the one turned away ('rejected').
+// Each event: { proposer, receiver, outcome: 'held' | 'swapped' | 'rejected', dropped, holder }
+// where dropped is the proposer the receiver let go ('swapped') or the one turned away ('rejected'),
+// and holder is whoever the receiver was holding before this proposal (-1 for nobody).
 export function deferredAcceptance(prefs) {
   const n = validatePrefs(prefs);
   const recvRank = rankTable(prefs.right);
@@ -44,14 +45,14 @@ export function deferredAcceptance(prefs) {
     const current = holding[r];
     if (current === -1) {
       holding[r] = p;
-      events.push({ proposer: p, receiver: r, outcome: 'held', dropped: -1 });
+      events.push({ proposer: p, receiver: r, outcome: 'held', dropped: -1, holder: -1 });
     } else if (recvRank[r][p] < recvRank[r][current]) {
       holding[r] = p;
       free.push(current);
-      events.push({ proposer: p, receiver: r, outcome: 'swapped', dropped: current });
+      events.push({ proposer: p, receiver: r, outcome: 'swapped', dropped: current, holder: current });
     } else {
       free.push(p);
-      events.push({ proposer: p, receiver: r, outcome: 'rejected', dropped: p });
+      events.push({ proposer: p, receiver: r, outcome: 'rejected', dropped: p, holder: current });
     }
   }
   const match = new Array(n);
