@@ -33,6 +33,13 @@ Run the tests with `npm test` (Node 20 or later).
 - **Step, Back, Play, Finish.** Every proposal is narrated in a sentence, also
   read out to screen readers.
 - **Who proposes.** The same lists run with either side proposing.
+- **Pair them yourself.** Pick one person on each side to pair them (mouse,
+  or Tab and Enter). Blocking pairs, two people who would both rather be with
+  each other than with their partners, are drawn as they appear and named
+  under the board. While the pairing is unfinished, only pairs of people who
+  already have partners count.
+- **Every stable pairing.** All of them, from best for the left to best for
+  the right, each with a button that puts it on the board.
 - **Who proposes, who gains.** Both pairings side by side, with the place on
   their own list that each person's partner holds, the average for each side,
   and the number of stable pairings the lists allow (found by a pruned search
@@ -55,6 +62,8 @@ Run the tests with `npm test` (Node 20 or later).
   goes first, and reached in at most n² − n + 1 proposals.
 - The pruned search for stable pairings agrees with brute force over all n!.
 - Blocking pairs, narration for both proposing sides, board markup and escaping.
+- Pairing and splitting by hand, the verdict text for empty, partial,
+  unstable and stable pairings, and the people as labelled buttons.
 
 ## Background
 
