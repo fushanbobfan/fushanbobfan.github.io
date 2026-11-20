@@ -4,7 +4,7 @@ import { SCENES, sceneById, optionalRoads } from './scenes.js';
 import { openRoads, roadFlows, routeName } from './network.js';
 import { outcomes, sweep } from './equilibrium.js';
 import { renderNetwork, routeTable, roadCurve, pointOn, minutes, drivers, ROUTE_COLORS } from './draw.js';
-import { createTraffic, advance, carsPerMinute } from './traffic.js';
+import { createTraffic, advance, syncTraffic, carsPerMinute } from './traffic.js';
 import { renderChart, rangesAbove } from './chart.js';
 import { headline, toggleEffect, effectText, trendText } from './story.js';
 
@@ -62,6 +62,7 @@ function update() {
     roadFlows: flows,
     carsPerMinute: carsPerMinute(demand),
   };
+  syncTraffic(state.traffic, state.plan);
 
   const focused = document.activeElement?.closest?.('[data-road]')?.dataset.road;
   map.innerHTML = renderNetwork({ scene, open, flows });

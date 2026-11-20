@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { formula, renderNetwork, routeTable, roadCurve, pointOn, minutes } from '../src/draw.js';
-import { createTraffic, advance, MIN_VISIBLE_MINUTES } from '../src/traffic.js';
+import { createTraffic, advance, syncTraffic, MIN_VISIBLE_MINUTES } from '../src/traffic.js';
 import { renderChart, rangesAbove, niceStep } from '../src/chart.js';
 import { openRoads, roadFlows, routeName } from '../src/network.js';
 import { outcomes, sweep } from '../src/equilibrium.js';
@@ -114,4 +114,25 @@ test('chart shades where opening the link is worse', () => {
   assert.equal(count(svg, /class="worse"/g), 1);
   assert.match(svg, /10,000<\/text>/);
   assert.equal(niceStep(100, 5), 20);
+});
+
+test('changing the roads recolours kept cars, drops cars on lost routes and empties the road at zero demand', () => {
+  const planFor = (open, d) => {
+    const roads = openRoads(braess, open);
+    const o = outcomes(braess, roads, d);
+    return { routes: o.routes, flows: o.equilibrium.flows, roads: new Map(roads.map((r) => [r.id, r])), roadFlows: roadFlows(roads, o.routes, o.equilibrium.flows), carsPerMinute: 2 };
+  };
+  const s = createTraffic();
+  advance(s, planFor(new Set(), 4000), 1);
+  const lower = s.cars.find((c) => c.key === 'SB>BT');
+  assert.equal(lower.routeIndex, 1);
+  syncTraffic(s, planFor(new Set(['AB']), 4000));
+  assert.equal(lower.routeIndex, 2, 'S → B → T is third once the link adds a route');
+  advance(s, planFor(new Set(['AB']), 4000), 1);
+  assert.ok(s.cars.some((c) => c.key === 'SA>AB>BT'));
+  syncTraffic(s, planFor(new Set(), 4000));
+  assert.ok(s.cars.every((c) => c.key !== 'SA>AB>BT'), 'closing the link removes its cars at once');
+  syncTraffic(s, planFor(new Set(), 0));
+  assert.equal(s.cars.length, 0);
+  assert.equal(s.owed.size, 0);
 });
