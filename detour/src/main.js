@@ -161,10 +161,15 @@ function stopReplay() {
   $('replay').textContent = 'Replay';
 }
 
-function startReplay() {
-  stopReplay();
+// The replay shows drivers without tolls, so entering it switches tolls off.
+function dropTolls() {
   state.tolls = false;
   $('tolls').checked = false;
+}
+
+function startReplay() {
+  stopReplay();
+  dropTolls();
   state.day = 0;
   update();
   $('replay').textContent = 'Stop';
@@ -282,6 +287,7 @@ map.addEventListener('keydown', (e) => {
 $('replay').addEventListener('click', () => (dayTimer ? stopReplay() : startReplay()));
 $('day').addEventListener('input', () => {
   stopReplay();
+  dropTolls();
   state.day = Number($('day').value);
   update();
 });
