@@ -7,7 +7,8 @@ export const WIDTH = 720;
 export const HEIGHT = 420;
 const NODE_R = 19;
 
-export const ROUTE_COLORS = ['#c4643f', '#3d7a8c', '#8a3f5f', '#5f7f2e', '#b08a2e', '#6a5acd'];
+// Car colours, one per route, kept apart from the red and blue-green of the roads themselves.
+export const ROUTE_COLORS = ['#e3a21a', '#7b5cd6', '#3f9a4a', '#e0679a', '#2f7fd8', '#9a6b3a'];
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (v) => (Math.abs(v - Math.round(v)) < 1e-6 ? String(Math.round(v)) : v.toFixed(1));

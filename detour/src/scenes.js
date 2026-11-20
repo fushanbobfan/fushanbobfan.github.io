@@ -61,14 +61,14 @@ export const SCENES = [
       { id: 'T', label: 'T', x: 660, y: 210 },
     ],
     roads: [
-      { id: 'SA', from: 'S', to: 'A', a: 0, b: 0.01 },
+      { id: 'SA', from: 'S', to: 'A', a: 0, b: 0.01, labelSide: -1 },
       { id: 'SB', from: 'S', to: 'B', a: 50, b: 0 },
       { id: 'AC', from: 'A', to: 'C', a: 50, b: 0 },
       { id: 'BD', from: 'B', to: 'D', a: 0, b: 0.01 },
-      { id: 'CT', from: 'C', to: 'T', a: 0, b: 0.01 },
+      { id: 'CT', from: 'C', to: 'T', a: 0, b: 0.01, labelSide: -1 },
       { id: 'DT', from: 'D', to: 'T', a: 50, b: 0 },
       { id: 'AB', from: 'A', to: 'B', a: 0, b: 0, optional: true, name: 'the link from A to B' },
-      { id: 'DC', from: 'D', to: 'C', a: 0, b: 0, optional: true, name: 'the link from D to C' },
+      { id: 'DC', from: 'D', to: 'C', a: 0, b: 0, optional: true, name: 'the link from D to C', labelSide: -1 },
     ],
   },
 ];

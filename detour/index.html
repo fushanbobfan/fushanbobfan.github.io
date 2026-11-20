@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>detour: Braess's paradox, where a new road slows everyone down</title>
+  <meta name="description" content="Braess's paradox in the browser: open a new road, let every driver pick the fastest route, and watch everyone get slower.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>detour</h1>
+    <p>Thousands of drivers go from S to T, and each one takes whichever route is fastest for them. Open a free shortcut and every one of them can arrive later than before. Nobody makes a mistake: each driver's choice is the best one given what everyone else does, and together those choices make every trip slower.</p>
+  </header>
+
+  <main>
+    <section class="stage" aria-labelledby="map-title">
+      <div class="map-column">
+        <h2 id="map-title" class="visually-hidden">The road network</h2>
+        <div class="map-scroll">
+          <svg id="map" class="map" viewBox="0 0 720 420" role="group" aria-labelledby="map-title"></svg>
+        </div>
+        <p id="headline" class="headline" aria-live="polite"></p>
+        <p class="legend">
+          <span class="key key-crowd"></span> crowds up: slower with every car
+          <span class="key key-fixed"></span> fixed time, however busy
+          <span class="key key-closed"></span> closed: click to open
+        </p>
+      </div>
+
+      <aside class="controls" aria-label="Settings">
+        <label class="field">Scene
+          <select id="scene"></select>
+        </label>
+        <p id="scene-blurb" class="blurb"></p>
+        <fieldset id="links">
+          <legend>Roads you can open or close</legend>
+          <div id="link-list" class="link-list"></div>
+        </fieldset>
+        <label class="field" for="demand">Drivers going from S to T <output id="demand-out" for="demand"></output>
+          <input id="demand" type="range" min="0" max="10000" step="100" value="4000">
+        </label>
+        <div class="row">
+          <button id="play" type="button" class="primary">Pause</button>
+          <label class="field inline">Speed
+            <input id="speed" type="range" min="1" max="10" step="1" value="5">
+          </label>
+        </div>
+      </aside>
+    </section>
+
+    <section class="outcomes" aria-labelledby="outcomes-title">
+      <h2 id="outcomes-title">Where the drivers go</h2>
+      <div class="outcome-grid">
+        <div class="outcome">
+          <h3>Everyone picks the fastest route</h3>
+          <p class="big" id="eq-time"></p>
+          <p class="sub" id="eq-sub"></p>
+        </div>
+        <div class="outcome">
+          <h3>Best split for everyone</h3>
+          <p class="big" id="opt-time"></p>
+          <p class="sub" id="opt-sub"></p>
+        </div>
+        <div class="outcome">
+          <h3>Price of choosing alone</h3>
+          <p class="big" id="poa"></p>
+          <p class="sub">Total time when everyone picks their own fastest route, divided by the least total time any split could give. Economists call it the price of anarchy. With travel times like these it never exceeds 4/3.</p>
+        </div>
+      </div>
+      <div id="route-table" class="table-scroll"></div>
+    </section>
+
+    <section class="trend" aria-labelledby="trend-title">
+      <h2 id="trend-title">How busy does it have to be?</h2>
+      <p id="trend-summary"></p>
+      <div class="chart-scroll">
+        <svg id="chart" class="chart" viewBox="0 0 640 260" role="img" aria-labelledby="trend-summary"></svg>
+      </div>
+      <p id="chart-legend" class="legend"></p>
+    </section>
+
+    <section class="notes">
+      <h2>How it works</h2>
+      <div class="note-columns">
+        <p>Each road has a rule for how long it takes. A road marked x/100 takes one minute for every hundred cars on it: quick when empty, slow at rush hour. A road marked 45 takes 45 minutes however many cars use it, like a long highway that never fills. The free link takes no time at all.</p>
+        <p>In Braess's network 4000 drivers split evenly between the two routes, 2000 each, and every trip takes 20 + 45 = 65 minutes. Open the link from A to B. A driver at S now sees that S → A takes 20 minutes and the free link plus B → T takes 20 more: 40 minutes beats 45, so they switch. So does everyone else, until all 4000 drivers are on both crowded roads and each trip takes 40 + 0 + 40 = 80 minutes.</p>
+        <p>Nobody wants to go back. The old routes now take 40 + 45 = 85 minutes, worse than 80. This is an equilibrium, named for John Glen Wardrop, who stated it for traffic in 1952: every route in use takes the same time, and no unused route is faster. No single driver can gain by changing route, even though all of them would gain if the link were closed again.</p>
+        <p>The best split for everyone is the one that makes the total time spent on the road smallest. It differs from the equilibrium because a driver choosing a route counts only their own trip time and not the delay they add to everyone else on a crowded road. Charge each driver that extra delay as a toll, and the drivers' own choices land on the best split.</p>
+        <p>The paradox needs the right amount of traffic. With few drivers the link really helps, because the crowded roads are nearly empty. With very many drivers nobody wants the link, because the crowded roads are slower than the fixed ones. In Braess's network it hurts for anything between 3000 and 9000 drivers, which the chart shades.</p>
+        <p>How bad can choosing alone get? Tim Roughgarden and Éva Tardos proved in 2002 that when every road's time grows in a straight line with its traffic, as here, the total time at equilibrium is never more than 4/3 of the best possible. Pigou's two roads reach that bound exactly at 6000 drivers.</p>
+        <p>Dietrich Braess published the example in 1968. Planners have since pointed to cases where closing a road did not make traffic worse, such as the removal of the Cheonggyecheon elevated highway in Seoul, begun in 2003. Joel Cohen and Paul Horowitz showed in 1991 that the same paradox appears in networks of springs and strings: cut a string, and the weight it holds can rise.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/detour">Source</a>
+    <a href="../">More explorables</a>
+  </footer>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

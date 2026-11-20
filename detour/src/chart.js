@@ -2,7 +2,7 @@
 // series: [{ id, label, points: [{ demand, value }], dashed }]; marker: { demand, value } or null;
 // worse: [[from, to]] demand ranges to shade (where opening the links makes the trip slower).
 
-export const CHART = { width: 640, height: 260, left: 52, right: 16, top: 14, bottom: 40 };
+export const CHART = { width: 640, height: 260, left: 52, right: 30, top: 14, bottom: 40 };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
