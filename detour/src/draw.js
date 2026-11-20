@@ -65,6 +65,7 @@ function tangent(curve, t) {
 // view: { scene, open: Set of open optional road ids, flows: Map road id -> drivers (open roads only) }
 export function renderNetwork(view) {
   const { scene, open, flows } = view;
+  const tolls = view.tolls || null;
   const parts = [];
   const widthFor = (x) => 3 + 17 * Math.min(1, x / scene.maxDemand);
 
@@ -104,7 +105,7 @@ export function renderNetwork(view) {
     );
     parts.push(
       `<text class="now" x="${lx.toFixed(1)}" y="${(ly + 13).toFixed(1)}" text-anchor="${anchor}">${
-        isOpen ? `${esc(minutes(t))} · ${esc(drivers(x))} cars` : 'closed'
+        isOpen ? `${esc(minutes(t))} · ${esc(drivers(x))} cars${tolls && tolls.get(road.id) > 0.05 ? ` · toll ${esc(minutes(tolls.get(road.id)))}` : ''}` : 'closed'
       }</text>`
     );
     parts.push('</g>');

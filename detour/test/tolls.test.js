@@ -58,3 +58,18 @@ test('no drivers, no tolls', () => {
   assert.equal(t.tollPerDriver, 0);
   [...t.roadTolls.values()].forEach((v) => assert.equal(v, 0));
 });
+
+test('the map shows each toll and the headline compares with untolled traffic', async () => {
+  const { renderNetwork } = await import('../src/draw.js');
+  const { tollHeadline } = await import('../src/story.js');
+  const pigou = sceneById('pigou');
+  const t = tolledOutcome(pigou, pigou.roads, 6000);
+  const svg = renderNetwork({ scene: pigou, open: new Set(), flows: roadFlows(pigou.roads, t.routes, t.flows), tolls: t.roadTolls });
+  if (!/30 min · 3,000 cars · toll 30 min/.test(svg)) throw new Error('toll label missing');
+  if (/60 min · 3,000 cars · toll/.test(svg)) throw new Error('fixed road should carry no toll');
+  assert.equal(
+    tollHeadline(t, 60, 6000),
+    'Each crowded road charges the delay its drivers cause. 6,000 drivers now take 45 min per trip on average, against 60 min without tolls. On top of that each pays a toll worth 15 min on average: money that goes to the road owner, where the delay it replaces was time nobody got back.'
+  );
+  assert.match(tollHeadline(t, 60, 0), /no tolls/);
+});
