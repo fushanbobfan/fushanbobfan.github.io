@@ -16,6 +16,8 @@ test('road rules read the way a person would write them', () => {
   assert.equal(formula({ a: 0, b: 0 }), '0');
   assert.equal(formula({ a: 10, b: 0.02 }), '10 + x/50');
   assert.equal(minutes(64.6875), '64.7 min');
+  assert.equal(minutes(79.98), '80 min');
+  assert.equal(minutes(-0.01), '0 min');
 });
 
 test('the network shows every road, marks the closed link and gives it a button role', () => {

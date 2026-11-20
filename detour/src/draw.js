@@ -11,7 +11,10 @@ const NODE_R = 19;
 export const ROUTE_COLORS = ['#e3a21a', '#7b5cd6', '#3f9a4a', '#e0679a', '#2f7fd8', '#9a6b3a'];
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const fmt = (v) => (Math.abs(v - Math.round(v)) < 1e-6 ? String(Math.round(v)) : v.toFixed(1));
+const fmt = (v) => {
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+};
 
 // "x/100", "45", "10 + x/50": the rule for a road's minutes with x drivers on it.
 export function formula(road) {
