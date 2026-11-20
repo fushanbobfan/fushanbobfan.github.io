@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { learn, nextDay, carryOver, replayStart } from '../src/learning.js';
-import { dayText, replayPrompt } from '../src/story.js';
+import { dayText, replayPrompt, replayHeadline } from '../src/story.js';
 import { renderChart } from '../src/chart.js';
 import { openRoads, routes, routeName } from '../src/network.js';
 import { outcomes } from '../src/equilibrium.js';
@@ -91,4 +91,22 @@ test('the chart can run against days', () => {
   assert.match(svg, />day<\/text>/);
   assert.match(svg, /style="stroke:#e3a21a"/);
   assert.match(svg, />50<\/text>/);
+});
+
+test('an empty but faster route keeps the narration from calling the traffic settled', () => {
+  const ladder = sceneById('ladder');
+  const roads = openRoads(ladder, new Set());
+  const r = routes(ladder, roads);
+  const names = r.map((x) => routeName(ladder, x));
+  // Everyone on S → A → C → T; S → B → D → T is empty and much faster.
+  const h = [{ day: 0, flows: [10300, 0], times: [256, 100], perDriver: 256 }, { day: 1, flows: [10300, 0], times: [256, 100], perDriver: 256 }];
+  const text = dayText(h, 1, names, 'even', 150);
+  assert.match(text, /S → B → D → T is fastest at 100 min with 0 drivers; S → A → C → T takes 256 min/);
+  assert.match(text, /Still on its way/);
+});
+
+test('the map headline speaks of the replay day while one is shown', () => {
+  const start = replayStart(braess, closed, opened, 4000);
+  const h = learn(opened, start.routes, start.flows, { days: 5 });
+  assert.equal(replayHeadline(h, 0, 80), 'Day 0 of the replay: 65 min per driver on average. Once the traffic settles every trip takes 80 min.');
 });

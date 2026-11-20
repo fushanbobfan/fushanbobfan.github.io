@@ -6,7 +6,7 @@ import { outcomes, sweep } from './equilibrium.js';
 import { renderNetwork, routeTable, roadCurve, pointOn, minutes, drivers, ROUTE_COLORS } from './draw.js';
 import { createTraffic, advance, syncTraffic, carsPerMinute } from './traffic.js';
 import { renderChart, rangesAbove } from './chart.js';
-import { headline, toggleEffect, effectText, trendText, dayText, replayPrompt } from './story.js';
+import { headline, toggleEffect, effectText, trendText, dayText, replayPrompt, replayHeadline } from './story.js';
 import { learn, replayStart } from './learning.js';
 
 const DAYS = 50;
@@ -83,10 +83,12 @@ function update() {
   if (focused) map.querySelector(`[data-road="${focused}"]`)?.focus();
 
   $('demand-out').textContent = drivers(demand);
-  $('headline').textContent = headline(scene, open, demand);
+  $('headline').textContent =
+    state.day !== null && demand > 0 ? replayHeadline(history, state.day, o.equilibrium.perDriver) : headline(scene, open, demand);
 
   const opts = optionalRoads(scene);
   $('links').hidden = opts.length === 0;
+  const focusedToggle = document.activeElement?.dataset?.toggle;
   $('link-list').innerHTML = opts
     .map((r) => {
       const on = open.has(r.id);
@@ -94,6 +96,7 @@ function update() {
       return `<div class="link-item"><button type="button" data-toggle="${r.id}" aria-pressed="${on}">${on ? 'Close' : 'Open'} ${r.name}</button><p class="effect">${effect}</p></div>`;
     })
     .join('');
+  if (focusedToggle) $('link-list').querySelector(`[data-toggle="${focusedToggle}"]`)?.focus();
 
   $('eq-time').textContent = demand > 0 ? minutes(o.equilibrium.perDriver) : '–';
   $('eq-sub').textContent = demand > 0 ? `per driver; ${drivers(o.equilibrium.total / 60)} hours on the road in all` : '';

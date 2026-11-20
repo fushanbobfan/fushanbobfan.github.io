@@ -60,7 +60,8 @@ export function dayText(history, day, names, start, settled) {
       ? `Day 0: traffic as it had settled before the new roads opened, ${minutes(h.perDriver)} per driver. Overnight they open.`
       : `Day 0: drivers spread evenly over the routes, ${minutes(h.perDriver)} per driver on average.`;
   }
-  const fastest = used.reduce((b, i) => (h.times[i] < h.times[b] ? i : b), used[0]);
+  // The fastest route counts empty ones too: an empty route that is quicker still draws drivers.
+  const fastest = h.times.reduce((b, t, i) => (t < h.times[b] ? i : b), 0);
   const slowest = used.reduce((b, i) => (h.times[i] > h.times[b] ? i : b), used[0]);
   let text = `Day ${day}: ${minutes(h.perDriver)} per driver on average.`;
   if (h.times[slowest] - h.times[fastest] < 0.05) {
@@ -83,4 +84,9 @@ export function replayPrompt(history, start, settled) {
       : `The even split is already the equilibrium here: ${from} per driver.`;
   }
   return `Press Replay to watch the drivers get from ${from} to ${minutes(settled)}, one morning at a time.`;
+}
+
+// The line under the map while it shows a day of the replay.
+export function replayHeadline(history, day, settled) {
+  return `Day ${day} of the replay: ${minutes(history[day].perDriver)} per driver on average. Once the traffic settles every trip takes ${minutes(settled)}.`;
 }
