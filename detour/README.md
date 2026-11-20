@@ -41,6 +41,10 @@ Run the tests with `npm test` (Node 20 or later).
   and each morning move a share of the drivers on slower routes to the fastest
   one. Step through the days with the slider and watch the map follow; turn up
   how readily drivers switch and they overshoot.
+- **Tolls.** Tick the toll box and every crowded road charges the delay its
+  drivers cause (`b·x` minutes, at the best split's traffic). Drivers who
+  minimise time plus toll then land exactly on the best split; the map shows
+  each toll and the headline compares trip times with and without tolls.
 - **How busy does it have to be?** Minutes per driver against demand with the
   optional roads all closed and all open, shading the range where opening
   them makes trips slower.
