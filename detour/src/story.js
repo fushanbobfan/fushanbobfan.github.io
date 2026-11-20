@@ -49,3 +49,29 @@ export function trendText(scene, worse) {
     ? `Minutes per driver as traffic grows, with every optional road closed and with every one open. Opening them makes trips slower from about ${range} drivers (shaded).`
     : 'Minutes per driver as traffic grows, with every optional road closed and with every one open. Here opening them never makes trips slower.';
 }
+
+// What happened on one day of a replay.
+// history: from learn(); names: route names; start: 'closed' | 'even'; settled: equilibrium minutes per driver.
+export function dayText(history, day, names, start, settled) {
+  const h = history[day];
+  const used = h.flows.map((f, i) => i).filter((i) => h.flows[i] > 0.5);
+  if (day === 0) {
+    return start === 'closed'
+      ? `Day 0: traffic as it had settled before the new roads opened, ${minutes(h.perDriver)} per driver. Overnight they open.`
+      : `Day 0: drivers spread evenly over the routes, ${minutes(h.perDriver)} per driver on average.`;
+  }
+  const fastest = used.reduce((b, i) => (h.times[i] < h.times[b] ? i : b), used[0]);
+  const slowest = used.reduce((b, i) => (h.times[i] > h.times[b] ? i : b), used[0]);
+  let text = `Day ${day}: ${minutes(h.perDriver)} per driver on average.`;
+  if (h.times[slowest] - h.times[fastest] < 0.05) {
+    text += ` Every route in use takes ${minutes(h.times[fastest])}, so nobody gains by switching.`;
+  } else {
+    text += ` ${names[fastest]} is fastest at ${minutes(h.times[fastest])} with ${drivers(h.flows[fastest])} drivers; ${names[slowest]} takes ${minutes(h.times[slowest])}, so some of its drivers will switch tomorrow.`;
+  }
+  if (day === history.length - 1) {
+    text += Math.abs(h.perDriver - settled) < 0.5
+      ? ` The traffic has settled at the equilibrium, ${minutes(settled)}.`
+      : ` Still on its way to the equilibrium, ${minutes(settled)}.`;
+  }
+  return text;
+}

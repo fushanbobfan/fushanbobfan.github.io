@@ -13,7 +13,8 @@ export function niceStep(span, ticks) {
   return (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
 }
 
-export function renderChart({ series, marker, worse, maxDemand }) {
+// Options xLabel and xFormat let the same chart run against days instead of drivers.
+export function renderChart({ series, marker, worse, maxDemand, xLabel = 'drivers going from S to T', xFormat = (d) => d.toLocaleString('en-US') }) {
   const { width, height, left, right, top, bottom } = CHART;
   const all = series.flatMap((s) => s.points.map((p) => p.value));
   const yMax = Math.max(10, ...all) * 1.08;
@@ -30,16 +31,17 @@ export function renderChart({ series, marker, worse, maxDemand }) {
     parts.push(`<line class="grid" x1="${left}" x2="${width - right}" y1="${ys(v).toFixed(1)}" y2="${ys(v).toFixed(1)}"/>`);
     parts.push(`<text class="tick" x="${left - 6}" y="${(ys(v) + 4).toFixed(1)}" text-anchor="end">${v}</text>`);
   }
-  const xStep = niceStep(maxDemand, 5);
+  const xStep = Math.max(1, niceStep(maxDemand, 5));
   for (let d = 0; d <= maxDemand + 1e-9; d += xStep) {
-    parts.push(`<text class="tick" x="${xs(d).toFixed(1)}" y="${height - bottom + 16}" text-anchor="middle">${d.toLocaleString('en-US')}</text>`);
+    parts.push(`<text class="tick" x="${xs(d).toFixed(1)}" y="${height - bottom + 16}" text-anchor="middle">${esc(xFormat(d))}</text>`);
   }
-  parts.push(`<text class="axis" x="${(left + width - right) / 2}" y="${height - 6}" text-anchor="middle">drivers going from S to T</text>`);
+  parts.push(`<text class="axis" x="${(left + width - right) / 2}" y="${height - 6}" text-anchor="middle">${esc(xLabel)}</text>`);
   parts.push(`<text class="axis" transform="translate(14 ${(top + height - bottom) / 2}) rotate(-90)" text-anchor="middle">minutes per driver</text>`);
 
   for (const s of series) {
     const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${xs(p.demand).toFixed(1)} ${ys(p.value).toFixed(1)}`).join(' ');
-    parts.push(`<path class="series ${esc(s.id)}${s.dashed ? ' dashed' : ''}" d="${d}"><title>${esc(s.label)}</title></path>`);
+    const colour = s.color ? ` style="stroke:${esc(s.color)}"` : '';
+    parts.push(`<path class="series ${esc(s.id)}${s.dashed ? ' dashed' : ''}"${colour} d="${d}"><title>${esc(s.label)}</title></path>`);
   }
   if (marker) {
     parts.push(`<line class="now" x1="${xs(marker.demand).toFixed(1)}" x2="${xs(marker.demand).toFixed(1)}" y1="${top}" y2="${height - bottom}"/>`);
