@@ -68,10 +68,19 @@ export function dayText(history, day, names, start, settled) {
   } else {
     text += ` ${names[fastest]} is fastest at ${minutes(h.times[fastest])} with ${drivers(h.flows[fastest])} drivers; ${names[slowest]} takes ${minutes(h.times[slowest])}, so some of its drivers will switch tomorrow.`;
   }
-  if (day === history.length - 1) {
-    text += Math.abs(h.perDriver - settled) < 0.5
-      ? ` The traffic has settled at the equilibrium, ${minutes(settled)}.`
-      : ` Still on its way to the equilibrium, ${minutes(settled)}.`;
+  if (day === history.length - 1 && h.times[slowest] - h.times[fastest] >= 0.05) {
+    text += ` Still on its way to the equilibrium, ${minutes(settled)}.`;
   }
   return text;
+}
+
+// The line under the replay controls while the map shows the settled traffic.
+export function replayPrompt(history, start, settled) {
+  const from = minutes(history[0].perDriver);
+  if (Math.abs(history[0].perDriver - settled) < 0.05) {
+    return start === 'closed'
+      ? `Opening these roads changes nothing here: trips stay at ${from}.`
+      : `The even split is already the equilibrium here: ${from} per driver.`;
+  }
+  return `Press Replay to watch the drivers get from ${from} to ${minutes(settled)}, one morning at a time.`;
 }

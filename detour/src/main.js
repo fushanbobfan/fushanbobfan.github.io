@@ -6,7 +6,10 @@ import { outcomes, sweep } from './equilibrium.js';
 import { renderNetwork, routeTable, roadCurve, pointOn, minutes, drivers, ROUTE_COLORS } from './draw.js';
 import { createTraffic, advance, syncTraffic, carsPerMinute } from './traffic.js';
 import { renderChart, rangesAbove } from './chart.js';
-import { headline, toggleEffect, effectText, trendText } from './story.js';
+import { headline, toggleEffect, effectText, trendText, dayText, replayPrompt } from './story.js';
+import { learn, replayStart } from './learning.js';
+
+const DAYS = 50;
 
 const $ = (id) => document.getElementById(id);
 const map = $('map');
@@ -25,11 +28,18 @@ const state = {
   traffic: createTraffic(),
   plan: null,
   curves: new Map(),
+  day: null,
+  replay: null,
 };
+
+let dayTimer = null;
+const eagerness = () => Number($('eager').value) / 10;
 
 for (const s of SCENES) sceneSelect.add(new Option(s.name, s.id));
 
 function setScene(id) {
+  stopReplay();
+  state.day = null;
   state.scene = sceneById(id);
   state.open = new Set();
   state.demand = state.scene.demand;
@@ -54,10 +64,14 @@ function update() {
   const { scene, open, demand } = state;
   const roads = openRoads(scene, open);
   const o = outcomes(scene, roads, demand);
-  const flows = roadFlows(roads, o.routes, o.equilibrium.flows);
+  const start = replayStart(scene, openRoads(scene, new Set()), roads, demand);
+  const history = learn(roads, start.routes, start.flows, { days: DAYS, rate: eagerness() });
+  state.replay = { history, start, names: o.routes.map((r) => routeName(scene, r)), settled: o.equilibrium.perDriver };
+  const shown = state.day === null ? o.equilibrium.flows : history[state.day].flows;
+  const flows = roadFlows(roads, o.routes, shown);
   state.plan = {
     routes: o.routes,
-    flows: o.equilibrium.flows,
+    flows: shown,
     roads: new Map(roads.map((r) => [r.id, r])),
     roadFlows: flows,
     carsPerMinute: carsPerMinute(demand),
@@ -89,6 +103,66 @@ function update() {
   $('poa').textContent = ratio.toFixed(3);
   $('route-table').innerHTML = routeTable(o.routes.map((r) => routeName(scene, r)), o.equilibrium, o.optimum);
   renderTrendMarker(o.equilibrium.perDriver);
+  renderDays();
+}
+
+function renderDays() {
+  const { history, start, names, settled } = state.replay;
+  const replaying = state.day !== null;
+  map.closest('.map-column').classList.toggle('replaying', replaying);
+  $('day-badge').hidden = !replaying;
+  $('day-badge').textContent = replaying ? `Showing day ${state.day} of the replay below.` : '';
+  $('day').value = replaying ? state.day : DAYS;
+  $('day-out').textContent = replaying ? String(state.day) : 'settled';
+  $('eager-out').textContent = `${Math.round(eagerness() * 100)}%`;
+  const hasLinks = optionalRoads(state.scene).length > 0;
+  $('days-intro').textContent =
+    start.from === 'closed'
+      ? `Start from the traffic as it had settled with the optional roads closed, open the ones that are open now, and let the drivers adjust one morning at a time. Each line is one route's trip time; the dashed line is the average.`
+      : `Start with the drivers spread evenly over the routes and let them adjust one morning at a time. Each line is one route's trip time; the dashed line is the average.${hasLinks ? ' Open a link to replay how drivers find it.' : ''}`;
+  $('day-narration').textContent =
+    state.demand <= 0 ? '' : replaying ? dayText(history, state.day, names, start.from, settled) : replayPrompt(history, start.from, settled);
+  const series = names.map((name, i) => ({
+    id: `route-${i}`,
+    label: name,
+    color: ROUTE_COLORS[i % ROUTE_COLORS.length],
+    points: history.map((h) => ({ demand: h.day, value: h.times[i] })),
+  }));
+  series.push({ id: 'best', label: 'Average per driver', dashed: true, points: history.map((h) => ({ demand: h.day, value: h.perDriver })) });
+  const at = replaying ? state.day : DAYS;
+  $('days-chart').innerHTML = renderChart({
+    series,
+    worse: [],
+    marker: { demand: at, value: history[at].perDriver },
+    maxDemand: DAYS,
+    xLabel: 'day',
+    xFormat: String,
+  });
+  $('days-legend').innerHTML = names
+    .map((n, i) => `<span class="key key-route" style="border-color:${ROUTE_COLORS[i % ROUTE_COLORS.length]}"></span> ${n}`)
+    .concat(['<span class="key key-s-best"></span> average per driver'])
+    .join(' ');
+}
+
+function stopReplay() {
+  if (dayTimer) clearInterval(dayTimer);
+  dayTimer = null;
+  $('replay').textContent = 'Replay';
+}
+
+function startReplay() {
+  stopReplay();
+  state.day = 0;
+  update();
+  $('replay').textContent = 'Stop';
+  dayTimer = setInterval(() => {
+    if (state.day >= DAYS) {
+      stopReplay();
+      return;
+    }
+    state.day += 1;
+    update();
+  }, 450);
 }
 
 let trend = null;
@@ -191,6 +265,19 @@ map.addEventListener('keydown', (e) => {
     toggle(g.dataset.road);
   }
 });
+
+$('replay').addEventListener('click', () => (dayTimer ? stopReplay() : startReplay()));
+$('day').addEventListener('input', () => {
+  stopReplay();
+  state.day = Number($('day').value);
+  update();
+});
+$('settled').addEventListener('click', () => {
+  stopReplay();
+  state.day = null;
+  update();
+});
+$('eager').addEventListener('input', update);
 
 playButton.textContent = state.playing ? 'Pause' : 'Play';
 setScene(SCENES[0].id);

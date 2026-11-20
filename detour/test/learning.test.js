@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { learn, nextDay, carryOver, replayStart } from '../src/learning.js';
-import { dayText } from '../src/story.js';
+import { dayText, replayPrompt } from '../src/story.js';
 import { renderChart } from '../src/chart.js';
 import { openRoads, routes, routeName } from '../src/network.js';
 import { outcomes } from '../src/equilibrium.js';
@@ -71,7 +71,12 @@ test('day narration', () => {
   const names = start.routes.map((r) => routeName(braess, r));
   assert.equal(dayText(h, 0, names, 'closed', 80), 'Day 0: traffic as it had settled before the new roads opened, 65 min per driver. Overnight they open.');
   assert.match(dayText(h, 1, names, 'closed', 80), /^Day 1: .* S → A → B → T is fastest at .*so some of its drivers will switch tomorrow\.$/);
-  assert.match(dayText(h, 50, names, 'closed', 80), /settled at the equilibrium, 80 min\.$/);
+  assert.match(dayText(h, 50, names, 'closed', 80), /Still on its way to the equilibrium, 80 min\.$/);
+  const fast = learn(opened, start.routes, start.flows, { days: 200, rate: 0.5 });
+  assert.match(dayText(fast, 200, names, 'closed', 80), /Every route in use takes 80 min, so nobody gains by switching\.$/);
+  assert.equal(replayPrompt(h, 'closed', 80), 'Press Replay to watch the drivers get from 65 min to 80 min, one morning at a time.');
+  const flat = learn(closed, routes(braess, closed), [2000, 2000], { days: 5 });
+  assert.match(replayPrompt(flat, 'even', 65), /already the equilibrium/);
 });
 
 test('the chart can run against days', () => {
