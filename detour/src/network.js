@@ -37,12 +37,13 @@ export function routes(scene, roads) {
   return found;
 }
 
-// A route's name, read off its nodes: "S → A → T".
+// A route's name, read off its nodes ("S → A → T"), with the road's own name where two roads join the same nodes.
 export function routeName(scene, route) {
   const byId = new Map(scene.roads.map((r) => [r.id, r]));
   const label = (id) => scene.nodes.find((n) => n.id === id).label;
   const nodes = [scene.source, ...route.map((id) => byId.get(id).to)];
-  return nodes.map(label).join(' → ');
+  const via = route.map((id) => byId.get(id).via).filter(Boolean);
+  return nodes.map(label).join(' → ') + (via.length ? ` by the ${via.join(' and ')}` : '');
 }
 
 // Drivers on each road, given drivers on each route.

@@ -49,3 +49,44 @@ export function trendText(scene, worse) {
     ? `Minutes per driver as traffic grows, with every optional road closed and with every one open. Opening them makes trips slower from about ${range} drivers (shaded).`
     : 'Minutes per driver as traffic grows, with every optional road closed and with every one open. Here opening them never makes trips slower.';
 }
+
+// What happened on one day of a replay.
+// history: from learn(); names: route names; start: 'closed' | 'even'; settled: equilibrium minutes per driver.
+export function dayText(history, day, names, start, settled) {
+  const h = history[day];
+  const used = h.flows.map((f, i) => i).filter((i) => h.flows[i] > 0.5);
+  if (day === 0) {
+    return start === 'closed'
+      ? `Day 0: traffic as it had settled before the new roads opened, ${minutes(h.perDriver)} per driver. Overnight they open.`
+      : `Day 0: drivers spread evenly over the routes, ${minutes(h.perDriver)} per driver on average.`;
+  }
+  // The fastest route counts empty ones too: an empty route that is quicker still draws drivers.
+  const fastest = h.times.reduce((b, t, i) => (t < h.times[b] ? i : b), 0);
+  const slowest = used.reduce((b, i) => (h.times[i] > h.times[b] ? i : b), used[0]);
+  let text = `Day ${day}: ${minutes(h.perDriver)} per driver on average.`;
+  if (h.times[slowest] - h.times[fastest] < 0.05) {
+    text += ` Every route in use takes ${minutes(h.times[fastest])}, so nobody gains by switching.`;
+  } else {
+    text += ` ${names[fastest]} is fastest at ${minutes(h.times[fastest])} with ${drivers(h.flows[fastest])} drivers; ${names[slowest]} takes ${minutes(h.times[slowest])}, so some of its drivers will switch tomorrow.`;
+  }
+  if (day === history.length - 1 && h.times[slowest] - h.times[fastest] >= 0.05) {
+    text += ` Still on its way to the equilibrium, ${minutes(settled)}.`;
+  }
+  return text;
+}
+
+// The line under the replay controls while the map shows the settled traffic.
+export function replayPrompt(history, start, settled) {
+  const from = minutes(history[0].perDriver);
+  if (Math.abs(history[0].perDriver - settled) < 0.05) {
+    return start === 'closed'
+      ? `Opening these roads changes nothing here: trips stay at ${from}.`
+      : `The even split is already the equilibrium here: ${from} per driver.`;
+  }
+  return `Press Replay to watch the drivers get from ${from} to ${minutes(settled)}, one morning at a time.`;
+}
+
+// The line under the map while it shows a day of the replay.
+export function replayHeadline(history, day, settled) {
+  return `Day ${day} of the replay: ${minutes(history[day].perDriver)} per driver on average. Once the traffic settles every trip takes ${minutes(settled)}.`;
+}

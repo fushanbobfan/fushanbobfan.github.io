@@ -132,6 +132,7 @@ h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 8px; }
 .key-s-open { border-color: var(--accent); }
 .key-s-best { border-color: var(--ink); border-top-style: dashed; border-top-width: 2px; }
 .key-worse { height: 12px; border: 0; background: var(--worse); }
+.key-route { border-top-width: 3px; }
 .key-now { width: 10px; height: 10px; border: 0; border-radius: 50%; background: var(--ink); margin-right: 0; }
 
 .controls {
@@ -172,7 +173,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 
 select { padding: 5px; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; }
 
-.outcomes, .trend, .notes { margin-top: 32px; }
+.outcomes, .days, .trend, .notes { margin-top: 32px; }
+.days > p { max-width: 70ch; }
+.days-controls { align-items: flex-end; margin: 8px 0; }
+.days-controls .field.inline { min-width: 180px; }
+.map-column.replaying .map { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.day-badge { margin: 6px 0 0; font-size: 0.9rem; color: var(--accent); }
 .trend > p { max-width: 70ch; }
 
 .outcome-grid {

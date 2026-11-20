@@ -36,6 +36,11 @@ Run the tests with `npm test` (Node 20 or later).
   fastest route (the Wardrop equilibrium) and for the split that makes the
   total time smallest, their ratio (the price of anarchy), and a table of
   every route.
+- **Day by day.** Replay how drivers find the equilibrium: start from the
+  traffic as it had settled before the open roads opened (or an even split),
+  and each morning move a share of the drivers on slower routes to the fastest
+  one. Step through the days with the slider and watch the map follow; turn up
+  how readily drivers switch and they overshoot.
 - **How busy does it have to be?** Minutes per driver against demand with the
   optional roads all closed and all open, shading the range where opening
   them makes trips slower.
