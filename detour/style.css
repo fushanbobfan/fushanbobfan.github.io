@@ -152,6 +152,7 @@ legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field.inline { flex: 1; }
 .field output { color: var(--muted); font-variant-numeric: tabular-nums; }
+.check { display: flex; gap: 8px; align-items: baseline; }
 .blurb { margin: -6px 0 0; color: var(--muted); font-size: 0.9rem; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 

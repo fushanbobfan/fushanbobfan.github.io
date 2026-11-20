@@ -6,7 +6,8 @@ import { outcomes, sweep } from './equilibrium.js';
 import { renderNetwork, routeTable, roadCurve, pointOn, minutes, drivers, ROUTE_COLORS } from './draw.js';
 import { createTraffic, advance, syncTraffic, carsPerMinute } from './traffic.js';
 import { renderChart, rangesAbove } from './chart.js';
-import { headline, toggleEffect, effectText, trendText, dayText, replayPrompt, replayHeadline } from './story.js';
+import { headline, toggleEffect, effectText, trendText, dayText, replayPrompt, replayHeadline, tollHeadline } from './story.js';
+import { tolledOutcome } from './tolls.js';
 import { learn, replayStart } from './learning.js';
 
 const DAYS = 50;
@@ -29,6 +30,7 @@ const state = {
   plan: null,
   curves: new Map(),
   day: null,
+  tolls: false,
   replay: null,
 };
 
@@ -67,7 +69,8 @@ function update() {
   const start = replayStart(scene, openRoads(scene, new Set()), roads, demand);
   const history = learn(roads, start.routes, start.flows, { days: DAYS, rate: eagerness() });
   state.replay = { history, start, names: o.routes.map((r) => routeName(scene, r)), settled: o.equilibrium.perDriver };
-  const shown = state.day === null ? o.equilibrium.flows : history[state.day].flows;
+  const tolled = state.tolls ? tolledOutcome(scene, roads, demand) : null;
+  const shown = state.day !== null ? history[state.day].flows : tolled ? tolled.flows : o.equilibrium.flows;
   const flows = roadFlows(roads, o.routes, shown);
   state.plan = {
     routes: o.routes,
@@ -79,12 +82,16 @@ function update() {
   syncTraffic(state.traffic, state.plan);
 
   const focused = document.activeElement?.closest?.('[data-road]')?.dataset.road;
-  map.innerHTML = renderNetwork({ scene, open, flows });
+  map.innerHTML = renderNetwork({ scene, open, flows, tolls: tolled ? tolled.roadTolls : null });
   if (focused) map.querySelector(`[data-road="${focused}"]`)?.focus();
 
   $('demand-out').textContent = drivers(demand);
   $('headline').textContent =
-    state.day !== null && demand > 0 ? replayHeadline(history, state.day, o.equilibrium.perDriver) : headline(scene, open, demand);
+    state.day !== null && demand > 0
+      ? replayHeadline(history, state.day, o.equilibrium.perDriver)
+      : tolled
+        ? tollHeadline(tolled, o.equilibrium.perDriver, demand)
+        : headline(scene, open, demand);
 
   const opts = optionalRoads(scene);
   $('links').hidden = opts.length === 0;
@@ -92,7 +99,8 @@ function update() {
   $('link-list').innerHTML = opts
     .map((r) => {
       const on = open.has(r.id);
-      const effect = demand > 0 ? effectText(toggleEffect(scene, open, demand, r.id)) : '';
+      const said = demand > 0 ? effectText(toggleEffect(scene, open, demand, r.id)) : '';
+      const effect = said && state.tolls ? `Without tolls: ${said.charAt(0).toLowerCase()}${said.slice(1)}` : said;
       return `<div class="link-item"><button type="button" data-toggle="${r.id}" aria-pressed="${on}">${on ? 'Close' : 'Open'} ${r.name}</button><p class="effect">${effect}</p></div>`;
     })
     .join('');
@@ -153,8 +161,15 @@ function stopReplay() {
   $('replay').textContent = 'Replay';
 }
 
+// The replay shows drivers without tolls, so entering it switches tolls off.
+function dropTolls() {
+  state.tolls = false;
+  $('tolls').checked = false;
+}
+
 function startReplay() {
   stopReplay();
+  dropTolls();
   state.day = 0;
   update();
   $('replay').textContent = 'Stop';
@@ -272,6 +287,7 @@ map.addEventListener('keydown', (e) => {
 $('replay').addEventListener('click', () => (dayTimer ? stopReplay() : startReplay()));
 $('day').addEventListener('input', () => {
   stopReplay();
+  dropTolls();
   state.day = Number($('day').value);
   update();
 });
@@ -281,6 +297,14 @@ $('settled').addEventListener('click', () => {
   update();
 });
 $('eager').addEventListener('input', update);
+$('tolls').addEventListener('change', () => {
+  state.tolls = $('tolls').checked;
+  if (state.tolls) {
+    stopReplay();
+    state.day = null;
+  }
+  update();
+});
 
 playButton.textContent = state.playing ? 'Pause' : 'Play';
 setScene(SCENES[0].id);

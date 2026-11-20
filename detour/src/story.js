@@ -86,6 +86,15 @@ export function replayPrompt(history, start, settled) {
   return `Press Replay to watch the drivers get from ${from} to ${minutes(settled)}, one morning at a time.`;
 }
 
+// The line under the map while tolls are charged. t: from tolledOutcome; untolled: equilibrium minutes per driver.
+export function tollHeadline(t, untolled, demand) {
+  if (demand <= 0) return 'No drivers on the road, so no tolls.';
+  let text = `Each crowded road charges the delay its drivers cause. ${drivers(demand)} drivers now take ${minutes(t.perDriver)} per trip on average`;
+  text += Math.abs(t.perDriver - untolled) < 0.05 ? ', the same as without tolls.' : `, against ${minutes(untolled)} without tolls.`;
+  if (t.tollPerDriver > 0.05) text += ` On top of that each pays a toll worth ${minutes(t.tollPerDriver)} on average: money that goes to the road owner, where the delay it replaces was time nobody got back.`;
+  return text;
+}
+
 // The line under the map while it shows a day of the replay.
 export function replayHeadline(history, day, settled) {
   return `Day ${day} of the replay: ${minutes(history[day].perDriver)} per driver on average. Once the traffic settles every trip takes ${minutes(settled)}.`;
