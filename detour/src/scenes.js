@@ -39,8 +39,8 @@ export const SCENES = [
       { id: 'T', label: 'T', x: 630, y: 210 },
     ],
     roads: [
-      { id: 'hi', from: 'S', to: 'T', a: 60, b: 0, bend: -150 },
-      { id: 'lo', from: 'S', to: 'T', a: 0, b: 0.01, bend: 150 },
+      { id: 'hi', from: 'S', to: 'T', a: 60, b: 0, bend: -150, via: 'highway' },
+      { id: 'lo', from: 'S', to: 'T', a: 0, b: 0.01, bend: 150, via: 'narrow road' },
     ],
   },
   {

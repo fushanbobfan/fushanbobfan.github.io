@@ -12,6 +12,8 @@ const opened = openRoads(braess, new Set(['AB']));
 test('routes are read off the open roads', () => {
   assert.deepEqual(routes(braess, closed).map((r) => routeName(braess, r)), ['S → A → T', 'S → B → T']);
   assert.deepEqual(routes(braess, opened).map((r) => routeName(braess, r)), ['S → A → T', 'S → A → B → T', 'S → B → T']);
+  const pigou = sceneById('pigou');
+  assert.deepEqual(routes(pigou, pigou.roads).map((r) => routeName(pigou, r)), ['S → T by the highway', 'S → T by the narrow road']);
   const ladder = sceneById('ladder');
   assert.equal(routes(ladder, openRoads(ladder, new Set(['AB', 'DC']))).length, 5);
 });
