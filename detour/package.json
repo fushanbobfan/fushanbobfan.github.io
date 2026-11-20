@@ -1,0 +1,20 @@
+{
+  "name": "detour",
+  "version": "0.1.0",
+  "description": "Braess's paradox in the browser: open a new road, let every driver pick the fastest route, and watch everyone get slower.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "braess-paradox",
+    "wardrop-equilibrium",
+    "selfish-routing",
+    "game-theory",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
