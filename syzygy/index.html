@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>syzygy · why eclipses come in seasons</title>
+  <meta name="description" content="Why there is not an eclipse every month: the Moon's tilted orbit, every new and full moon of a year, and which of them line up closely enough to be eclipses.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>syzygy</h1>
+    <p class="lede">The Moon passes between the Earth and the Sun every month, yet a solar eclipse
+      comes only a few times a year. Its orbit is tilted about 5° to the Earth's, so most new moons
+      pass above or below the Sun and most full moons miss the Earth's shadow. Eclipses happen
+      only when a new or full moon falls near one of the two places where the orbits cross.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Year and orbit">
+      <div class="field">
+        <label for="year">Year</label>
+        <div class="stepper">
+          <button type="button" id="prev-year" aria-label="Previous year">‹</button>
+          <input id="year" type="number" inputmode="numeric" step="1">
+          <button type="button" id="next-year" aria-label="Next year">›</button>
+        </div>
+      </div>
+      <div class="field grow">
+        <label for="tilt">Tilt of the Moon's orbit: <output id="tilt-value" for="tilt"></output></label>
+        <div class="row">
+          <input id="tilt" type="range" min="0" max="10" step="0.05">
+          <button type="button" id="real-tilt">Real tilt</button>
+        </div>
+      </div>
+    </section>
+
+    <p id="summary" class="summary"></p>
+    <p id="what-if" class="what-if" hidden>This is a made-up tilt: the chart and the list show what
+      would happen. The real Moon is tilted 5.1°.</p>
+
+    <section aria-labelledby="chart-title">
+      <h2 id="chart-title">The year at a glance</h2>
+      <p class="hint">The curve is the Moon's height above or below the Sun's path in the sky. Each
+        dark dot is a new moon and each light dot a full moon; the bar through it is how close it
+        has to come to the line for an eclipse. Shaded spans are eclipse seasons. Click to move the
+        date.</p>
+      <div id="chart" class="chart-wrap"></div>
+    </section>
+
+    <section class="moment" aria-labelledby="moment-title">
+      <div class="moment-text">
+        <h2 id="moment-title">From above</h2>
+        <p class="date" id="moment-date"></p>
+        <p id="moment-text"></p>
+        <div class="row">
+          <button type="button" id="play" aria-pressed="false">Play</button>
+          <label class="sr-only" for="day">Day of the year</label>
+          <input id="day" type="range" min="0" step="0.25">
+        </div>
+        <p class="hint">Play the year and watch the line where the orbits cross. It keeps pointing
+          the same way in space while the Earth goes round the Sun, so twice a year it points at
+          the Sun. Those are the eclipse seasons. The line turns slowly backwards, once in 18.6
+          years, so the seasons come about 19 days earlier each year.</p>
+        <p id="live" class="sr-only" aria-live="polite"></p>
+      </div>
+      <div id="orbit" class="orbit-wrap"></div>
+    </section>
+
+    <section aria-labelledby="list-title">
+      <h2 id="list-title">The eclipses</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Greatest eclipse</th><th scope="col">Kind</th><th scope="col">What happens</th><th scope="col">Closest pass, of the limit</th></tr>
+          </thead>
+          <tbody id="eclipse-rows"></tbody>
+        </table>
+      </div>
+      <p class="hint">Times are for the moment of greatest eclipse, computed from the positions of
+        the Sun and the Moon; for 2021-2030 they agree with NASA's eclipse tables to within a few
+        minutes. A solar eclipse is visible only from part of the Earth; a lunar eclipse from
+        everywhere the Moon is up.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/syzygy">Source</a> ·
+    <a href="../">More projects</a>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
