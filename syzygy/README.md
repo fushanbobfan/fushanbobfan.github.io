@@ -40,6 +40,13 @@ Run the tests with `npm test` (Node 20 or later).
 - **The eclipses.** Date and time of greatest eclipse, the kind (total,
   annular, hybrid or partial for the Sun; total, partial or penumbral for the
   Moon), and how close the Moon passed compared with the limit for an eclipse.
+- **Close-up.** Choose an eclipse in the table to see it at greatest eclipse,
+  drawn to scale with the Moon's path three hours either side: the Moon
+  crossing the Earth's umbra and penumbra, or the Moon against the Sun as seen
+  from the place where the eclipse is deepest. The magnitude beside it is the
+  share of the Moon's diameter inside the umbra (lunar) or of the Sun's
+  diameter covered (solar); for a central eclipse it is the Moon's apparent
+  size over the Sun's. For 2021–2030 every magnitude is within 0.02 of NASA's.
 - **Year after year.** Thirty-seven years, one row each, with the seasons
   shaded and every eclipse marked. The seasons drift about 19 days earlier
   each year and return to the same dates after 18.6 years. Choose an eclipse
