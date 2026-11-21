@@ -25,14 +25,16 @@ export function seasonHalfWidth(limit, tilt) {
 // orbit; seasons use the low end so that no eclipse falls outside one.
 const LOWEST_TILT_SHARE = 4.99 / MOON_INCLINATION;
 
-export function buildYear(year, tilt = MOON_INCLINATION) {
+// `step` sets how finely the season edges and the curve are sampled; the
+// many-years view uses whole days.
+export function buildYear(year, tilt = MOON_INCLINATION, { step = SAMPLE_STEP } = {}) {
   const start = utcToJde(julianDay(year, 1, 1));
   const end = utcToJde(julianDay(year + 1, 1, 1));
   const events = syzygies(start, end, { tilt });
   const scale = tilt / MOON_INCLINATION;
 
   const samples = [];
-  for (let t = start; t <= end + 1e-9; t += SAMPLE_STEP) {
+  for (let t = start; t <= end + 1e-9; t += step) {
     samples.push({ jde: t, lat: moonPosition(t).lat * scale, fromNode: sunFromNode(t) });
   }
 
