@@ -27,9 +27,9 @@ Run the tests with `npm test` (Node 20 or later).
 ## What is on the page
 
 - **The year at a glance.** The Moon's height above or below the Sun's path
-  (its ecliptic latitude) through the year. Dark dots are new moons and light
-  dots full moons; the bar through each is the window it must fall in for an
-  eclipse. Shaded spans are eclipse seasons, when the Sun is near one end of
+  (its ecliptic latitude) through the year. Solid dots are new moons and
+  orange rings full moons; the bar through each is the window it must fall in
+  for an eclipse, and the moons that make it are drawn larger. Shaded spans are eclipse seasons, when the Sun is near one end of
   the line where the two orbits cross (the line of nodes). Click to move the
   date.
 - **From above.** The Earth on its orbit and the Moon on its own, drawn much
