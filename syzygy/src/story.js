@@ -44,15 +44,23 @@ function countPhrase(n, word) {
 
 export function yearSummary(data, realTilt) {
   const counts = `${countPhrase(data.solarCount, 'solar')} and ${countPhrase(data.lunarCount, 'lunar')}`;
-  if (data.halfWidth >= 90) {
+  if (data.eclipses.length === data.events.length) {
     return `With the Moon’s orbit tilted only ${data.tilt.toFixed(1)}°, every new moon lines up with the Sun and every full moon with the Earth’s shadow: ${counts} in ${data.year}.`;
+  }
+  const lead = realTilt ? `${data.year} has` : `With a ${data.tilt.toFixed(1)}° tilt, ${data.year} would have`;
+  if (data.halfWidth >= 90) {
+    return `${lead} ${counts}. With so small a tilt the Sun is never far enough from a node to rule an eclipse out, but a few new or full moons still pass just outside the limit.`;
   }
   const seasons = data.seasons.map(seasonMonths);
   const list = seasons.length > 1
     ? `${seasons.slice(0, -1).join(', ')} and ${seasons[seasons.length - 1]}`
     : seasons[0] || 'none';
-  const lead = realTilt ? `${data.year} has` : `With a ${data.tilt.toFixed(1)}° tilt, ${data.year} would have`;
-  return `${lead} ${counts}. They all fall in the ${seasons.length} eclipse season${seasons.length === 1 ? '' : 's'} (${list}), when the Sun stands within ${data.halfWidth.toFixed(0)}° of a node of the Moon’s orbit.`;
+  const n = seasons.length;
+  const where = `the ${n} eclipse season${n === 1 ? '' : 's'} (${list}), when the Sun stands within ${data.halfWidth.toFixed(0)}° of a node of the Moon’s orbit`;
+  const inside = data.eclipses.filter((e) => data.seasons.some((s) => e.jde >= s.start && e.jde <= s.end)).length;
+  if (data.eclipses.length === 0) return `${lead} no eclipses, even in ${where}.`;
+  const share = inside === data.eclipses.length ? (inside === 1 ? 'It falls' : 'They all fall') : `${inside} of them fall`;
+  return `${lead} ${counts}. ${share} in ${where}.`;
 }
 
 // What the top view shows at the cursor, in a sentence or two.

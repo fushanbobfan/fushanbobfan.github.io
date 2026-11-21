@@ -85,7 +85,14 @@ test('the words match the numbers', () => {
     '2026 has 2 solar eclipses and 2 lunar eclipses. They all fall in the 2 eclipse seasons (Feb–Mar and Aug–Sep), when the Sun stands within 17° of a node of the Moon’s orbit.');
   const flat = buildYear(2026, 0);
   assert.match(yearSummary(flat, false), /^With the Moon’s orbit tilted only 0\.0°, every new moon lines up/);
-  assert.match(yearSummary(buildYear(2026, 10), false), /^With a 10\.0° tilt, 2026 would have/);
+  assert.equal(yearSummary(buildYear(2026, 10), false),
+    'With a 10.0° tilt, 2026 would have no solar eclipses and 2 lunar eclipses. They all fall in the 2 eclipse seasons (Feb–Mar and Aug), when the Sun stands within 9° of a node of the Moon’s orbit.');
+  for (const tilt of [1.45, 1.5, 1.55, 1.6]) {
+    const d = buildYear(2026, tilt);
+    if (d.halfWidth >= 90 && d.eclipses.length < d.events.length) {
+      assert.match(yearSummary(d, false), /still pass just outside the limit\.$/);
+    }
+  }
   const rows = eclipseRows(y2026);
   assert.equal(rows.length, 4);
   assert.equal(rows[0].when, '17 Feb 2026, 12:13 UTC');
@@ -97,4 +104,11 @@ test('the words match the numbers', () => {
   assert.match(m.line, /^Full moon, the Moon 0\.\d° (above|below) the Sun’s path\. The Sun is \d+° from a node: eclipse season\.$/);
   const off = momentText(snapshot(julianDay(2026, 5, 15)), y2026);
   assert.match(off.line, /Next eclipse season in \d+ days\.$/);
+});
+
+test('a calendar year can hold three eclipse seasons, as 2020 did', () => {
+  const y = buildYear(2020);
+  assert.equal(y.seasons.length, 3);
+  assert.deepEqual(y.eclipses.map((e) => e.eclipse), ['penumbral', 'penumbral', 'annular', 'penumbral', 'penumbral', 'total']);
+  assert.match(yearSummary(y, true), /They all fall in the 3 eclipse seasons \(Jan, Jun–Jul and Nov–Dec\)/);
 });
