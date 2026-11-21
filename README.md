@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [syzygy](https://fushanbobfan.github.io/syzygy/) | Why eclipses come in seasons: every new and full moon of a year against the window it must hit, the Moon's tilted orbit seen from above, and the eclipses that result. | [`syzygy/`](syzygy/) |
 | [detour](https://fushanbobfan.github.io/detour/) | Braess's paradox in the browser: open a free shortcut, let every driver take the fastest route, and watch every trip get slower. | [`detour/`](detour/) |
 | [suitors](https://fushanbobfan.github.io/suitors/) | Stable matching in the browser: watch deferred acceptance pair two groups one proposal at a time, and see how much it matters which side proposes. | [`suitors/`](suitors/) |
 | [moire](https://fushanbobfan.github.io/moire/) | Moiré patterns in the browser: lay one grating over another, turn or slide it a little, and watch broad fringes swing and travel far more than the sheet moved. | [`moire/`](moire/) |
