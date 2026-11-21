@@ -116,6 +116,11 @@ export function classify(kind, gap, g, lim = limits(g)) {
   if (kind === 'new') {
     if (gap >= lim.solarPartial) return null;
     if (gap < lim.solarCentral) return centralKind(g, gap);
+    // The axis misses the Earth but the edge of the umbra or antumbra still
+    // grazes it: a non-central total or annular eclipse.
+    if (gap < lim.solarCentral + Math.abs(g.moonRadius - g.sunRadius)) {
+      return g.moonRadius > g.sunRadius ? 'total' : 'annular';
+    }
     return 'partial';
   }
   if (gap >= lim.lunarPenumbral) return null;
