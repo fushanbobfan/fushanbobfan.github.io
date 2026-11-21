@@ -40,6 +40,12 @@ Run the tests with `npm test` (Node 20 or later).
 - **The eclipses.** Date and time of greatest eclipse, the kind (total,
   annular, hybrid or partial for the Sun; total, partial or penumbral for the
   Moon), and how close the Moon passed compared with the limit for an eclipse.
+- **Year after year.** Thirty-seven years, one row each, with the seasons
+  shaded and every eclipse marked. The seasons drift about 19 days earlier
+  each year and return to the same dates after 18.6 years. Choose an eclipse
+  (click, or focus it and press Enter) to see its saros series: the eclipses of
+  the same kind a whole number of saros cycles away, joined by a line. "Show
+  this eclipse above" moves the year chart and the top view to it.
 - **Tilt.** Flatten the Moon's orbit and every new and full moon becomes an
   eclipse; tilt it further and eclipses grow rarer.
 
@@ -77,6 +83,10 @@ Espenak–Meeus estimate of ΔT, held flat outside 2005–2050.
 Because the line of nodes turns backwards once every 18.6 years, the Sun meets
 it every 346.6 days, so the eclipse seasons come about 19 days earlier each
 calendar year.
+
+The grid counts an eclipse as a saros relative of the chosen one when it is of
+the same kind (solar or lunar) and its greatest eclipse falls within half a day
+of a whole number of saros cycles from it.
 
 ## License
 
