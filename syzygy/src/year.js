@@ -2,7 +2,7 @@
 
 import { moonPosition, sunPosition, wrap180 } from './ephemeris.js';
 import { syzygies, MOON_INCLINATION } from './eclipses.js';
-import { julianDay } from './time.js';
+import { julianDay, utcToJde } from './time.js';
 
 const RAD = Math.PI / 180;
 export const SAMPLE_STEP = 0.25; // days between points of the latitude curve
@@ -21,13 +21,13 @@ export function seasonHalfWidth(limit, tilt) {
   return tilt <= 0 || s >= 1 ? 90 : Math.asin(s) / RAD;
 }
 
-function mean(xs) {
-  return xs.reduce((a, b) => a + b, 0) / xs.length;
-}
+// The tilt itself swings between about 4.99° and 5.30° as the Sun pulls on the
+// orbit; seasons use the low end so that no eclipse falls outside one.
+const LOWEST_TILT_SHARE = 4.99 / MOON_INCLINATION;
 
 export function buildYear(year, tilt = MOON_INCLINATION) {
-  const start = julianDay(year, 1, 1);
-  const end = julianDay(year + 1, 1, 1);
+  const start = utcToJde(julianDay(year, 1, 1));
+  const end = utcToJde(julianDay(year + 1, 1, 1));
   const events = syzygies(start, end, { tilt });
   const scale = tilt / MOON_INCLINATION;
 
@@ -36,15 +36,21 @@ export function buildYear(year, tilt = MOON_INCLINATION) {
     samples.push({ jde: t, lat: moonPosition(t).lat * scale, fromNode: sunFromNode(t) });
   }
 
-  const solarLimit = mean(events.filter((e) => e.kind === 'new').map((e) => e.limits.solarPartial));
-  const halfWidth = seasonHalfWidth(solarLimit, tilt);
+  const widestLimit = Math.max(...events.map((e) => (e.kind === 'new' ? e.limits.solarPartial : e.limits.lunarPenumbral)));
+  const halfWidth = seasonHalfWidth(widestLimit, tilt * LOWEST_TILT_SHARE);
   const seasons = [];
   let open = null;
-  for (const s of samples) {
+  // Edges fall between samples: interpolate where |fromNode| crosses the width.
+  const edge = (a, b) => {
+    const fa = Math.abs(a.fromNode) - halfWidth;
+    const fb = Math.abs(b.fromNode) - halfWidth;
+    return a.jde + (b.jde - a.jde) * (fa / (fa - fb));
+  };
+  samples.forEach((s, i) => {
     const inside = Math.abs(s.fromNode) < halfWidth;
-    if (inside && !open) open = { start: s.jde };
-    if (!inside && open) { open.end = s.jde; seasons.push(open); open = null; }
-  }
+    if (inside && !open) open = { start: i ? edge(samples[i - 1], s) : s.jde };
+    if (!inside && open) { open.end = edge(samples[i - 1], s); seasons.push(open); open = null; }
+  });
   if (open) { open.end = end; seasons.push(open); }
 
   const found = events.filter((e) => e.eclipse);
@@ -57,7 +63,7 @@ export function buildYear(year, tilt = MOON_INCLINATION) {
     samples,
     seasons,
     halfWidth,
-    solarLimit,
+    widestLimit,
     eclipses: found,
     solarCount: found.filter((e) => e.kind === 'new').length,
     lunarCount: found.filter((e) => e.kind === 'full').length,

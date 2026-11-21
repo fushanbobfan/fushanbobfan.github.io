@@ -102,7 +102,10 @@ export function moonPosition(jde) {
     - 0.002235 * sin(a.Lp) + 0.000382 * sin(A3) + 0.000175 * sin(A1 - a.F)
     + 0.000175 * sin(A1 + a.F) + 0.000127 * sin(a.Lp - a.Mp) - 0.000115 * sin(a.Lp + a.Mp);
   const dist = 385000.56 + series(DISTANCE, a, E, cos);
-  return { lon: norm360(lon), lat, dist, node: a.node };
+  // The true node wobbles about the mean one by up to 1.7° (Meeus 47).
+  const node = a.node - 1.4979 * sin(2 * (a.D - a.F)) - 0.15 * sin(a.M) - 0.1226 * sin(2 * a.D)
+    + 0.1176 * sin(2 * a.F) - 0.0801 * sin(2 * (a.Mp - a.F));
+  return { lon: norm360(lon), lat, dist, node: norm360(node) };
 }
 
 // Geocentric ecliptic longitude of the Sun (degrees, with aberration) and its

@@ -6,7 +6,7 @@ import { renderOrbit, seasonLongitudes } from '../src/orbit.js';
 import { eclipseRows, yearSummary, momentText, eclipseLabel } from '../src/story.js';
 import { eclipses } from '../src/eclipses.js';
 import { sunPosition } from '../src/ephemeris.js';
-import { julianDay } from '../src/time.js';
+import { julianDay, jdeToUtc, formatDateTime } from '../src/time.js';
 
 const count = (s, re) => (s.match(re) || []).length;
 const y2026 = buildYear(2026);
@@ -82,11 +82,11 @@ test('the top view puts the Earth opposite the Sun and the Moon on its orbit', (
 
 test('the words match the numbers', () => {
   assert.equal(yearSummary(y2026, true),
-    '2026 has 2 solar eclipses and 2 lunar eclipses. They all fall in the 2 eclipse seasons (Feb–Mar and Aug–Sep), when the Sun stands within 17° of a node of the Moon’s orbit.');
+    '2026 has 2 solar eclipses and 2 lunar eclipses. They all fall in the 2 eclipse seasons (Feb–Mar and Aug–Sep), when the Sun stands within 19° of a node of the Moon’s orbit.');
   const flat = buildYear(2026, 0);
   assert.match(yearSummary(flat, false), /^With the Moon’s orbit tilted only 0\.0°, every new moon lines up/);
   assert.equal(yearSummary(buildYear(2026, 10), false),
-    'With a 10.0° tilt, 2026 would have no solar eclipses and 2 lunar eclipses. They all fall in the 2 eclipse seasons (Feb–Mar and Aug), when the Sun stands within 9° of a node of the Moon’s orbit.');
+    'With a 10.0° tilt, 2026 would have no solar eclipses and 2 lunar eclipses. They all fall in the 2 eclipse seasons (Feb–Mar and Aug–Sep), when the Sun stands within 10° of a node of the Moon’s orbit.');
   for (const tilt of [1.45, 1.5, 1.55, 1.6]) {
     const d = buildYear(2026, tilt);
     if (d.halfWidth >= 90 && d.eclipses.length < d.events.length) {
@@ -110,5 +110,27 @@ test('a calendar year can hold three eclipse seasons, as 2020 did', () => {
   const y = buildYear(2020);
   assert.equal(y.seasons.length, 3);
   assert.deepEqual(y.eclipses.map((e) => e.eclipse), ['penumbral', 'penumbral', 'annular', 'penumbral', 'penumbral', 'total']);
-  assert.match(yearSummary(y, true), /They all fall in the 3 eclipse seasons \(Jan, Jun–Jul and Nov–Dec\)/);
+  assert.match(yearSummary(y, true), /They all fall in the 3 eclipse seasons \(Jan, May–Jul and Nov–Dec\)/);
+});
+
+test('every eclipse from 1900 to 2100 falls inside one of its year’s shaded seasons', () => {
+  for (let year = 1900; year <= 2100; year++) {
+    const y = buildYear(year);
+    for (const e of y.eclipses) {
+      assert.ok(y.seasons.some((s) => e.greatest >= s.start && e.greatest <= s.end), `${year}: eclipse at ${e.greatest} outside the seasons`);
+    }
+  }
+});
+
+test('a year runs from midnight UTC on 1 January to midnight on the next', () => {
+  for (const year of [1900, 2026, 2100]) {
+    const y = buildYear(year);
+    assert.equal(formatDateTime(jdeToUtc(y.start)), `1 Jan ${year}, 00:00 UTC`);
+    assert.equal(formatDateTime(jdeToUtc(y.end)), `1 Jan ${year + 1}, 00:00 UTC`);
+  }
+});
+
+test('an annular eclipse whose axis misses the Earth is still annular (2014 April 29)', () => {
+  const found = eclipses(julianDay(2014, 4, 28), julianDay(2014, 4, 30));
+  assert.deepEqual(found.map((e) => e.eclipse), ['annular']);
 });

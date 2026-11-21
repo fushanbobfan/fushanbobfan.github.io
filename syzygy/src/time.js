@@ -40,6 +40,11 @@ export function deltaT(year) {
   return 62.92 + 0.32217 * t + 0.005589 * t * t;
 }
 
+export function utcToJde(jd) {
+  const { year } = calendarDate(jd);
+  return jd + deltaT(year) / 86400;
+}
+
 export function jdeToUtc(jde) {
   const { year } = calendarDate(jde);
   return jde - deltaT(year) / 86400;
