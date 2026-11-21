@@ -4,6 +4,8 @@ import { renderOrbit, seasonLongitudes } from './orbit.js';
 import { eclipseRows, yearSummary, momentText } from './story.js';
 import { sunPosition } from './ephemeris.js';
 import { MOON_INCLINATION } from './eclipses.js';
+import { renderCloseup, closeupText } from './closeup.js';
+import { eclipseLabel } from './story.js';
 import {
   windowYears, decadeRows, renderDecades, sarosText, findEclipse, eclipseId,
 } from './decades.js';
@@ -16,6 +18,7 @@ const els = {
   chart: $('chart'), orbit: $('orbit'), summary: $('summary'),
   date: $('moment-date'), moment: $('moment-text'), live: $('live'),
   rows: $('eclipse-rows'), whatIf: $('what-if'),
+  closeup: $('closeup'), closeupTitle: $('closeup-title'), closeupText: $('closeup-text'),
   decades: $('decades'), saros: $('saros-text'), sarosGo: $('saros-go'),
 };
 
@@ -26,6 +29,7 @@ let data = null;
 let last = 0;
 const yearCache = new Map();
 let selectedId = null;
+let closeupId = null;
 let rows = [];
 
 function isRealTilt() {
@@ -65,13 +69,27 @@ function drawYear() {
   els.day.value = String(state.day);
   els.chart.innerHTML = renderChart(data, cursorJde());
   els.summary.textContent = yearSummary(data, isRealTilt());
-  els.rows.innerHTML = eclipseRows(data).map((r) => `<tr>`
-    + `<td><button type="button" class="jump" data-jde="${r.jde}">${r.when}</button></td>`
+  els.rows.innerHTML = eclipseRows(data).map((r, i) => `<tr>`
+    + `<td><button type="button" class="jump" data-index="${i}" data-jde="${r.jde}">${r.when}</button></td>`
     + `<td>${r.kind}</td><td>${r.what}</td><td>${r.miss}</td></tr>`).join('')
     || '<tr><td colspan="4">No eclipses this year.</td></tr>';
   els.whatIf.hidden = isRealTilt();
+  const kept = data.eclipses.findIndex((e) => eclipseId(e) === closeupId);
+  const next = data.eclipses.findIndex((e) => e.greatest >= cursorJde());
+  drawCloseup(kept >= 0 ? kept : Math.max(0, next));
   drawMoment(false);
   drawDecades();
+}
+
+function drawCloseup(index) {
+  const e = data.eclipses[index];
+  els.closeup.parentElement.hidden = !e;
+  if (!e) return;
+  closeupId = eclipseId(e);
+  els.closeup.innerHTML = renderCloseup(e, state.tilt / MOON_INCLINATION);
+  els.closeupTitle.textContent = `${eclipseLabel(e)} eclipse, ${els.rows.querySelector(`[data-index="${index}"]`).textContent}`;
+  els.closeupText.textContent = closeupText(e);
+  els.rows.querySelectorAll('button.jump').forEach((b) => b.setAttribute('aria-current', String(Number(b.dataset.index) === index)));
 }
 
 // The many-years grid around the current year, and the selected eclipse's saros.
@@ -185,6 +203,8 @@ els.sarosGo.addEventListener('click', () => {
   stop();
   setYear(row.year);
   setDay(jde - data.start);
+  const index = target ? data.eclipses.findIndex((e) => eclipseId(e) === eclipseId(target)) : -1;
+  if (index >= 0) drawCloseup(index);
   if (target) els.orbit.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
 
@@ -193,7 +213,7 @@ els.rows.addEventListener('click', (ev) => {
   if (!btn) return;
   stop();
   setDay(Number(btn.dataset.jde) - data.start);
-  els.orbit.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  drawCloseup(Number(btn.dataset.index));
 });
 
 const now = new Date();

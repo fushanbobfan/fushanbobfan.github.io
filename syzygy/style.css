@@ -183,6 +183,26 @@ th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rul
 th { color: var(--muted); font-weight: normal; }
 button.jump { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; text-align: left; }
 
+.closeup-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 12px;
+}
+.closeup-panel h3 { margin: 4px 0 6px; font-size: 1.05rem; }
+.closeup-wrap { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; }
+.closeup .penumbra { fill: var(--rule); opacity: 0.45; }
+.closeup .umbra { fill: var(--lunar); opacity: 0.55; }
+.closeup .cu-sun { fill: var(--sun); }
+.closeup .cu-sun-edge { fill: none; stroke: var(--sun); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.closeup .cu-track { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.closeup.full .cu-moon { fill: var(--moon-fill); fill-opacity: 0.55; stroke: var(--ink); stroke-width: 1.4; }
+.closeup.new .cu-moon { fill: #22201c; fill-opacity: 0.92; stroke: var(--panel); stroke-width: 1; }
+.closeup .cu-note { fill: var(--muted); font-size: 12px; }
+button.jump[aria-current="true"] { font-weight: bold; }
+@media (max-width: 760px) { .closeup-panel { grid-template-columns: 1fr; } }
+
 .decades-wrap { cursor: default; }
 .decades .grid { stroke: var(--rule); stroke-width: 1; }
 .decades .tick, .decades .year { fill: var(--muted); font-size: 11px; }
