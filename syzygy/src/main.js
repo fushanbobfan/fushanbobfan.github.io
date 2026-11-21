@@ -29,6 +29,7 @@ let data = null;
 let last = 0;
 const yearCache = new Map();
 let selectedId = null;
+let closeupId = null;
 let rows = [];
 
 function isRealTilt() {
@@ -73,8 +74,9 @@ function drawYear() {
     + `<td>${r.kind}</td><td>${r.what}</td><td>${r.miss}</td></tr>`).join('')
     || '<tr><td colspan="4">No eclipses this year.</td></tr>';
   els.whatIf.hidden = isRealTilt();
+  const kept = data.eclipses.findIndex((e) => eclipseId(e) === closeupId);
   const next = data.eclipses.findIndex((e) => e.greatest >= cursorJde());
-  drawCloseup(next >= 0 ? next : 0);
+  drawCloseup(kept >= 0 ? kept : Math.max(0, next));
   drawMoment(false);
   drawDecades();
 }
@@ -83,6 +85,7 @@ function drawCloseup(index) {
   const e = data.eclipses[index];
   els.closeup.parentElement.hidden = !e;
   if (!e) return;
+  closeupId = eclipseId(e);
   els.closeup.innerHTML = renderCloseup(e, state.tilt / MOON_INCLINATION);
   els.closeupTitle.textContent = `${eclipseLabel(e)} eclipse, ${els.rows.querySelector(`[data-index="${index}"]`).textContent}`;
   els.closeupText.textContent = closeupText(e);
