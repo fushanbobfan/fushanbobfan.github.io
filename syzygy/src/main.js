@@ -4,6 +4,9 @@ import { renderOrbit, seasonLongitudes } from './orbit.js';
 import { eclipseRows, yearSummary, momentText } from './story.js';
 import { sunPosition } from './ephemeris.js';
 import { MOON_INCLINATION } from './eclipses.js';
+import {
+  windowYears, decadeRows, renderDecades, sarosText, findEclipse, eclipseId,
+} from './decades.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -13,6 +16,7 @@ const els = {
   chart: $('chart'), orbit: $('orbit'), summary: $('summary'),
   date: $('moment-date'), moment: $('moment-text'), live: $('live'),
   rows: $('eclipse-rows'), whatIf: $('what-if'),
+  decades: $('decades'), saros: $('saros-text'), sarosGo: $('saros-go'),
 };
 
 const MIN_YEAR = 1900;
@@ -20,6 +24,9 @@ const MAX_YEAR = 2100;
 const state = { year: new Date().getUTCFullYear(), tilt: MOON_INCLINATION, day: 0, playing: false };
 let data = null;
 let last = 0;
+const yearCache = new Map();
+let selectedId = null;
+let rows = [];
 
 function isRealTilt() {
   return Math.abs(state.tilt - MOON_INCLINATION) < 1e-6;
@@ -64,6 +71,29 @@ function drawYear() {
     || '<tr><td colspan="4">No eclipses this year.</td></tr>';
   els.whatIf.hidden = isRealTilt();
   drawMoment(false);
+  drawDecades();
+}
+
+// The many-years grid around the current year, and the selected eclipse's saros.
+function drawDecades() {
+  rows = decadeRows(windowYears(state.year, MIN_YEAR, MAX_YEAR), state.tilt, yearCache);
+  if (!selectedId || !findEclipse(rows, selectedId)) {
+    const first = data.eclipses.find((e) => e.greatest >= cursorJde()) || data.eclipses[0];
+    selectedId = first ? eclipseId(first) : null;
+  }
+  els.decades.innerHTML = renderDecades(rows, { currentYear: state.year, selectedId });
+  const target = selectedId ? findEclipse(rows, selectedId) : null;
+  els.saros.textContent = sarosText(target, rows);
+  els.sarosGo.hidden = !target;
+  if (target) els.sarosGo.dataset.jde = String(target.greatest);
+}
+
+function selectEclipse(id) {
+  selectedId = id;
+  els.decades.innerHTML = renderDecades(rows, { currentYear: state.year, selectedId });
+  els.saros.textContent = sarosText(findEclipse(rows, id), rows);
+  els.sarosGo.dataset.jde = String(findEclipse(rows, id).greatest);
+  els.decades.querySelector(`[data-id="${id}"]`)?.focus();
 }
 
 function setYear(y) {
@@ -134,6 +164,28 @@ els.chart.addEventListener('click', (ev) => {
   const x = ((ev.clientX - box.left) / box.width) * W;
   stop();
   setDay(jdeAt(data, x) - data.start);
+});
+
+els.decades.addEventListener('click', (ev) => {
+  const mark = ev.target.closest('.mark');
+  if (mark) selectEclipse(mark.dataset.id);
+});
+
+els.decades.addEventListener('keydown', (ev) => {
+  const mark = ev.target.closest('.mark');
+  if (!mark || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+  ev.preventDefault();
+  selectEclipse(mark.dataset.id);
+});
+
+els.sarosGo.addEventListener('click', () => {
+  const jde = Number(els.sarosGo.dataset.jde);
+  const target = findEclipse(rows, selectedId);
+  const row = rows.find((r) => jde >= r.start && jde < r.end);
+  stop();
+  setYear(row.year);
+  setDay(jde - data.start);
+  if (target) els.orbit.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
 
 els.rows.addEventListener('click', (ev) => {
