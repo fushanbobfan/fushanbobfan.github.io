@@ -1,0 +1,20 @@
+{
+  "name": "syzygy",
+  "version": "0.1.0",
+  "description": "Why eclipses come in seasons: the Moon's tilted orbit, new and full moons through a year, and which of them line up closely enough to be eclipses.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "eclipse",
+    "astronomy",
+    "moon",
+    "visualization",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
