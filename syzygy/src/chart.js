@@ -32,7 +32,7 @@ function monthTicks(data, x) {
   return out;
 }
 
-function daysBefore(year, month) {
+export function daysBefore(year, month) {
   const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
   const len = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   return len.slice(0, month - 1).reduce((a, b) => a + b, 0);

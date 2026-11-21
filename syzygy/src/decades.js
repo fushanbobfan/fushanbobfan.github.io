@@ -5,6 +5,7 @@ import { buildYear } from './year.js';
 import { SYNODIC_MONTH } from './eclipses.js';
 import { formatDate, jdeToUtc, calendarDate } from './time.js';
 import { eclipseLabel } from './story.js';
+import { daysBefore } from './chart.js';
 
 export const SAROS = 223 * SYNODIC_MONTH; // days, about 18 years 11 days
 export const SPAN = 37; // rows: two saros cycles
@@ -18,8 +19,10 @@ export function windowYears(center, min, max, span = SPAN) {
   return years;
 }
 
+// Counts half-lunations from the new moon of 2000 January 6, so an eclipse keeps
+// its name when a different tilt moves its moment of greatest eclipse.
 export function eclipseId(e) {
-  return `${e.kind}-${e.greatest.toFixed(4)}`;
+  return `${e.kind}-${Math.round(((e.jde - 2451550.09766) / SYNODIC_MONTH) * 2)}`;
 }
 
 // Rows for the grid, reusing years already built.
@@ -78,8 +81,9 @@ export function renderDecades(rows, { currentYear, selectedId } = {}) {
 
   let body = '';
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const yearLength = rows[0].end - rows[0].start;
   months.forEach((m, k) => {
-    const xm = LEFT + (k / 12) * plotW;
+    const xm = LEFT + (daysBefore(rows[0].year, k + 1) / yearLength) * plotW;
     body += `<line class="grid" x1="${xm.toFixed(1)}" y1="${TOP - 4}" x2="${xm.toFixed(1)}" y2="${height - 8}"/>`;
     body += `<text class="tick" x="${(xm + 3).toFixed(1)}" y="${TOP - 10}">${m}</text>`;
   });
@@ -132,7 +136,7 @@ export function sarosText(target, rows) {
   const others = family.filter((f) => f.n !== 0)
     .map(({ e, n }) => `${formatDate(jdeToUtc(e.greatest))} (${n > 0 ? '+' : ''}${n}, ${e.eclipse})`);
   const gap = yearsAndDays(SAROS);
-  const lead = `${name} repeats after one saros, 223 new moons or ${gap.years} years ${gap.days} days, when the Sun, the Moon and the line of nodes stand almost as they did.`;
+  const lead = `${name} belongs to a saros series. Eclipses in a series come one saros apart, 223 new moons or ${gap.years} years ${gap.days} days, when the Sun, the Moon and the line of nodes stand almost as they did; a series runs for more than a thousand years before it fades out.`;
   if (!others.length) return `${lead} No other member of its series falls in these years.`;
   return `${lead} Members of its series in view: ${others.join(', ')}.`;
 }

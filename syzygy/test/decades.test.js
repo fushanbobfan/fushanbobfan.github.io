@@ -84,7 +84,33 @@ test('the grid draws a row per year, every eclipse as a button and the selected 
 test('the saros sentence names the gap and the relatives', () => {
   const aug = byDate(2026, 8, 12);
   const text = sarosText(aug, rows);
-  assert.match(text, /^The total solar eclipse of 12 Aug 2026 repeats after one saros, 223 new moons or 18 years 11 days/);
+  assert.match(text, /^The total solar eclipse of 12 Aug 2026 belongs to a saros series\. Eclipses in a series come one saros apart, 223 new moons or 18 years 11 days/);
   assert.match(text, /1 Aug 2008 \(-1, total\), 23 Aug 2044 \(\+1, total\)\.$/);
   assert.equal(sarosText(null, rows), '');
+});
+
+test('a selected eclipse keeps its name when the tilt changes', () => {
+  const tilted = decadeRows(windowYears(2026, 1900, 2100), 5.2, new Map());
+  const aug = byDate(2026, 8, 12);
+  const same = findEclipse(tilted, eclipseId(aug));
+  assert.ok(same, 'lost after a tilt change');
+  assert.equal(same.kind, 'new');
+  assert.ok(Math.abs(same.jde - aug.jde) < 0.01);
+});
+
+test('a series that ends says so: 2027 July 18 has no lunar eclipse one saros later', () => {
+  const jul = byDate(2027, 7, 18);
+  assert.equal(jul.eclipse, 'penumbral');
+  assert.equal(sarosFamily(jul, rows).find((f) => f.n === 1), undefined);
+  assert.doesNotMatch(sarosText(jul, rows), /repeats/);
+});
+
+test('month lines sit on the first day of each month', () => {
+  const svg = renderDecades(rows, { currentYear: 2026 });
+  const xs = [...svg.matchAll(/<line class="grid" x1="([\d.]+)"/g)].map((m) => Number(m[1]));
+  assert.equal(xs.length, 12);
+  const plotW = 900 - 52 - 12;
+  // The first row is 2008, a leap year: 1 March is day 60.
+  const yearLength = rows[0].end - rows[0].start;
+  assert.ok(Math.abs(xs[2] - (52 + (60 / yearLength) * plotW)) < 0.1, `March line at ${xs[2]}`);
 });
