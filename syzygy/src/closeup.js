@@ -77,7 +77,11 @@ export function renderCloseup(e, scale = 1) {
     const len = Math.hypot(here.x, here.y) || 1;
     const move = Math.min(len, g.moonParallax - g.sunParallax);
     shift = { x: (-here.x / len) * move, y: (-here.y / len) * move };
-    moonR = Math.asin(MOON_RADIUS / Math.sqrt(g.moonDist ** 2 - EARTH_RADIUS ** 2)) / RAD;
+    // Use the same observer as the magnitude: on the central line for a central
+    // eclipse, at the edge of the Earth otherwise.
+    moonR = e.gap < g.moonParallax - g.sunParallax
+      ? magnitude(e).solar * g.sunRadius
+      : Math.asin(MOON_RADIUS / Math.sqrt(g.moonDist ** 2 - EARTH_RADIUS ** 2)) / RAD;
   }
   const k = (SIZE / 2 - 10) / half;
   const map = (p) => [c - (p.x + shift.x) * k, c - (p.y + shift.y) * k];

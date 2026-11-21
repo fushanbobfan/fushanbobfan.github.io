@@ -79,3 +79,12 @@ test('the words follow the magnitude', () => {
   assert.match(closeupText(find('L2026-8-28')), /^Umbral magnitude 0\.9\d: at greatest eclipse 9\d% of the Moon’s diameter/);
   assert.match(closeupText(find('L2024-3-25')), /^Umbral magnitude -0\.13: the Moon misses the dark shadow/);
 });
+
+test('the drawn discs agree with the magnitude for every central solar eclipse', () => {
+  for (const e of decade.filter((x) => x.kind === 'new' && x.eclipse !== 'partial')) {
+    const svg = renderCloseup(e);
+    const sun = Number(svg.match(/class="cu-sun" cx="170" cy="170" r="([\d.]+)"/)[1]);
+    const moon = Number(svg.match(/class="cu-moon" cx="[\d.]+" cy="[\d.]+" r="([\d.]+)"/)[1]);
+    assert.equal(moon > sun, magnitude(e).solar > 1, `${keyOf(e)}: moon ${moon}, sun ${sun}`);
+  }
+});

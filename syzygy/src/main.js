@@ -203,6 +203,8 @@ els.sarosGo.addEventListener('click', () => {
   stop();
   setYear(row.year);
   setDay(jde - data.start);
+  const index = target ? data.eclipses.findIndex((e) => eclipseId(e) === eclipseId(target)) : -1;
+  if (index >= 0) drawCloseup(index);
   if (target) els.orbit.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
 
