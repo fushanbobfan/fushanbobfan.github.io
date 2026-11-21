@@ -52,9 +52,9 @@ function drawMoment(announce) {
 
 function drawYear() {
   data = buildYear(state.year, state.tilt);
-  const days = Math.round(data.end - data.start);
-  els.day.max = String(days - 0.25);
-  state.day = Math.min(state.day, days - 0.25);
+  const days = data.end - data.start;
+  els.day.max = String(days);
+  state.day = Math.min(state.day, days);
   els.day.value = String(state.day);
   els.chart.innerHTML = renderChart(data, cursorJde());
   els.summary.textContent = yearSummary(data, isRealTilt());
@@ -69,8 +69,11 @@ function drawYear() {
 function setYear(y) {
   const v = Math.round(Number(y));
   if (!Number.isFinite(v)) return;
-  state.year = Math.min(MAX_YEAR, Math.max(MIN_YEAR, v));
-  els.year.value = String(state.year);
+  const year = Math.min(MAX_YEAR, Math.max(MIN_YEAR, v));
+  els.year.value = String(year);
+  // A late change event (on blur) must not rebuild the table under a click.
+  if (year === state.year && data) return;
+  state.year = year;
   drawYear();
 }
 
