@@ -183,6 +183,23 @@ th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rul
 th { color: var(--muted); font-weight: normal; }
 button.jump { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; text-align: left; }
 
+.decades-wrap { cursor: default; }
+.decades .grid { stroke: var(--rule); stroke-width: 1; }
+.decades .tick, .decades .year { fill: var(--muted); font-size: 11px; }
+.decades .year.current { fill: var(--ink); font-weight: bold; }
+.decades .current-row { fill: var(--season); opacity: 0.6; }
+.decades .season { fill: var(--season); }
+.decades .mark { cursor: pointer; }
+.decades .mark circle { stroke-width: 1.4; }
+.decades .new circle { fill: var(--solar); stroke: var(--solar); }
+.decades .full circle { fill: var(--moon-fill); stroke: var(--lunar); }
+.decades .family circle, .decades .selected circle { stroke: var(--accent); stroke-width: 3; }
+.decades .selected circle { r: 6; }
+.decades .mark:focus { outline: none; }
+.decades .mark:focus-visible circle { stroke: var(--accent); stroke-width: 4; }
+.decades .saros-line { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.saros-text { max-width: 70ch; }
+
 footer { margin: 36px auto 28px; color: var(--muted); }
 footer a { color: var(--accent); }
 
