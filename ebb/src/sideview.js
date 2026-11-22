@@ -34,7 +34,7 @@ export function renderSide({ dec, lat, amp }) {
   const out = [];
   out.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2.3 -1.6 4.6 3.2" class="side" role="img" aria-labelledby="side-title side-desc">');
   out.push('<title id="side-title">The Earth cut through its axis, with the Moon\'s tilted bulge</title>');
-  out.push(`<desc id="side-desc">At latitude ${Math.round(lat)}°, the high water facing the Moon is ${cmText(nearH)} and the one twelve hours later is ${cmText(farH)}.</desc>`);
+  out.push(`<desc id="side-desc">With the Moon alone, a place at latitude ${Math.round(Math.abs(lat))}° ${lat >= 0 ? 'north' : 'south'} has water ${cmText(nearH)} from the mean as it faces the Moon and ${cmText(farH)} half a turn later.</desc>`);
   out.push(`<polygon class="ocean" points="${pts.join(' ')}"/>`);
   out.push('<circle class="earth" cx="0" cy="0" r="0.86"/>');
   out.push('<line class="axis" x1="0" y1="-1.38" x2="0" y2="1.38"/>');
@@ -53,7 +53,7 @@ export function renderSide({ dec, lat, amp }) {
   return { svg: out.join(''), nearH, farH };
 }
 
-export const DAY_CHART = { w: 620, h: 220, left: 46, right: 12, top: 26, bottom: 30 };
+export const DAY_CHART = { w: 620, h: 232, left: 46, right: 14, top: 26, bottom: 44 };
 
 export function renderDay({ series, highs, lows }) {
   const { w, h, left, right, top, bottom } = DAY_CHART;
@@ -65,7 +65,7 @@ export function renderDay({ series, highs, lows }) {
   const x = (t) => left + ((t - t0) / (t1 - t0)) * (w - left - right);
   const y = (m) => top + ((ymax - m) / (ymax - ymin)) * (h - top - bottom);
   const out = [];
-  out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" class="month day" role="img" aria-label="Water height over two days at the chosen latitude">`);
+  out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" class="month day" role="img" aria-label="Water height over two tidal days at the chosen latitude; the high and low waters are listed below the chart">`);
   for (let cm = Math.ceil((ymin * 100) / 20) * 20; cm <= ymax * 100; cm += 20) {
     out.push(`<line class="grid${cm === 0 ? ' zero' : ''}" x1="${left}" x2="${w - right}" y1="${f1(y(cm / 100))}" y2="${f1(y(cm / 100))}"/>`);
     out.push(`<text class="tick" x="${left - 6}" y="${f1(y(cm / 100) + 4)}" text-anchor="end">${cm}</text>`);
@@ -73,8 +73,11 @@ export function renderDay({ series, highs, lows }) {
   for (let hr = 0; hr <= (t1 - t0) * 24 + 1e-9; hr += 6) {
     const xx = x(t0 + hr / 24);
     out.push(`<line class="grid" x1="${f1(xx)}" x2="${f1(xx)}" y1="${top}" y2="${h - bottom}"/>`);
-    const anchor = xx > w - right - 40 ? 'end' : xx < left + 40 ? 'start' : 'middle';
-    out.push(`<text class="tick" x="${f1(xx)}" y="${h - bottom + 16}" text-anchor="${anchor}">${hr % 24 === 0 ? dayLabel(t0 + hr / 24) : `+${hr} h`}</text>`);
+    out.push(`<text class="tick" x="${f1(xx)}" y="${h - bottom + 16}" text-anchor="middle">${hr === 0 ? 'start' : `+${hr} h`}</text>`);
+    if (hr % 24 === 0) {
+      const anchor = xx > w - right - 40 ? 'end' : xx < left + 40 ? 'start' : 'middle';
+      out.push(`<text class="tick" x="${f1(xx)}" y="${h - bottom + 32}" text-anchor="${anchor}">${dayLabel(t0 + hr / 24)}</text>`);
+    }
   }
   out.push(`<path class="height" d="${series.map((p, i) => `${i ? 'L' : 'M'}${f1(x(p.jde))},${f1(y(p.h))}`).join('')}"/>`);
   for (const p of highs) {
@@ -84,6 +87,13 @@ export function renderDay({ series, highs, lows }) {
   for (const p of lows) out.push(`<circle class="lw" cx="${f1(x(p.jde))}" cy="${f1(y(p.h))}" r="2.5"/>`);
   out.push('</svg>');
   return out.join('');
+}
+
+// Text for every high and low water of the chart, in time order.
+export function extremaList({ highs, lows }) {
+  return [...highs.map((p) => ({ ...p, kind: 'High water' })), ...lows.map((p) => ({ ...p, kind: 'Low water' }))]
+    .sort((a, b) => a.jde - b.jde)
+    .map((p) => `${p.kind}, ${dayLabel(p.jde)} UTC: ${cmText(p.h)} from the mean`);
 }
 
 function dayLabel(jde) {
