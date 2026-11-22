@@ -22,7 +22,7 @@
     <section class="controls" aria-label="Moon and Sun">
       <fieldset class="field">
         <legend>Arrows show</legend>
-        <label><input type="radio" name="mode" value="pull"> The Moon's pull</label>
+        <label><input type="radio" name="mode" value="pull"> <span id="pull-label">The Moon's pull</span></label>
         <label><input type="radio" name="mode" value="tidal" checked> The pull minus the pull on the centre</label>
       </fieldset>
       <div class="field grow">
@@ -57,15 +57,15 @@
         <dl id="readout"></dl>
         <p class="hint">Drag the Moon to move it. The Earth is seen from above the North Pole; the
           Moon and the Sun are drawn much closer than they are. Arrow lengths are to scale within the
-          picture, and the ocean is drawn millions of times higher than the real tide so its shape
-          shows.</p>
+          picture. The ocean is rescaled for each picture so its shape shows; the numbers say how many
+          times higher than the real tide it is drawn.</p>
       </div>
     </div>
     <p id="live" class="sr-only" aria-live="polite"></p>
 
     <section aria-labelledby="why-title">
       <h2 id="why-title">Why the far side bulges too</h2>
-      <p>Switch the arrows to the Moon's pull. Every arrow points at the Moon and they look the same
+      <p>With the Sun off, switch the arrows to the Moon's pull. Every arrow points at the Moon and they look the same
         length, because the Moon is 60 Earth radii away and the Earth's near and far sides are less
         than 2 percent closer or farther. That pull keeps the whole Earth falling round the centre
         of mass it shares with the Moon, and it moves the oceans exactly as much as the rock.</p>

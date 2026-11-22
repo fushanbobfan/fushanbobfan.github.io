@@ -27,10 +27,12 @@ Run the tests with `npm test` (Node 20 or later).
 
 - **The Earth from above the North Pole**, with arrows at points on its
   surface and inside it. Switch them between the Moon's full pull, which
-  looks the same everywhere, and the pull minus the pull on the centre, which
+  looks the same everywhere (with the Sun added, the arrows show the Moon's
+  and the Sun's pull together), and the pull minus the pull on the centre, which
   points out at both ends of the line to the Moon and inward round the middle.
-- **The ocean** drawn as the equilibrium tide, millions of times higher than
-  life so its shape shows. The page says by how much.
+- **The ocean** drawn as the equilibrium tide, rescaled for each picture so its
+  shape shows. The page says how many times higher than life it is drawn
+  (about 3.6 million for the Moon at its average distance).
 - **The Moon**: drag it round, or move it between its nearest and farthest
   distance (or anywhere from 20 to 120 Earth radii) and watch the tide grow
   with the inverse cube of the distance.

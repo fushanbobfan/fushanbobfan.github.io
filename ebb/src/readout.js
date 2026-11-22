@@ -44,7 +44,7 @@ export function rows({ moonBody, sunBody, longest, exaggeration, mode }) {
   if (Math.abs(ratio - 1) > 0.005) {
     out.push(['Against the average Moon', `${ratio.toFixed(2)} times the tide`]);
   }
-  out.push([mode === 'pull' ? 'Longest arrow (pull)' : 'Longest arrow (leftover)', `${sci(longest)} m/s², ${gFraction(longest)}`]);
+  out.push([mode === 'pull' ? 'Longest arrow (full pull)' : 'Longest arrow (leftover)', `${sci(longest)} m/s², ${gFraction(longest)}`]);
   out.push(['Ocean drawn', `${times(exaggeration)} higher than the real tide`]);
   return out;
 }
