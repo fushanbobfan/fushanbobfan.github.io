@@ -93,6 +93,35 @@
       </details>
     </section>
 
+    <section aria-labelledby="lat-heading">
+      <h2 id="lat-heading">Away from the equator the two tides are unequal</h2>
+      <p class="hint">The Moon is not over the equator: each month it swings north and south of it,
+        by 18° to 29° depending on the year (about 28° in 2025-2026). The bulges tilt with it, so a place in the north passes close
+        to the crest of one bulge and well below the crest of the other, and its two daily high
+        waters differ. With the Moon alone, a place more than 90° minus the Moon's declination from
+        the equator misses the far bulge's crest altogether and gets one high water a day; the Sun's
+        own tide moves that line a little. The drawing shows the Moon alone; the
+        chart has the Moon and the Sun, at the moment shown above (or now, if none is chosen),
+        for a place on the Greenwich meridian.</p>
+      <div class="controls">
+        <div class="field grow">
+          <label for="lat">Latitude: <output id="lat-value" for="lat"></output></label>
+          <input id="lat" type="range" min="-80" max="80" step="1" value="45">
+        </div>
+      </div>
+      <div class="lat-stage">
+        <div id="side" class="field-wrap side-wrap"></div>
+        <div>
+          <div id="day-chart" class="chart-wrap day-wrap"></div>
+          <dl id="lat-readout" class="lat-readout"></dl>
+          <details class="event-details">
+            <summary>Every high and low water in the chart</summary>
+            <ul id="extrema-list"></ul>
+          </details>
+        </div>
+      </div>
+    </section>
+
     <section aria-labelledby="why-title">
       <h2 id="why-title">Why the far side bulges too</h2>
       <p>With the Sun off, switch the arrows to the Moon's pull. Every arrow points at the Moon and they look the same
