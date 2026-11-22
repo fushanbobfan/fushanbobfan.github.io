@@ -3,6 +3,9 @@ import { renderField } from './field.js';
 import { rows, distanceLabel, liveText } from './readout.js';
 import { renderMonth, monthSummary, when, eventLabel } from './monthchart.js';
 import { equatorialSky } from './month.js';
+import { placeSeries, describeDay, secondHighLimit, highWatersPerDay, relativeToMean } from './latitude.js';
+import { renderSide, renderDay } from './sideview.js';
+import { tideAmplitude } from './tides.js';
 import { julianDay, calendarDate, utcToJde } from './time.js';
 
 const $ = (id) => document.getElementById(id);
@@ -60,6 +63,44 @@ function render() {
   $('pull-label').textContent = state.sunOn ? "The Moon's and the Sun's pull" : "The Moon's pull";
   $('live').textContent = liveText(b);
   renderChart();
+  renderLatitude();
+}
+
+let latKey = '';
+function renderLatitude() {
+  const lat = Number($('lat').value);
+  const jde = state.dated ? state.start + state.day : utcToJde(Date.now() / 86400000 + 2440587.5);
+  const key = `${lat}|${jde}`;
+  if (key === latKey) return;
+  latKey = key;
+  const k = equatorialSky(jde);
+  const side = renderSide({ dec: k.moon.dec, lat, amp: tideAmplitude(moon(0, k.moon.distance)) });
+  $('side').innerHTML = side.svg;
+  const series = placeSeries(jde, 48, lat);
+  const day = describeDay(series);
+  $('day-chart').innerHTML = renderDay({ series, highs: day.highs, lows: day.lows });
+  $('lat-value').textContent = `${Math.abs(lat)}° ${lat >= 0 ? 'N' : 'S'}`;
+  const decText = `${Math.abs(k.moon.dec).toFixed(1)}° ${k.moon.dec >= 0 ? 'north' : 'south'}`;
+  const rowsOut = [
+    ['Moment', `${when(jde)}${state.dated ? '' : ' (now)'}`],
+    ["Moon's declination", `${decText}; a second high water needs latitude within ${secondHighLimit(k.moon.dec).toFixed(1)}°`],
+  ];
+  const perDay = highWatersPerDay(jde, lat);
+  rowsOut.push(['High waters', perDay === 2 ? 'two a day' : 'one a day']);
+  if (perDay === 2 && day.higher && day.lower) {
+    rowsOut.push(['Higher high water', relativeToMean(day.higher.h)]);
+    rowsOut.push(['Lower high water', relativeToMean(day.lower.h)]);
+  } else if (day.higher) {
+    rowsOut.push(['High water', relativeToMean(day.higher.h)]);
+  }
+  const dl = $('lat-readout');
+  dl.replaceChildren(...rowsOut.flatMap(([a, b]) => {
+    const dt = document.createElement('dt');
+    dt.textContent = a;
+    const dd = document.createElement('dd');
+    dd.textContent = b;
+    return [dt, dd];
+  }));
 }
 
 let chart = null;
@@ -164,6 +205,7 @@ function undate() {
   sunDistance = undefined;
 }
 
+$('lat').addEventListener('input', () => renderLatitude());
 $('day').addEventListener('input', (e) => showMoment(Number(e.target.value)));
 $('month').addEventListener('click', (e) => {
   const svg = $('month').querySelector('svg');

@@ -45,6 +45,11 @@ Run the tests with `npm test` (Node 20 or later).
   spring tides, a new or full moon within a day and a half of perigee (the
   "king tides" of tide tables). Click a moment to put that day's Moon and Sun
   into the picture.
+- **Away from the equator**: the Earth cut through its axis with the Moon's
+  bulge tilted by its declination, and two days of water height at a chosen
+  latitude on the Greenwich meridian. North or south of the equator the two
+  daily high waters differ, and beyond 90° minus the Moon's declination there
+  is only one a day.
 
 ## The numbers
 
@@ -69,9 +74,9 @@ The positions of the Moon and the Sun come from the truncated series in
 Meeus, *Astronomical Algorithms* (chapters 25 and 47). Every new and full moon
 of 2026 falls within 3 minutes of Fred Espenak's published phase table, and
 every perigee within 20 minutes and 40 km of his perigee table; the tests check
-them all. The chart treats the Moon and the Sun as if they sat on
-the equator; their real declination is what makes the two daily tides unequal
-away from the equator.
+them all. The two-month chart treats the Moon and the Sun as if they sat on the
+equator; the latitude section uses their real declinations, from the same
+series converted to right ascension and declination with the mean obliquity.
 
 ## Layout
 
@@ -81,6 +86,7 @@ away from the equator.
 - `src/ephemeris.js`, `src/time.js`: Sun and Moon positions, calendar dates
 - `src/month.js`: phases, perigees, apogees and perigean spring tides
 - `src/monthchart.js`: the two-month chart
+- `src/latitude.js`, `src/sideview.js`: the tide at a latitude and its drawings
 - `src/main.js`: controls and dragging
 - `test/`: Node tests for the physics and the drawing
 

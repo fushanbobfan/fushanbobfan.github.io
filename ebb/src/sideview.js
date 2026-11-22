@@ -73,7 +73,8 @@ export function renderDay({ series, highs, lows }) {
   for (let hr = 0; hr <= (t1 - t0) * 24 + 1e-9; hr += 6) {
     const xx = x(t0 + hr / 24);
     out.push(`<line class="grid" x1="${f1(xx)}" x2="${f1(xx)}" y1="${top}" y2="${h - bottom}"/>`);
-    out.push(`<text class="tick" x="${f1(xx)}" y="${h - bottom + 16}" text-anchor="middle">${hr % 24 === 0 ? dayLabel(t0 + hr / 24) : `+${hr} h`}</text>`);
+    const anchor = xx > w - right - 40 ? 'end' : xx < left + 40 ? 'start' : 'middle';
+    out.push(`<text class="tick" x="${f1(xx)}" y="${h - bottom + 16}" text-anchor="${anchor}">${hr % 24 === 0 ? dayLabel(t0 + hr / 24) : `+${hr} h`}</text>`);
   }
   out.push(`<path class="height" d="${series.map((p, i) => `${i ? 'L' : 'M'}${f1(x(p.jde))},${f1(y(p.h))}`).join('')}"/>`);
   for (const p of highs) {

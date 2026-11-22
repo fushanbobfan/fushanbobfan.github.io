@@ -138,6 +138,27 @@ svg { display: block; width: 100%; height: auto; }
 .month .ev-perigee { fill: var(--arrow); font-weight: bold; }
 .month .cursor { stroke: var(--arrow); stroke-width: 1.5; }
 .month-controls { margin-top: 10px; }
+.lat-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 20px;
+  align-items: start;
+}
+.day-wrap { margin-top: 0; cursor: default; }
+.day-wrap svg { min-width: 480px; }
+.side .axis { stroke: var(--muted); stroke-width: 0.012; stroke-dasharray: 0.05 0.04; }
+.side .equator { stroke: var(--muted); stroke-width: 0.012; }
+.side .moon-line { stroke: var(--moon); stroke-width: 0.015; stroke-dasharray: 0.06 0.05; }
+.side .path { stroke: var(--arrow); stroke-width: 0.018; stroke-dasharray: 0.04 0.03; }
+.side .place { fill: var(--arrow); }
+.side .place.later { fill: var(--panel); stroke: var(--arrow); stroke-width: 0.02; }
+.field-wrap .label.small { font-size: 0.15px; fill: var(--ink); }
+.day .hw { fill: var(--arrow); }
+.day .lw { fill: var(--panel); stroke: var(--sea-line); stroke-width: 1.2; }
+.day .hw-label { fill: var(--ink); }
+.lat-readout { margin: 10px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
+.lat-readout dt { font-weight: bold; }
+.lat-readout dd { margin: 0; }
 .event-details { margin: 6px 0 0; color: var(--muted); }
 .event-details ul { margin: 6px 0 0; padding-left: 1.2em; columns: 2 18em; font-size: 0.93rem; }
 
@@ -154,5 +175,5 @@ footer a { color: var(--accent); }
 }
 
 @media (max-width: 760px) {
-  .stage { grid-template-columns: 1fr; }
+  .stage, .lat-stage { grid-template-columns: 1fr; }
 }
