@@ -51,8 +51,8 @@ const ICON = { new: '●', full: '○', perigee: 'P', apogee: 'A' };
 export function renderMonth({ start, days = 59, selected = null, lon = 0 }) {
   const series = heightSeries(start, days, 0.5, lon);
   const top = Math.max(0.6, ...series.map((p) => p.h + 0.05));
-  const bot = Math.min(-0.5, ...series.map((p) => p.h - 0.05));
-  const sc = chartScales(start, days, bot, top);
+  const floor = Math.min(-0.5, ...series.map((p) => p.h - 0.05));
+  const sc = chartScales(start, days, floor, top);
   // Look a few days past each edge so a spring tide near an edge still finds
   // its perigee, then keep what falls inside the window.
   const padded = events(start - 3, start + days + 3);
@@ -70,7 +70,7 @@ export function renderMonth({ start, days = 59, selected = null, lon = 0 }) {
     out.push(`<rect class="king" x="${f1(Math.max(left, x0))}" y="${T - 4}" width="${f1(Math.min(w - right, x1) - Math.max(left, x0))}" height="${h - T - bottom + 4}"/>`);
   }
   // Gridlines: centimetres and the first of each month.
-  for (let cm = Math.ceil((bot * 100) / 20) * 20; cm <= top * 100; cm += 20) {
+  for (let cm = Math.ceil((floor * 100) / 20) * 20; cm <= top * 100; cm += 20) {
     const y = sc.y(cm / 100);
     out.push(`<line class="grid${cm === 0 ? ' zero' : ''}" x1="${left}" x2="${w - right}" y1="${f1(y)}" y2="${f1(y)}"/>`);
     out.push(`<text class="tick" x="${left - 6}" y="${f1(y + 4)}" text-anchor="end">${cm}</text>`);
