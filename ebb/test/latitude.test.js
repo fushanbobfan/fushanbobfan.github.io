@@ -91,3 +91,15 @@ test('the side view puts the place on the bulges at the heights the formula give
   assert.equal((day.match(/class="lw"/g) || []).length, lows.length);
   assert.ok(!day.includes('NaN'));
 });
+
+test('high waters per tidal day follow the declination limit with the real sky', async () => {
+  const { highWatersPerDay, relativeToMean } = await import('../src/latitude.js');
+  const t = julianDay(2026, 1, 1.5);
+  const dec = equatorialSky(t).moon.dec;
+  assert.ok(dec > 25);
+  assert.equal(highWatersPerDay(t, 45), 2);
+  assert.equal(highWatersPerDay(t, 0), 2);
+  assert.equal(highWatersPerDay(t, 75), 1);
+  assert.equal(relativeToMean(-0.214), '21 cm below the mean');
+  assert.equal(relativeToMean(0.51), '51 cm above the mean');
+});

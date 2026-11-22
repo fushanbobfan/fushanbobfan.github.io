@@ -69,6 +69,20 @@ export function highWaterPair(amp, lat, dec) {
   return { near: heightFrom(amp, lat, dec, 0), far: heightFrom(amp, lat, dec, 180) };
 }
 
+// One or two high waters per tidal day (24 h 50 min), counted over three
+// tidal days so the window edges do not matter.
+export const TIDAL_DAY_HOURS = 24.8412;
+export function highWatersPerDay(jde, lat, lon = 0) {
+  const s = placeSeries(jde, 3 * TIDAL_DAY_HOURS + 2, lat, lon);
+  const n = turningPoints(s).highs.length / 3;
+  return n > 1.5 ? 2 : 1;
+}
+
+export function relativeToMean(m) {
+  const cm = Math.round(Math.abs(m) * 100);
+  return m >= 0 ? `${cm} cm above the mean` : `${cm} cm below the mean`;
+}
+
 // Describe a day of tide: how many high waters and how unequal they are.
 export function describeDay(series) {
   const { highs, lows } = turningPoints(series);
