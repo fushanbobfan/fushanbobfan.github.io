@@ -1,0 +1,134 @@
+:root {
+  color-scheme: light dark;
+  --paper: #f4f1ea;
+  --panel: #fbfaf5;
+  --ink: #26241f;
+  --muted: #69645a;
+  --rule: #d6cfbf;
+  --accent: #2f5d8a;
+  --sea: rgba(74, 140, 196, 0.42);
+  --sea-line: #2f6f9f;
+  --land: #c9bfa7;
+  --arrow: #b5532f;
+  --sun: #d9932b;
+  --moon: #b8b4aa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #15171c;
+    --panel: #1d2027;
+    --ink: #e8e6e0;
+    --muted: #a3a29c;
+    --rule: #383b44;
+    --accent: #8db8e6;
+    --sea: rgba(110, 170, 225, 0.36);
+    --sea-line: #8db8e6;
+    --land: #4a4639;
+    --arrow: #f0956c;
+    --sun: #f0b452;
+    --moon: #c9c5bc;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 Georgia, "Iowan Old Style", "Times New Roman", serif;
+}
+
+button, input { font: inherit; color: inherit; }
+
+header, main, footer {
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+header { padding-top: 28px; }
+h1 { margin: 0 0 6px; font-size: 2.1rem; letter-spacing: 0.01em; }
+h2 { font-size: 1.2rem; margin: 28px 0 6px; }
+.lede { max-width: 66ch; margin: 0; }
+main p { max-width: 70ch; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  align-items: flex-start;
+  margin: 22px 0 14px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+fieldset.field { border: 0; margin: 0; padding: 0; }
+.field legend { padding: 0; margin-bottom: 4px; }
+.field.grow { flex: 1 1 240px; }
+.field label, .field legend { font-size: 0.95rem; color: var(--muted); }
+.field output { color: var(--ink); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row input[type="range"] { flex: 1 1 120px; min-width: 0; }
+input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+
+button {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.field-wrap {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  touch-action: none;
+}
+
+svg { display: block; width: 100%; height: auto; }
+.field-wrap .ocean { fill: var(--sea); stroke: var(--sea-line); stroke-width: 0.02; }
+.field-wrap .mean-sea { fill: none; stroke: var(--sea-line); stroke-width: 0.012; stroke-dasharray: 0.05 0.05; opacity: 0.8; }
+.field-wrap .earth { fill: var(--land); }
+.field-wrap .arrows line { stroke: var(--arrow); stroke-width: 0.03; stroke-linecap: round; }
+.field-wrap .arrowhead { fill: var(--arrow); }
+.field-wrap .dot { fill: var(--arrow); }
+.field-wrap .moon { fill: var(--moon); stroke: var(--ink); stroke-width: 0.015; cursor: grab; }
+.field-wrap .sun { fill: var(--sun); }
+.field-wrap .sun-ray line { stroke: var(--sun); stroke-width: 0.02; stroke-dasharray: 0.08 0.06; }
+.field-wrap .label { fill: var(--muted); font-size: 0.2px; font-family: inherit; }
+
+.readout dl { margin: 0; display: grid; gap: 2px 0; }
+.readout dt { font-weight: bold; margin-top: 8px; }
+.readout dd { margin: 0; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+
+footer { margin: 36px auto 28px; color: var(--muted); }
+footer a { color: var(--accent); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .stage { grid-template-columns: 1fr; }
+}

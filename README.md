@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [ebb](https://fushanbobfan.github.io/ebb/) | Why the sea rises twice a day: drag the Moon round the Earth, take away the pull on the centre and watch the leftover raise two bulges, then add the Sun for spring and neap tides. | [`ebb/`](ebb/) |
 | [syzygy](https://fushanbobfan.github.io/syzygy/) | Why eclipses come in seasons: every new and full moon of a year against the window it must hit, the Moon's tilted orbit seen from above, and the eclipses that result. | [`syzygy/`](syzygy/) |
 | [detour](https://fushanbobfan.github.io/detour/) | Braess's paradox in the browser: open a free shortcut, let every driver take the fastest route, and watch every trip get slower. | [`detour/`](detour/) |
 | [suitors](https://fushanbobfan.github.io/suitors/) | Stable matching in the browser: watch deferred acceptance pair two groups one proposal at a time, and see how much it matters which side proposes. | [`suitors/`](suitors/) |
