@@ -2,12 +2,10 @@
 // one point on the equator, rising and falling twice a day, under a strip of
 // new and full moons, quarters, perigees and apogees.
 
-import { moonPosition, sunPosition } from './ephemeris.js';
 import { moon, sun, heightFromBody } from './tides.js';
 import { calendarDate, monthName, jdeToUtc } from './time.js';
-import { events, kingTides } from './month.js';
+import { events, kingTides, equatorialSky } from './month.js';
 
-const AU = 1.495978707e11;
 const RAD = Math.PI / 180;
 
 // Angle (degrees) the Greenwich meridian has turned through, measured like an
@@ -20,13 +18,13 @@ export function earthTurn(jd) {
 }
 
 // Height (m) of the equilibrium tide at a point on the equator `lon` degrees
-// east of Greenwich, with the Moon and the Sun treated as on the equator.
+// east of Greenwich, with the Moon and the Sun treated as on the equator: the
+// angle from each is its hour angle, sidereal time minus right ascension.
 export function heightOnEquator(jde, lon = 0) {
-  const m = moonPosition(jde);
-  const s = sunPosition(jde);
+  const k = equatorialSky(jde);
   const here = earthTurn(jdeToUtc(jde)) + lon;
-  return heightFromBody((here - m.lon) * RAD, moon(0, m.dist * 1000))
-    + heightFromBody((here - s.lon) * RAD, sun(0, s.dist * AU));
+  return heightFromBody((here - k.moon.ra) * RAD, moon(0, k.moon.distance))
+    + heightFromBody((here - k.sun.ra) * RAD, sun(0, k.sun.distance));
 }
 
 export function heightSeries(start, days, stepHours = 0.5, lon = 0) {
@@ -55,8 +53,12 @@ export function renderMonth({ start, days = 59, selected = null, lon = 0 }) {
   const top = Math.max(0.6, ...series.map((p) => p.h + 0.05));
   const bot = Math.min(-0.5, ...series.map((p) => p.h - 0.05));
   const sc = chartScales(start, days, bot, top);
-  const evts = events(start, start + days);
-  const kings = kingTides(evts);
+  // Look a few days past each edge so a spring tide near an edge still finds
+  // its perigee, then keep what falls inside the window.
+  const padded = events(start - 3, start + days + 3);
+  const inside = (t) => t >= start && t <= start + days;
+  const evts = padded.filter((e) => inside(e.jde));
+  const kings = kingTides(padded).filter((k) => inside(k.jde));
   const { w, h, left, right, top: T, bottom } = CHART;
   const out = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" class="month" role="img" aria-labelledby="month-title month-desc">`);
@@ -79,7 +81,8 @@ export function renderMonth({ start, days = 59, selected = null, lon = 0 }) {
     if (c.day === 1 || d === 0) {
       const x = sc.x(start + d);
       out.push(`<line class="grid" x1="${f1(x)}" x2="${f1(x)}" y1="${T}" y2="${h - bottom}"/>`);
-      out.push(`<text class="tick" x="${f1(x + 4)}" y="${h - bottom + 18}">${c.day} ${monthName(c.month)}</text>`);
+      const atEnd = x > w - right - 50;
+      out.push(`<text class="tick" x="${f1(atEnd ? x - 4 : x + 4)}" y="${h - bottom + 18}"${atEnd ? ' text-anchor="end"' : ''}>${c.day} ${monthName(c.month)}</text>`);
     }
   }
   const path = series.map((p, i) => `${i ? 'L' : 'M'}${f1(sc.x(p.jde))},${f1(sc.y(p.h))}`).join('');
