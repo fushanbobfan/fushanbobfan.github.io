@@ -1,8 +1,8 @@
 import { moon, sun, EARTH_RADIUS, MOON_MEAN_DISTANCE, MOON_PERIGEE, MOON_APOGEE } from './tides.js';
 import { renderField } from './field.js';
 import { rows, distanceLabel, liveText } from './readout.js';
-import { renderMonth, monthSummary, when } from './monthchart.js';
-import { moonPosition, sunPosition } from './ephemeris.js';
+import { renderMonth, monthSummary, when, eventLabel } from './monthchart.js';
+import { equatorialSky } from './month.js';
 import { julianDay, calendarDate, utcToJde } from './time.js';
 
 const $ = (id) => document.getElementById(id);
@@ -22,7 +22,9 @@ const state = {
 };
 
 const WINDOW_DAYS = 59;
-const AU_M = 1.495978707e11;
+const DAY_STEP = 0.125;
+const FIRST_MONTH = 1900 * 12;
+const LAST_MONTH = 2100 * 12 + 11;
 
 let sunDistance = undefined;
 
@@ -69,32 +71,45 @@ function renderChart() {
   chart = renderMonth({ start: state.start, days: WINDOW_DAYS, selected: state.dated ? state.start + state.day : null });
   $('month').innerHTML = chart.svg;
   $('month-summary').textContent = monthSummary(chart);
+  const list = $('event-list');
+  list.replaceChildren(...chart.events.map((e) => {
+    const li = document.createElement('li');
+    li.textContent = eventLabel(e);
+    return li;
+  }));
   const c = calendarDate(state.start);
   $('month-start').value = `${c.year}-${String(c.month).padStart(2, '0')}`;
   $('day').value = String(state.day);
+  const idx = monthIndex();
+  $('month-prev').disabled = idx <= FIRST_MONTH;
+  $('month-next').disabled = idx >= LAST_MONTH;
   $('day-value').textContent = state.dated ? when(state.start + state.day) : 'drag the slider or click the chart';
 }
 
-// Put the real Moon and Sun of a moment into the picture, as seen from above
-// the North Pole with longitudes measured counterclockwise.
+// Put the real Moon and Sun of a moment into the picture, seen from above the
+// North Pole with right ascension measured counterclockwise. The moment is
+// kept on the slider's steps so the slider, the cursor and the picture agree.
 function showMoment(day) {
-  state.day = Math.max(0, Math.min(WINDOW_DAYS, day));
+  state.day = Math.max(0, Math.min(WINDOW_DAYS, Math.round(day / DAY_STEP) * DAY_STEP));
   state.dated = true;
-  const jde = state.start + state.day;
-  const m = moonPosition(jde);
-  const s = sunPosition(jde);
-  state.moonAngle = m.lon;
-  state.moonDistance = m.dist * 1000;
+  const k = equatorialSky(state.start + state.day);
+  state.moonAngle = k.moon.ra;
+  state.moonDistance = k.moon.distance;
   state.sunOn = true;
-  state.sunAngle = s.lon;
+  state.sunAngle = k.sun.ra;
   $('sun-on').checked = true;
-  sunDistance = s.dist * AU_M;
+  sunDistance = k.sun.distance;
   render();
 }
 
-function setStart(year, month) {
-  const y = Math.max(1900, Math.min(2100, year));
-  state.start = utcToJde(julianDay(y, month, 1));
+function monthIndex() {
+  const c = calendarDate(state.start);
+  return c.year * 12 + (c.month - 1);
+}
+
+function setMonth(idx) {
+  const i = Math.max(FIRST_MONTH, Math.min(LAST_MONTH, idx));
+  state.start = utcToJde(julianDay(Math.floor(i / 12), (i % 12) + 1, 1));
   showMoment(state.day);
 }
 
@@ -159,16 +174,11 @@ $('month').addEventListener('click', (e) => {
   const p = pt.matrixTransform(svg.getScreenCTM().inverse());
   showMoment(chart.scales.jdeAt(p.x) - state.start);
 });
-function shiftMonth(by) {
-  const c = calendarDate(state.start);
-  const idx = c.year * 12 + (c.month - 1) + by;
-  setStart(Math.floor(idx / 12), (idx % 12) + 1);
-}
-$('month-prev').addEventListener('click', () => shiftMonth(-1));
-$('month-next').addEventListener('click', () => shiftMonth(1));
+$('month-prev').addEventListener('click', () => setMonth(monthIndex() - 1));
+$('month-next').addEventListener('click', () => setMonth(monthIndex() + 1));
 $('month-start').addEventListener('change', (e) => {
   const [y, m] = e.target.value.split('-').map(Number);
-  if (y && m) setStart(y, m);
+  if (y && m) setMonth(y * 12 + (m - 1));
 });
 
 {
