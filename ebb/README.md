@@ -39,6 +39,12 @@ Run the tests with `npm test` (Node 20 or later).
 - **The Sun**: add it and turn it. In line with the Moon (new or full moon)
   the two tides add to a spring tide; at right angles (quarter moons) they
   partly cancel to a neap tide.
+- **Two months of tides** with the real Moon and Sun: the equilibrium tide at
+  a point on the equator under Greenwich, two high waters a day, under a strip
+  of new and full moons, perigees and apogees. Shaded bands are perigean
+  spring tides, a new or full moon within a day and a half of perigee (the
+  "king tides" of tide tables). Click a moment to put that day's Moon and Sun
+  into the picture.
 
 ## The numbers
 
@@ -59,11 +65,22 @@ shaped by the continents, the depth of each ocean basin and its resonances,
 so the range at a harbour can be anything from almost nothing to more than
 ten metres.
 
+The positions of the Moon and the Sun come from the truncated series in
+Meeus, *Astronomical Algorithms* (chapters 25 and 47). Every new and full moon
+of 2026 falls within 3 minutes of Fred Espenak's published phase table, and
+every perigee within 20 minutes and 40 km of his perigee table; the tests check
+them all. The chart treats the Moon and the Sun as if they sat on
+the equator; their real declination is what makes the two daily tides unequal
+away from the equator.
+
 ## Layout
 
 - `src/tides.js`: pulls, tidal pulls and equilibrium tide heights
 - `src/field.js`: the SVG picture
 - `src/readout.js`: the numbers beside it
+- `src/ephemeris.js`, `src/time.js`: Sun and Moon positions, calendar dates
+- `src/month.js`: phases, perigees, apogees and perigean spring tides
+- `src/monthchart.js`: the two-month chart
 - `src/main.js`: controls and dragging
 - `test/`: Node tests for the physics and the drawing
 
