@@ -70,28 +70,47 @@ export function moonMarker(angle) {
   return { x: MOON_DRAWN_AT * Math.cos(angle), y: MOON_DRAWN_AT * Math.sin(angle) };
 }
 
-// Labels sit beside a body, at right angles to the line from the Earth, so the
-// Moon's and the Sun's never collide when the two line up.
+// Labels sit beside a body, at right angles to the line from the Earth, and
+// on the side facing away from the other body so the two never collide.
 const labelAt = (x, y, a, r) => ({ x: x + r * Math.cos(a), y: y + r * Math.sin(a) });
+
+// +1 when the Sun is counterclockwise of the Moon (by less than half a turn).
+export const sunSide = (moonAngle, sunAngle) => (Math.sin(sunAngle - moonAngle) > 1e-9 ? 1 : -1);
+
+export function labelPositions(moonBody, sunBody) {
+  const m = moonMarker(moonBody.angle);
+  const moonR = moonRadius(moonBody);
+  const side = sunBody ? sunSide(moonBody.angle, sunBody.angle) : -1;
+  const out = { moon: labelAt(m.x, m.y, moonBody.angle - side * Math.PI / 2, moonR + 0.3) };
+  if (sunBody) {
+    const s = sunMarker(sunBody.angle);
+    out.sun = labelAt(s.x, s.y, sunBody.angle + side * Math.PI / 2, 0.42);
+  }
+  return out;
+}
+
+const SUN_DRAWN_AT = 2.8;
+export const sunMarker = (angle) => ({ x: SUN_DRAWN_AT * Math.cos(angle), y: SUN_DRAWN_AT * Math.sin(angle) });
+export const moonRadius = (body) => 0.27 * Math.cbrt(MOON_MEAN_DISTANCE / body.distance);
 
 export function renderField({ moonBody, sunBody, mode = 'tidal', showOcean = true }) {
   const bodies = sunBody ? [moonBody, sunBody] : [moonBody];
   const ar = arrows(bodies, mode);
   const oc = ocean(bodies);
   const m = moonMarker(moonBody.angle);
-  const moonR = 0.27 * Math.cbrt(MOON_MEAN_DISTANCE / moonBody.distance);
+  const moonR = moonRadius(moonBody);
+  const labels = labelPositions(moonBody, sunBody);
   const out = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}" role="img" aria-labelledby="field-title">`);
   out.push(`<title id="field-title">${mode === 'pull' ? 'The Moon\'s pull' : 'The tidal pull'} across the Earth${sunBody ? ', Sun included' : ''}</title>`);
   out.push('<defs><marker id="head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>');
   if (sunBody) {
-    const sx = 2.8 * Math.cos(sunBody.angle);
-    const sy = 2.8 * Math.sin(sunBody.angle);
+    const { x: sx, y: sy } = sunMarker(sunBody.angle);
     const lx = 1.75 * Math.cos(sunBody.angle);
     const ly = 1.75 * Math.sin(sunBody.angle);
     out.push(`<g class="sun-ray"><line x1="${f(lx)}" y1="${f(-ly)}" x2="${f(sx)}" y2="${f(-sy)}"/></g>`);
     out.push(`<circle class="sun" cx="${f(sx)}" cy="${f(-sy)}" r="0.18"/>`);
-    const sl = labelAt(sx, sy, sunBody.angle - Math.PI / 2, 0.42);
+    const sl = labels.sun;
     out.push(`<text class="label" x="${f(sl.x)}" y="${f(-sl.y)}" dy="0.07" text-anchor="middle">Sun</text>`);
   }
   if (showOcean) {
@@ -109,7 +128,7 @@ export function renderField({ moonBody, sunBody, mode = 'tidal', showOcean = tru
   }
   out.push('</g>');
   out.push(`<circle class="moon" id="moon-handle" cx="${f(m.x)}" cy="${f(-m.y)}" r="${f(moonR)}" tabindex="-1"/>`);
-  const ml = labelAt(m.x, m.y, moonBody.angle + Math.PI / 2, moonR + 0.3);
+  const ml = labels.moon;
   out.push(`<text class="label" x="${f(ml.x)}" y="${f(-ml.y)}" dy="0.07" text-anchor="middle">Moon</text>`);
   out.push('</svg>');
   return { svg: out.join(''), longest: ar.longest, exaggeration: oc.exaggeration, arrows: ar.list.length };

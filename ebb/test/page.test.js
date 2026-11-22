@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { renderField, arrows, ocean, samplePoints } from '../src/field.js';
+import { renderField, arrows, ocean, samplePoints, labelPositions } from '../src/field.js';
 import { rows, tideKind, distanceLabel, gFraction, cm } from '../src/readout.js';
 import { moon, sun, MOON_PERIGEE, tidalScale } from '../src/tides.js';
 
@@ -53,6 +53,17 @@ test('readouts name spring and neap tides and the Moon\'s distance', () => {
   assert.match(both, /^29 cm .*neap/);
   const near = rows({ moonBody: moon(0, MOON_PERIGEE), sunBody: null, longest: 1e-6, exaggeration: 4e6, mode: 'tidal' });
   assert.ok(near.some(([k, v]) => k === 'Against the average Moon' && v === '1.18 times the tide'));
+});
+
+test('the Moon and Sun labels stay apart at every pair of directions', () => {
+  for (let m = 0; m < 360; m += 5) {
+    for (let s = 0; s < 360; s += 5) {
+      const L = labelPositions(moon(m * Math.PI / 180), sun(s * Math.PI / 180));
+      // Labels are about 0.55 wide and 0.2 tall in drawing units.
+      const apart = Math.abs(L.moon.x - L.sun.x) > 0.6 || Math.abs(L.moon.y - L.sun.y) > 0.25;
+      assert.ok(apart, `labels collide with Moon at ${m} and Sun at ${s}`);
+    }
+  }
 });
 
 test('the page has the controls the script looks up', () => {
