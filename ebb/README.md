@@ -47,7 +47,7 @@ mass *Mₑ* and radius *R* stands at
 
 above the mean, where *z* is the angle from the point under the body. For the
 Moon at its average distance that is 36 cm under it and opposite, 18 cm down
-at the sides, about 54 cm from low to high water. The Sun's comes to 46% of
+at the sides, 53 cm from low to high water. The Sun's comes to 46% of
 that, so spring tides reach about 78 cm and neap tides about 29 cm. The tidal
 acceleration under the Moon is close to 2GMR/d³ ≈ 1.1 × 10⁻⁶ m/s², and the
 page computes it exactly as the difference of the two pulls.
