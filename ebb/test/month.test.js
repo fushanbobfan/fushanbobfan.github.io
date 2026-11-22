@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { events, kingTides, combinedRange, rangeAt, sampleRange } from '../src/month.js';
+import { renderMonth, heightOnEquator, earthTurn, eventLabel } from '../src/monthchart.js';
 import { moonPosition } from '../src/ephemeris.js';
 import { julianDay, jdeToUtc } from '../src/time.js';
 import { tideAmplitude, moon, sun } from '../src/tides.js';
@@ -65,4 +66,30 @@ test('the combined range swings between spring and neap with the elongation', ()
   assert.ok(Math.max(...r) > 0.88 && Math.max(...r) < 0.95, `largest ${Math.max(...r)}`);
   const dec = rangeAt(julianDay(2026, 12, 24.1));
   assert.ok(dec.elongation > 170 && dec.moonDistance < 3.58e8);
+});
+
+test('the equator point sees two tides a day', () => {
+  const start = julianDay(2026, 11, 1);
+  let highs = 0;
+  let prev = heightOnEquator(start - 0.01);
+  let cur = heightOnEquator(start);
+  for (let t = 0.01; t <= 10; t += 0.01) {
+    const next = heightOnEquator(start + t);
+    if (cur > prev && cur >= next) highs += 1;
+    prev = cur;
+    cur = next;
+  }
+  // Ten days at one high water every 12 h 25 min.
+  assert.ok(highs >= 19 && highs <= 20, `${highs} high waters`);
+  assert.ok(Math.abs(earthTurn(2451545.0) - 280.46061837) < 1e-9);
+});
+
+test('the chart draws a curve, the events and the perigean spring bands', () => {
+  const r = renderMonth({ start: julianDay(2026, 11, 1), days: 59, selected: julianDay(2026, 11, 24) });
+  assert.ok(!r.svg.includes('NaN'));
+  assert.equal((r.svg.match(/class="king"/g) || []).length, r.kings.length);
+  assert.ok(r.kings.length >= 2);
+  assert.equal((r.svg.match(/class="ev /g) || []).length, r.events.length);
+  assert.ok(r.svg.includes('class="cursor"'));
+  assert.match(eventLabel({ kind: 'perigee', jde: julianDay(2026, 12, 24.35), km: 356660 }), /^Perigee \(Moon nearest\), 24 Dec 2026, 08:\d\d UTC, 356,660 km$/);
 });
