@@ -92,14 +92,38 @@ test('the side view puts the place on the bulges at the heights the formula give
   assert.ok(!day.includes('NaN'));
 });
 
-test('high waters per tidal day follow the declination limit with the real sky', async () => {
-  const { highWatersPerDay, relativeToMean } = await import('../src/latitude.js');
+test('high waters are counted in each tidal day of the chart, transitions included', async () => {
+  const { highsPerTidalDay, countText, relativeToMean, TIDAL_DAY_HOURS } = await import('../src/latitude.js');
+  const count = (t, lat) => highsPerTidalDay(turningPoints(placeSeries(t, 2 * TIDAL_DAY_HOURS, lat)).highs, t, 2);
   const t = julianDay(2026, 1, 1.5);
-  const dec = equatorialSky(t).moon.dec;
-  assert.ok(dec > 25);
-  assert.equal(highWatersPerDay(t, 45), 2);
-  assert.equal(highWatersPerDay(t, 0), 2);
-  assert.equal(highWatersPerDay(t, 75), 1);
+  assert.ok(equatorialSky(t).moon.dec > 25);
+  assert.deepEqual(count(t, 45), [2, 2]);
+  assert.deepEqual(count(t, 0), [2, 2]);
+  assert.deepEqual(count(t, 75), [1, 1]);
+  // Near the limit the count changes from one tidal day to the next.
+  const edge = count(julianDay(2026, 1, 2), 62);
+  assert.equal(edge[0], 1);
+  assert.equal(countText([1, 2]), 'one, then two in successive tidal days of 24 h 50 min');
+  assert.equal(countText([2, 2]), 'two in each tidal day of 24 h 50 min');
   assert.equal(relativeToMean(-0.214), '21 cm below the mean');
   assert.equal(relativeToMean(0.51), '51 cm above the mean');
+});
+
+test('the side view puts the place markers in the right hemisphere on the right side', async () => {
+  const { renderSide } = await import('../src/sideview.js');
+  for (const lat of [-60, -20, 20, 60]) {
+    for (const dec of [-25, 0, 25]) {
+      const { svg, nearH, farH } = renderSide({ dec, lat, amp: A });
+      const marks = [...svg.matchAll(/class="place[^"]*" cx="([^"]+)" cy="([^"]+)"/g)].map((m) => ({ x: Number(m[1]), y: -Number(m[2]) }));
+      assert.equal(marks.length, 2);
+      const [nearM, farM] = marks;
+      assert.ok(nearM.x > 0 && farM.x < 0, 'facing the Moon on the right');
+      for (const m of marks) assert.equal(Math.sign(m.y), Math.sign(lat), `lat ${lat} dec ${dec}`);
+      const k = 0.2 / A;
+      const close = (a, b) => Math.abs(a - b) < 0.003;
+      assert.ok(close(Math.hypot(nearM.x, nearM.y), 1 + k * nearH), 'near radius');
+      assert.ok(close(Math.hypot(farM.x, farM.y), 1 + k * farH), 'far radius');
+      assert.ok(Math.abs(Math.atan2(nearM.y, nearM.x) * 180 / Math.PI - lat) < 0.1, 'near at the latitude');
+    }
+  }
 });

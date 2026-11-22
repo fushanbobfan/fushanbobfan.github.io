@@ -69,13 +69,23 @@ export function highWaterPair(amp, lat, dec) {
   return { near: heightFrom(amp, lat, dec, 0), far: heightFrom(amp, lat, dec, 180) };
 }
 
-// One or two high waters per tidal day (24 h 50 min), counted over three
-// tidal days so the window edges do not matter.
+// High waters in each tidal day (24 h 50 min) of a series that starts at
+// `start`: one count per whole tidal day the series covers.
 export const TIDAL_DAY_HOURS = 24.8412;
-export function highWatersPerDay(jde, lat, lon = 0) {
-  const s = placeSeries(jde, 3 * TIDAL_DAY_HOURS + 2, lat, lon);
-  const n = turningPoints(s).highs.length / 3;
-  return n > 1.5 ? 2 : 1;
+export function highsPerTidalDay(highs, start, tidalDays) {
+  const len = TIDAL_DAY_HOURS / 24;
+  const counts = Array.from({ length: tidalDays }, () => 0);
+  for (const p of highs) {
+    const i = Math.floor((p.jde - start) / len);
+    if (i >= 0 && i < tidalDays) counts[i] += 1;
+  }
+  return counts;
+}
+
+export function countText(counts) {
+  const word = (n) => (n === 1 ? 'one' : n === 2 ? 'two' : String(n));
+  if (counts.every((n) => n === counts[0])) return `${word(counts[0])} in each tidal day of 24 h 50 min`;
+  return `${counts.map(word).join(', then ')} in successive tidal days of 24 h 50 min`;
 }
 
 export function relativeToMean(m) {
