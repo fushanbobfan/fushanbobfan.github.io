@@ -48,8 +48,9 @@ Run the tests with `npm test` (Node 20 or later).
 - **Away from the equator**: the Earth cut through its axis with the Moon's
   bulge tilted by its declination, and two days of water height at a chosen
   latitude on the Greenwich meridian. North or south of the equator the two
-  daily high waters differ, and beyond 90° minus the Moon's declination there
-  is only one a day.
+  daily high waters differ. With the Moon alone, a place more than 90° minus
+  the Moon's declination from the equator gets only one a day; the chart, with
+  the Sun added, counts the high waters in each tidal day.
 
 ## The numbers
 

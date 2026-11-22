@@ -3,8 +3,10 @@ import { renderField } from './field.js';
 import { rows, distanceLabel, liveText } from './readout.js';
 import { renderMonth, monthSummary, when, eventLabel } from './monthchart.js';
 import { equatorialSky } from './month.js';
-import { placeSeries, describeDay, secondHighLimit, highWatersPerDay, relativeToMean } from './latitude.js';
-import { renderSide, renderDay } from './sideview.js';
+import {
+  placeSeries, describeDay, secondHighLimit, highsPerTidalDay, countText, relativeToMean, TIDAL_DAY_HOURS,
+} from './latitude.js';
+import { renderSide, renderDay, extremaList } from './sideview.js';
 import { tideAmplitude } from './tides.js';
 import { julianDay, calendarDate, utcToJde } from './time.js';
 
@@ -76,23 +78,28 @@ function renderLatitude() {
   const k = equatorialSky(jde);
   const side = renderSide({ dec: k.moon.dec, lat, amp: tideAmplitude(moon(0, k.moon.distance)) });
   $('side').innerHTML = side.svg;
-  const series = placeSeries(jde, 48, lat);
+  const series = placeSeries(jde, 2 * TIDAL_DAY_HOURS, lat);
   const day = describeDay(series);
   $('day-chart').innerHTML = renderDay({ series, highs: day.highs, lows: day.lows });
   $('lat-value').textContent = `${Math.abs(lat)}° ${lat >= 0 ? 'N' : 'S'}`;
   const decText = `${Math.abs(k.moon.dec).toFixed(1)}° ${k.moon.dec >= 0 ? 'north' : 'south'}`;
   const rowsOut = [
     ['Moment', `${when(jde)}${state.dated ? '' : ' (now)'}`],
-    ["Moon's declination", `${decText}; a second high water needs latitude within ${secondHighLimit(k.moon.dec).toFixed(1)}°`],
+    ["Moon's declination", `${decText}; the Moon alone gives two high waters a day within ${secondHighLimit(k.moon.dec).toFixed(1)}° of the equator`],
   ];
-  const perDay = highWatersPerDay(jde, lat);
-  rowsOut.push(['High waters', perDay === 2 ? 'two a day' : 'one a day']);
-  if (perDay === 2 && day.higher && day.lower) {
+  const counts = highsPerTidalDay(day.highs, jde, 2);
+  rowsOut.push(['High waters', countText(counts)]);
+  if (counts.some((n) => n >= 2) && day.higher && day.lower) {
     rowsOut.push(['Higher high water', relativeToMean(day.higher.h)]);
     rowsOut.push(['Lower high water', relativeToMean(day.lower.h)]);
   } else if (day.higher) {
     rowsOut.push(['High water', relativeToMean(day.higher.h)]);
   }
+  $('extrema-list').replaceChildren(...extremaList(day).map((t) => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    return li;
+  }));
   const dl = $('lat-readout');
   dl.replaceChildren(...rowsOut.flatMap(([a, b]) => {
     const dt = document.createElement('dt');

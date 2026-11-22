@@ -145,6 +145,7 @@ svg { display: block; width: 100%; height: auto; }
   align-items: start;
 }
 .day-wrap { margin-top: 0; cursor: default; }
+.side-wrap { touch-action: auto; }
 .day-wrap svg { min-width: 480px; }
 .side .axis { stroke: var(--muted); stroke-width: 0.012; stroke-dasharray: 0.05 0.04; }
 .side .equator { stroke: var(--muted); stroke-width: 0.012; }
