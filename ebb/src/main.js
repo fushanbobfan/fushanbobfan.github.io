@@ -43,6 +43,7 @@ function render() {
   $('sun-angle').disabled = !state.sunOn;
   $('sun-angle').value = String(state.sunAngle);
   $('sun-angle-value').textContent = state.sunOn ? `${state.sunAngle}°` : '';
+  $('pull-label').textContent = state.sunOn ? "The Moon's and the Sun's pull" : "The Moon's pull";
   $('live').textContent = liveText(b);
 }
 
@@ -61,8 +62,8 @@ $('sun-on').addEventListener('change', (e) => { state.sunOn = e.target.checked; 
 $('sun-angle').addEventListener('input', (e) => { state.sunAngle = Number(e.target.value); render(); });
 $('ocean-on').addEventListener('change', (e) => { state.ocean = e.target.checked; render(); });
 
-// Drag the Moon round the Earth.
-let dragging = false;
+// Drag the Moon round the Earth. Only the pointer that grabbed it moves it.
+let dragging = null;
 function angleFromEvent(e) {
   const svg = $('field').querySelector('svg');
   const pt = svg.createSVGPoint();
@@ -74,17 +75,19 @@ function angleFromEvent(e) {
 }
 $('field').addEventListener('pointerdown', (e) => {
   if (!(e.target instanceof Element) || e.target.id !== 'moon-handle') return;
-  dragging = true;
+  if (dragging !== null) return;
+  dragging = e.pointerId;
   $('field').setPointerCapture(e.pointerId);
   e.preventDefault();
 });
 $('field').addEventListener('pointermove', (e) => {
-  if (!dragging) return;
+  if (e.pointerId !== dragging) return;
   state.moonAngle = angleFromEvent(e);
   render();
 });
-const stop = () => { dragging = false; };
+const stop = (e) => { if (e.pointerId === dragging) dragging = null; };
 $('field').addEventListener('pointerup', stop);
 $('field').addEventListener('pointercancel', stop);
+$('field').addEventListener('lostpointercapture', stop);
 
 render();
