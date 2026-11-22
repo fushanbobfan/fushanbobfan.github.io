@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ebb · why the sea rises twice a day</title>
+  <meta name="description" content="Why there are two high tides a day: the Moon pulls the near side of the Earth harder than the centre and the centre harder than the far side, and the Sun adds a tide a little under half as large.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>ebb</h1>
+    <p class="lede">The Moon pulls on the whole Earth, but not equally: the side facing it is
+      pulled a little harder than the centre, and the centre a little harder than the far side.
+      Take away the pull on the centre, which only keeps the Earth and the Moon going round each
+      other, and what is left stretches the oceans along the line to the Moon. That is why the
+      sea rises twice a day, on the side under the Moon and on the side away from it.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Moon and Sun">
+      <fieldset class="field">
+        <legend>Arrows show</legend>
+        <label><input type="radio" name="mode" value="pull"> The Moon's pull</label>
+        <label><input type="radio" name="mode" value="tidal" checked> The pull minus the pull on the centre</label>
+      </fieldset>
+      <div class="field grow">
+        <label for="moon-angle">Direction of the Moon: <output id="moon-angle-value" for="moon-angle"></output></label>
+        <input id="moon-angle" type="range" min="0" max="359" step="1">
+      </div>
+      <div class="field grow">
+        <label for="moon-distance">Distance of the Moon: <output id="moon-distance-value" for="moon-distance"></output></label>
+        <div class="row">
+          <input id="moon-distance" type="range" min="20" max="120" step="0.1">
+          <button type="button" data-distance="perigee">Nearest</button>
+          <button type="button" data-distance="mean">Average</button>
+          <button type="button" data-distance="apogee">Farthest</button>
+        </div>
+      </div>
+      <div class="field grow">
+        <label><input type="checkbox" id="sun-on"> Add the Sun</label>
+        <label for="sun-angle" class="sr-only">Direction of the Sun</label>
+        <div class="row">
+          <input id="sun-angle" type="range" min="0" max="359" step="1" disabled>
+          <output id="sun-angle-value" for="sun-angle"></output>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="ocean-on" checked> Draw the ocean</label>
+      </div>
+    </section>
+
+    <div class="stage">
+      <div id="field" class="field-wrap"></div>
+      <div class="readout">
+        <dl id="readout"></dl>
+        <p class="hint">Drag the Moon to move it. The Earth is seen from above the North Pole; the
+          Moon and the Sun are drawn much closer than they are. Arrow lengths are to scale within the
+          picture, and the ocean is drawn millions of times higher than the real tide so its shape
+          shows.</p>
+      </div>
+    </div>
+    <p id="live" class="sr-only" aria-live="polite"></p>
+
+    <section aria-labelledby="why-title">
+      <h2 id="why-title">Why the far side bulges too</h2>
+      <p>Switch the arrows to the Moon's pull. Every arrow points at the Moon and they look the same
+        length, because the Moon is 60 Earth radii away and the Earth's near and far sides are less
+        than 2 percent closer or farther. That pull keeps the whole Earth falling round the centre
+        of mass it shares with the Moon, and it moves the oceans exactly as much as the rock.</p>
+      <p>Switch back. With the pull on the centre taken away, the near side is left with a small pull
+        towards the Moon and the far side with a small pull away from it: the far side is simply
+        falling towards the Moon less than the Earth's centre does. Halfway round, the leftover
+        points inward, at half the strength. The oceans are pulled out at both ends of the line to
+        the Moon and pressed in round the middle.</p>
+      <p>The leftover falls off with the cube of the distance, so moving the Moon from its farthest
+        to its nearest point raises the tide by about 40 percent, while its plain pull grows by only
+        a quarter. The Sun pulls on the Earth about 180 times harder than the Moon, but it is 390
+        times farther away, so its tide comes out a little under half of the Moon's.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/ebb">Source</a> ·
+    <a href="../">More projects</a>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
