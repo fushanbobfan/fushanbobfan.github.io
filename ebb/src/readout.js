@@ -28,9 +28,10 @@ export function distanceLabel(d) {
   return `${r.toFixed(1)} Earth radii (${km} km${note})`;
 }
 
-export function rows({ moonBody, sunBody, longest, exaggeration, mode }) {
+export function rows({ moonBody, sunBody, longest, exaggeration, mode, moment = null }) {
   const lunarAlone = profile([moonBody]);
   const out = [
+    ...(moment ? [['Moment shown', `${moment}, real Moon and Sun`]] : []),
     ['Tide from the Moon', `${cm(lunarAlone.high)} up under it and opposite, ${cm(-lunarAlone.low)} down at the sides: ${cm(lunarAlone.range)} from low to high water`],
   ];
   if (sunBody) {

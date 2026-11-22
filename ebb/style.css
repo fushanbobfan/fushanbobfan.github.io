@@ -12,6 +12,7 @@
   --arrow: #b5532f;
   --sun: #d9932b;
   --moon: #b8b4aa;
+  --king: rgba(181, 83, 47, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +29,7 @@
     --arrow: #f0956c;
     --sun: #f0b452;
     --moon: #c9c5bc;
+    --king: rgba(240, 149, 108, 0.14);
   }
 }
 
@@ -116,6 +118,26 @@ svg { display: block; width: 100%; height: auto; }
 .readout dt { font-weight: bold; margin-top: 8px; }
 .readout dd { margin: 0; }
 .hint { color: var(--muted); font-size: 0.93rem; }
+
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow-x: auto;
+  cursor: crosshair;
+  margin-top: 12px;
+}
+.chart-wrap svg { min-width: 640px; }
+.month .grid { stroke: var(--rule); stroke-width: 1; }
+.month .grid.zero { stroke: var(--muted); }
+.month .tick { fill: var(--muted); font-size: 12px; font-family: inherit; }
+.month .height { fill: none; stroke: var(--sea-line); stroke-width: 1.1; }
+.month .king { fill: var(--king); }
+.month .ev { fill: var(--ink); font-size: 14px; font-family: inherit; }
+.month .ev-perigee, .month .ev-apogee { fill: var(--muted); font-size: 12px; }
+.month .ev-perigee { fill: var(--arrow); font-weight: bold; }
+.month .cursor { stroke: var(--arrow); stroke-width: 1.5; }
+.month-controls { margin-top: 10px; }
 
 footer { margin: 36px auto 28px; color: var(--muted); }
 footer a { color: var(--accent); }

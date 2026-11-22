@@ -1,6 +1,9 @@
 import { moon, sun, EARTH_RADIUS, MOON_MEAN_DISTANCE, MOON_PERIGEE, MOON_APOGEE } from './tides.js';
 import { renderField } from './field.js';
 import { rows, distanceLabel, liveText } from './readout.js';
+import { renderMonth, monthSummary, when } from './monthchart.js';
+import { moonPosition, sunPosition } from './ephemeris.js';
+import { julianDay, calendarDate, utcToJde } from './time.js';
 
 const $ = (id) => document.getElementById(id);
 const DEG = Math.PI / 180;
@@ -12,14 +15,23 @@ const state = {
   sunOn: false,
   sunAngle: 0,
   ocean: true,
+  // The chart window: first day (JDE) and the moment shown, in days from it.
+  start: 0,
+  day: 0,
+  dated: false,
 };
+
+const WINDOW_DAYS = 59;
+const AU_M = 1.495978707e11;
+
+let sunDistance = undefined;
 
 const PRESETS = { perigee: MOON_PERIGEE, mean: MOON_MEAN_DISTANCE, apogee: MOON_APOGEE };
 
 function bodies() {
   return {
     moonBody: moon(state.moonAngle * DEG, state.moonDistance),
-    sunBody: state.sunOn ? sun(state.sunAngle * DEG) : null,
+    sunBody: state.sunOn ? sun(state.sunAngle * DEG, sunDistance) : null,
   };
 }
 
@@ -29,7 +41,7 @@ function render() {
   $('field').innerHTML = pic.svg;
   const dl = $('readout');
   dl.replaceChildren();
-  for (const [k, v] of rows({ ...b, longest: pic.longest, exaggeration: pic.exaggeration, mode: state.mode })) {
+  for (const [k, v] of rows({ ...b, longest: pic.longest, exaggeration: pic.exaggeration, mode: state.mode, moment: state.dated ? when(state.start + state.day) : null })) {
     const dt = document.createElement('dt');
     dt.textContent = k;
     const dd = document.createElement('dd');
@@ -41,25 +53,65 @@ function render() {
   $('moon-distance').value = (state.moonDistance / EARTH_RADIUS).toFixed(1);
   $('moon-distance-value').textContent = distanceLabel(state.moonDistance);
   $('sun-angle').disabled = !state.sunOn;
-  $('sun-angle').value = String(state.sunAngle);
-  $('sun-angle-value').textContent = state.sunOn ? `${state.sunAngle}°` : '';
+  $('sun-angle').value = String(Math.round(state.sunAngle) % 360);
+  $('sun-angle-value').textContent = state.sunOn ? `${Math.round(state.sunAngle) % 360}°` : '';
   $('pull-label').textContent = state.sunOn ? "The Moon's and the Sun's pull" : "The Moon's pull";
   $('live').textContent = liveText(b);
+  renderChart();
+}
+
+let chart = null;
+let chartKey = '';
+function renderChart() {
+  const key = `${state.start}|${state.dated ? state.day : 'x'}`;
+  if (key === chartKey) return;
+  chartKey = key;
+  chart = renderMonth({ start: state.start, days: WINDOW_DAYS, selected: state.dated ? state.start + state.day : null });
+  $('month').innerHTML = chart.svg;
+  $('month-summary').textContent = monthSummary(chart);
+  const c = calendarDate(state.start);
+  $('month-start').value = `${c.year}-${String(c.month).padStart(2, '0')}`;
+  $('day').value = String(state.day);
+  $('day-value').textContent = state.dated ? when(state.start + state.day) : 'drag the slider or click the chart';
+}
+
+// Put the real Moon and Sun of a moment into the picture, as seen from above
+// the North Pole with longitudes measured counterclockwise.
+function showMoment(day) {
+  state.day = Math.max(0, Math.min(WINDOW_DAYS, day));
+  state.dated = true;
+  const jde = state.start + state.day;
+  const m = moonPosition(jde);
+  const s = sunPosition(jde);
+  state.moonAngle = m.lon;
+  state.moonDistance = m.dist * 1000;
+  state.sunOn = true;
+  state.sunAngle = s.lon;
+  $('sun-on').checked = true;
+  sunDistance = s.dist * AU_M;
+  render();
+}
+
+function setStart(year, month) {
+  const y = Math.max(1900, Math.min(2100, year));
+  state.start = utcToJde(julianDay(y, month, 1));
+  showMoment(state.day);
 }
 
 for (const r of document.querySelectorAll('input[name="mode"]')) {
   r.addEventListener('change', () => { state.mode = r.value; render(); });
 }
-$('moon-angle').addEventListener('input', (e) => { state.moonAngle = Number(e.target.value); render(); });
+$('moon-angle').addEventListener('input', (e) => { state.moonAngle = Number(e.target.value); undate(); render(); });
 $('moon-distance').addEventListener('input', (e) => {
   state.moonDistance = Number(e.target.value) * EARTH_RADIUS;
+  undate();
   render();
 });
 for (const btn of document.querySelectorAll('[data-distance]')) {
-  btn.addEventListener('click', () => { state.moonDistance = PRESETS[btn.dataset.distance]; render(); });
+  btn.addEventListener('click', () => { state.moonDistance = PRESETS[btn.dataset.distance]; undate(); render(); });
 }
-$('sun-on').addEventListener('change', (e) => { state.sunOn = e.target.checked; render(); });
-$('sun-angle').addEventListener('input', (e) => { state.sunAngle = Number(e.target.value); render(); });
+$('sun-on').addEventListener('change', (e) => { state.sunOn = e.target.checked; undate(); render(); });
+$('sun-angle').addEventListener('input', (e) => { state.sunAngle = Number(e.target.value); undate(); render(); });
 $('ocean-on').addEventListener('change', (e) => { state.ocean = e.target.checked; render(); });
 
 // Drag the Moon round the Earth. Only the pointer that grabbed it moves it.
@@ -83,6 +135,7 @@ $('field').addEventListener('pointerdown', (e) => {
 $('field').addEventListener('pointermove', (e) => {
   if (e.pointerId !== dragging) return;
   state.moonAngle = angleFromEvent(e);
+  undate();
   render();
 });
 const stop = (e) => { if (e.pointerId === dragging) dragging = null; };
@@ -90,4 +143,37 @@ $('field').addEventListener('pointerup', stop);
 $('field').addEventListener('pointercancel', stop);
 $('field').addEventListener('lostpointercapture', stop);
 
+// Any hand change to the Moon or the Sun leaves the dated moment behind.
+function undate() {
+  state.dated = false;
+  sunDistance = undefined;
+}
+
+$('day').addEventListener('input', (e) => showMoment(Number(e.target.value)));
+$('month').addEventListener('click', (e) => {
+  const svg = $('month').querySelector('svg');
+  if (!svg || !chart) return;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+  showMoment(chart.scales.jdeAt(p.x) - state.start);
+});
+function shiftMonth(by) {
+  const c = calendarDate(state.start);
+  const idx = c.year * 12 + (c.month - 1) + by;
+  setStart(Math.floor(idx / 12), (idx % 12) + 1);
+}
+$('month-prev').addEventListener('click', () => shiftMonth(-1));
+$('month-next').addEventListener('click', () => shiftMonth(1));
+$('month-start').addEventListener('change', (e) => {
+  const [y, m] = e.target.value.split('-').map(Number);
+  if (y && m) setStart(y, m);
+});
+
+{
+  const now = new Date();
+  state.start = utcToJde(julianDay(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  state.day = Math.floor((utcToJde(Date.now() / 86400000 + 2440587.5) - state.start) * 8) / 8;
+}
 render();
