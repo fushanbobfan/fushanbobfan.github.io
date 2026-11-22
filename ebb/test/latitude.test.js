@@ -75,3 +75,19 @@ test('turning points are refined between samples', () => {
   near(highs[0].jde, 1.234, 1e-9);
   near(highs[0].h, 0, 1e-12);
 });
+
+test('the side view puts the place on the bulges at the heights the formula gives', async () => {
+  const { renderSide, renderDay } = await import('../src/sideview.js');
+  const side = renderSide({ dec: 25, lat: 40, amp: A });
+  const pair = highWaterPair(A, 40, 25);
+  near(side.nearH, pair.near, 1e-12);
+  near(side.farH, pair.far, 1e-12);
+  assert.ok(!side.svg.includes('NaN'));
+  assert.ok(side.svg.includes(`+${Math.round(pair.near * 100)} cm`));
+  const series = placeSeries(julianDay(2026, 1, 10), 50, 45);
+  const { highs, lows } = turningPoints(series);
+  const day = renderDay({ series, highs, lows });
+  assert.equal((day.match(/class="hw"/g) || []).length, highs.length);
+  assert.equal((day.match(/class="lw"/g) || []).length, lows.length);
+  assert.ok(!day.includes('NaN'));
+});
