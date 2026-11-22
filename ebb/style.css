@@ -138,6 +138,8 @@ svg { display: block; width: 100%; height: auto; }
 .month .ev-perigee { fill: var(--arrow); font-weight: bold; }
 .month .cursor { stroke: var(--arrow); stroke-width: 1.5; }
 .month-controls { margin-top: 10px; }
+.event-details { margin: 6px 0 0; color: var(--muted); }
+.event-details ul { margin: 6px 0 0; padding-left: 1.2em; columns: 2 18em; font-size: 0.93rem; }
 
 footer { margin: 36px auto 28px; color: var(--muted); }
 footer a { color: var(--accent); }

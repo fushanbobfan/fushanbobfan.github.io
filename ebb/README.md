@@ -66,9 +66,10 @@ so the range at a harbour can be anything from almost nothing to more than
 ten metres.
 
 The positions of the Moon and the Sun come from the truncated series in
-Meeus, *Astronomical Algorithms* (chapters 25 and 47). Every perigee of 2026
-falls within 20 minutes and 40 km of Fred Espenak's published table, and the
-tests check them all. The chart treats the Moon and the Sun as if they sat on
+Meeus, *Astronomical Algorithms* (chapters 25 and 47). Every new and full moon
+of 2026 falls within 3 minutes of Fred Espenak's published phase table, and
+every perigee within 20 minutes and 40 km of his perigee table; the tests check
+them all. The chart treats the Moon and the Sun as if they sat on
 the equator; their real declination is what makes the two daily tides unequal
 away from the equator.
 
