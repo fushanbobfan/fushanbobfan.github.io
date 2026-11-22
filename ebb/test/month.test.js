@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { events, kingTides, combinedRange, rangeAt, sampleRange } from '../src/month.js';
-import { renderMonth, heightOnEquator, earthTurn, eventLabel } from '../src/monthchart.js';
+import { renderMonth, heightOnEquator, earthTurn, eventLabel, monthSummary } from '../src/monthchart.js';
 import { moonPosition } from '../src/ephemeris.js';
 import { julianDay, jdeToUtc } from '../src/time.js';
 import { tideAmplitude, moon, sun } from '../src/tides.js';
@@ -92,4 +92,12 @@ test('the chart draws a curve, the events and the perigean spring bands', () => 
   assert.equal((r.svg.match(/class="ev /g) || []).length, r.events.length);
   assert.ok(r.svg.includes('class="cursor"'));
   assert.match(eventLabel({ kind: 'perigee', jde: julianDay(2026, 12, 24.35), km: 356660 }), /^Perigee \(Moon nearest\), 24 Dec 2026, 08:\d\d UTC, 356,660 km$/);
+});
+
+test('the summary names the perigean spring tides or the highest water', () => {
+  const dec = renderMonth({ start: julianDay(2026, 11, 1), days: 59 });
+  const s = monthSummary(dec);
+  assert.match(s, /full moon on 24 Dec 2026, \d+ hours from perigee at 356,6\d\d km/);
+  const quiet = renderMonth({ start: julianDay(2026, 2, 1), days: 20 });
+  if (!quiet.kings.length) assert.match(monthSummary(quiet), /^No perigee falls close/);
 });

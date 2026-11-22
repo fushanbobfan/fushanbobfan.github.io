@@ -68,7 +68,7 @@ export function renderMonth({ start, days = 59, selected = null, lon = 0 }) {
     out.push(`<rect class="king" x="${f1(Math.max(left, x0))}" y="${T - 4}" width="${f1(Math.min(w - right, x1) - Math.max(left, x0))}" height="${h - T - bottom + 4}"/>`);
   }
   // Gridlines: centimetres and the first of each month.
-  for (let cm = Math.ceil(bot * 10) * 10; cm <= top * 100; cm += 20) {
+  for (let cm = Math.ceil((bot * 100) / 20) * 20; cm <= top * 100; cm += 20) {
     const y = sc.y(cm / 100);
     out.push(`<line class="grid${cm === 0 ? ' zero' : ''}" x1="${left}" x2="${w - right}" y1="${f1(y)}" y2="${f1(y)}"/>`);
     out.push(`<text class="tick" x="${left - 6}" y="${f1(y + 4)}" text-anchor="end">${cm}</text>`);
@@ -114,4 +114,18 @@ function describe(evts, kings) {
   const parts = [`${evts.filter((e) => e.kind === 'new' || e.kind === 'full').length} new and full moons`];
   if (kings.length) parts.push(`perigean spring tides near ${kings.map((k) => when(k.jde).split(',')[0]).join(' and ')}`);
   return `${parts.join('; ')}.`;
+}
+
+// One sentence on where the largest tides of the window fall.
+export function monthSummary({ kings, series }) {
+  if (kings.length) {
+    const parts = kings.map((k) => {
+      const hours = Math.round(k.gap * 24);
+      const km = Math.round(k.perigee.km).toLocaleString('en-US');
+      return `${k.kind === 'new' ? 'new moon' : 'full moon'} on ${when(k.jde).split(',')[0]}, ${hours} hours from perigee at ${km} km`;
+    });
+    return `Perigean spring tides in this window: ${parts.join('; ')}.`;
+  }
+  const top = series.reduce((a, b) => (b.h > a.h ? b : a));
+  return `No perigee falls close to a new or full moon in this window. The highest water comes on ${when(top.jde).split(',')[0]}.`;
 }
