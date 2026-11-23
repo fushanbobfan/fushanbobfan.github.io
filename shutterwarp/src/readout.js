@@ -113,13 +113,17 @@ export function leanLabel(angle) {
 }
 
 export function flashLabel(cover, exposure, readout, flash) {
-  const pct = (v) => `${fmt(v * 100)}%`;
+  const pct = (v) => (v > 0 && v < 0.005 ? 'under 1%' : `${fmt(v * 100)}%`);
   if (cover.full >= 1) {
     return `The whole frame is lit: every row is open while the flash fires, which needs an exposure of at least ${fmt((readout + flash) * 1000)} ms.`;
   }
   if (cover.any === 0) return 'The flash fires while no row is open, so it misses the frame.';
+  if (cover.any >= 1) {
+    const caught = cover.full > 0 ? `only ${pct(cover.full)} catch all of it` : 'none catches all of it';
+    return `Every row catches some of the flash, but ${caught}, so the frame is lit unevenly from top to bottom.`;
+  }
   const share = cover.full > 0
     ? `${pct(cover.full)} of the rows catch all of it and ${pct(cover.any)} catch some`
     : `no row catches all of it and ${pct(cover.any)} of the rows catch some`;
-  return `The flash lights a band: ${share}. Rows that open after it fires, or close before, stay dark.`;
+  return `The flash lights a band: ${share}. Rows that close before the flash starts, or open after it ends, stay dark.`;
 }
