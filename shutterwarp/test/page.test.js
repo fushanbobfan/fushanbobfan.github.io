@@ -14,10 +14,15 @@ test('every element the script looks up by id is on the page', () => {
 });
 
 test('every range control starts inside its own limits', () => {
+  const ranges = [...html.matchAll(/type="range"/g)].length;
+  let checked = 0;
   for (const m of html.matchAll(/<input id="([\w-]+)" type="range" min="([\d.]+)" max="([\d.]+)" step="([\d.]+)" value="([\d.]+)">/g)) {
     const [, id, min, max, , value] = m.map((v, i) => (i > 1 ? Number(v) : v));
     assert.ok(value >= min && value <= max, id);
+    checked++;
   }
+  assert.ok(ranges >= 3);
+  assert.equal(checked, ranges);
 });
 
 test('the page loads only relative files', () => {

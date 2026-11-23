@@ -11,11 +11,12 @@
 <body>
   <header>
     <h1>shutterwarp</h1>
-    <p class="lede">Most phone cameras take a picture one row at a time. The sensor reads its
-      rows one after another, from the top of the frame to the bottom, and the whole sweep takes
-      something like a hundredth to a thirtieth of a second. A propeller turning thousands of times a minute moves a long
-      way in that time, so every row catches the blades in a different place. Put the rows
-      together and the straight blades come out bent, lopsided, or broken into pieces.</p>
+    <p class="lede">Most phone cameras take a picture one line of pixels at a time. Each line
+      is exposed a moment after the one before it, and the sweep across the whole frame takes
+      something like a hundredth to a thirtieth of a second. A propeller turning thousands of
+      times a minute moves a long way in that time, so every line catches the blades in a
+      different place. Put the lines together and the straight blades come out bent, lopsided,
+      or broken into pieces.</p>
   </header>
 
   <main>
@@ -50,34 +51,41 @@
     <section class="panels">
       <figure>
         <canvas id="scene" width="360" height="360" role="img"
-          aria-label="The propeller as it really is, slowed down, with the row the sensor is reading"></canvas>
+          aria-label="The propeller as it really is, slowed down, with the row the sensor is capturing"></canvas>
         <figcaption>The propeller as it really is, slowed down. The line is the row the sensor
-          is reading now; the shaded part above it is already in the photo.</figcaption>
+          is capturing now; the shaded part above it is already in the photo.</figcaption>
       </figure>
       <figure>
-        <canvas id="photo" width="360" height="360" role="img" aria-describedby="verdict"></canvas>
-        <figcaption>The photo, built up one row at a time.</figcaption>
+        <canvas id="photo" width="360" height="360" role="img" aria-labelledby="photo-caption" aria-describedby="verdict"></canvas>
+        <figcaption id="photo-caption">The photo, built up one row at a time.</figcaption>
       </figure>
     </section>
 
     <div class="row actions">
-      <button type="button" id="play" aria-pressed="true">Pause</button>
+      <button type="button" id="play">Pause</button>
       <button type="button" id="shoot">Take a photo now</button>
     </div>
 
+    <p id="status" class="status" aria-live="polite"></p>
     <p id="verdict" aria-live="polite"></p>
     <dl id="readouts" class="readouts"></dl>
 
     <h2>What the camera is doing</h2>
-    <p>The sensor in a phone is a grid of light-sensitive pixels. Reading every pixel at the
-      same instant needs extra circuitry under each one, so most phone sensors read one
-      row, then the next, down the frame. This is called a rolling shutter. For anything that
-      moves slowly compared with the sweep, it makes no difference. A propeller is the classic
-      case where it does: the tip of a blade on a small aircraft travels hundreds of metres a
-      second.</p>
-    <p>Each row of the photo is a true picture of a thin strip of the scene, taken at its own
-      moment. Nothing is blurred and nothing is invented; the strips come from
-      different instants. That is why the shapes in the photo can look like no propeller ever built.</p>
+    <p>The sensor in a phone is a grid of light-sensitive pixels. With a rolling shutter, each
+      line of pixels starts and stops collecting light a little later than the line before it,
+      so the lines record the scene at staggered moments. A global shutter starts and stops
+      every pixel together; it needs extra circuitry in each pixel, which is why most phone
+      sensors roll. For anything that moves slowly compared with the sweep, the stagger makes no
+      visible difference. A propeller is the classic case where it does: the tip of a blade on a
+      small aircraft travels hundreds of metres a second.</p>
+    <p>This page scans from the top of the frame to the bottom. In a real camera the direction
+      depends on how the sensor sits in the body, so turning the phone on its side turns the
+      sweep too. The page also gives every row an instant exposure, as a very short shutter
+      speed in bright light would; a longer exposure smears each row along the blade's path
+      and adds motion blur on top of the bending.</p>
+    <p>Each row of the photo is then a true picture of a thin strip of the scene, taken at its
+      own moment. The strips come from different instants, which is why the shapes in the photo
+      can look like no propeller ever built.</p>
   </main>
 
   <footer>
