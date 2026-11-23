@@ -130,6 +130,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   border-radius: 10px;
   overflow-x: auto;
 }
+.chart-wrap:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .chart-wrap svg { display: block; width: 100%; min-width: 480px; height: auto; }
 .speed .grid { stroke: var(--rule); stroke-width: 1; }
 .speed .grid.zero { stroke: var(--muted); }
