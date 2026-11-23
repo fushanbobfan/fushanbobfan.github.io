@@ -60,3 +60,23 @@ test('standstill speeds are whole multiples of fps x 60 / blades', () => {
   for (const rpm of standstillRpms(5, 25, 9000)) assert.equal(apparentTurn(makeProp({ rpm, blades: 5 }), 25), 0);
   near(maxReadout(30), 1 / 30);
 });
+
+test('video readouts name the frame rate, the turn, the seen motion and the readout used', async () => {
+  const { videoRows, nearestStandstill, playbackLabel } = await import('../src/readout.js');
+  const r = videoRows(makeProp({ rpm: 590, blades: 3 }), 0.03, 30);
+  assert.deepEqual(r.map(([k]) => k), ['Frame rate', 'Turn between frames', 'Seen on video', 'Readout in each frame']);
+  assert.equal(r[0][1], '30 frames a second');
+  assert.equal(r[1][1], '118°');
+  assert.equal(r[2][1], '10 rpm backwards');
+  assert.equal(r[3][1], '30 ms from top to bottom');
+  assert.equal(videoRows(makeProp({ rpm: 600, blades: 3 }), 0.03, 30)[2][1], 'standing still');
+  assert.equal(videoRows(makeProp({ rpm: 610, blades: 3, direction: -1 }), 0.03, 30)[2][1], '10 rpm forwards');
+  assert.match(videoRows(makeProp({ rpm: 600 }), 0.03, 60)[3][1], /^16\.7 ms, a whole frame/);
+  assert.equal(nearestStandstill(1000, 3, 30, 9000), 1200);
+  assert.equal(nearestStandstill(100, 3, 30, 9000), 600);
+  assert.equal(nearestStandstill(100, 1, 240, 9000), null);
+  assert.equal(playbackLabel(24), 'played at its own 24 frames a second');
+  assert.equal(playbackLabel(60), 'played at 30 frames a second, 2 times slower than life');
+  assert.equal(playbackLabel(25), 'played at its own 25 frames a second');
+  assert.equal(playbackLabel(50), 'played at 30 frames a second, 1.7 times slower than life');
+});
