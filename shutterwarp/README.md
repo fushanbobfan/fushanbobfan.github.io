@@ -1,8 +1,9 @@
 # shutterwarp
 
-Why a phone photo bends a spinning propeller. Most phone sensors read their
-rows one after another, from the top of the frame to the bottom. While the sweep runs, the blades keep turning, so every row
-catches them somewhere else. Stacked together, the rows show blades that are
+Why a phone photo bends a spinning propeller. Most phone sensors have a
+rolling shutter: each line of pixels is exposed a moment after the one before
+it. While the sweep runs, the blades keep turning, so every line catches them
+somewhere else. Stacked together, the rows show blades that are
 bent, lopsided or broken into pieces.
 
 **Live demo:** https://fushanbobfan.github.io/shutterwarp/
@@ -35,8 +36,9 @@ Run the tests with `npm test` (Node 20 or later).
   propeller and a drone rotor.
 - **A readout** of how far the propeller turns during one sweep, which is
   what decides the picture: a few degrees leaves the blades straight, a large
-  part of a turn curves them, and more than a full turn catches each blade
-  several times on its way down the frame.
+  part of a turn curves them, and more than a full turn can catch a blade
+  several times on its way down the frame. Where the blades stand when the
+  sweep starts decides whether a piece comes out detached.
 
 With reduced motion requested, the page starts paused and "Take a photo now"
 produces the finished photo at once.
@@ -57,7 +59,10 @@ half a blade width of the blade's centre line. The sensor has *N* rows; row *i*
 where *T* is the readout time. Each pixel is the fraction of a 2 × 2 grid of
 sample points inside it that fall on a blade at its row's time. The photo is
 therefore a stack of exact snapshots of thin strips, each from its own
-moment; the turn during one readout, (rpm / 60) · T · 360°, sets how much the
+moment. Two simplifications: the sweep always runs from top to bottom (in a
+real camera the direction depends on how the sensor is mounted and how the
+phone is held), and each row's exposure is instantaneous, so there is no
+motion blur; the turn during one readout, (rpm / 60) · T · 360°, sets how much the
 strips disagree.
 
 ## Layout
