@@ -1,0 +1,20 @@
+{
+  "name": "shutterwarp",
+  "version": "0.1.0",
+  "description": "Why a phone photo bends a spinning propeller: a rolling-shutter sensor reads its rows one after another while the blades turn.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "rolling shutter",
+    "camera",
+    "propeller",
+    "visualization",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
