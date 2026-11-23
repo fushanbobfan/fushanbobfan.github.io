@@ -113,3 +113,34 @@ footer a { color: var(--accent); }
   .panels { grid-template-columns: 1fr; }
 }
 .status { color: var(--muted); margin: 10px 0 0; min-height: 1.5em; }
+
+h3 { font-size: 1.05rem; margin: 22px 0 6px; }
+select { font: inherit; color: inherit; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 3px 6px; }
+select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.5; cursor: default; }
+.video-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.chart-wrap:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.chart-wrap svg { display: block; width: 100%; min-width: 480px; height: auto; }
+.speed .grid { stroke: var(--rule); stroke-width: 1; }
+.speed .grid.zero { stroke: var(--muted); }
+.speed .tick { fill: var(--muted); font-size: 12px; font-family: inherit; }
+.speed .saw { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.speed .still { fill: var(--panel); stroke: var(--ink); stroke-width: 1.2; }
+.speed .cursor { stroke: var(--scan); stroke-width: 1; stroke-dasharray: 4 3; }
+.speed .here { fill: var(--scan); }
+.hint { color: var(--muted); font-size: 0.93rem; }
+
+@media (max-width: 680px) {
+  .video-stage { grid-template-columns: 1fr; }
+}

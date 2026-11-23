@@ -1,17 +1,35 @@
 // Plain-language readouts for the page. No DOM access here.
 
 import { turnDuringReadout } from './shutter.js';
+import { frameTurn, seenMotion, standstillRpms, maxReadout } from './video.js';
 
 export const WALL_SECONDS_PER_READOUT = 4;
 
 const fmt = (x, digits = 0) =>
   x.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
+// An rpm value with enough digits that a small non-zero speed never reads as 0.
+export function rpmText(rpm) {
+  const a = Math.abs(rpm);
+  if (a === 0) return '0';
+  if (a < 1) return fmt(rpm, 2);
+  if (Math.abs(rpm - Math.round(rpm)) < 0.05 || a >= 1000) return fmt(rpm);
+  return fmt(rpm, 1);
+}
+
 export function speedLabel(rpm) {
   const perSecond = rpm / 60;
   if (rpm === 0) return 'standing still';
   const turns = perSecond < 10 ? fmt(perSecond, 1) : fmt(perSecond);
-  return `${fmt(rpm)} rpm (${turns} turns a second)`;
+  return `${rpmText(rpm)} rpm (${turns} turns a second)`;
+}
+
+// The speed seen on video, in words.
+export function seenText(prop, fps) {
+  const { kind, rpm } = seenMotion(prop, fps);
+  if (kind === 'still') return 'standing still';
+  if (kind === 'ambiguous') return `${rpmText(rpm)} rpm, direction ambiguous`;
+  return `${rpmText(rpm)} rpm ${kind}`;
 }
 
 export function readoutLabel(seconds) {
@@ -52,4 +70,33 @@ export function rows(prop, readout) {
     ['Turn during one readout', turnLabel(turnDuringReadout(prop, readout))],
     ['Animation', slowdownLabel(readout)],
   ];
+}
+
+// Readouts for the video section.
+export function videoRows(prop, readout, fps) {
+  const used = Math.min(readout, maxReadout(fps));
+  const real = frameTurn(prop, fps);
+  return [
+    ['Frame rate', `${fps} frames a second`],
+    ['Turn between frames', turnLabel(Math.abs(real))],
+    ['Seen on video', seenText(prop, fps)],
+    ['Readout in each frame', used < readout
+      ? `${fmt(used * 1000, 1)} ms, a whole frame: a sensor cannot take longer to read a frame than the time between frames`
+      : readoutLabel(used)],
+  ];
+}
+
+// The rpm nearest to `rpm` (within 0..maxRpm) at which the propeller seems to stand still.
+export function nearestStandstill(rpm, blades, fps, maxRpm) {
+  const list = standstillRpms(blades, fps, maxRpm);
+  if (!list.length) return null;
+  return list.reduce((best, s) => (Math.abs(s - rpm) < Math.abs(best - rpm) ? s : best));
+}
+
+// How the video is played back on the page.
+export function playbackLabel(fps) {
+  const shown = Math.min(fps, 30);
+  return shown === fps
+    ? `played at its own ${fps} frames a second`
+    : `played at 30 frames a second, ${fmt(fps / 30, fps % 30 ? 1 : 0)} times slower than life`;
 }
