@@ -23,7 +23,7 @@
     <section class="controls" aria-label="Propeller and camera">
       <div class="field grow">
         <label for="rpm">Propeller speed: <output id="rpm-value" for="rpm"></output></label>
-        <input id="rpm" type="range" min="0" max="9000" step="10" value="1800">
+        <input id="rpm" type="range" min="0" max="9000" step="1" value="1800">
       </div>
       <div class="field">
         <label for="blades">Blades: <output id="blades-value" for="blades"></output></label>
@@ -69,6 +69,51 @@
     <p id="status" class="status" aria-live="polite"></p>
     <p id="verdict" aria-live="polite"></p>
     <dl id="readouts" class="readouts"></dl>
+
+    <h2>On video</h2>
+    <p>A video is a string of these photos, one per frame. Between two frames the propeller
+      turns some way, but with identical blades the eye cannot tell one blade from the next: it
+      takes the smallest turn that lines the blades up again. Turn exactly one blade spacing per
+      frame and the propeller seems to hang still in the air, still bent by the rolling shutter.
+      Turn a little less and it seems to creep backwards, like a wagon wheel in an old film.</p>
+
+    <section class="controls" aria-label="Video">
+      <div class="field">
+        <label for="fps">Frame rate</label>
+        <select id="fps">
+          <option value="24">24 frames a second</option>
+          <option value="25">25 frames a second</option>
+          <option value="30" selected>30 frames a second</option>
+          <option value="50">50 frames a second</option>
+          <option value="60">60 frames a second</option>
+          <option value="120">120 frames a second</option>
+          <option value="240">240 frames a second</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="label">Try</span>
+        <div class="row">
+          <button type="button" id="hang">Make it hang still</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="video-stage">
+      <figure>
+        <canvas id="video" width="240" height="240" role="img" aria-labelledby="video-caption"
+          aria-describedby="video-verdict"></canvas>
+        <figcaption id="video-caption"></figcaption>
+      </figure>
+      <div>
+        <p id="video-verdict" aria-live="polite"></p>
+        <dl id="video-readouts" class="readouts"></dl>
+      </div>
+    </div>
+
+    <h3>Speed on video against real speed</h3>
+    <div class="chart-wrap" id="speed-chart"></div>
+    <p class="hint">The dot is the current propeller. The marks on the zero line are the speeds at
+      which the propeller seems to stand still: a whole number of blade spacings per frame.</p>
 
     <h2>What the camera is doing</h2>
     <p>The sensor in a phone is a grid of light-sensitive pixels. With a rolling shutter, each
