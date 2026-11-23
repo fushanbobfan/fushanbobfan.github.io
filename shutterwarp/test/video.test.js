@@ -80,3 +80,14 @@ test('video readouts name the frame rate, the turn, the seen motion and the read
   assert.equal(playbackLabel(25), 'played at its own 25 frames a second');
   assert.equal(playbackLabel(50), 'played at 30 frames a second, 1.7 times slower than life');
 });
+
+test('exactly half a blade spacing per frame is called ambiguous', async () => {
+  // 2,700 rpm with two blades at 60 fps: 270 degrees a frame, 90 past a spacing of 180.
+  const p = makeProp({ rpm: 2700, blades: 2 });
+  near(Math.abs(apparentTurn(p, 60)), 90);
+  assert.match(motionVerdict(p, 60), /ambiguous/);
+  const { videoRows } = await import('../src/readout.js');
+  assert.equal(videoRows(p, 0.01, 60)[2][1], '900 rpm, direction ambiguous');
+  // Below half a spacing the verdict is about true motion, not ambiguity.
+  assert.match(motionVerdict(makeProp({ rpm: 899, blades: 2 }), 60), /true motion/);
+});

@@ -51,6 +51,9 @@ export function motionVerdict(prop, fps) {
   if (seen === 0) {
     return 'The propeller turns exactly a whole number of blade spacings between frames, so on video it seems to hang still in the air, bent by the rolling shutter.';
   }
+  if (Math.abs(Math.abs(seen) - spacing / 2) < 1e-9) {
+    return 'Exactly half a blade spacing between frames: each frame could be a turn forwards or the same turn backwards, so the direction on video is ambiguous and the blades seem to flicker.';
+  }
   const sameWay = Math.sign(seen) === Math.sign(real);
   const slow = Math.abs(seen) < spacing / 12;
   if (Math.abs(real) < spacing / 2) {

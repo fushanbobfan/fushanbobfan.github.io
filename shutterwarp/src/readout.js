@@ -65,6 +65,7 @@ export function videoRows(prop, readout, fps) {
   let seenText;
   if (prop.rpm === 0) seenText = 'standing still';
   else if (seen === 0) seenText = 'standing still';
+  else if (Math.abs(Math.abs(seen) - 180 / prop.blades) < 1e-9) seenText = `${fmt(Math.abs(seenRpm))} rpm, direction ambiguous`;
   else seenText = `${fmt(Math.abs(seenRpm))} rpm ${sameWay ? 'forwards' : 'backwards'}`;
   return [
     ['Frame rate', `${fps} frames a second`],
