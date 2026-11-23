@@ -115,6 +115,41 @@
     <p class="hint">The dot is the current propeller. The marks on the zero line are the speeds at
       which the propeller seems to stand still: a whole number of blade spacings per frame.</p>
 
+    <h2>Two more things it does</h2>
+    <p>Both use the sensor readout set above.</p>
+    <div class="others">
+      <section aria-labelledby="pole-heading">
+        <h3 id="pole-heading">A pole passing by</h3>
+        <p>Anything moving sideways is caught further along its path on each lower row, so
+          upright things lean. Phone photos from a moving car or train show it in posts and
+          buildings.</p>
+        <div class="field">
+          <label for="cross">The pole takes <output id="cross-value" for="cross"></output></label>
+          <input id="cross" type="range" min="10" max="1000" step="5" value="120">
+        </div>
+        <canvas id="pole" width="240" height="240" role="img" aria-labelledby="pole-heading"
+          aria-describedby="pole-lean"></canvas>
+        <p id="pole-lean" aria-live="polite"></p>
+      </section>
+      <section aria-labelledby="flash-heading">
+        <h3 id="flash-heading">A flash during the readout</h3>
+        <p>Each row collects light for the exposure time, starting a little after the row above.
+          A flash lasting 1 ms reaches only the rows that are open at that moment, so in a dim
+          room it often lights only a band across the frame.</p>
+        <div class="field">
+          <label for="exposure">Exposure of each row: <output id="exposure-value" for="exposure"></output></label>
+          <input id="exposure" type="range" min="1" max="70" step="1" value="6">
+        </div>
+        <div class="field">
+          <label for="flash-at">The flash fires <output id="flash-at-value" for="flash-at"></output></label>
+          <input id="flash-at" type="range" min="0" max="100" step="1" value="40">
+        </div>
+        <canvas id="flash" width="240" height="240" role="img" aria-labelledby="flash-heading"
+          aria-describedby="flash-text"></canvas>
+        <p id="flash-text" aria-live="polite"></p>
+      </section>
+    </div>
+
     <h2>What the camera is doing</h2>
     <p>The sensor in a phone is a grid of light-sensitive pixels. With a rolling shutter, each
       line of pixels starts and stops collecting light a little later than the line before it,

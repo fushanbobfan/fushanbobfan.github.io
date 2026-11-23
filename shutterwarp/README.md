@@ -50,6 +50,16 @@ Run the tests with `npm test` (Node 20 or later).
   that jumps back each time the turn between frames passes half a blade
   spacing, with the standstill speeds marked.
 
+- **A pole passing by**: anything moving sideways is caught further along
+  its path on each lower row, so it leans in the photo by
+  atan(readout / crossing time), the angle whose tangent is how far it moves
+  during the readout over the frame height.
+- **A flash during the readout**: each row collects light for the exposure
+  time, starting a little after the row above, and a 1 ms flash reaches only
+  the rows open while it fires. With a short exposure it lights a band; the
+  whole frame catches all of it only when the exposure is at least the
+  readout plus the flash.
+
 With reduced motion requested, the page starts paused and "Take a photo now"
 produces the finished photo at once.
 
@@ -89,6 +99,7 @@ style.css         styles, light and dark
 src/shutter.js    propeller, row timing, exposure
 src/video.js      frame-to-frame turn, the turn seen, standstill speeds
 src/speedchart.js SVG chart of seen speed against real speed
+src/others.js     the leaning pole and the flash band
 src/readout.js    labels and the one-sentence verdicts
 src/scene.js      canvas drawing of the propeller and the photo
 src/main.js       controls and animation
