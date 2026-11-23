@@ -31,3 +31,10 @@ test('seen speeds are measured in the real direction', () => {
   assert.equal(seenRpm(100, 3, 30).toFixed(6), (100).toFixed(6));
   assert.match(speedChart({ blades: 3, fps: 30, rpm: 600 }), /the video shows standing still/);
 });
+
+test('the chart description agrees with the video readout at the edges', () => {
+  assert.match(speedChart({ blades: 3, fps: 30, rpm: 300 }), /At 300 rpm the video shows 300 rpm, direction ambiguous\./);
+  const none = speedChart({ blades: 1, fps: 240, rpm: 0 });
+  assert.match(none, /Above zero it never seems to stand still in this range\. At 0 rpm the video shows standing still\./);
+  assert.match(speedChart({ blades: 8, fps: 25, rpm: 187.5 }), /187\.5, 375/);
+});

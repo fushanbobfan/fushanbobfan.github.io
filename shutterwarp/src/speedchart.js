@@ -5,6 +5,7 @@
 
 import { makeProp } from './shutter.js';
 import { apparentRpm, standstillRpms } from './video.js';
+import { seenText, rpmText } from './readout.js';
 
 export const CHART = { w: 640, h: 260, left: 70, right: 16, top: 16, bottom: 44 };
 
@@ -62,12 +63,11 @@ export function sawPath(blades, fps, maxRpm, x, y, limit) {
 }
 
 function describe(blades, fps, rpm, still) {
-  const seen = seenRpm(rpm, blades, fps);
   const where = still.length
-    ? `It seems to stand still at ${still.map(fmt).join(', ')} rpm.`
-    : 'It never seems to stand still in this range.';
-  const now = seen === 0 ? 'standing still' : `${fmt(Math.abs(seen))} rpm ${seen > 0 ? 'forwards' : 'backwards'}`;
-  return `The seen speed rises with the real speed, then jumps back each time the turn between frames passes half a blade spacing. ${where} At ${fmt(rpm)} rpm the video shows ${now}.`;
+    ? `Above zero it seems to stand still at ${still.map(rpmText).join(', ')} rpm.`
+    : 'Above zero it never seems to stand still in this range.';
+  const now = seenText(makeProp({ rpm, blades, direction: 1 }), fps);
+  return `The seen speed rises with the real speed, then jumps back each time the turn between frames passes half a blade spacing. ${where} At ${rpmText(rpm)} rpm the video shows ${now}.`;
 }
 
 function fmt(v) {
