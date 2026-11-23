@@ -79,4 +79,5 @@ test('pole and flash readouts read naturally', async () => {
   assert.match(flashLabel({ full: 1, any: 1 }, 0.031, 0.03, 0.001), /whole frame is lit.*31 ms/);
   assert.match(flashLabel({ full: 0, any: 0 }, 0.005, 0.03, 0.001), /misses the frame/);
   assert.match(flashLabel({ full: 0.166, any: 0.233 }, 0.006, 0.03, 0.001), /17% of the rows catch all of it and 23% catch some/);
+  assert.match(flashLabel({ full: 0, any: 0.02 }, 0.002, 0.03, 0.001), /no row catches all of it and 2% of the rows catch some/);
 });

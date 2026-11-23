@@ -118,5 +118,8 @@ export function flashLabel(cover, exposure, readout, flash) {
     return `The whole frame is lit: every row is open while the flash fires, which needs an exposure of at least ${fmt((readout + flash) * 1000)} ms.`;
   }
   if (cover.any === 0) return 'The flash fires while no row is open, so it misses the frame.';
-  return `The flash lights a band: ${pct(cover.full)} of the rows catch all of it and ${pct(cover.any)} catch some. Rows that open after it fires, or close before, stay dark.`;
+  const share = cover.full > 0
+    ? `${pct(cover.full)} of the rows catch all of it and ${pct(cover.any)} catch some`
+    : `no row catches all of it and ${pct(cover.any)} of the rows catch some`;
+  return `The flash lights a band: ${share}. Rows that open after it fires, or close before, stay dark.`;
 }
