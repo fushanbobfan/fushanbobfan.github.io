@@ -40,6 +40,16 @@ Run the tests with `npm test` (Node 20 or later).
   several times on its way down the frame. Where the blades stand when the
   sweep starts decides whether a piece comes out detached.
 
+- **On video**: a string of these photos at a chosen frame rate (24 to 240
+  frames a second), played back on the page. Because the blades are
+  identical, the eye takes the smallest turn that lines them up again, so a
+  propeller turning a whole number of blade spacings per frame seems to hang
+  still while staying bent, and one turning a little less seems to creep
+  backwards. "Make it hang still" moves the speed to the nearest such value.
+- **A chart** of the speed seen on video against the real speed: a sawtooth
+  that jumps back each time the turn between frames passes half a blade
+  spacing, with the standstill speeds marked.
+
 With reduced motion requested, the page starts paused and "Take a photo now"
 produces the finished photo at once.
 
@@ -65,13 +75,21 @@ phone is held), and each row's exposure is instantaneous, so there is no
 motion blur; the turn during one readout, (rpm / 60) · T · 360°, sets how much the
 strips disagree.
 
+On video, frame *m* is a photo whose top row is read at *m* / fps, with the
+readout capped at one frame period. Between frames the propeller turns
+(rpm / 60) / fps · 360°; with *n* blades the turn seen is that value wrapped
+into (−180°/*n*, 180°/*n*], and it is zero whenever rpm is a whole multiple
+of fps · 60 / *n*.
+
 ## Layout
 
 ```
 index.html        page
 style.css         styles, light and dark
 src/shutter.js    propeller, row timing, exposure
-src/readout.js    labels and the one-sentence verdict
+src/video.js      frame-to-frame turn, the turn seen, standstill speeds
+src/speedchart.js SVG chart of seen speed against real speed
+src/readout.js    labels and the one-sentence verdicts
 src/scene.js      canvas drawing of the propeller and the photo
 src/main.js       controls and animation
 test/             node:test suites
