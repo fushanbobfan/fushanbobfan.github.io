@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   makeProp, bladeAngle, rowTime, turnDuringReadout, onBlade, pixelToScene,
-  photograph, exposeRows, coverage, bladePolygons, HUB, EXTENT,
+  photograph, exposeRows, coverage, bladePolygons, tipLength, HUB, EXTENT, SKY, BLADE,
 } from '../src/shutter.js';
 
 const SIZE = 64;
@@ -34,6 +34,9 @@ test('a point is on a blade along its axis, off it beside the blade, and always 
   assert.ok(onBlade(p, 0.6, 0.049, 0));
   assert.ok(!onBlade(p, 0.6, 0.06, 0));
   assert.ok(!onBlade(p, 1.01, 0, 0));
+  // The tip is flat, ending where its corners touch radius 1.
+  assert.ok(onBlade(p, 0.998, 0, 0));
+  assert.ok(!onBlade(p, 0.9995, 0, 0));
   assert.ok(onBlade(p, 0.05, -0.05, 1.234));
   // The other two blades of three, at 120 and 240 degrees.
   assert.ok(onBlade(p, 0.5 * Math.cos(2.0944), 0.5 * Math.sin(2.0944), 0));
@@ -62,21 +65,26 @@ test('a still propeller, or a sensor read all at once, gives the same picture as
   assert.ok(!same(photograph(spun, { size: SIZE, readout: 0.03 }), snapshot));
 });
 
-test('every row of the photo is the scene as it stood when that row was read', () => {
+test('every pixel of the photo is the scene as it stood when its row was read', () => {
   const p = makeProp({ rpm: 2500, blades: 4, phase: 0.3 });
   const readout = 0.025;
   const start = 0.004;
   const photo = photograph(p, { size: SIZE, readout, start });
-  for (const row of [0, 11, 31, 47, 63]) {
+  let partial = 0;
+  for (let row = 0; row < SIZE; row++) {
     const angle = bladeAngle(p, start + rowTime(row, SIZE, readout));
     for (let col = 0; col < SIZE; col++) {
       const c = coverage(p, col, row, SIZE, angle);
+      if (c > 0 && c < 1) partial++;
       const k = (row * SIZE + col) * 4;
-      // Sky is lighter than blade; full coverage is the darkest value.
-      if (c === 1) assert.equal(photo[k], 43);
-      if (c === 0) assert.equal(photo[k], 223);
+      for (let ch = 0; ch < 3; ch++) {
+        assert.equal(photo[k + ch], Uint8ClampedArray.of(SKY[ch] + (BLADE[ch] - SKY[ch]) * c)[0]);
+      }
+      assert.equal(photo[k + 3], 255);
     }
   }
+  // Edge pixels get a blend, so the check covers fractional coverage too.
+  assert.ok(partial > 50);
 });
 
 test('exposing the rows in pieces gives the same photo as exposing them at once', () => {
@@ -112,6 +120,15 @@ test('blade outlines start at the hub and end at the tips', () => {
   for (const poly of polys) {
     const r = poly.map((q) => Math.hypot(q.x, q.y));
     assert.ok(Math.abs(r[0] - HUB) < 1e-9 && Math.abs(r[1] - 1) < 1e-9);
+    // Points just inside the outline are on the blade, points just outside are not.
+    const a = Math.atan2(poly[1].y + poly[2].y, poly[1].x + poly[2].x);
+    const u = { x: Math.cos(a), y: Math.sin(a) };
+    const tip = tipLength(p);
+    assert.ok(onBlade(p, u.x * (tip - 0.001), u.y * (tip - 0.001), 0.2));
+    assert.ok(!onBlade(p, u.x * (tip + 0.001), u.y * (tip + 0.001), 0.2));
+    const side = (d) => ({ x: u.x * 0.5 - u.y * d, y: u.y * 0.5 + u.x * d });
+    assert.ok(onBlade(p, side(0.059).x, side(0.059).y, 0.2));
+    assert.ok(!onBlade(p, side(0.061).x, side(0.061).y, 0.2));
     // Corners lie on the blade.
     const mid = { x: (poly[0].x + poly[1].x + poly[2].x + poly[3].x) / 4, y: (poly[0].y + poly[1].y + poly[2].y + poly[3].y) / 4 };
     assert.ok(onBlade(p, mid.x, mid.y, 0.2));

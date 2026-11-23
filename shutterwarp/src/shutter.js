@@ -29,6 +29,8 @@ export function turnDuringReadout(prop, readout) {
 }
 
 // Is the scene point (x, y) covered by the propeller when blade 0 points at `angle`?
+// Each blade is a rectangle of half-width `width` along its centre line, with a
+// flat tip whose corners touch radius 1, joined to a round hub.
 export function onBlade(prop, x, y, angle) {
   const r = Math.hypot(x, y);
   if (r > 1) return false;
@@ -36,8 +38,14 @@ export function onBlade(prop, x, y, angle) {
   const sector = (2 * Math.PI) / prop.blades;
   let phi = Math.atan2(y, x) - angle;
   phi -= sector * Math.round(phi / sector);
-  if (Math.cos(phi) <= 0) return false;
+  const along = r * Math.cos(phi);
+  if (along <= 0 || along > tipLength(prop)) return false;
   return r * Math.abs(Math.sin(phi)) <= prop.width;
+}
+
+// Distance from the hub centre to the flat blade tip.
+export function tipLength(prop) {
+  return Math.sqrt(1 - prop.width * prop.width);
 }
 
 // Centre of pixel (col, row) of a size × size sensor, in scene coordinates.
@@ -97,7 +105,7 @@ export function bladePolygons(prop, angle) {
     const uy = Math.sin(a);
     const w = prop.width;
     const inner = Math.sqrt(Math.max(HUB * HUB - w * w, 0));
-    const outer = Math.sqrt(1 - w * w);
+    const outer = tipLength(prop);
     polys.push([
       { x: ux * inner - uy * w, y: uy * inner + ux * w },
       { x: ux * outer - uy * w, y: uy * outer + ux * w },
