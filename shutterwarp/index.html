@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>shutterwarp · why a phone photo bends a propeller</title>
+  <meta name="description" content="Why phone photos of spinning propellers show bent, detached blades: the sensor reads its rows from top to bottom while the blades keep turning.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>shutterwarp</h1>
+    <p class="lede">Most phone cameras take a picture one line of pixels at a time. Each line
+      is exposed a moment after the one before it, and the sweep across the whole frame takes
+      something like a hundredth to a thirtieth of a second. A propeller turning thousands of
+      times a minute moves a long way in that time, so every line catches the blades in a
+      different place. Put the lines together and the straight blades come out bent, lopsided,
+      or broken into pieces.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Propeller and camera">
+      <div class="field grow">
+        <label for="rpm">Propeller speed: <output id="rpm-value" for="rpm"></output></label>
+        <input id="rpm" type="range" min="0" max="9000" step="10" value="1800">
+      </div>
+      <div class="field">
+        <label for="blades">Blades: <output id="blades-value" for="blades"></output></label>
+        <input id="blades" type="range" min="1" max="8" step="1" value="3">
+      </div>
+      <div class="field grow">
+        <label for="readout">Sensor readout: <output id="readout-value" for="readout"></output></label>
+        <input id="readout" type="range" min="1" max="60" step="1" value="30">
+      </div>
+      <fieldset class="field">
+        <legend>Turning</legend>
+        <label><input type="radio" name="direction" value="1" checked> Anticlockwise</label>
+        <label><input type="radio" name="direction" value="-1"> Clockwise</label>
+      </fieldset>
+      <div class="field">
+        <span class="label">Try</span>
+        <div class="row" id="presets">
+          <button type="button" data-rpm="180" data-blades="5">Ceiling fan</button>
+          <button type="button" data-rpm="2400" data-blades="2">Aircraft propeller</button>
+          <button type="button" data-rpm="6000" data-blades="2">Drone rotor</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panels">
+      <figure>
+        <canvas id="scene" width="360" height="360" role="img"
+          aria-label="The propeller as it really is, slowed down, with the row the sensor is capturing"></canvas>
+        <figcaption>The propeller as it really is, slowed down. The line is the row the sensor
+          is capturing now; the shaded part above it is already in the photo.</figcaption>
+      </figure>
+      <figure>
+        <canvas id="photo" width="360" height="360" role="img" aria-labelledby="photo-caption" aria-describedby="verdict"></canvas>
+        <figcaption id="photo-caption">The photo, built up one row at a time.</figcaption>
+      </figure>
+    </section>
+
+    <div class="row actions">
+      <button type="button" id="play">Pause</button>
+      <button type="button" id="shoot">Take a photo now</button>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+    <p id="verdict" aria-live="polite"></p>
+    <dl id="readouts" class="readouts"></dl>
+
+    <h2>What the camera is doing</h2>
+    <p>The sensor in a phone is a grid of light-sensitive pixels. With a rolling shutter, each
+      line of pixels starts and stops collecting light a little later than the line before it,
+      so the lines record the scene at staggered moments. A global shutter starts and stops
+      every pixel together; it needs extra circuitry in each pixel, which is why most phone
+      sensors roll. For anything that moves slowly compared with the sweep, the stagger makes no
+      visible difference. A propeller is the classic case where it does: the tip of a blade on a
+      small aircraft travels hundreds of metres a second.</p>
+    <p>This page scans from the top of the frame to the bottom. In a real camera the direction
+      depends on how the sensor sits in the body, so turning the phone on its side turns the
+      sweep too. The page also gives every row an instant exposure, as a very short shutter
+      speed in bright light would; a longer exposure smears each row along the blade's path
+      and adds motion blur on top of the bending.</p>
+    <p>Each row of the photo is then a true picture of a thin strip of the scene, taken at its
+      own moment. The strips come from different instants, which is why the shapes in the photo
+      can look like no propeller ever built.</p>
+  </main>
+
+  <footer>
+    <p><a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/shutterwarp">Source</a>
+      · MIT licence</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

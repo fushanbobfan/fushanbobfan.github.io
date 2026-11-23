@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [shutterwarp](https://fushanbobfan.github.io/shutterwarp/) | Why a phone photo bends a spinning propeller: watch the sensor read its rows one after another while the blades turn, and the photo build up row by row. | [`shutterwarp/`](shutterwarp/) |
 | [ebb](https://fushanbobfan.github.io/ebb/) | Why the sea rises twice a day: drag the Moon round the Earth, take away the pull on the centre and watch the leftover raise two bulges, then add the Sun for spring and neap tides. | [`ebb/`](ebb/) |
 | [syzygy](https://fushanbobfan.github.io/syzygy/) | Why eclipses come in seasons: every new and full moon of a year against the window it must hit, the Moon's tilted orbit seen from above, and the eclipses that result. | [`syzygy/`](syzygy/) |
 | [detour](https://fushanbobfan.github.io/detour/) | Braess's paradox in the browser: open a free shortcut, let every driver take the fastest route, and watch every trip get slower. | [`detour/`](detour/) |
