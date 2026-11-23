@@ -69,3 +69,14 @@ test('an exposure of the readout plus the flash lights the whole frame', () => {
   const shorter = flashCoverage(rows, { readout, exposure: 0.02, flashAt: 0.015, flash });
   assert.ok(shorter.full < 1);
 });
+
+test('pole and flash readouts read naturally', async () => {
+  const { crossLabel, leanLabel, flashLabel } = await import('../src/readout.js');
+  assert.equal(crossLabel(0.3), '300 ms to cross the frame');
+  assert.match(leanLabel(0.001), /^upright/);
+  assert.equal(leanLabel(Math.atan(0.1)), 'leaning 5.7° from vertical, its foot further along than its top');
+  assert.match(leanLabel(Math.PI / 4), /^leaning 45°/);
+  assert.match(flashLabel({ full: 1, any: 1 }, 0.031, 0.03, 0.001), /whole frame is lit.*31 ms/);
+  assert.match(flashLabel({ full: 0, any: 0 }, 0.005, 0.03, 0.001), /misses the frame/);
+  assert.match(flashLabel({ full: 0.166, any: 0.233 }, 0.006, 0.03, 0.001), /17% of the rows catch all of it and 23% catch some/);
+});
