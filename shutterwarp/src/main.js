@@ -48,10 +48,18 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
   render();
 });
 
+// "Make it hang still" can ask for a speed such as 187.5 rpm that the slider
+// rounds; the exact value is kept while the slider still shows its rounding.
+let exactRpm = null;
+function rpmFromSlider() {
+  const v = Number($('rpm').value);
+  return exactRpm !== null && Math.abs(v - exactRpm) <= 0.5 ? exactRpm : v;
+}
+
 function readControls() {
   const angle = bladeAngle(state.prop, state.time);
   state.prop = makeProp({
-    rpm: Number($('rpm').value),
+    rpm: rpmFromSlider(),
     blades: Number($('blades').value),
     direction: Number(document.querySelector('input[name="direction"]:checked').value),
     phase: angle,
@@ -177,11 +185,16 @@ reducedMotion.addEventListener('change', () => {
   if (reducedMotion.matches) setPlaying(false);
 });
 
-for (const id of ['rpm', 'blades', 'readout']) $(id).addEventListener('input', readControls);
+$('rpm').addEventListener('input', () => {
+  exactRpm = null;
+  readControls();
+});
+for (const id of ['blades', 'readout']) $(id).addEventListener('input', readControls);
 for (const r of document.querySelectorAll('input[name="direction"]')) r.addEventListener('change', readControls);
 $('presets').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  exactRpm = null;
   $('rpm').value = b.dataset.rpm;
   $('blades').value = b.dataset.blades;
   readControls();
@@ -190,6 +203,7 @@ $('fps').addEventListener('change', readControls);
 $('hang').addEventListener('click', () => {
   const rpm = nearestStandstill(state.prop.rpm, state.prop.blades, state.fps, MAX_RPM);
   if (rpm === null) return;
+  exactRpm = rpm;
   $('rpm').value = String(rpm);
   readControls();
 });
