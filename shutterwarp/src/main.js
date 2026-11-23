@@ -105,12 +105,12 @@ const FLASH_SECONDS = 0.001;
 const poleCtx = $('pole').getContext('2d');
 const flashCtx = $('flash').getContext('2d');
 
-// The flash slider runs from the moment the top row opens to the moment the
-// bottom row closes.
+// The flash slider places the whole flash between the moment the top row opens
+// and the moment the bottom row closes.
 function flashOptions() {
   const exposure = Number($('exposure').value) / 1000;
   const span = state.readout + exposure;
-  const flashAt = (Number($('flash-at').value) / 100) * span - FLASH_SECONDS / 2;
+  const flashAt = (Number($('flash-at').value) / 100) * Math.max(span - FLASH_SECONDS, 0);
   return { readout: state.readout, exposure, flashAt, flash: FLASH_SECONDS };
 }
 
@@ -149,7 +149,8 @@ function drawOthers() {
   }
   flashCtx.putImageData(img, 0, 0);
   $('exposure-value').textContent = `${Math.round(opts.exposure * 1000)} ms`;
-  $('flash-at-value').textContent = `${Math.round((opts.flashAt + FLASH_SECONDS / 2) * 1000)} ms after the top row opens`;
+  const ms = (t) => (t * 1000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  $('flash-at-value').textContent = `from ${ms(opts.flashAt)} to ${ms(opts.flashAt + FLASH_SECONDS)} ms after the top row opens`;
   $('flash-text').textContent = flashLabel(flashCoverage(OTHER_SIZE, opts), opts.exposure, state.readout, FLASH_SECONDS);
 }
 
