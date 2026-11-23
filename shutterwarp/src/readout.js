@@ -1,18 +1,35 @@
 // Plain-language readouts for the page. No DOM access here.
 
 import { turnDuringReadout } from './shutter.js';
-import { frameTurn, apparentTurn, apparentRpm, standstillRpms, maxReadout } from './video.js';
+import { frameTurn, seenMotion, standstillRpms, maxReadout } from './video.js';
 
 export const WALL_SECONDS_PER_READOUT = 4;
 
 const fmt = (x, digits = 0) =>
   x.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
+// An rpm value with enough digits that a small non-zero speed never reads as 0.
+export function rpmText(rpm) {
+  const a = Math.abs(rpm);
+  if (a === 0) return '0';
+  if (a < 1) return fmt(rpm, 2);
+  if (Math.abs(rpm - Math.round(rpm)) < 0.05 || a >= 1000) return fmt(rpm);
+  return fmt(rpm, 1);
+}
+
 export function speedLabel(rpm) {
   const perSecond = rpm / 60;
   if (rpm === 0) return 'standing still';
   const turns = perSecond < 10 ? fmt(perSecond, 1) : fmt(perSecond);
-  return `${fmt(rpm)} rpm (${turns} turns a second)`;
+  return `${rpmText(rpm)} rpm (${turns} turns a second)`;
+}
+
+// The speed seen on video, in words.
+export function seenText(prop, fps) {
+  const { kind, rpm } = seenMotion(prop, fps);
+  if (kind === 'still') return 'standing still';
+  if (kind === 'ambiguous') return `${rpmText(rpm)} rpm, direction ambiguous`;
+  return `${rpmText(rpm)} rpm ${kind}`;
 }
 
 export function readoutLabel(seconds) {
@@ -59,18 +76,10 @@ export function rows(prop, readout) {
 export function videoRows(prop, readout, fps) {
   const used = Math.min(readout, maxReadout(fps));
   const real = frameTurn(prop, fps);
-  const seen = apparentTurn(prop, fps);
-  const seenRpm = apparentRpm(prop, fps);
-  const sameWay = Math.sign(seen) === Math.sign(real);
-  let seenText;
-  if (prop.rpm === 0) seenText = 'standing still';
-  else if (seen === 0) seenText = 'standing still';
-  else if (Math.abs(Math.abs(seen) - 180 / prop.blades) < 1e-9) seenText = `${fmt(Math.abs(seenRpm))} rpm, direction ambiguous`;
-  else seenText = `${fmt(Math.abs(seenRpm))} rpm ${sameWay ? 'forwards' : 'backwards'}`;
   return [
     ['Frame rate', `${fps} frames a second`],
     ['Turn between frames', turnLabel(Math.abs(real))],
-    ['Seen on video', seenText],
+    ['Seen on video', seenText(prop, fps)],
     ['Readout in each frame', used < readout
       ? `${fmt(used * 1000, 1)} ms, a whole frame: a sensor cannot take longer to read a frame than the time between frames`
       : readoutLabel(used)],

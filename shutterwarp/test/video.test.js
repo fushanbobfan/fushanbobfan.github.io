@@ -91,3 +91,33 @@ test('exactly half a blade spacing per frame is called ambiguous', async () => {
   // Below half a spacing the verdict is about true motion, not ambiguity.
   assert.match(motionVerdict(makeProp({ rpm: 899, blades: 2 }), 60), /true motion/);
 });
+
+test('exact half spacings land on the + end in both directions, despite rounding', async () => {
+  // 250 rpm, three blades, 25 fps: exactly 60 degrees a frame.
+  for (const direction of [1, -1]) {
+    const p = makeProp({ rpm: 250, blades: 3, direction });
+    assert.equal(apparentTurn(p, 25), 60);
+    assert.match(motionVerdict(p, 25), /ambiguous/);
+  }
+  // Seen turns stay inside (-180/n, 180/n] at the frame rates of PAL video too.
+  for (const fps of [25, 50]) {
+    for (let rpm = 0; rpm <= 9000; rpm += 12.5) {
+      const p = makeProp({ rpm, blades: 3 });
+      const seen = apparentTurn(p, fps);
+      assert.ok(seen > -60 && seen <= 60, `${rpm} rpm at ${fps}: ${seen}`);
+    }
+  }
+});
+
+test('a standstill speed with a fraction stays exactly still, and small speeds never read as zero', async () => {
+  const { nearestStandstill, seenText, rpmText, speedLabel } = await import('../src/readout.js');
+  const target = nearestStandstill(180, 8, 25, 9000);
+  assert.equal(target, 187.5);
+  assert.equal(apparentTurn(makeProp({ rpm: target, blades: 8 }), 25), 0);
+  assert.equal(speedLabel(187.5), '187.5 rpm (3.1 turns a second)');
+  // 188 rpm is half an rpm off: the video shows slow motion, not zero.
+  assert.equal(seenText(makeProp({ rpm: 188, blades: 8 }), 25), '0.50 rpm forwards');
+  assert.equal(rpmText(0), '0');
+  assert.equal(rpmText(9.98), '10');
+  assert.equal(rpmText(2700), '2,700');
+});
