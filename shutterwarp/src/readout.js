@@ -35,13 +35,14 @@ export function slowdownLabel(readout) {
   return `${fmt(s, s < 10 ? 1 : 0)} times slower than life`;
 }
 
-// What the photo will look like, in a sentence.
+// What the photo will look like, in a sentence. Exactly where pieces appear
+// also depends on where the blades stand when the sweep starts.
 export function verdict(prop, readout) {
   const deg = turnDuringReadout(prop, readout);
-  if (deg < 3) return 'The blades barely move while the rows are read, so they come out straight.';
-  if (deg < 45) return 'The blades turn a little while the rows are read, so they come out gently bent.';
-  if (deg < 360) return 'The blades turn a large part of a circle while the rows are read: they come out as curved, lopsided shapes.';
-  return 'The propeller turns more than once while the rows are read, so each blade is caught several times on its way down the picture: the photo shows curved pieces, some of them detached from the hub.';
+  if (deg < 3) return 'The blades barely move while the rows are captured, so they come out straight.';
+  if (deg < 45) return 'The blades turn a little while the rows are captured, so they come out gently bent.';
+  if (deg <= 360 + 1e-9) return 'The blades turn up to a full circle while the rows are captured: they come out curved and lopsided, and depending on where they start, a piece can come out detached from the hub.';
+  return 'The propeller turns more than once while the rows are captured, so a blade can be caught several times on its way down the picture: expect curved pieces, often detached from the hub.';
 }
 
 export function rows(prop, readout) {

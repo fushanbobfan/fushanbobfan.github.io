@@ -26,10 +26,15 @@ test('every range control starts inside its own limits', () => {
 });
 
 test('the page loads only relative files', () => {
-  for (const m of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
-    if (m[1].startsWith('https://github.com/')) continue;
-    assert.ok(!m[1].startsWith('/') && !m[1].includes('://'), m[1]);
+  let checked = 0;
+  for (const m of html.matchAll(/(?:src|href)\s*=\s*(?:"([^"]+)"|'([^']+)')/g)) {
+    const url = m[1] ?? m[2];
+    checked++;
+    if (url.startsWith('https://github.com/')) continue;
+    assert.ok(!url.startsWith('/') && !url.includes('://'), url);
   }
+  // favicon, stylesheet, script and the source link
+  assert.ok(checked >= 4);
 });
 
 test('speeds, readouts and turns read naturally', () => {
@@ -54,7 +59,9 @@ test('the verdict grows with the turn during one readout', () => {
   assert.match(at(0), /straight/);
   assert.match(at(10), /straight/);       // 1.8 degrees
   assert.match(at(180), /gently bent/);   // 32 degrees
-  assert.match(at(1200), /curved, lopsided/); // 216 degrees
+  assert.match(at(1200), /curved and lopsided/); // 216 degrees
+  assert.match(at(2000), /up to a full circle/);  // exactly 360 degrees
+  assert.match(at(2010), /more than once/);
   assert.match(at(6000), /more than once/);   // 1080 degrees
   const r = rows(makeProp({ rpm: 2400 }), 0.03);
   assert.deepEqual(r.map(([k]) => k), ['Propeller', 'Sensor readout', 'Turn during one readout', 'Animation']);
