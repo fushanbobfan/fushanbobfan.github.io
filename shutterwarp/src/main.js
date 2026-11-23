@@ -5,6 +5,8 @@ import {
 } from './readout.js';
 import { motionVerdict, maxReadout } from './video.js';
 import { speedChart } from './speedchart.js';
+import { photographPole, leanAngle, flashProfile, flashCoverage } from './others.js';
+import { crossLabel, leanLabel, flashLabel } from './readout.js';
 
 const SIZE = 360;
 const PAUSE_WALL_SECONDS = 1.2;
@@ -46,6 +48,7 @@ let palette = colors();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   palette = colors();
   render();
+  drawOthers();
 });
 
 // "Make it hang still" can ask for a speed such as 187.5 rpm that the slider
@@ -97,6 +100,59 @@ function fillList(dl, entries) {
   }
 }
 
+const OTHER_SIZE = 240;
+const FLASH_SECONDS = 0.001;
+const poleCtx = $('pole').getContext('2d');
+const flashCtx = $('flash').getContext('2d');
+
+// The flash slider runs from the moment the top row opens to the moment the
+// bottom row closes.
+function flashOptions() {
+  const exposure = Number($('exposure').value) / 1000;
+  const span = state.readout + exposure;
+  const flashAt = (Number($('flash-at').value) / 100) * span - FLASH_SECONDS / 2;
+  return { readout: state.readout, exposure, flashAt, flash: FLASH_SECONDS };
+}
+
+function drawOthers() {
+  const cross = Number($('cross').value) / 1000;
+  const pole = poleCtx.createImageData(OTHER_SIZE, OTHER_SIZE);
+  pole.data.set(photographPole({ size: OTHER_SIZE, readout: state.readout, cross }));
+  poleCtx.putImageData(pole, 0, 0);
+  // Where the pole really stands halfway through the readout.
+  poleCtx.strokeStyle = palette.scan;
+  poleCtx.setLineDash([5, 4]);
+  poleCtx.lineWidth = 1.5;
+  poleCtx.beginPath();
+  poleCtx.moveTo(OTHER_SIZE / 2, 0);
+  poleCtx.lineTo(OTHER_SIZE / 2, OTHER_SIZE);
+  poleCtx.stroke();
+  poleCtx.setLineDash([]);
+  $('cross-value').textContent = crossLabel(cross);
+  $('pole-lean').textContent = `In the photo the pole is ${leanLabel(leanAngle(state.readout, cross))}. The dashed line is where it really stands halfway through the readout.`;
+
+  const opts = flashOptions();
+  const profile = flashProfile(OTHER_SIZE, opts);
+  const img = flashCtx.createImageData(OTHER_SIZE, OTHER_SIZE);
+  for (let row = 0; row < OTHER_SIZE; row++) {
+    const v = profile[row];
+    const r = 38 + (250 - 38) * v;
+    const g = 36 + (240 - 36) * v;
+    const b = 44 + (214 - 44) * v;
+    for (let col = 0; col < OTHER_SIZE; col++) {
+      const k = (row * OTHER_SIZE + col) * 4;
+      img.data[k] = r;
+      img.data[k + 1] = g;
+      img.data[k + 2] = b;
+      img.data[k + 3] = 255;
+    }
+  }
+  flashCtx.putImageData(img, 0, 0);
+  $('exposure-value').textContent = `${Math.round(opts.exposure * 1000)} ms`;
+  $('flash-at-value').textContent = `${Math.round((opts.flashAt + FLASH_SECONDS / 2) * 1000)} ms after the top row opens`;
+  $('flash-text').textContent = flashLabel(flashCoverage(OTHER_SIZE, opts), opts.exposure, state.readout, FLASH_SECONDS);
+}
+
 function newPhoto() {
   if (state.announce) $('status').textContent = '';
   state.announce = false;
@@ -132,6 +188,7 @@ function updateText() {
   fillList($('video-readouts'), videoRows(state.prop, state.readout, state.fps));
   $('speed-chart').innerHTML = speedChart({ blades: state.prop.blades, fps: state.fps, rpm: state.prop.rpm, maxRpm: MAX_RPM });
   $('hang').disabled = nearestStandstill(state.prop.rpm, state.prop.blades, state.fps, MAX_RPM) === null;
+  drawOthers();
 }
 
 function advance(wallDt) {
@@ -200,6 +257,7 @@ $('presets').addEventListener('click', (e) => {
   readControls();
 });
 $('fps').addEventListener('change', readControls);
+for (const id of ['cross', 'exposure', 'flash-at']) $(id).addEventListener('input', drawOthers);
 $('hang').addEventListener('click', () => {
   const rpm = nearestStandstill(state.prop.rpm, state.prop.blades, state.fps, MAX_RPM);
   if (rpm === null) return;

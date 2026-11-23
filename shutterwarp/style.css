@@ -140,6 +140,16 @@ button:disabled { opacity: 0.5; cursor: default; }
 .speed .cursor { stroke: var(--scan); stroke-width: 1; stroke-dasharray: 4 3; }
 .speed .here { fill: var(--scan); }
 .hint { color: var(--muted); font-size: 0.93rem; }
+.others {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+.others canvas { max-width: 240px; margin-top: 10px; }
+.others .field { margin-top: 8px; }
+@media (max-width: 680px) {
+  .others { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 680px) {
   .video-stage { grid-template-columns: 1fr; }
