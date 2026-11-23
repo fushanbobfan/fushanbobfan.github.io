@@ -112,3 +112,4 @@ footer a { color: var(--accent); }
 @media (max-width: 680px) {
   .panels { grid-template-columns: 1fr; }
 }
+.status { color: var(--muted); margin: 10px 0 0; min-height: 1.5em; }

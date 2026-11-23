@@ -12,13 +12,14 @@ const sceneCtx = sceneCanvas.getContext('2d');
 const photoCtx = photoCanvas.getContext('2d');
 const image = photoCtx.createImageData(SIZE, SIZE);
 
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const state = {
   prop: makeProp(),
   readout: 0.03,
   time: 0,
-  playing: !reduceMotion,
+  playing: !reducedMotion.matches,
+  announce: false,
   photoStart: 0,
   rowsDone: 0,
   pauseLeft: 0,
@@ -51,6 +52,8 @@ function readControls() {
 }
 
 function newPhoto() {
+  if (state.announce) $('status').textContent = '';
+  state.announce = false;
   state.photoStart = state.time;
   state.rowsDone = 0;
   state.pauseLeft = 0;
@@ -59,6 +62,16 @@ function newPhoto() {
 function finishPhotoNow() {
   image.data.set(photograph(state.prop, { size: SIZE, readout: state.readout, start: state.photoStart }));
   state.rowsDone = SIZE;
+  photoDone();
+}
+
+// Only a photo the reader asked for is announced, once when it starts and once
+// when it is finished; the automatic repeats stay quiet.
+function photoDone() {
+  if (state.announce) {
+    $('status').textContent = 'Photo taken.';
+    state.announce = false;
+  }
 }
 
 function updateText() {
@@ -89,7 +102,10 @@ function advance(wallDt) {
   if (target > state.rowsDone) {
     exposeRows(state.prop, { size: SIZE, readout: state.readout, start: state.photoStart }, state.rowsDone, target, image.data);
     state.rowsDone = target;
-    if (state.rowsDone >= SIZE) state.pauseLeft = PAUSE_WALL_SECONDS;
+    if (state.rowsDone >= SIZE) {
+      state.pauseLeft = PAUSE_WALL_SECONDS;
+      photoDone();
+    }
   }
 }
 
@@ -99,9 +115,15 @@ function render() {
   drawPhoto(photoCtx, SIZE, image, state.rowsDone / SIZE, palette);
 }
 
+// Elapsed time is used in full so a slow device still sweeps in four seconds;
+// the clock restarts after the tab has been hidden.
+const MAX_STEP_SECONDS = 1;
 let last = null;
+document.addEventListener('visibilitychange', () => {
+  last = null;
+});
 function frame(now) {
-  if (last !== null && state.playing) advance(Math.min((now - last) / 1000, 0.1));
+  if (last !== null && state.playing) advance(Math.min((now - last) / 1000, MAX_STEP_SECONDS));
   last = now;
   render();
   requestAnimationFrame(frame);
@@ -110,8 +132,11 @@ function frame(now) {
 function setPlaying(on) {
   state.playing = on;
   $('play').textContent = on ? 'Pause' : 'Play';
-  $('play').setAttribute('aria-pressed', String(on));
 }
+
+reducedMotion.addEventListener('change', () => {
+  if (reducedMotion.matches) setPlaying(false);
+});
 
 for (const id of ['rpm', 'blades', 'readout']) $(id).addEventListener('input', readControls);
 for (const r of document.querySelectorAll('input[name="direction"]')) r.addEventListener('change', readControls);
@@ -125,6 +150,8 @@ $('presets').addEventListener('click', (e) => {
 $('play').addEventListener('click', () => setPlaying(!state.playing));
 $('shoot').addEventListener('click', () => {
   newPhoto();
+  state.announce = true;
+  $('status').textContent = 'Taking a photo.';
   if (!state.playing) finishPhotoNow();
 });
 
