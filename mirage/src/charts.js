@@ -12,7 +12,10 @@ export const FOLD = { w: 640, h: 320, left: 86, right: 18, top: 16, bottom: 44 }
 // along the bottom. Upright and upside-down stretches get their own class.
 export function foldChart(rows, { top, bottom }, { eye }) {
   const { w, h, left, right, top: t, bottom: b } = FOLD;
-  const zMax = Math.max(2.5, Math.ceil(eye * 1.2 * 2) / 2);
+  const fold = foldPoint(rows);
+  // Wide enough for the board, the eye and the fold, wherever it lies.
+  const zMax = Math.max(2.5, Math.ceil(eye * 1.2 * 2) / 2, fold ? niceCeil(fold.zAtBoard * 1.25) : 0);
+  const zStep = [0.5, 1, 2, 5, 10, 20].find((s) => zMax / s <= 6);
   const x = (z) => left + (z / zMax) * (w - left - right);
   const y = (a) => t + ((top - a) / (top - bottom)) * (h - t - b);
   const parts = [];
@@ -27,8 +30,9 @@ export function foldChart(rows, { top, bottom }, { eye }) {
   }
   parts.push(`<text class="tick" x="${x(BOARD_HEIGHT / 2).toFixed(1)}" y="${t + 14}" text-anchor="middle">the board</text>`);
 
-  for (let z = 0; z <= zMax + 1e-9; z += 0.5) {
-    parts.push(`<text class="tick" x="${x(z).toFixed(1)}" y="${h - b + 18}" text-anchor="middle">${z.toFixed(1)}</text>`);
+  for (let k = 0; k * zStep <= zMax + 1e-9; k++) {
+    const z = k * zStep;
+    parts.push(`<text class="tick" x="${x(z).toFixed(1)}" y="${h - b + 18}" text-anchor="middle">${zStep < 1 ? z.toFixed(1) : z}</text>`);
   }
   parts.push(`<text class="tick" x="${(left + w - right) / 2}" y="${h - 6}" text-anchor="middle">height reached at the board, m</text>`);
   for (const a of angleTicks(top, bottom)) {
@@ -45,7 +49,6 @@ export function foldChart(rows, { top, bottom }, { eye }) {
 
   for (const [cls, d] of foldPaths(rows, x, y, zMax)) parts.push(`<path class="${cls}" d="${d}"/>`);
 
-  const fold = foldPoint(rows);
   if (fold) {
     const fx = x(fold.zAtBoard);
     const fy = y(fold.angle);
@@ -101,9 +104,15 @@ export function foldPoint(rows) {
   return best;
 }
 
+function niceCeil(v) {
+  for (const s of [0.5, 1, 2, 5, 10, 20]) if (v <= s * 6) return Math.ceil(v / s) * s;
+  return Math.ceil(v / 50) * 50;
+}
+
 function angleTicks(top, bottom) {
   const span = (top - bottom) * DEG;
-  const step = [0.05, 0.1, 0.2, 0.25, 0.5, 1].find((s) => span / s <= 6) / DEG;
+  const steps = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10];
+  const step = (steps.find((s) => span / s <= 6) ?? 20) / DEG;
   const ticks = [];
   for (let a = Math.ceil(bottom / step) * step; a <= top + 1e-12; a += step) {
     ticks.push(Math.abs(a) < step / 1000 ? 0 : a);
@@ -120,7 +129,11 @@ function describeFold(rows) {
   if (!fold) {
     return 'Going down the view, the height reached at the board falls steadily: one upright picture, with the road below it.';
   }
-  return `Going down the view, the height reached at the board falls to ${heightText(fold.zAtBoard)} and then rises again. The rows below that fold see the board from the bottom up, which is the upside-down copy.`;
+  const turn = `Going down the view, the height reached at the board's distance falls to ${heightText(fold.zAtBoard)} and then rises again.`;
+  if (fold.zAtBoard > BOARD_HEIGHT) {
+    return `${turn} The fold lies above the top of the board, so no ray reaches the board at all: it has sunk out of sight.`;
+  }
+  return `${turn} The rows below that fold see the board from the bottom up, which is the upside-down copy.`;
 }
 
 export const PROFILE = { w: 300, h: 320, left: 54, right: 14, top: 16, bottom: 44 };

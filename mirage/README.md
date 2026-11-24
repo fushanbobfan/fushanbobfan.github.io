@@ -39,7 +39,8 @@ Run the tests with `npm test` (Node 20 or later).
   angle below eye level at which a ray still turns back up, and how far ahead
   the shine starts.
 - **Where each ray lands**: a chart of the height each row's ray reaches at the
-  board, lined up with the rows of the view. Over a hot road it folds back:
+  board, lined up with the rows of the view. Over a hot road, once the board
+  stands in the shine, it folds back:
   below the fold the rows see the board from the bottom up (the upside-down
   copy), and nothing lower than the fold is seen. Beside it, the temperature of
   the air against height.

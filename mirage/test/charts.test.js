@@ -60,6 +60,28 @@ test('the curve breaks where rays end on the road and joins upright to inverted 
   assert.deepEqual(foldPaths(rows.slice(0, 3), id, id, 1.5), [['curve upright', 'M1.0,2.0L0.5,1.0']]);
 });
 
+test('a fold above the board says the board has sunk, and stays on the chart', () => {
+  const sc = { eye: 0.3, distance: 1500 };
+  const { rows, svg } = chartFor({ surface: 75, air: 0, layer: 0.5 }, sc);
+  const fold = foldPoint(rows);
+  assert.ok(fold.zAtBoard > 10, fold.zAtBoard);
+  assert.match(svg, /sunk out of sight/);
+  assert.doesNotMatch(svg, /upside-down copy/);
+  const cx = Number(svg.match(/class="mark" cx="([\d.]+)"/)[1]);
+  assert.ok(cx > 0 && cx < 640, cx);
+  assert.match(svg, /class="curve inverted"/);
+  const ticks = [...svg.matchAll(/text-anchor="middle">(\d+(?:\.\d)?)</g)].map((m) => Number(m[1]));
+  assert.ok(ticks.length >= 3 && ticks.length <= 8, ticks.join());
+});
+
+test('angle labels survive a wide view: a tall eye close to the board', () => {
+  const { svg } = chartFor({ surface: 30, air: 30 }, { eye: 3, distance: 50 });
+  assert.doesNotMatch(svg, /NaN/);
+  assert.match(svg, />eye level</);
+  const labels = [...svg.matchAll(/>(\d+(?:\.\d+)?)° (?:above|below)</g)];
+  assert.ok(labels.length >= 2 && labels.length <= 8, labels.length);
+});
+
 test('the temperature profile runs from the road value to the air value', () => {
   const air = makeAir({ surface: 55, air: 30, layer: 0.1 });
   const svg = profileChart(air, scene);
