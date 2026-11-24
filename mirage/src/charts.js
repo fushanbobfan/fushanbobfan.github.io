@@ -5,7 +5,7 @@ import { BOARD, BOARD_HEIGHT } from './view.js';
 
 const DEG = 180 / Math.PI;
 
-export const FOLD = { w: 640, h: 320, left: 64, right: 18, top: 16, bottom: 44 };
+export const FOLD = { w: 640, h: 320, left: 86, right: 18, top: 16, bottom: 44 };
 
 // Where each row of the view lands on the board's line, drawn sideways so the
 // rows line up with the picture: viewing angle down the side, height reached
@@ -33,7 +33,7 @@ export function foldChart(rows, { top, bottom }, { eye }) {
   parts.push(`<text class="tick" x="${(left + w - right) / 2}" y="${h - 6}" text-anchor="middle">height reached at the board, m</text>`);
   for (const a of angleTicks(top, bottom)) {
     parts.push(`<line class="grid${a === 0 ? ' zero' : ''}" x1="${left}" x2="${w - right}" y1="${y(a).toFixed(1)}" y2="${y(a).toFixed(1)}"/>`);
-    parts.push(`<text class="tick" x="${left - 6}" y="${(y(a) + 4).toFixed(1)}" text-anchor="end">${a === 0 ? 'eye level' : `${(a * DEG).toFixed(2)}°`}</text>`);
+    parts.push(`<text class="tick" x="${left - 6}" y="${(y(a) + 4).toFixed(1)}" text-anchor="end">${a === 0 ? 'eye level' : `${Math.abs(a * DEG).toFixed(2)}° ${a < 0 ? 'below' : 'above'}`}</text>`);
   }
 
   // Rays that end on the road before the board: a grey bar at the left edge.

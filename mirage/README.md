@@ -38,6 +38,11 @@ Run the tests with `npm test` (Node 20 or later).
 - **Readouts**: the refractive index at the road and at eye level, the steepest
   angle below eye level at which a ray still turns back up, and how far ahead
   the shine starts.
+- **Where each ray lands**: a chart of the height each row's ray reaches at the
+  board, lined up with the rows of the view. Over a hot road it folds back:
+  below the fold the rows see the board from the bottom up (the upside-down
+  copy), and nothing lower than the fold is seen. Beside it, the temperature of
+  the air against height.
 
 ## The model
 
@@ -58,6 +63,7 @@ Run the tests with `npm test` (Node 20 or later).
 - `src/rays.js` the ray tracer, the critical angle and where the shine starts
 - `src/view.js` the long-lens picture, one ray per row
 - `src/side.js` the side view
+- `src/charts.js` the fold chart and the temperature profile
 - `src/readout.js` labels and the description under the picture
 - `src/main.js` the page
 

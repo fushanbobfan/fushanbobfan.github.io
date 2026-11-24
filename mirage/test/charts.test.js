@@ -23,6 +23,8 @@ test('over a hot road the chart shows a fold with an upside-down stretch below i
   assert.match(svg, /class="curve inverted"/);
   assert.match(svg, /fold: nothing below \d+ cm is seen/);
   assert.match(svg, /falls to \d+ cm and then rises again/);
+  assert.match(svg, />0\.20° below</);
+  assert.doesNotMatch(svg, />-/);
   for (const v of numbers(svg)) assert.ok(Number.isFinite(v));
 });
 

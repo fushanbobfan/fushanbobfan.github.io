@@ -121,6 +121,41 @@ footer a { color: var(--accent); }
 
 main > figure { margin: 18px 0 0; max-width: 820px; }
 .readouts dd { overflow-wrap: anywhere; }
+
+.charts {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1020px;
+}
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.chart-wrap:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.chart-wrap svg { display: block; width: 100%; height: auto; }
+#fold-chart svg { min-width: 460px; }
+.charts .grid { stroke: var(--rule); stroke-width: 1; }
+.charts .grid.zero { stroke: var(--muted); stroke-dasharray: 4 3; }
+.charts .tick { fill: var(--muted); font-size: 12px; font-family: inherit; }
+.charts .note { fill: var(--ink); font-size: 12.5px; font-family: inherit; }
+.fold .band { opacity: 0.28; }
+.fold .band.post { fill: var(--scene-post); }
+.fold .band.red { fill: var(--scene-red); }
+.fold .band.white { fill: var(--scene-white); opacity: 0.6; }
+.fold .band.blue { fill: var(--scene-blue); }
+.fold .road { fill: var(--ray-road); }
+.fold .curve { fill: none; stroke-width: 2; }
+.fold .curve.upright { stroke: var(--ink); }
+.fold .curve.inverted { stroke: var(--ray-board); stroke-width: 2.6; }
+.fold .mark { fill: var(--panel); stroke: var(--ray-board); stroke-width: 2; }
+.profile .temp { fill: none; stroke: #d0682a; stroke-width: 2.2; }
+.profile .eye { stroke: var(--muted); stroke-dasharray: 4 3; }
+@media (max-width: 680px) {
+  .charts { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 520px) {
   .readouts { grid-template-columns: 1fr; }
   .readouts dd { margin-bottom: 6px; }
