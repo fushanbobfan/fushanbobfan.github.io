@@ -9,7 +9,17 @@
 
 import { index, dndz } from './air.js';
 
-const MAX_STEP = 0.5;
+const BASE_STEP = 0.5;
+const MAX_STEP = 10;
+
+// Step length: half a metre in and near the warm layer, longer higher up
+// where the index hardly changes, and never so long that a descending ray
+// drops more than about a third of its height in one step.
+function stepLength(air, z, theta) {
+  const away = BASE_STEP * Math.exp(Math.min(z / air.layer, 6) / 2);
+  const fall = BASE_STEP + (0.3 * z) / Math.max(Math.abs(Math.tan(theta)), 1e-9);
+  return Math.min(MAX_STEP, away, fall);
+}
 
 function slope(air, z, theta) {
   return [Math.tan(theta), dndz(air, z) / index(air, z)];
@@ -22,7 +32,7 @@ function slope(air, z, theta) {
 // height at stops[i], or null if the ray hit the ground first.
 export function trace(air, eye, angle, { stops, path = false, pathEvery = 4 } = {}) {
   const last = stops[stops.length - 1];
-  const dx = Math.min(MAX_STEP, last / 2000);
+  const cap = Math.min(BASE_STEP, last / 2000);
   const heights = new Array(stops.length).fill(null);
   const angles = new Array(stops.length).fill(null);
   const points = path ? [[0, eye]] : null;
@@ -32,7 +42,7 @@ export function trace(air, eye, angle, { stops, path = false, pathEvery = 4 } = 
   let next = 0;
   let step = 0;
   while (next < stops.length) {
-    const h = Math.min(dx, stops[next] - x);
+    const h = Math.min((stepLength(air, z, t) * cap) / BASE_STEP, stops[next] - x);
     const [a1, b1] = slope(air, z, t);
     const [a2, b2] = slope(air, z + (h / 2) * a1, t + (h / 2) * b1);
     const [a3, b3] = slope(air, z + (h / 2) * a2, t + (h / 2) * b2);

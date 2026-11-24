@@ -17,7 +17,7 @@ test('the temperature runs from the surface value to the air value', () => {
   assert.equal(temperature(a, 0), 55);
   close(temperature(a, 0.1), 30 + 25 / Math.E, 1e-12);
   close(temperature(a, 3), 30, 1e-9);
-  assert.ok(index(a, 0) < index(a, 1), 'hot air near the road bends light less');
+  assert.ok(index(a, 0) < index(a, 1), 'hot air near the road has the lower index');
 });
 
 test('the index gradient matches a finite difference', () => {
