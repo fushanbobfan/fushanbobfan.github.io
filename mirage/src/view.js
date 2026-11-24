@@ -36,8 +36,23 @@ export function boardBand(z) {
 export function viewAngles(air, { eye, distance }) {
   const c = criticalAngle(air, eye) ?? 0;
   const bottom = -Math.max((1.5 * eye) / distance, 1.25 * c, 0.002);
-  const top = Math.max((1.4 * BOARD_HEIGHT - eye) / distance, 0.3 * Math.abs(bottom));
+  const top = Math.max((1.4 * BOARD_HEIGHT - eye) / distance, 0.3 * Math.abs(bottom), aimAt(air, eye, distance, 1.4 * BOARD_HEIGHT));
   return { top, bottom };
+}
+
+// The angle at which a ray from the eye arrives at `height` on the board,
+// found by bisection; air that bends rays down needs a higher aim than the
+// straight line.
+function aimAt(air, eye, distance, height) {
+  let lo = -0.05;
+  let hi = 0.05;
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2;
+    const z = trace(air, eye, mid, { stops: [distance] }).heights[0];
+    if (z !== null && z >= height) hi = mid;
+    else lo = mid;
+  }
+  return hi;
 }
 
 export function farDistance(distance) {
@@ -49,12 +64,26 @@ export function farDistance(distance) {
 export function viewRows(air, { eye, distance }, count) {
   const { top, bottom } = viewAngles(air, { eye, distance });
   const far = farDistance(distance);
-  const rows = [];
+  const traced = [];
   for (let i = 0; i < count; i++) {
     const angle = top + ((bottom - top) * (i + 0.5)) / count;
-    const r = trace(air, eye, angle, { stops: [distance, far] });
-    const zAtBoard = r.heights[0];
-    const turned = angle < 0 && r.angles[0] !== null && r.angles[0] > 0;
+    traced.push({ angle, r: trace(air, eye, angle, { stops: [distance, far] }) });
+  }
+  const zs = traced.map((t) => t.r.heights[0]);
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const { angle, r } = traced[i];
+    const zAtBoard = zs[i];
+    // Upside down: the next row down reaches higher on the board than the
+    // row above did.
+    const below = i + 1 < count ? zs[i + 1] : null;
+    const above = i > 0 ? zs[i - 1] : null;
+    let turned = false;
+    if (zAtBoard !== null) {
+      const lower = below ?? zAtBoard;
+      const upper = above ?? zAtBoard;
+      turned = lower - upper > 0;
+    }
     let open;
     if (r.groundX !== null) open = { kind: 'ground', x: r.groundX };
     else open = { kind: 'far', z: r.heights[1], angle: r.angles[1] };

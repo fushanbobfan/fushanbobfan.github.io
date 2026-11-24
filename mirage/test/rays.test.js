@@ -60,6 +60,26 @@ test('rays just shallower than the critical angle turn back; steeper ones hit th
   assert.equal(criticalAngle(makeAir({ surface: 20, air: 30 }), 1.2), null);
 });
 
+test('a steep gradient cannot carry a ray through the road and out again', () => {
+  // 75 °C road under 0 °C air with a 2 cm layer: this ray touches the road
+  // about 29.5 m out (a trace with 1 mm steps agrees).
+  const a = makeAir({ surface: 75, air: 0, layer: 0.02 });
+  const angle = -0.0112406;
+  const fine = (() => {
+    let z = 0.3;
+    let t = angle;
+    for (let x = 0; x < 60; x += 0.001) {
+      z += 0.001 * Math.tan(t);
+      t += (0.001 * dndz(a, z)) / index(a, z);
+      if (z <= 0) return x;
+    }
+    return null;
+  })();
+  const r = trace(a, 0.3, angle, { stops: [60, 3000] });
+  if (fine === null) assert.equal(r.groundX, null);
+  else close(r.groundX, fine, 0.05);
+});
+
 test('a ray levels out where the invariant says it should', () => {
   const a = makeAir({ surface: 55, air: 30, layer: 0.1 });
   const eye = 1.2;

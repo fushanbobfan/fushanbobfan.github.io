@@ -12,13 +12,19 @@ import { index, dndz } from './air.js';
 const BASE_STEP = 0.5;
 const MAX_STEP = 10;
 
+const MIN_STEP = 0.002;
+const MAX_TURN = 2e-4;
+
 // Step length: half a metre in and near the warm layer, longer higher up
-// where the index hardly changes, and never so long that a descending ray
-// drops more than about a third of its height in one step.
+// where the index hardly changes, never so long that a descending ray drops
+// more than about a third of its height, and short enough that the ray turns
+// by at most MAX_TURN radians, so a steep gradient cannot carry it below the
+// ground and back up within one step.
 function stepLength(air, z, theta) {
   const away = BASE_STEP * Math.exp(Math.min(z / air.layer, 6) / 2);
   const fall = BASE_STEP + (0.3 * z) / Math.max(Math.abs(Math.tan(theta)), 1e-9);
-  return Math.min(MAX_STEP, away, fall);
+  const bend = MAX_TURN / Math.max(Math.abs(dndz(air, Math.max(z, 0)) / index(air, z)), 1e-12);
+  return Math.max(MIN_STEP, Math.min(MAX_STEP, away, fall, bend));
 }
 
 function slope(air, z, theta) {
@@ -42,13 +48,24 @@ export function trace(air, eye, angle, { stops, path = false, pathEvery = 4 } = 
   let next = 0;
   let step = 0;
   while (next < stops.length) {
-    const h = Math.min((stepLength(air, z, t) * cap) / BASE_STEP, stops[next] - x);
-    const [a1, b1] = slope(air, z, t);
-    const [a2, b2] = slope(air, z + (h / 2) * a1, t + (h / 2) * b1);
-    const [a3, b3] = slope(air, z + (h / 2) * a2, t + (h / 2) * b2);
-    const [a4, b4] = slope(air, z + h * a3, t + h * b3);
-    const nz = z + (h / 6) * (a1 + 2 * a2 + 2 * a3 + a4);
-    const nt = t + (h / 6) * (b1 + 2 * b2 + 2 * b3 + b4);
+    let h = Math.min((stepLength(air, z, t) * cap) / BASE_STEP, stops[next] - x);
+    let nz;
+    let nt;
+    for (;;) {
+      const [a1, b1] = slope(air, z, t);
+      const z2 = z + (h / 2) * a1;
+      const [a2, b2] = slope(air, z2, t + (h / 2) * b1);
+      const z3 = z + (h / 2) * a2;
+      const [a3, b3] = slope(air, z3, t + (h / 2) * b2);
+      const z4 = z + h * a3;
+      const [a4, b4] = slope(air, z4, t + h * b3);
+      nz = z + (h / 6) * (a1 + 2 * a2 + 2 * a3 + a4);
+      nt = t + (h / 6) * (b1 + 2 * b2 + 2 * b3 + b4);
+      // A stage below the ground while the end lands above it: the step
+      // straddles a touch of the road, so try again with a shorter one.
+      if (nz > 0 && Math.min(z2, z3, z4) <= 0 && h > MIN_STEP) h = Math.max(MIN_STEP, h / 4);
+      else break;
+    }
     if (nz <= 0) {
       const groundX = x + (h * z) / (z - nz);
       if (points) points.push([groundX, 0]);

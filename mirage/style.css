@@ -120,4 +120,9 @@ footer a { color: var(--accent); }
   }
 
 main > figure { margin: 18px 0 0; max-width: 820px; }
+.readouts dd { overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .readouts { grid-template-columns: 1fr; }
+  .readouts dd { margin-bottom: 6px; }
+}
 #verdict { margin: 14px 0; }

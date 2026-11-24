@@ -39,7 +39,8 @@ export function sideRays(air, scene, count) {
     // Past the board, along the middle of the view, the ray meets the trees.
     else if (r.heights[1] <= treeHeight(0)) ends = 'trees';
     else ends = r.angles[1] < 0 ? 'road' : 'sky';
-    rays.push({ angle, path: cut, ends, turned: angle < 0 && r.angles[0] > 0 });
+    // Rays that level out and climb again before the board are drawn heavier.
+    rays.push({ angle, path: cut, ends, turned: angle < 0 && r.angles[0] !== null && r.angles[0] > 0 });
   }
   return rays;
 }

@@ -51,8 +51,24 @@ test('over a hot road the sky shows below the horizon and the board has an upsid
   assert.ok(k > 0 && k < z.length - 1);
   for (let i = 1; i <= k; i++) assert.ok(z[i] < z[i - 1]);
   for (let i = k + 1; i < z.length; i++) assert.ok(z[i] > z[i - 1]);
-  // Rays in the lower copy reach the board heading upwards, after turning.
-  for (const r of rows) if (r.board.kind === 'board' && r.board.turned) assert.ok(r.angle < 0);
+  // The rows past the fold are marked upside down and those before it are
+  // not; the fold row itself can go either way.
+  const board = rows.filter((r) => r.board.kind === 'board');
+  board.forEach((r, i) => i !== k && assert.equal(r.board.turned, i > k, `row ${i}`));
+});
+
+test('a ray that climbs after dipping still makes an upright picture if heights keep falling', () => {
+  // A low eye close to the board over a thick warm layer: rays bend but the
+  // picture is still one upright board.
+  const rows = viewRows(makeAir({ surface: 55, air: 30, layer: 0.5 }), { eye: 0.3, distance: 50 }, 162);
+  const z = rows.filter((r) => r.board.kind === 'board').map((r) => r.board.z);
+  for (let i = 1; i < z.length; i++) assert.ok(z[i] < z[i - 1]);
+  assert.equal(describeView(rows).invertedRows, 0);
+});
+
+test('air that bends rays down still leaves the board in view', () => {
+  const rows = viewRows(makeAir({ surface: 0, air: 45, layer: 0.5 }), { eye: 0.3, distance: 1500 }, 240);
+  assert.ok(rows.some((r) => r.board.kind === 'board'));
 });
 
 test('without heating no ray aimed below eye level comes back up', () => {
