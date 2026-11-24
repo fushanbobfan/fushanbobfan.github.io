@@ -38,6 +38,10 @@ Run the tests with `npm test` (Node 20 or later).
 - **Readouts**: the refractive index at the road and at eye level, the steepest
   angle below eye level at which a ray still turns back up, and how far ahead
   the shine starts.
+- **Driving towards the board** at 90 km/h: the wet patch keeps its distance
+  ahead of the car while the board comes nearer, and its upside-down copy
+  vanishes once the board is closer than the shine; a readout gives that
+  distance.
 - **Where each ray lands**: a chart of the height each row's ray reaches at the
   board, lined up with the rows of the view. Over a hot road, once the board
   stands in the shine, it folds back:
@@ -65,6 +69,7 @@ Run the tests with `npm test` (Node 20 or later).
 - `src/view.js` the long-lens picture, one ray per row
 - `src/side.js` the side view
 - `src/charts.js` the fold chart and the temperature profile
+- `src/drive.js` the drive and where the copy vanishes
 - `src/readout.js` labels and the description under the picture
 - `src/main.js` the page
 

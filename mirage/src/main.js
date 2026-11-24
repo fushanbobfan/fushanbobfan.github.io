@@ -4,6 +4,7 @@ import { renderView, describeView } from './view.js';
 import { drawSide, sideFrame } from './side.js';
 import { rows, verdict, tempLabel, layerLabel, heightLabel, distanceLabel } from './readout.js';
 import { foldChart, profileChart } from './charts.js';
+import { nextDistance, copyVanishes, NEAREST } from './drive.js';
 
 const $ = (id) => document.getElementById(id);
 const viewCanvas = $('view');
@@ -80,10 +81,11 @@ function render() {
   const shine = shineStart(air, scene.eye);
   const view = describeView(out.rows);
   const { stretch } = sideFrame(scene, sideCanvas.width, sideCanvas.height);
+  const vanish = vanishFor(air, scene.eye);
   $('verdict').textContent = verdict(air, scene, { critical, shine, view });
   const dl = $('readouts');
   dl.replaceChildren();
-  for (const [k, v] of rows(air, scene, { critical, shine, top: out.top, bottom: out.bottom, stretch })) {
+  for (const [k, v] of rows(air, scene, { critical, shine, top: out.top, bottom: out.bottom, stretch, vanish })) {
     const dt = document.createElement('dt');
     dt.textContent = k;
     const dd = document.createElement('dd');
@@ -91,6 +93,47 @@ function render() {
     dl.append(dt, dd);
   }
 }
+
+// Where the copy vanishes depends on the air and the eye only, so it is
+// worked out once per setting, not on every frame of a drive.
+let vanishKey = '';
+let vanishValue = null;
+function vanishFor(air, eye) {
+  const key = `${air.surface}|${air.air}|${air.layer}|${eye}`;
+  if (key !== vanishKey) {
+    vanishKey = key;
+    vanishValue = copyVanishes(air, eye);
+  }
+  return vanishValue;
+}
+
+const drive = { on: false, last: 0, distance: 0 };
+function setDriving(on) {
+  drive.on = on;
+  $('drive').setAttribute('aria-pressed', String(on));
+  $('drive').textContent = on ? 'Stop the car' : 'Drive towards the board';
+  if (on) {
+    drive.distance = Number(sliders.distance.el.value);
+    drive.last = performance.now();
+    requestAnimationFrame(driveFrame);
+  }
+}
+function driveFrame(now) {
+  if (!drive.on) return;
+  // Long gaps (a hidden tab) count as one frame, so the car never jumps.
+  const seconds = Math.min((now - drive.last) / 1000, 0.25);
+  drive.last = now;
+  drive.distance = nextDistance(drive.distance, seconds);
+  sliders.distance.el.value = String(Math.round(drive.distance));
+  render();
+  if (drive.distance <= NEAREST) setDriving(false);
+  else requestAnimationFrame(driveFrame);
+}
+$('drive').addEventListener('click', () => {
+  if (!drive.on && Number(sliders.distance.el.value) <= NEAREST) sliders.distance.el.value = '300';
+  setDriving(!drive.on);
+});
+sliders.distance.el.addEventListener('input', () => setDriving(false));
 
 let pending = false;
 function schedule() {
@@ -107,6 +150,7 @@ for (const s of Object.values(sliders)) s.el.addEventListener('input', schedule)
 $('presets').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  setDriving(false);
   for (const k of Object.keys(sliders)) if (b.dataset[k] !== undefined) sliders[k].el.value = b.dataset[k];
   render();
 });
