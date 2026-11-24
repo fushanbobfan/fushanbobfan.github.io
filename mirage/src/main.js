@@ -4,6 +4,7 @@ import { renderView, describeView } from './view.js';
 import { drawSide, sideFrame } from './side.js';
 import { rows, verdict, tempLabel, layerLabel, heightLabel, distanceLabel } from './readout.js';
 import { foldChart, profileChart } from './charts.js';
+import { nextDistance, NEAREST } from './drive.js';
 
 const $ = (id) => document.getElementById(id);
 const viewCanvas = $('view');
@@ -11,6 +12,7 @@ const sideCanvas = $('side');
 const viewCtx = viewCanvas.getContext('2d');
 const sideCtx = sideCanvas.getContext('2d');
 const image = viewCtx.createImageData(viewCanvas.width, viewCanvas.height);
+
 
 function hex(c) {
   const m = c.trim().match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
@@ -80,10 +82,11 @@ function render() {
   const shine = shineStart(air, scene.eye);
   const view = describeView(out.rows);
   const { stretch } = sideFrame(scene, sideCanvas.width, sideCanvas.height);
+  const vanish = vanishFor(air, scene.eye);
   $('verdict').textContent = verdict(air, scene, { critical, shine, view });
   const dl = $('readouts');
   dl.replaceChildren();
-  for (const [k, v] of rows(air, scene, { critical, shine, top: out.top, bottom: out.bottom, stretch })) {
+  for (const [k, v] of rows(air, scene, { critical, shine, top: out.top, bottom: out.bottom, stretch, vanish })) {
     const dt = document.createElement('dt');
     dt.textContent = k;
     const dd = document.createElement('dd');
@@ -91,6 +94,69 @@ function render() {
     dl.append(dt, dd);
   }
 }
+
+// Where the copy vanishes depends on the air and the eye only. Finding it
+// takes a few dozen traced pictures, so it is worked out once per setting,
+// a moment after the sliders come to rest, and the readout says so meanwhile.
+const vanish = { key: '', value: undefined, timer: 0 };
+const worker = new Worker(new URL('./vanish-worker.js', import.meta.url), { type: 'module' });
+worker.onmessage = (e) => {
+  if (e.data.key !== vanish.key) return;
+  vanish.value = e.data.value;
+  if (!drive.on) render();
+};
+function vanishFor(air, eye) {
+  const key = `${air.surface}|${air.air}|${air.layer}|${eye}`;
+  if (key !== vanish.key) {
+    vanish.key = key;
+    vanish.value = undefined;
+    clearTimeout(vanish.timer);
+    vanish.timer = setTimeout(() => {
+      worker.postMessage({ key, surface: air.surface, air: air.air, layer: air.layer, eye });
+    }, 250);
+  }
+  return vanish.value;
+}
+
+// Each start of the car gets a new number; a frame left queued from an
+// earlier drive sees a different number and stops.
+const drive = { on: false, last: 0, distance: 0, run: 0 };
+function setDriving(on) {
+  const was = drive.on;
+  drive.on = on;
+  drive.run++;
+  $('drive').setAttribute('aria-pressed', String(on));
+  $('drive').textContent = on ? 'Stop the car' : 'Drive towards the board';
+  if (on) {
+    drive.distance = Number(sliders.distance.el.value);
+    drive.last = performance.now();
+    const run = drive.run;
+    requestAnimationFrame((now) => driveFrame(now, run));
+  } else if (was) {
+    render();
+  }
+}
+function driveFrame(now, run) {
+  if (!drive.on || run !== drive.run) return;
+  // Long gaps (a hidden tab) count as one frame, so the car never jumps.
+  const seconds = Math.min((now - drive.last) / 1000, 0.25);
+  drive.last = now;
+  drive.distance = nextDistance(drive.distance, seconds);
+  sliders.distance.el.value = String(Math.round(drive.distance));
+  if (drive.distance <= NEAREST) {
+    setDriving(false);
+    return;
+  }
+  // Every frame is the full picture, so the words and the readout always
+  // match what is drawn; a frame takes a few tens of milliseconds.
+  render();
+  requestAnimationFrame((t) => driveFrame(t, run));
+}
+$('drive').addEventListener('click', () => {
+  if (!drive.on && Number(sliders.distance.el.value) <= NEAREST) sliders.distance.el.value = '300';
+  setDriving(!drive.on);
+});
+sliders.distance.el.addEventListener('input', () => setDriving(false));
 
 let pending = false;
 function schedule() {
@@ -107,6 +173,7 @@ for (const s of Object.values(sliders)) s.el.addEventListener('input', schedule)
 $('presets').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  setDriving(false);
   for (const k of Object.keys(sliders)) if (b.dataset[k] !== undefined) sliders[k].el.value = b.dataset[k];
   render();
 });

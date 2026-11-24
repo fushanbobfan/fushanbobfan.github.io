@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { makeAir } from '../src/air.js';
 import { criticalAngle, shineStart } from '../src/rays.js';
 import { viewRows, describeView } from '../src/view.js';
-import { verdict, rows, distanceLabel, degreesLabel, layerLabel, tempLabel } from '../src/readout.js';
+import { verdict, rows, vanishLabel, distanceLabel, degreesLabel, layerLabel, tempLabel } from '../src/readout.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
@@ -94,9 +94,13 @@ test('the readout table names both layers of air and the stretch of the side vie
   const r = rows(air, { eye: 1.2, distance: 300 }, { critical: criticalAngle(air, 1.2), shine: 212, top: 0.0035, bottom: -0.0079, stretch: 64.6 });
   assert.deepEqual(r.map(([k]) => k), [
     'Air at the road surface', 'Air at eye level (1.2 m)', 'Rays bend back up if aimed within',
-    'The shine starts', 'Height of the view', 'Side view',
+    'The shine starts', "The board's upside-down copy vanishes nearer than", 'Height of the view', 'Side view',
   ]);
   assert.equal(r[0][1], '55 °C, refractive index 1.000244');
   assert.equal(r[1][1], '30 °C, refractive index 1.000264');
-  assert.equal(r[5][1], 'heights stretched 65 times');
+  assert.equal(r[6][1], 'heights stretched 65 times');
+  assert.equal(vanishLabel(225.6), 'about 225 m');
+  assert.equal(vanishLabel(null), 'it never appears between 50 m and 1.5 km');
+  assert.equal(vanishLabel(50), 'it stays even at 50 m');
+  assert.equal(vanishLabel(undefined), 'working it out…');
 });

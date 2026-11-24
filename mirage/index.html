@@ -38,7 +38,7 @@
       </div>
       <div class="field grow">
         <label for="distance">Board: <output id="distance-value" for="distance"></output> away</label>
-        <input id="distance" type="range" min="50" max="1500" step="10" value="300">
+        <input id="distance" type="range" min="50" max="1500" step="1" value="300">
       </div>
       <div class="field">
         <span class="label">Try</span>
@@ -59,6 +59,11 @@
         The ticks on the edges mark eye level.</figcaption>
     </figure>
 
+    <div class="row actions">
+      <button type="button" id="drive" aria-pressed="false">Drive towards the board</button>
+      <span class="hint" id="drive-note">at 90 km/h, stopping 50 m short</span>
+    </div>
+
     <p id="verdict" aria-live="polite"></p>
 
     <figure>
@@ -69,6 +74,13 @@
     </figure>
 
     <dl id="readouts" class="readouts"></dl>
+
+    <h2>Driving towards it</h2>
+    <p>The shine starts where the steepest ray that still turns back meets the road, and that ray
+      is fixed by its angle below your eye. Drive forward and the whole fan of rays comes with
+      you, so the wet patch keeps the same distance ahead of the car however far you go. The board
+      does come nearer, and once it stands closer than roughly where the shine starts, its
+      upside-down copy is gone. The readout gives the distance for the current settings.</p>
 
     <h2>Where each ray lands</h2>
     <p>Every row of the view above is one ray from the eye. The left chart follows those rows

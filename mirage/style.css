@@ -121,6 +121,9 @@ footer a { color: var(--accent); }
 
 main > figure { margin: 18px 0 0; max-width: 820px; }
 .readouts dd { overflow-wrap: anywhere; }
+.actions { margin: 14px 0 0; gap: 12px; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+button[aria-pressed="true"] { border-color: var(--accent); background: var(--panel); }
 
 .charts {
   display: grid;

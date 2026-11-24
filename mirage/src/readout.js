@@ -32,12 +32,20 @@ export function degreesLabel(rad) {
   return d < 0.1 ? `${d.toFixed(3)}°` : `${d.toFixed(2)}°`;
 }
 
-export function rows(air, scene, { critical, shine, top, bottom, stretch }) {
+export function vanishLabel(d) {
+  if (d === undefined) return 'working it out…';
+  if (d === null) return 'it never appears between 50 m and 1.5 km';
+  if (d <= 50) return 'it stays even at 50 m';
+  return `about ${distanceLabel(d)}`;
+}
+
+export function rows(air, scene, { critical, shine, top, bottom, stretch, vanish }) {
   return [
     ['Air at the road surface', `${tempLabel(air.surface)}, refractive index ${indexLabel(index(air, 0))}`],
     [`Air at eye level (${heightLabel(scene.eye)})`, `${tempLabel(temperature(air, scene.eye))}, refractive index ${indexLabel(index(air, scene.eye))}`],
     ['Rays bend back up if aimed within', critical === null ? 'none do' : `${degreesLabel(critical)} below eye level`],
     ['The shine starts', shine === null ? 'nowhere' : `about ${distanceLabel(shine)} ahead`],
+    ["The board's upside-down copy vanishes nearer than", vanishLabel(vanish)],
     ['Height of the view', `${degreesLabel(top - bottom)} (the full Moon is about 0.5° across)`],
     ['Side view', `heights stretched ${Math.round(stretch)} times`],
   ];
