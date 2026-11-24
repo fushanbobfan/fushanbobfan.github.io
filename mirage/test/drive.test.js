@@ -16,13 +16,31 @@ test('the upside-down copy vanishes near where the shine starts', () => {
   const d = copyVanishes(air, 1.2);
   const shine = shineStart(air, 1.2);
   assert.ok(Math.abs(d - shine) < 0.25 * shine, `${d} vs ${shine}`);
-  const copies = (distance) => describeView(viewRows(air, { eye: 1.2, distance }, 80)).invertedRows;
-  assert.ok(copies(d + 20) > 0);
-  assert.equal(copies(d - 20), 0);
+  const copies = (distance) => describeView(viewRows(air, { eye: 1.2, distance }, 240)).invertedRows;
+  assert.ok(copies(d) > 0);
+  assert.equal(copies(d - 2), 0);
 });
 
 test('no heating, no copy at any distance; a low eye keeps one up close', () => {
   assert.equal(copyVanishes(makeAir({ surface: 30, air: 30 }), 1.2), null);
   const crouch = copyVanishes(makeAir({ surface: 75, air: 20, layer: 0.05 }), 0.3);
-  assert.ok(crouch < 100, crouch);
+  assert.ok(crouch !== null && crouch < 100, crouch);
+});
+
+test('a copy that shows at middle distances is found even if a very distant board has sunk', () => {
+  const air = makeAir({ surface: 75, air: 0, layer: 0.5 });
+  const copies = (distance) => describeView(viewRows(air, { eye: 3, distance }, 240)).invertedRows;
+  assert.equal(copies(1500), 0);
+  const d = copyVanishes(air, 3);
+  assert.ok(d !== null && d < 1500, d);
+  assert.ok(copies(d) > 0);
+  assert.equal(copies(d - 2), 0);
+});
+
+test('the distance agrees with the picture on the page, row for row', () => {
+  const air = makeAir({ surface: 46, air: 45, layer: 0.02 });
+  const d = copyVanishes(air, 0.3);
+  const copies = (distance) => describeView(viewRows(air, { eye: 0.3, distance }, 240)).invertedRows;
+  assert.ok(copies(d) > 0, d);
+  assert.equal(copies(d - 2), 0);
 });

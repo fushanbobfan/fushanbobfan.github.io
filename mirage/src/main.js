@@ -4,7 +4,7 @@ import { renderView, describeView } from './view.js';
 import { drawSide, sideFrame } from './side.js';
 import { rows, verdict, tempLabel, layerLabel, heightLabel, distanceLabel } from './readout.js';
 import { foldChart, profileChart } from './charts.js';
-import { nextDistance, copyVanishes, NEAREST } from './drive.js';
+import { nextDistance, NEAREST } from './drive.js';
 
 const $ = (id) => document.getElementById(id);
 const viewCanvas = $('view');
@@ -12,6 +12,13 @@ const sideCanvas = $('side');
 const viewCtx = viewCanvas.getContext('2d');
 const sideCtx = sideCanvas.getContext('2d');
 const image = viewCtx.createImageData(viewCanvas.width, viewCanvas.height);
+// During a drive the view is traced at half resolution and scaled up, which
+// quarters the work per frame; the full picture returns when the car stops.
+const halfCanvas = document.createElement('canvas');
+halfCanvas.width = viewCanvas.width / 2;
+halfCanvas.height = viewCanvas.height / 2;
+const halfCtx = halfCanvas.getContext('2d');
+const halfImage = halfCtx.createImageData(halfCanvas.width, halfCanvas.height);
 
 function hex(c) {
   const m = c.trim().match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
@@ -56,11 +63,20 @@ function read() {
   };
 }
 
-function render() {
+function render({ fast = false } = {}) {
   const { air, scene } = read();
-  const out = renderView(air, scene, viewCanvas.width, viewCanvas.height, palette.view);
-  image.data.set(out.data);
-  viewCtx.putImageData(image, 0, 0);
+  let out;
+  if (fast) {
+    out = renderView(air, scene, halfCanvas.width, halfCanvas.height, palette.view);
+    halfImage.data.set(out.data);
+    halfCtx.putImageData(halfImage, 0, 0);
+    viewCtx.imageSmoothingEnabled = false;
+    viewCtx.drawImage(halfCanvas, 0, 0, viewCanvas.width, viewCanvas.height);
+  } else {
+    out = renderView(air, scene, viewCanvas.width, viewCanvas.height, palette.view);
+    image.data.set(out.data);
+    viewCtx.putImageData(image, 0, 0);
+  }
 
   // A tick on each edge at eye level, where the horizon would be over flat ground.
   const y = (out.top / (out.top - out.bottom)) * viewCanvas.height;
@@ -94,40 +110,60 @@ function render() {
   }
 }
 
-// Where the copy vanishes depends on the air and the eye only, so it is
-// worked out once per setting, not on every frame of a drive.
-let vanishKey = '';
-let vanishValue = null;
+// Where the copy vanishes depends on the air and the eye only. Finding it
+// takes a few dozen traced pictures, so it is worked out once per setting,
+// a moment after the sliders come to rest, and the readout says so meanwhile.
+const vanish = { key: '', value: undefined, timer: 0 };
+const worker = new Worker(new URL('./vanish-worker.js', import.meta.url), { type: 'module' });
+worker.onmessage = (e) => {
+  if (e.data.key !== vanish.key) return;
+  vanish.value = e.data.value;
+  if (!drive.on) render();
+};
 function vanishFor(air, eye) {
   const key = `${air.surface}|${air.air}|${air.layer}|${eye}`;
-  if (key !== vanishKey) {
-    vanishKey = key;
-    vanishValue = copyVanishes(air, eye);
+  if (key !== vanish.key) {
+    vanish.key = key;
+    vanish.value = undefined;
+    clearTimeout(vanish.timer);
+    vanish.timer = setTimeout(() => {
+      worker.postMessage({ key, surface: air.surface, air: air.air, layer: air.layer, eye });
+    }, 250);
   }
-  return vanishValue;
+  return vanish.value;
 }
 
-const drive = { on: false, last: 0, distance: 0 };
+// Each start of the car gets a new number; a frame left queued from an
+// earlier drive sees a different number and stops.
+const drive = { on: false, last: 0, distance: 0, run: 0 };
 function setDriving(on) {
+  const was = drive.on;
   drive.on = on;
+  drive.run++;
   $('drive').setAttribute('aria-pressed', String(on));
   $('drive').textContent = on ? 'Stop the car' : 'Drive towards the board';
   if (on) {
     drive.distance = Number(sliders.distance.el.value);
     drive.last = performance.now();
-    requestAnimationFrame(driveFrame);
+    const run = drive.run;
+    requestAnimationFrame((now) => driveFrame(now, run));
+  } else if (was) {
+    render();
   }
 }
-function driveFrame(now) {
-  if (!drive.on) return;
+function driveFrame(now, run) {
+  if (!drive.on || run !== drive.run) return;
   // Long gaps (a hidden tab) count as one frame, so the car never jumps.
   const seconds = Math.min((now - drive.last) / 1000, 0.25);
   drive.last = now;
   drive.distance = nextDistance(drive.distance, seconds);
   sliders.distance.el.value = String(Math.round(drive.distance));
-  render();
-  if (drive.distance <= NEAREST) setDriving(false);
-  else requestAnimationFrame(driveFrame);
+  if (drive.distance <= NEAREST) {
+    setDriving(false);
+    return;
+  }
+  render({ fast: true });
+  requestAnimationFrame((t) => driveFrame(t, run));
 }
 $('drive').addEventListener('click', () => {
   if (!drive.on && Number(sliders.distance.el.value) <= NEAREST) sliders.distance.el.value = '300';

@@ -70,6 +70,7 @@ Run the tests with `npm test` (Node 20 or later).
 - `src/side.js` the side view
 - `src/charts.js` the fold chart and the temperature profile
 - `src/drive.js` the drive and where the copy vanishes
+- `src/vanish-worker.js` runs that search off the main thread
 - `src/readout.js` labels and the description under the picture
 - `src/main.js` the page
 

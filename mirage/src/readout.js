@@ -33,6 +33,7 @@ export function degreesLabel(rad) {
 }
 
 export function vanishLabel(d) {
+  if (d === undefined) return 'working it out…';
   if (d === null) return 'it never appears between 50 m and 1.5 km';
   if (d <= 50) return 'it stays even at 50 m';
   return `about ${distanceLabel(d)}`;

@@ -102,4 +102,5 @@ test('the readout table names both layers of air and the stretch of the side vie
   assert.equal(vanishLabel(225.6), 'about 225 m');
   assert.equal(vanishLabel(null), 'it never appears between 50 m and 1.5 km');
   assert.equal(vanishLabel(50), 'it stays even at 50 m');
+  assert.equal(vanishLabel(undefined), 'working it out…');
 });
