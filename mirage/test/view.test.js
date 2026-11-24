@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeAir } from '../src/air.js';
-import { viewRows, viewAngles, renderView, describeView, boardBand, BOARD_HEIGHT } from '../src/view.js';
+import { viewRows, viewAngles, renderView, describeView, boardBand, treeHeight, BOARD_HEIGHT } from '../src/view.js';
 
 const scene = { eye: 1.2, distance: 300 };
 const palette = Object.fromEntries(
-  ['post', 'red', 'white', 'blue', 'road', 'verge', 'paint', 'haze', 'horizon', 'zenith'].map((k, i) => [k, [i * 20, 100, 200 - i * 10]]),
+  ['post', 'red', 'white', 'blue', 'road', 'verge', 'paint', 'haze', 'horizon', 'zenith', 'tree'].map((k, i) => [k, [i * 20, 100, 200 - i * 10]]),
 );
 
 test('the board is banded from the ground up', () => {
@@ -55,9 +55,16 @@ test('over a hot road the sky shows below the horizon and the board has an upsid
   for (const r of rows) if (r.board.kind === 'board' && r.board.turned) assert.ok(r.angle < 0);
 });
 
-test('a ray still heading down at the far edge counts as distant ground, never sky', () => {
+test('without heating no ray aimed below eye level comes back up', () => {
   const rows = viewRows(makeAir({ surface: 25, air: 25 }), { eye: 1.2, distance: 300 }, 200);
-  for (const r of rows) if (r.angle < 0) assert.equal(r.open.kind, 'ground');
+  for (const r of rows) if (r.angle < 0) assert.ok(r.open.kind === 'ground' || r.open.angle < 0);
+});
+
+test('the trees on the horizon stand between about 3 and 13 m tall', () => {
+  for (let y = -500; y <= 500; y += 0.7) {
+    const h = treeHeight(y);
+    assert.ok(h > 3 && h < 13, `${y}: ${h}`);
+  }
 });
 
 test('the rendered view is opaque and the right size', () => {

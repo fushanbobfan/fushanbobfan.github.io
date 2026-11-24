@@ -18,6 +18,13 @@ export const BOARD = {
 export const BOARD_HEIGHT = BOARD.bands[BOARD.bands.length - 1].top;
 export const ROAD_HALF_WIDTH = 3.5;
 
+// A line of trees on the horizon, at the far distance, so that the sky and
+// its copy on the road have a skyline between them. Height in metres at
+// sideways offset y.
+export function treeHeight(y) {
+  return 8 + 2.5 * Math.sin(y / 23) + 1.5 * Math.sin(y / 7.3 + 1) + 0.8 * Math.sin(y / 2.1 + 2);
+}
+
 export function boardBand(z) {
   if (z < 0 || z > BOARD_HEIGHT) return null;
   for (const b of BOARD.bands) if (z <= b.top) return b.color;
@@ -50,14 +57,12 @@ export function viewRows(air, { eye, distance }, count) {
     const turned = angle < 0 && r.angles[0] !== null && r.angles[0] > 0;
     let open;
     if (r.groundX !== null) open = { kind: 'ground', x: r.groundX };
-    // A ray still heading down at the far stop meets ground too distant to matter.
-    else if (r.angles[1] < 0) open = { kind: 'ground', x: far };
-    else open = { kind: 'sky', angle: r.angles[1] };
+    else open = { kind: 'far', z: r.heights[1], angle: r.angles[1] };
     let board;
     if (r.groundX !== null && r.groundX < distance) board = open;
     else if (boardBand(zAtBoard) !== null) board = { kind: 'board', z: zAtBoard, band: boardBand(zAtBoard), turned };
     else board = open;
-    rows.push({ angle, zAtBoard, turned, open, board });
+    rows.push({ angle, zAtBoard, turned, far, open, board });
   }
   return rows;
 }
@@ -92,9 +97,17 @@ export function renderView(air, scene, width, height, palette) {
     for (let i = 0; i < width; i++) {
       const azimuth = (i + 0.5 - width / 2) * perPixel;
       const onBoard = Math.abs(azimuth * scene.distance) <= BOARD.width / 2;
-      const hit = onBoard ? row.board : row.open;
+      let hit = onBoard ? row.board : row.open;
+      if (hit.kind === 'far') {
+        // Beyond the board the ray meets the trees, the sky above them, or,
+        // if it is still heading down, ground too distant to matter.
+        if (hit.z <= treeHeight(azimuth * row.far)) hit = { kind: 'tree', z: hit.z };
+        else if (hit.angle < 0) hit = { kind: 'ground', x: row.far };
+        else hit = { kind: 'sky', angle: hit.angle };
+      }
       let c;
-      if (hit.kind === 'board') c = mix(palette[hit.band], palette.haze, 1 - Math.exp(-scene.distance / 2500));
+      if (hit.kind === 'tree') c = mix(mix(palette.tree, palette.post, 0.35 * (1 - Math.min(1, hit.z / 8))), palette.haze, 0.45);
+      else if (hit.kind === 'board') c = mix(palette[hit.band], palette.haze, 1 - Math.exp(-scene.distance / 2500));
       else if (hit.kind === 'ground') c = groundColor(palette, hit.x, azimuth * hit.x);
       else c = skyColor(palette, hit.angle);
       const k = (j * width + i) * 4;
@@ -107,16 +120,20 @@ export function renderView(air, scene, width, height, palette) {
   return { data, rows, top, bottom };
 }
 
-// Summary of the picture: whether the road shows sky, and how much of the
-// board appears upside down underneath it.
+// Summary of the picture: whether the road shows sky, which part of the
+// board appears upside down underneath it, and how much of its foot no ray
+// reaches at all.
 export function describeView(rows) {
-  const skyBelowHorizon = rows.some((r) => r.angle < 0 && r.open.kind === 'sky');
-  const inverted = rows.filter((r) => r.board.kind === 'board' && r.board.turned);
-  const upright = rows.filter((r) => r.board.kind === 'board' && !r.board.turned);
+  const skyBelowHorizon = rows.some((r) => r.angle < 0 && r.open.kind === 'far' && r.open.angle > 0);
+  const onBoard = rows.filter((r) => r.board.kind === 'board');
+  const inverted = onBoard.filter((r) => r.board.turned);
+  const upright = onBoard.filter((r) => !r.board.turned);
   return {
     skyBelowHorizon,
     invertedRows: inverted.length,
     uprightRows: upright.length,
     invertedTop: inverted.length ? Math.max(...inverted.map((r) => r.board.z)) : 0,
+    invertedBottom: inverted.length ? Math.min(...inverted.map((r) => r.board.z)) : 0,
+    lowestSeen: onBoard.length ? Math.min(...onBoard.map((r) => r.board.z)) : null,
   };
 }
