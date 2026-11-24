@@ -3,6 +3,7 @@ import { criticalAngle, shineStart } from './rays.js';
 import { renderView, describeView } from './view.js';
 import { drawSide, sideFrame } from './side.js';
 import { rows, verdict, tempLabel, layerLabel, heightLabel, distanceLabel } from './readout.js';
+import { foldChart, profileChart } from './charts.js';
 
 const $ = (id) => document.getElementById(id);
 const viewCanvas = $('view');
@@ -72,6 +73,8 @@ function render() {
   viewCtx.stroke();
 
   drawSide(sideCtx, air, scene, palette.side);
+  $('fold-chart').innerHTML = foldChart(out.rows, out, scene);
+  $('profile-chart').innerHTML = profileChart(air, scene);
 
   const critical = criticalAngle(air, scene.eye);
   const shine = shineStart(air, scene.eye);
