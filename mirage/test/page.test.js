@@ -84,6 +84,7 @@ test('the verdict follows the scene', () => {
   const desert = say({ surface: 68, air: 40, layer: 0.3 }, { eye: 1.7, distance: 900 });
   assert.match(desert, /copy of the board above its lowest 86 cm/);
   assert.match(desert, /bottom 86 cm of the board is missing/);
+  assert.match(say({ surface: 75, air: 0, layer: 0.5 }, { eye: 3, distance: 1500 }), /board has vanished/);
   assert.match(say({ surface: 22, air: 22 }, { eye: 1.2, distance: 300 }), /no warmer than the air/);
   assert.match(say({ surface: 10, air: 22 }, { eye: 1.2, distance: 300 }), /cooler than the air/);
 });

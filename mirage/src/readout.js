@@ -68,7 +68,9 @@ export function verdict(air, scene, { critical, shine, view }) {
   if (hidden) {
     text += ` The bottom ${layerLabel(hidden)} of the board is missing from both: light from there curves upwards and passes over your head, so the board seems to stand in water.`;
   }
-  if (view.invertedRows === 0 && shine > scene.distance) {
+  if (view.lowestSeen === null && shine <= scene.distance) {
+    text += ' The board has vanished: light from every part of it curves upwards and passes over your head.';
+  } else if (view.invertedRows === 0 && shine > scene.distance) {
     text += ' The board stands nearer than the shine, so it has no copy.';
   }
   return text;
