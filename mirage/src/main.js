@@ -12,13 +12,7 @@ const sideCanvas = $('side');
 const viewCtx = viewCanvas.getContext('2d');
 const sideCtx = sideCanvas.getContext('2d');
 const image = viewCtx.createImageData(viewCanvas.width, viewCanvas.height);
-// During a drive the view is traced at half resolution and scaled up, which
-// quarters the work per frame; the full picture returns when the car stops.
-const halfCanvas = document.createElement('canvas');
-halfCanvas.width = viewCanvas.width / 2;
-halfCanvas.height = viewCanvas.height / 2;
-const halfCtx = halfCanvas.getContext('2d');
-const halfImage = halfCtx.createImageData(halfCanvas.width, halfCanvas.height);
+
 
 function hex(c) {
   const m = c.trim().match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
@@ -63,20 +57,11 @@ function read() {
   };
 }
 
-function render({ fast = false } = {}) {
+function render() {
   const { air, scene } = read();
-  let out;
-  if (fast) {
-    out = renderView(air, scene, halfCanvas.width, halfCanvas.height, palette.view);
-    halfImage.data.set(out.data);
-    halfCtx.putImageData(halfImage, 0, 0);
-    viewCtx.imageSmoothingEnabled = false;
-    viewCtx.drawImage(halfCanvas, 0, 0, viewCanvas.width, viewCanvas.height);
-  } else {
-    out = renderView(air, scene, viewCanvas.width, viewCanvas.height, palette.view);
-    image.data.set(out.data);
-    viewCtx.putImageData(image, 0, 0);
-  }
+  const out = renderView(air, scene, viewCanvas.width, viewCanvas.height, palette.view);
+  image.data.set(out.data);
+  viewCtx.putImageData(image, 0, 0);
 
   // A tick on each edge at eye level, where the horizon would be over flat ground.
   const y = (out.top / (out.top - out.bottom)) * viewCanvas.height;
@@ -162,7 +147,9 @@ function driveFrame(now, run) {
     setDriving(false);
     return;
   }
-  render({ fast: true });
+  // Every frame is the full picture, so the words and the readout always
+  // match what is drawn; a frame takes a few tens of milliseconds.
+  render();
   requestAnimationFrame((t) => driveFrame(t, run));
 }
 $('drive').addEventListener('click', () => {

@@ -21,7 +21,8 @@ function hasCopy(air, eye, distance, rows) {
 // page) shows an upside-down copy; nearer than this the copy is gone. The
 // copy need not stay at every greater distance (a very distant board can sink
 // out of sight altogether), so the search walks outwards from the nearest
-// position in coarse steps and then narrows the first step that has a copy.
+// position in coarse steps and then a metre at a time through the first step
+// that has a copy.
 // Null if no distance up to FURTHEST shows one; NEAREST if the nearest does.
 export function copyVanishes(air, eye, { step = 25, rows = VIEW_ROWS } = {}) {
   // With no ray turning back up there is no fold, so no copy anywhere.
@@ -37,10 +38,8 @@ export function copyVanishes(air, eye, { step = 25, rows = VIEW_ROWS } = {}) {
     lo = d;
   }
   if (hi === null) return null;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) / 2;
-    if (hasCopy(air, eye, mid, rows)) hi = mid;
-    else lo = mid;
-  }
+  // Near the threshold the copy is a row or two thick and can flicker in and
+  // out from metre to metre, so the last step is walked a metre at a time.
+  for (let d = lo + 1; d < hi; d++) if (hasCopy(air, eye, d, rows)) return d;
   return hi;
 }

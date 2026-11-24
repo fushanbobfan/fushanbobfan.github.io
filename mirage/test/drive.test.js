@@ -38,9 +38,10 @@ test('a copy that shows at middle distances is found even if a very distant boar
 });
 
 test('the distance agrees with the picture on the page, row for row', () => {
+  // Near this threshold the copy flickers: present at 270 m, gone at 271-273 m.
   const air = makeAir({ surface: 46, air: 45, layer: 0.02 });
   const d = copyVanishes(air, 0.3);
   const copies = (distance) => describeView(viewRows(air, { eye: 0.3, distance }, 240)).invertedRows;
   assert.ok(copies(d) > 0, d);
-  assert.equal(copies(d - 2), 0);
+  for (let x = d - 25; x < d; x++) assert.equal(copies(x), 0, `${x} m`);
 });
