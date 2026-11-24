@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mirage · why a hot road looks wet</title>
+  <meta name="description" content="Why a hot road looks wet in the distance: light from the sky curves back up through the thin layer of hot air just above the asphalt.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>mirage</h1>
+    <p class="lede">On a hot day the road far ahead often looks wet, and cars seem to drive
+      through a puddle that is never there when you arrive. The asphalt heats a thin layer of
+      air above it, and light travels slightly faster through hot air than through cool air.
+      A ray from the sky heading for the road at a shallow angle curves back up through that
+      layer and reaches your eye from below. What you see on the road is a piece of the sky.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Road, air and observer">
+      <div class="field grow">
+        <label for="surface">Road surface: <output id="surface-value" for="surface"></output></label>
+        <input id="surface" type="range" min="0" max="75" step="1" value="55">
+      </div>
+      <div class="field grow">
+        <label for="air">Air: <output id="air-value" for="air"></output></label>
+        <input id="air" type="range" min="0" max="45" step="1" value="30">
+      </div>
+      <div class="field grow">
+        <label for="layer">Heated layer: <output id="layer-value" for="layer"></output></label>
+        <input id="layer" type="range" min="2" max="50" step="1" value="10">
+      </div>
+      <div class="field grow">
+        <label for="eye">Eye height: <output id="eye-value" for="eye"></output></label>
+        <input id="eye" type="range" min="0.3" max="3" step="0.1" value="1.2">
+      </div>
+      <div class="field grow">
+        <label for="distance">Board: <output id="distance-value" for="distance"></output> away</label>
+        <input id="distance" type="range" min="50" max="1500" step="10" value="300">
+      </div>
+      <div class="field">
+        <span class="label">Try</span>
+        <div class="row" id="presets">
+          <button type="button" data-surface="55" data-air="30" data-layer="10" data-eye="1.2" data-distance="300">Summer road</button>
+          <button type="button" data-surface="68" data-air="40" data-layer="30" data-eye="1.7" data-distance="900">Desert flat</button>
+          <button type="button" data-surface="55" data-air="30" data-layer="10" data-eye="0.4" data-distance="150">Crouching</button>
+          <button type="button" data-surface="22" data-air="22" data-layer="10" data-eye="1.2" data-distance="300">Overcast morning</button>
+        </div>
+      </div>
+    </section>
+
+    <figure>
+      <canvas id="view" width="480" height="240" role="img" aria-labelledby="view-caption"
+        aria-describedby="verdict"></canvas>
+      <figcaption id="view-caption">Looking straight down the road through a long lens, at a
+        striped board standing on it, with a line of trees on the horizon a few kilometres off.
+        The ticks on the edges mark eye level.</figcaption>
+    </figure>
+
+    <p id="verdict" aria-live="polite"></p>
+
+    <figure>
+      <canvas id="side" width="480" height="240" role="img" aria-labelledby="side-caption"></canvas>
+      <figcaption id="side-caption">The same road from the side, with the eye on the left and the
+        board on the right. Each line is a ray from the eye, coloured by what it reaches: the
+        board (red), the trees on the horizon (green), the sky (blue) or the road (grey). The orange shading is the hot air.</figcaption>
+    </figure>
+
+    <dl id="readouts" class="readouts"></dl>
+
+    <h2>Why hot air bends light</h2>
+    <p>Light slows down a little in air, by about three parts in ten thousand at freezing point.
+      The slowing grows with the density of the air, and hot air is thinner, so light runs a
+      little faster just above a hot road than at the height of your eyes. A ray crossing from
+      slower air into faster air at a shallow angle bends away from the faster side, the way a
+      line of marchers wheels when one end steps onto firmer ground. Heading down into the hot
+      layer, a ray bends ever flatter until it runs level and then climbs out again.</p>
+    <p>Only rays that meet the layer at a very shallow angle turn back: the difference in speed
+      is tiny, so the steepest ray that still turns is aimed a fraction of a degree below eye
+      level. That is why the shine always lies in a thin band near the horizon, and why it keeps
+      its distance as you drive towards it: the band is fixed by angle, and the stretch of road
+      seen at that angle moves with you.</p>
+    <p>Among the rays that dip through the layer, the ones from higher up the board reach your
+      eye from lower down, so the copy under the board is upside down. The hot layer works like
+      a mirror lying on the road, but a soft one: it often shows only the lowest part of what
+      stands in it, and it shimmers because the hot air above real asphalt rises in restless
+      plumes.</p>
+    <p>The page uses a smooth layer whose temperature falls from the road value to the air value
+      over a few times its thickness, with the refractive index of dry air for visible light. The
+      ground is flat; over a few hundred metres the curve of the Earth lowers it by millimetres.</p>
+  </main>
+
+  <footer>
+    <p><a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/mirage">Source</a>
+      · MIT licence</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

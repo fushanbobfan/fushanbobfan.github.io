@@ -1,0 +1,20 @@
+{
+  "name": "mirage",
+  "version": "0.1.0",
+  "description": "Why a hot road looks wet: light from the sky bends back up through the hot air just above the asphalt.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "mirage",
+    "refraction",
+    "optics",
+    "visualization",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
