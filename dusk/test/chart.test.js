@@ -25,6 +25,7 @@ test('the spectral strip runs from violet through green to red', () => {
   assert.ok(g5 > r5 && g5 > b5, 'green at 530 nm');
   const [r6, g6] = rgb(spectralColour(640));
   assert.ok(r6 > g6, 'red at 640 nm');
+  for (let nm = 650; nm <= 780; nm += 10) assert.equal(spectralColour(nm), spectralColour(650), `${nm} nm`);
 });
 
 test('sunlight above the air peaks near 500 nm, and the low sun\'s light has shifted to the red', () => {
@@ -34,6 +35,7 @@ test('sunlight above the air peaks near 500 nm, and the low sun\'s light has shi
   assert.ok(high.through.every((v, i) => v <= high.above[i] + 1e-12), 'the air only takes light away');
   const low = curves(data({ sun: 1, haze: 0.06, height: 0 }));
   assert.ok(peakAt(low.through) >= 640, String(peakAt(low.through)));
+  assert.match(describeSpectrum(data({ sun: 1, haze: 0.06, height: 0 })), /red end of the chart/);
 });
 
 test('the sky overhead is bluest when the sun is high', () => {

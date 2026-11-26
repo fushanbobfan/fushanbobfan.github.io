@@ -12,9 +12,10 @@ export function y(v, c = CHART) {
   return c.top + (1 - v) * (c.height - c.top - c.bottom);
 }
 
-// The colour of light of a single wavelength, as near as the screen can show it.
+// The colour of light of a single wavelength, as near as the screen can show it. Beyond 650 nm
+// every wavelength is the same red on screen.
 export function spectralColour(nm) {
-  const lin = xyzToLinear(cmf(nm)).map((v, i) => Math.max(0, v * BALANCE[i]));
+  const lin = xyzToLinear(cmf(Math.min(nm, 650))).map((v, i) => Math.max(0, v * BALANCE[i]));
   return hex(hue(lin));
 }
 
@@ -78,7 +79,12 @@ export function describeSpectrum(data) {
   const kept = through.reduce((s, v) => s + v, 0) / above.reduce((s, v) => s + v, 0);
   const sentences = [];
   if (kept === 0) sentences.push('No direct sunlight reaches you.');
-  else sentences.push(`The sunlight reaching you peaks at ${peakAt(through)} nm, against ${peakAt(above)} nm above the air.`);
+  else {
+    const at = peakAt(through);
+    sentences.push(at === WAVELENGTHS[WAVELENGTHS.length - 1]
+      ? `The sunlight reaching you rises all the way to the red end of the chart; above the air it peaks at ${peakAt(above)} nm.`
+      : `The sunlight reaching you peaks at ${at} nm, against ${peakAt(above)} nm above the air.`);
+  }
   if (skyShape.some((v) => v > 0)) {
     const at = peakAt(skyShape);
     sentences.push(at === WAVELENGTHS[0]
