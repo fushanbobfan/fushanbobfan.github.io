@@ -35,6 +35,11 @@ Run the tests with `npm test` (Node 20 or later).
   overhead, how much of its blue, green and red gets through, the colours of
   the sun's disc and of two patches of sky, and how bright the sky is compared
   with a clear midday sky.
+- **Colour by colour**: a chart of sunlight above the air, the sunlight that
+  reaches you on the same scale, and the shape of the light of the sky
+  overhead, over a strip of the spectrum's colours.
+- **An ozone switch**: take the ozone layer away and the sky overhead after
+  sunset turns grey-yellow; with it, the sky stays blue.
 - **A fixed camera** option. Normally the exposure follows the sky, as your
   eyes do. A camera kept at the exposure for a clear midday shows how dark the
   sky is after sunset or seen from a balloon.
@@ -72,6 +77,7 @@ Run the tests with `npm test` (Node 20 or later).
 - `src/spectrum.js` wavelengths, sunlight and the path from a spectrum to a colour
 - `src/air.js` scattering and absorption by molecules, haze and ozone
 - `src/sky.js` ray geometry, columns of air and the single-scattering sky
+- `src/chart.js` the spectrum chart
 - `src/render-worker.js` traces the pictures off the page's thread
 - `src/readout.js` labels and the description under the picture
 - `src/main.js` the page
