@@ -1,5 +1,7 @@
 // Wavelength samples, sunlight above the air, and the path from a spectrum to a screen colour.
 
+import { CIE_1931, CIE_START, CIE_STEP } from './cie1931.js';
+
 export const WAVELENGTHS = Array.from({ length: 21 }, (_, i) => 380 + 20 * i); // nm
 export const STEP_NM = 20;
 
@@ -17,19 +19,21 @@ export function planck(nm, kelvin) {
 export const SUN_KELVIN = 5778;
 export const SUN = WAVELENGTHS.map((nm) => planck(nm, SUN_KELVIN) / planck(550, SUN_KELVIN));
 
-// CIE 1931 2-degree colour matching functions, multi-lobe fit of Wyman, Sloan and Shirley (2013).
-function lobe(x, mu, s1, s2) {
-  const t = (x - mu) / (x < mu ? s1 : s2);
-  return Math.exp(-0.5 * t * t);
-}
+// CIE 1931 2-degree colour matching functions, from the CIE's table, interpolated linearly.
 export function cmf(nm) {
-  return [
-    1.056 * lobe(nm, 599.8, 37.9, 31.0) + 0.362 * lobe(nm, 442.0, 16.0, 26.7) - 0.065 * lobe(nm, 501.1, 20.4, 26.2),
-    0.821 * lobe(nm, 568.8, 46.9, 40.5) + 0.286 * lobe(nm, 530.9, 16.3, 31.1),
-    1.217 * lobe(nm, 437.0, 11.8, 36.0) + 0.681 * lobe(nm, 459.0, 26.0, 13.8),
-  ];
+  const f = (nm - CIE_START) / CIE_STEP;
+  const i = Math.floor(f);
+  if (i < 0 || i >= CIE_1931.length - 1) return [0, 0, 0];
+  const t = f - i;
+  return CIE_1931[i].map((v, k) => v * (1 - t) + CIE_1931[i + 1][k] * t);
 }
-const CMF = WAVELENGTHS.map(cmf);
+
+// Each 20 nm sample stands for the band around it: the table's rows at nm - 10, nm and nm + 10
+// weighted 1/4, 1/2, 1/4 (the trapezoid rule over the band).
+const CMF = WAVELENGTHS.map((nm) => {
+  const [a, b, c] = [cmf(nm - 10), cmf(nm), cmf(nm + 10)];
+  return a.map((v, k) => 0.25 * v + 0.5 * b[k] + 0.25 * c[k]);
+});
 
 export function toXYZ(spec) {
   let x = 0, y = 0, z = 0;
