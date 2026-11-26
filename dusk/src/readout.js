@@ -71,7 +71,7 @@ export function describe({ sun, height, airMass, transmission, skyRatio, fixed, 
     parts.push('The air overhead is still in sunlight, and the glow you see is light it scatters down to you; it fades as the Earth\'s shadow climbs the sky.');
     parts.push(ozone
       ? 'That light has skimmed through the ozone layer, which takes out orange, so the sky overhead stays blue.'
-      : 'With the ozone layer taken away, nothing takes the orange out of that light, and the sky overhead turns grey-yellow.');
+      : 'With the ozone layer taken away, the orange it would have absorbed stays in that light, and the sky overhead turns grey-yellow.');
   } else {
     parts.push(airMass < 1.05
       ? 'The sun is high, so its light crosses only the air straight above you.'

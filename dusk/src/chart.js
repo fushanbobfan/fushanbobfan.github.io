@@ -82,13 +82,13 @@ export function describeSpectrum(data) {
   else {
     const at = peakAt(through);
     sentences.push(at === WAVELENGTHS[WAVELENGTHS.length - 1]
-      ? `The sunlight reaching you rises all the way to the red end of the chart; above the air it peaks at ${peakAt(above)} nm.`
+      ? `The sunlight reaching you is strongest at the red end of the chart; above the air it peaks at ${peakAt(above)} nm.`
       : `The sunlight reaching you peaks at ${at} nm, against ${peakAt(above)} nm above the air.`);
   }
   if (skyShape.some((v) => v > 0)) {
     const at = peakAt(skyShape);
     sentences.push(at === WAVELENGTHS[0]
-      ? 'The light of the sky overhead rises all the way to the violet end of the chart.'
+      ? 'The light of the sky overhead is strongest at the violet end of the chart.'
       : `The light of the sky overhead peaks at ${at} nm.`);
   }
   return sentences.join(' ');

@@ -35,13 +35,13 @@ test('sunlight above the air peaks near 500 nm, and the low sun\'s light has shi
   assert.ok(high.through.every((v, i) => v <= high.above[i] + 1e-12), 'the air only takes light away');
   const low = curves(data({ sun: 1, haze: 0.06, height: 0 }));
   assert.ok(peakAt(low.through) >= 640, String(peakAt(low.through)));
-  assert.match(describeSpectrum(data({ sun: 1, haze: 0.06, height: 0 })), /red end of the chart/);
+  assert.match(describeSpectrum(data({ sun: 1, haze: 0.06, height: 0 })), /strongest at the red end of the chart/);
 });
 
 test('the sky overhead is bluest when the sun is high', () => {
   const sky = curves(data({ sun: 45, haze: 0.06, height: 0 })).skyShape;
   assert.equal(peakAt(sky), WAVELENGTHS[0]);
-  assert.match(describeSpectrum(data({ sun: 45, haze: 0.06, height: 0 })), /violet end/);
+  assert.match(describeSpectrum(data({ sun: 45, haze: 0.06, height: 0 })), /strongest at the violet end/);
 });
 
 test('after sunset the chart says no sunlight reaches you, and the svg has every curve', () => {
@@ -55,5 +55,5 @@ test('after sunset the chart says no sunlight reaches you, and the svg has every
 test('the ozone switch changes what the description says about the twilight sky', () => {
   const base = { sun: -4, height: 0, airMass: Infinity, transmission: Array(21).fill(0), skyRatio: 0.005 };
   assert.match(describe({ ...base, ozone: 1 }), /stays blue/);
-  assert.match(describe({ ...base, ozone: 0 }), /grey-yellow/);
+  assert.match(describe({ ...base, ozone: 0 }), /orange it would have absorbed stays/);
 });
