@@ -26,7 +26,8 @@ export function rayleighCoefficient(nm) {
   return ((8 * Math.PI ** 3 * (n * n - 1) ** 2) / (3 * LOSCHMIDT * l ** 4)) * KING;
 }
 
-// Haze scattering coefficient at sea level, per metre, for a vertical optical depth tau at 550 nm.
+// Haze extinction (scattering plus absorption) at sea level, per metre, for a vertical aerosol
+// optical depth tau at 550 nm; the haze scatters HAZE_ALBEDO of it.
 export function hazeCoefficient(nm, tau) {
   return (tau / HAZE_HEIGHT) * (nm / 550) ** -ANGSTROM;
 }
@@ -75,7 +76,7 @@ export function ozoneDensity(height) {
 // Coefficients for every sampled wavelength, for one haze amount (ozone scaled by `ozone`, 0..1).
 export function coefficients(tau, ozone = 1) {
   const rayleigh = WAVELENGTHS.map(rayleighCoefficient);
-  const haze = WAVELENGTHS.map((nm) => hazeCoefficient(nm, tau));
+  const hazeExtinction = WAVELENGTHS.map((nm) => hazeCoefficient(nm, tau));
   const ozoneAbsorption = WAVELENGTHS.map((nm) => ozone * OZONE_PEAK * ozoneCrossSection(nm));
-  return { rayleigh, haze, hazeExtinction: haze.map((b) => b / HAZE_ALBEDO), ozoneAbsorption };
+  return { rayleigh, haze: hazeExtinction.map((b) => b * HAZE_ALBEDO), hazeExtinction, ozoneAbsorption };
 }

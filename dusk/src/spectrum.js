@@ -55,7 +55,12 @@ const SUN_RGB = xyzToLinear(toXYZ(SUN));
 const SUN_Y = toXYZ(SUN)[1];
 export const BALANCE = SUN_RGB.map((c) => SUN_Y / c);
 
-// A spectrum (in units of the sunlight above the air) to balanced linear RGB with Y kept.
+// Photometric brightness of a spectrum, in units of the sunlight above the air (whose Y is 1).
+export function brightnessY(spec) {
+  return toXYZ(spec)[1] / SUN_Y;
+}
+
+// A spectrum (in units of the sunlight above the air) to white-balanced linear RGB for display.
 export function spectrumToRGB(spec) {
   const lin = xyzToLinear(toXYZ(spec));
   return [lin[0] * BALANCE[0] / SUN_Y, lin[1] * BALANCE[1] / SUN_Y, lin[2] * BALANCE[2] / SUN_Y];

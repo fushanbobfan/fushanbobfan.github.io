@@ -1,27 +1,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EARTH_RADIUS, RAYLEIGH_HEIGHT, HAZE_HEIGHT, density, ozoneDensity } from '../src/air.js';
-import { column, exitDistance, direction, eyePosition, makeScene, skySpectrum, sunlight, sunRGB, skyRGB, renderDome, renderView, exposureFor, DEG } from '../src/sky.js';
+import { column, exitDistance, direction, eyePosition, makeScene, skySpectrum, sunlight, sunRGB, skyRGB, renderDome, renderView, exposureFor, meanBrightness, DEG } from '../src/sky.js';
 import { WAVELENGTHS, SUN } from '../src/spectrum.js';
 import { OZONE_PEAK, DOBSON, ozoneCrossSection } from '../src/air.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 const rel = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol * Math.abs(b), `${msg}: ${a} vs ${b}`);
 
-// Brute-force column with very fine uniform steps.
+// Brute-force column with very fine uniform steps, with its own ray-sphere geometry.
 function reference(p, d) {
-  const len = exitDistance(p, d);
-  if (len < 0) return [Infinity, Infinity, Infinity];
+  const b = p[0] * d[0] + p[1] * d[1] + p[2] * d[2];
+  const pp = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+  const top = EARTH_RADIUS + 100e3;
+  const len = -b + Math.sqrt(b * b - (pp - top * top));
   const n = 200000;
-  let cr = 0, cm = 0, co = 0;
+  let cr = 0, cm = 0, co = 0, lowest = Infinity;
   for (let i = 0; i < n; i++) {
     const t = ((i + 0.5) / n) * len;
     const h = Math.hypot(p[0] + t * d[0], p[1] + t * d[1], p[2] + t * d[2]) - EARTH_RADIUS;
+    lowest = Math.min(lowest, h);
     cr += density(h, RAYLEIGH_HEIGHT) * (len / n);
     cm += density(h, HAZE_HEIGHT) * (len / n);
     co += ozoneDensity(h) * (len / n);
   }
-  return [cr, cm, co];
+  return { col: [cr, cm, co], lowest };
 }
 
 test('straight up from sea level crosses one scale height of air', () => {
@@ -38,8 +41,8 @@ test('the short columns used for the picture agree with a brute-force sum', () =
   ];
   for (const [h, el] of cases) {
     const p = eyePosition(h), d = direction(el * DEG, 0);
-    const [r0, m0, o0] = reference(p, d);
-    if (r0 === Infinity) continue;
+    const { col: [r0, m0, o0], lowest } = reference(p, d);
+    assert.ok(lowest > 0, `the ray at ${h} m, ${el} deg clears the ground`);
     const [r, m, o] = column(p, d, 10);
     rel(o, o0, 1e-3, `ozone at ${h} m, ${el} deg`);
     rel(r, r0, 0.01, `molecules at ${h} m, ${el} deg`);
@@ -147,4 +150,39 @@ test('after sunset the ozone keeps the sky overhead blue; without it the sky tur
   const without = skyRGB(makeScene({ sun: -3, haze: 0.05, height: 0, ozone: 0 }), 90 * DEG, 0);
   assert.ok(ratio(withO) > 1.3, `blue / red with ozone ${ratio(withO)}`);
   assert.ok(ratio(without) < 1.1, `blue / red without ozone ${ratio(without)}`);
+});
+
+test('a sun below the horizon gives no direct light even with no haze and no ozone', () => {
+  for (const scene of [makeScene({ sun: -4, haze: 0, height: 0 }), makeScene({ sun: -4, haze: 0.1, height: 0, ozone: 0 })]) {
+    const { transmission } = sunlight(scene);
+    assert.ok(transmission.every((t) => t === 0), String(transmission));
+    assert.ok(sunRGB(scene).every((c) => c === 0));
+  }
+});
+
+test('vertical haze transmission is exp(-tau) at 550 nm', () => {
+  const clear = sunlight(makeScene({ sun: 90, haze: 0, height: 0, ozone: 0 })).transmission;
+  const hazy = sunlight(makeScene({ sun: 90, haze: 0.2, height: 0, ozone: 0 })).transmission;
+  // 540 and 560 nm bracket 550 nm; tau scales as wavelength^-1.3.
+  const i = WAVELENGTHS.indexOf(540);
+  rel(hazy[i] / clear[i], Math.exp(-0.2 * (540 / 550) ** -1.3), 2e-3, 'haze-only transmission at 540 nm');
+});
+
+test('the sky average weights each fisheye pixel by the solid angle it covers', () => {
+  // A sky whose brightness is the cosine of the zenith angle averages 1/2 over the hemisphere.
+  const size = 200;
+  const dome = renderDome(makeScene({ sun: 30, haze: 0, height: 0 }), 8, 2, 2);
+  const sky = new Uint8Array(size * size), lum = new Float32Array(size * size), area = new Float32Array(size * size);
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+    const x = (i + 0.5 - size / 2) / (size / 2), y = (j + 0.5 - size / 2) / (size / 2);
+    const r = Math.hypot(x, y);
+    if (r > 1) continue;
+    const theta = (Math.PI / 2) * r;
+    const o = j * size + i;
+    sky[o] = 1;
+    lum[o] = Math.cos(theta);
+    area[o] = theta > 0 ? Math.sin(theta) / theta : 1;
+  }
+  close(meanBrightness({ sky, lum, area }), 0.5, 0.005, 'mean of cos(theta)');
+  assert.ok(dome.area.every((a, o) => !dome.sky[o] || (a > 0 && a <= 1)));
 });

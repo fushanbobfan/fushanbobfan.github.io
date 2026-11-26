@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WAVELENGTHS, SUN, cmf, toXYZ, spectrumToRGB, toDisplay, hue, hex, planck } from '../src/spectrum.js';
-import { airIndex, rayleighCoefficient, hazeCoefficient, rayleighPhase, hazePhase, RAYLEIGH_HEIGHT } from '../src/air.js';
+import { WAVELENGTHS, SUN, cmf, toXYZ, spectrumToRGB, toDisplay, hue, hex, planck, brightnessY } from '../src/spectrum.js';
+import { airIndex, rayleighCoefficient, hazeCoefficient, rayleighPhase, hazePhase, RAYLEIGH_HEIGHT, coefficients, HAZE_ALBEDO } from '../src/air.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 
@@ -58,6 +58,9 @@ test('blue is scattered about five times as strongly as red', () => {
 
 test('haze has the requested optical depth and scatters colours more evenly', () => {
   close(hazeCoefficient(550, 0.2) * 1.2e3, 0.2, 1e-12, 'tau at 550 nm');
+  const c = coefficients(0.2);
+  const i = WAVELENGTHS.indexOf(540);
+  close(c.haze[i] / c.hazeExtinction[i], HAZE_ALBEDO, 1e-12, 'scattered share of the extinction');
   const ratio = hazeCoefficient(450, 0.2) / hazeCoefficient(700, 0.2);
   assert.ok(ratio > 1.5 && ratio < 2, String(ratio));
 });
@@ -81,4 +84,12 @@ test('display colours stay inside 0-255 and the hue of a dim colour is its brigh
   assert.deepEqual(hue([0.5, 0.25, 0]), hue([1, 0.5, 0]));
   assert.equal(hex([255, 0, 16]), '#ff0010');
   assert.deepEqual(hue([0, 0, 0]), [0, 0, 0]);
+});
+
+test('brightness is the photometric Y, untouched by the white balance', () => {
+  close(brightnessY(SUN), 1, 1e-12, 'sunlight above the air');
+  const line = (nm) => WAVELENGTHS.map((w) => (w === nm ? 1 : 0));
+  for (const nm of [440, 560, 660]) {
+    close(brightnessY(line(nm)), (toXYZ(line(nm))[1]) / toXYZ(SUN)[1], 1e-12, `${nm} nm`);
+  }
 });

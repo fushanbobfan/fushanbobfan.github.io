@@ -1,7 +1,7 @@
 // Single scattering in a spherical atmosphere: the light that reaches the eye from every direction.
 
 import { EARTH_RADIUS, TOP, RAYLEIGH_HEIGHT, HAZE_HEIGHT, coefficients, density, ozoneDensity, rayleighPhase, hazePhase } from './air.js';
-import { WAVELENGTHS, SUN, spectrumToRGB, luminance } from './spectrum.js';
+import { WAVELENGTHS, SUN, spectrumToRGB, brightnessY, luminance } from './spectrum.js';
 
 const R_TOP = EARTH_RADIUS + TOP;
 const NL = WAVELENGTHS.length;
@@ -183,7 +183,9 @@ export function sunlight(scene, n = 400) {
   const { eye, sunDir, coef, height } = scene;
   const [cr, cm, co] = column(eye, sunDir, n);
   const [vr] = column(eye, [0, 0, 1], n);
-  const transmission = coef.rayleigh.map((b, l) => Math.exp(-(b * cr + coef.hazeExtinction[l] * cm + coef.ozoneAbsorption[l] * co)));
+  const transmission = cr === Infinity
+    ? coef.rayleigh.map(() => 0)
+    : coef.rayleigh.map((b, l) => Math.exp(-(b * cr + coef.hazeExtinction[l] * cm + coef.ozoneAbsorption[l] * co)));
   return { transmission, airMass: cr / vr, column: [cr, cm, co], height };
 }
 
@@ -197,10 +199,13 @@ export function skyRGB(scene, elevation, azimuth) {
 }
 
 // The whole sky seen from below, zenith in the middle, the horizon round the edge and the sun's
-// direction at the bottom. Returns linear RGB for each pixel and which pixels are sky.
+// direction at the bottom (an equidistant fisheye). Returns linear RGB for each pixel, which
+// pixels are sky, each pixel's brightness Y, and the solid angle each pixel covers (relative).
 export function renderDome(scene, size, steps = 20, sunSteps = 8) {
   const rgb = new Float32Array(size * size * 3);
   const sky = new Uint8Array(size * size);
+  const lum = new Float32Array(size * size);
+  const area = new Float32Array(size * size);
   const spec = new Float64Array(NL);
   const half = size / 2;
   for (let j = 0; j < size; j++) {
@@ -212,14 +217,20 @@ export function renderDome(scene, size, steps = 20, sunSteps = 8) {
       const az = Math.atan2(x, y);
       skySpectrum(scene, direction(el, az), spec, steps, sunSteps);
       const c = spectrumToRGB(spec);
+      const bright = brightnessY(spec);
+      // Zenith angle theta = r pi / 2, so a pixel covers a solid angle proportional to sin(theta) / theta.
+      const theta = (Math.PI / 2) * r;
+      const a = theta > 1e-9 ? Math.sin(theta) / theta : 1;
       for (const ii of [i, size - 1 - i]) {
         const o = j * size + ii;
         sky[o] = 1;
         rgb.set(c, o * 3);
+        lum[o] = bright;
+        area[o] = a;
       }
     }
   }
-  return { rgb, sky, size };
+  return { rgb, sky, lum, area, size };
 }
 
 // The view towards the sun: azimuths -span/2..span/2 across, elevations 0..rise up.
@@ -249,14 +260,15 @@ export function percentileLuminance(rgb, mask, q = 0.95) {
   return ys[Math.floor(q * (ys.length - 1))] || 0;
 }
 
-export function meanLuminance(rgb, mask) {
-  let sum = 0, n = 0;
-  for (let o = 0; o < rgb.length / 3; o++) {
-    if (mask && !mask[o]) continue;
-    sum += luminance([rgb[3 * o], rgb[3 * o + 1], rgb[3 * o + 2]]);
-    n++;
+// Mean brightness of the sky over the hemisphere, each pixel weighted by its solid angle.
+export function meanBrightness(dome) {
+  let sum = 0, weight = 0;
+  for (let o = 0; o < dome.sky.length; o++) {
+    if (!dome.sky[o]) continue;
+    sum += dome.lum[o] * dome.area[o];
+    weight += dome.area[o];
   }
-  return n ? sum / n : 0;
+  return weight ? sum / weight : 0;
 }
 
 // An exposure that puts the bright end of the sky (its 95th percentile) at a comfortable brightness.
