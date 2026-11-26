@@ -100,4 +100,9 @@ test('the deep red and violet ends follow the CIE table', () => {
   close(cmf(700)[0] / cmf(700)[1], 0.01135916 / 0.004102, 1e-9, 'x/y at 700 nm');
   close(cmf(445)[2], (1.74706 + 1.77211) / 2, 1e-9, 'z-bar interpolated between 440 and 450 nm');
   assert.deepEqual(cmf(830), [0, 0, 0]);
+  assert.deepEqual(cmf(790), [2.067383e-05, 7.4657e-06, 0], 'the last row counts');
+  assert.deepEqual(cmf(370), [0.0004149, 1.239e-05, 0.001946], 'the first row counts');
+  // The 780 nm band: 1/4 of 770 nm, 1/2 of 780 nm, 1/4 of 790 nm, times the 20 nm step.
+  const xyz = toXYZ(WAVELENGTHS.map((nm) => (nm === 780 ? 1 : 0)));
+  close(xyz[0], 20 * (0.25 * 8.307527e-05 + 0.5 * 4.150994e-05 + 0.25 * 2.067383e-05), 1e-12, 'X of the 780 nm band');
 });

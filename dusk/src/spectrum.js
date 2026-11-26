@@ -22,8 +22,10 @@ export const SUN = WAVELENGTHS.map((nm) => planck(nm, SUN_KELVIN) / planck(550, 
 // CIE 1931 2-degree colour matching functions, from the CIE's table, interpolated linearly.
 export function cmf(nm) {
   const f = (nm - CIE_START) / CIE_STEP;
+  const last = CIE_1931.length - 1;
+  if (f < 0 || f > last) return [0, 0, 0];
+  if (f === last) return CIE_1931[last].slice();
   const i = Math.floor(f);
-  if (i < 0 || i >= CIE_1931.length - 1) return [0, 0, 0];
   const t = f - i;
   return CIE_1931[i].map((v, k) => v * (1 - t) + CIE_1931[i + 1][k] * t);
 }
