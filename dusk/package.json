@@ -1,0 +1,21 @@
+{
+  "name": "dusk",
+  "version": "0.1.0",
+  "description": "Why the sky is blue and the setting sun red: sunlight scattered by the air, colour by colour.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "sky",
+    "rayleigh-scattering",
+    "sunset",
+    "colour",
+    "visualization",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
