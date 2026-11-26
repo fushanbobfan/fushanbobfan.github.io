@@ -58,17 +58,20 @@ export function samplePath(p, d, length, n, t = scratchT, w = scratchW) {
 
 // Air crossed from p along d to space, in metres of sea-level air: [molecules, haze].
 // Infinity if the ground is in the way.
+const colT = new Float64Array(4096);
+const colW = new Float64Array(4096);
+
 export function column(p, d, n = 16) {
   const len = exitDistance(p, d);
   if (len < 0) return [Infinity, Infinity];
-  const t = new Float64Array(n + 2), w = new Float64Array(n + 2);
-  const k = samplePath(p, d, len, n, t, w);
+  const k = samplePath(p, d, len, n, colT, colW);
   let cr = 0, cm = 0;
   for (let i = 0; i < k; i++) {
-    const x = p[0] + t[i] * d[0], y = p[1] + t[i] * d[1], z = p[2] + t[i] * d[2];
+    const t = colT[i];
+    const x = p[0] + t * d[0], y = p[1] + t * d[1], z = p[2] + t * d[2];
     const h = Math.sqrt(x * x + y * y + z * z) - EARTH_RADIUS;
-    cr += w[i] * density(h, RAYLEIGH_HEIGHT);
-    cm += w[i] * density(h, HAZE_HEIGHT);
+    cr += colW[i] * Math.exp(-Math.max(0, h) / RAYLEIGH_HEIGHT);
+    cm += colW[i] * Math.exp(-Math.max(0, h) / HAZE_HEIGHT);
   }
   return [cr, cm];
 }
@@ -85,6 +88,11 @@ export function makeScene({ sun, haze, height }) {
   return { sun, haze, height, coef, eye, sunDir };
 }
 
+const viewT = new Float64Array(4096);
+const viewW = new Float64Array(4096);
+const ORDER = new Int32Array(4096);
+const q = [0, 0, 0];
+
 // Spectrum of the sky light arriving along -d (looking along d), in units of sunlight above the air
 // per steradian. Each sample on the view ray is lit by sunlight dimmed on its way down to that
 // point, scatters some of it towards the eye, and that light is dimmed again on its way to the eye.
@@ -93,14 +101,19 @@ export function skySpectrum(scene, d, out = new Float64Array(NL), steps = 24, su
   const { eye, sunDir, coef } = scene;
   const len = exitDistance(eye, d);
   if (len <= 0) return out;
-  const t = new Float64Array(steps + 2), w = new Float64Array(steps + 2);
+  const t = viewT, w = viewW;
   const k = samplePath(eye, d, len, steps, t, w);
-  const order = Array.from({ length: k }, (_, i) => i).sort((a, b) => t[a] - t[b]);
+  // Rays from the eye into the sky are sampled outwards already; sort only the rare others.
+  let order = ORDER.subarray(0, k);
+  for (let i = 0; i < k; i++) order[i] = i;
+  if (-dot(eye, d) > 0) order = Array.from(order).sort((a, b) => t[a] - t[b]);
   const mu = dot(d, sunDir);
   const pr = rayleighPhase(mu), pm = hazePhase(mu);
   let viewR = 0, viewM = 0;
   for (const i of order) {
-    const q = [eye[0] + t[i] * d[0], eye[1] + t[i] * d[1], eye[2] + t[i] * d[2]];
+    q[0] = eye[0] + t[i] * d[0];
+    q[1] = eye[1] + t[i] * d[1];
+    q[2] = eye[2] + t[i] * d[2];
     const h = Math.hypot(q[0], q[1], q[2]) - EARTH_RADIUS;
     const dr = density(h, RAYLEIGH_HEIGHT), dm = density(h, HAZE_HEIGHT);
     const halfR = 0.5 * w[i] * dr, halfM = 0.5 * w[i] * dm;
