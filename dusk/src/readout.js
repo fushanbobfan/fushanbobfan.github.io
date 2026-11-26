@@ -62,13 +62,16 @@ export function sunColourWord(rgb) {
   return 'red';
 }
 
-export function describe({ sun, height, airMass, transmission, skyRatio, fixed, sunRGB = null }) {
+export function describe({ sun, height, airMass, transmission, skyRatio, fixed, sunRGB = null, ozone = 1 }) {
   const blue = band(transmission, 440);
   const red = band(transmission, 660);
   const parts = [];
   if (!Number.isFinite(airMass)) {
     parts.push(`The sun is ${sunLabel(sun)}, so no sunlight reaches you directly.`);
     parts.push('The air overhead is still in sunlight, and the glow you see is light it scatters down to you; it fades as the Earth\'s shadow climbs the sky.');
+    parts.push(ozone
+      ? 'That light has skimmed through the ozone layer, which takes out orange, so the sky overhead stays blue.'
+      : 'With the ozone layer taken away, nothing takes the orange out of that light, and the sky overhead turns grey-yellow.');
   } else {
     parts.push(airMass < 1.05
       ? 'The sun is high, so its light crosses only the air straight above you.'

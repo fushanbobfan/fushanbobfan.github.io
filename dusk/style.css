@@ -7,6 +7,8 @@
   --rule: #d5d0c6;
   --accent: #b4532a;
   --night: #10131c;
+  --sun: #d0661f;
+  --skyline: #2f6fb8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,6 +19,8 @@
     --muted: #a4a1a9;
     --rule: #383a45;
     --accent: #f0a074;
+    --sun: #f0954f;
+    --skyline: #79aef0;
   }
 }
 
@@ -119,6 +123,27 @@ figcaption { color: var(--muted); font-size: 0.93rem; margin-top: 6px; }
 .readouts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
 .readouts dt { font-weight: bold; }
 .readouts dd { margin: 0; overflow-wrap: anywhere; }
+
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  max-width: 820px;
+}
+.chart-wrap svg { display: block; width: 100%; height: auto; }
+.spectrum .grid { stroke: var(--rule); stroke-width: 1; }
+.spectrum .axis { stroke: var(--muted); stroke-width: 1; }
+.spectrum .tick { fill: var(--muted); font-size: 12px; font-family: Georgia, serif; }
+.spectrum .above { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 4; }
+.spectrum .through { fill: none; stroke: var(--sun); stroke-width: 2.4; }
+.spectrum .through-fill { fill: var(--sun); opacity: 0.16; }
+.spectrum .sky { fill: none; stroke: var(--skyline); stroke-width: 2.4; }
+.key { display: inline-block; width: 22px; height: 0; margin: 0 6px 3px 10px; border-top: 3px solid; vertical-align: middle; }
+.key:first-child { margin-left: 0; }
+.key.above { border-top: 2px dashed var(--muted); }
+.key.through { border-color: var(--sun); }
+.key.sky { border-color: var(--skyline); }
+#spectrum-words { display: block; margin-top: 4px; }
 
 footer { margin: 36px auto 28px; color: var(--muted); }
 footer a { color: var(--accent); }
