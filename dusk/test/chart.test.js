@@ -25,7 +25,12 @@ test('the spectral strip runs from violet through green to red', () => {
   assert.ok(g5 > r5 && g5 > b5, 'green at 530 nm');
   const [r6, g6] = rgb(spectralColour(640));
   assert.ok(r6 > g6, 'red at 640 nm');
-  for (let nm = 650; nm <= 780; nm += 10) assert.equal(spectralColour(nm), spectralColour(650), `${nm} nm`);
+  for (let nm = 650; nm <= 780; nm += 10) {
+    const [r, g, b] = rgb(spectralColour(nm));
+    assert.ok(r === 255 && g < 80 && b < 80, `red at ${nm} nm: ${spectralColour(nm)}`);
+  }
+  const [rv, gv, bv] = rgb(spectralColour(390));
+  assert.ok(bv === 255 && rv > gv, `violet at 390 nm: ${spectralColour(390)}`);
 });
 
 test('sunlight above the air peaks near 500 nm, and the low sun\'s light has shifted to the red', () => {
