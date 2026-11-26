@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EARTH_RADIUS, RAYLEIGH_HEIGHT, HAZE_HEIGHT, density } from '../src/air.js';
+import { EARTH_RADIUS, RAYLEIGH_HEIGHT, HAZE_HEIGHT, density, ozoneDensity } from '../src/air.js';
 import { column, exitDistance, direction, eyePosition, makeScene, skySpectrum, sunlight, sunRGB, skyRGB, renderDome, renderView, exposureFor, DEG } from '../src/sky.js';
 import { WAVELENGTHS, SUN } from '../src/spectrum.js';
+import { OZONE_PEAK, DOBSON, ozoneCrossSection } from '../src/air.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 const rel = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol * Math.abs(b), `${msg}: ${a} vs ${b}`);
@@ -10,22 +11,24 @@ const rel = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol * Math.abs(b), 
 // Brute-force column with very fine uniform steps.
 function reference(p, d) {
   const len = exitDistance(p, d);
-  if (len < 0) return [Infinity, Infinity];
+  if (len < 0) return [Infinity, Infinity, Infinity];
   const n = 200000;
-  let cr = 0, cm = 0;
+  let cr = 0, cm = 0, co = 0;
   for (let i = 0; i < n; i++) {
     const t = ((i + 0.5) / n) * len;
     const h = Math.hypot(p[0] + t * d[0], p[1] + t * d[1], p[2] + t * d[2]) - EARTH_RADIUS;
     cr += density(h, RAYLEIGH_HEIGHT) * (len / n);
     cm += density(h, HAZE_HEIGHT) * (len / n);
+    co += ozoneDensity(h) * (len / n);
   }
-  return [cr, cm];
+  return [cr, cm, co];
 }
 
 test('straight up from sea level crosses one scale height of air', () => {
-  const [cr, cm] = column(eyePosition(0), [0, 0, 1], 400);
+  const [cr, cm, co] = column(eyePosition(0), [0, 0, 1], 400);
   rel(cr, RAYLEIGH_HEIGHT, 1e-3, 'molecules');
   rel(cm, HAZE_HEIGHT, 1e-3, 'haze');
+  rel(co, 15000, 1e-3, 'ozone, 15 km at peak density');
 });
 
 test('the short columns used for the picture agree with a brute-force sum', () => {
@@ -35,9 +38,10 @@ test('the short columns used for the picture agree with a brute-force sum', () =
   ];
   for (const [h, el] of cases) {
     const p = eyePosition(h), d = direction(el * DEG, 0);
-    const [r0, m0] = reference(p, d);
+    const [r0, m0, o0] = reference(p, d);
     if (r0 === Infinity) continue;
-    const [r, m] = column(p, d, 10);
+    const [r, m, o] = column(p, d, 10);
+    rel(o, o0, 1e-3, `ozone at ${h} m, ${el} deg`);
     rel(r, r0, 0.01, `molecules at ${h} m, ${el} deg`);
     rel(m, m0, 0.02, `haze at ${h} m, ${el} deg`);
   }
@@ -46,7 +50,7 @@ test('the short columns used for the picture agree with a brute-force sum', () =
 test('a ray aimed below the horizon from a height meets the ground', () => {
   assert.equal(exitDistance(eyePosition(10000), direction(-10 * DEG, 0)), -1);
   assert.ok(exitDistance(eyePosition(10000), direction(-1 * DEG, 0)) > 0, 'grazes over the curve of the Earth');
-  assert.deepEqual(column(eyePosition(0), direction(-1 * DEG, 0)), [Infinity, Infinity]);
+  assert.deepEqual(column(eyePosition(0), direction(-1 * DEG, 0)), [Infinity, Infinity, Infinity]);
 });
 
 test('the setting sun crosses about 35 times as much air as the sun overhead', () => {
@@ -127,4 +131,20 @@ test('the dome is symmetric about the sun and covers a disc, and the view is mir
   assert.equal(view.rgb[0], view.rgb[3 * 11]);
   const k = exposureFor(dome.rgb, dome.sky);
   assert.ok(Number.isFinite(k) && k > 0);
+});
+
+test('the ozone layer holds 300 Dobson units and absorbs a few per cent of orange light overhead', () => {
+  const [, , co] = column(eyePosition(0), [0, 0, 1], 400);
+  rel((co * OZONE_PEAK) / DOBSON, 300, 1e-3, 'Dobson units');
+  const tau600 = co * OZONE_PEAK * ozoneCrossSection(600);
+  assert.ok(tau600 > 0.03 && tau600 < 0.045, `vertical optical depth at 600 nm: ${tau600}`);
+  assert.ok(ozoneCrossSection(600) > 10 * ozoneCrossSection(440), 'the Chappuis band sits in the orange');
+});
+
+test('after sunset the ozone keeps the sky overhead blue; without it the sky turns grey-yellow', () => {
+  const ratio = (c) => c[2] / c[0];
+  const withO = skyRGB(makeScene({ sun: -3, haze: 0.05, height: 0, ozone: 1 }), 90 * DEG, 0);
+  const without = skyRGB(makeScene({ sun: -3, haze: 0.05, height: 0, ozone: 0 }), 90 * DEG, 0);
+  assert.ok(ratio(withO) > 1.3, `blue / red with ozone ${ratio(withO)}`);
+  assert.ok(ratio(without) < 1.1, `blue / red without ozone ${ratio(without)}`);
 });

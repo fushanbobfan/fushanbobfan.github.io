@@ -43,9 +43,39 @@ export function hazePhase(mu, g = HAZE_ANISOTROPY) {
   return (1 - g * g) / (4 * Math.PI * (1 + g * g - 2 * g * mu) ** 1.5);
 }
 
-// Coefficients for every sampled wavelength, for one haze amount.
-export function coefficients(tau) {
+// Ozone absorption cross-sections in m^2 per molecule, 10 nm bins from 360 nm: IUP Bremen
+// measurements at 233 K (Serdyuchenko et al. 2014), averaged over each bin by E. Bruneton,
+// precomputed_atmospheric_scattering, demo.cc. Copyright (c) 2017 Eric Bruneton, BSD 3-clause
+// licence; see THIRD-PARTY.md.
+const OZONE_BINS = [
+  1.18e-27, 2.182e-28, 2.818e-28, 6.636e-28, 1.527e-27, 2.763e-27, 5.52e-27,
+  8.451e-27, 1.582e-26, 2.316e-26, 3.669e-26, 4.924e-26, 7.752e-26, 9.016e-26,
+  1.48e-25, 1.602e-25, 2.139e-25, 2.755e-25, 3.091e-25, 3.5e-25, 4.266e-25,
+  4.672e-25, 4.398e-25, 4.701e-25, 5.019e-25, 4.305e-25, 3.74e-25, 3.215e-25,
+  2.662e-25, 2.238e-25, 1.852e-25, 1.473e-25, 1.209e-25, 9.423e-26, 7.455e-26,
+  6.566e-26, 5.105e-26, 4.15e-26, 4.228e-26, 3.237e-26, 2.451e-26, 2.801e-26,
+  2.534e-26, 1.624e-26, 1.465e-26, 2.078e-26, 1.383e-26, 7.105e-27,
+];
+
+// Cross-section for a sample standing for nm - 10 .. nm + 10: the two bins it covers.
+export function ozoneCrossSection(nm) {
+  const i = Math.round((nm - 370) / 10);
+  return (OZONE_BINS[i] + OZONE_BINS[i + 1]) / 2;
+}
+
+// Ozone rises linearly from 10 km to a peak at 25 km and falls to nothing at 40 km; the layer is
+// as thick as 15 km of peak-density ozone, which holds 300 Dobson units.
+export const DOBSON = 2.687e20; // molecules per m^2
+export const OZONE_PEAK = (300 * DOBSON) / 15000; // molecules per m^3
+export function ozoneDensity(height) {
+  if (height <= 10000 || height >= 40000) return 0;
+  return height < 25000 ? (height - 10000) / 15000 : (40000 - height) / 15000;
+}
+
+// Coefficients for every sampled wavelength, for one haze amount (ozone scaled by `ozone`, 0..1).
+export function coefficients(tau, ozone = 1) {
   const rayleigh = WAVELENGTHS.map(rayleighCoefficient);
   const haze = WAVELENGTHS.map((nm) => hazeCoefficient(nm, tau));
-  return { rayleigh, haze, hazeExtinction: haze.map((b) => b / HAZE_ALBEDO) };
+  const ozoneAbsorption = WAVELENGTHS.map((nm) => ozone * OZONE_PEAK * ozoneCrossSection(nm));
+  return { rayleigh, haze, hazeExtinction: haze.map((b) => b / HAZE_ALBEDO), ozoneAbsorption };
 }

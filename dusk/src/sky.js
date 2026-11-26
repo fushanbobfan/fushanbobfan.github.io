@@ -1,6 +1,6 @@
 // Single scattering in a spherical atmosphere: the light that reaches the eye from every direction.
 
-import { EARTH_RADIUS, TOP, RAYLEIGH_HEIGHT, HAZE_HEIGHT, coefficients, density, rayleighPhase, hazePhase } from './air.js';
+import { EARTH_RADIUS, TOP, RAYLEIGH_HEIGHT, HAZE_HEIGHT, coefficients, density, ozoneDensity, rayleighPhase, hazePhase } from './air.js';
 import { WAVELENGTHS, SUN, spectrumToRGB, luminance } from './spectrum.js';
 
 const R_TOP = EARTH_RADIUS + TOP;
@@ -56,14 +56,52 @@ export function samplePath(p, d, length, n, t = scratchT, w = scratchW) {
   return crowd(t, w, 0, 0, length, n);
 }
 
-// Air crossed from p along d to space, in metres of sea-level air: [molecules, haze].
+// Air crossed from p along d to space, in metres of sea-level air for the molecules and the haze
+// and metres of peak-density ozone: [molecules, haze, ozone].
 // Infinity if the ground is in the way.
+// Distances along the ray where it crosses the sphere of radius r.
+function crossings(p, d, r, out) {
+  const b = dot(p, d);
+  const disc = b * b - (dot(p, p) - r * r);
+  if (disc <= 0) return;
+  const s = Math.sqrt(disc);
+  out.push(-b - s, -b + s);
+}
+
+const GL_X = [-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526];
+const GL_W = [0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538];
+const OZONE_SHELLS = [10000, 25000, 40000].map((h) => EARTH_RADIUS + h);
+
+// Ozone crossed along [0, len]: the ray is cut where it enters, peaks in and leaves the layer, and
+// where it passes closest to the ground, so the height is smooth and one-way on each piece, and
+// each piece inside the layer gets a four-point Gauss-Legendre rule.
+export function ozoneColumn(p, d, len) {
+  const cuts = [0, len];
+  for (const r of OZONE_SHELLS) crossings(p, d, r, cuts);
+  cuts.push(-dot(p, d));
+  const ts = cuts.filter((t) => t >= 0 && t <= len).sort((a, b) => a - b);
+  let total = 0;
+  for (let i = 0; i + 1 < ts.length; i++) {
+    const a = ts[i], b = ts[i + 1];
+    if (b - a < 1e-6) continue;
+    const mid = 0.5 * (a + b), half = 0.5 * (b - a);
+    const hm = Math.hypot(p[0] + mid * d[0], p[1] + mid * d[1], p[2] + mid * d[2]) - EARTH_RADIUS;
+    if (hm <= 10000 || hm >= 40000) continue;
+    for (let k = 0; k < 4; k++) {
+      const t = mid + half * GL_X[k];
+      const h = Math.hypot(p[0] + t * d[0], p[1] + t * d[1], p[2] + t * d[2]) - EARTH_RADIUS;
+      total += half * GL_W[k] * ozoneDensity(h);
+    }
+  }
+  return total;
+}
+
 const colT = new Float64Array(4096);
 const colW = new Float64Array(4096);
 
 export function column(p, d, n = 16) {
   const len = exitDistance(p, d);
-  if (len < 0) return [Infinity, Infinity];
+  if (len < 0) return [Infinity, Infinity, Infinity];
   const k = samplePath(p, d, len, n, colT, colW);
   let cr = 0, cm = 0;
   for (let i = 0; i < k; i++) {
@@ -73,7 +111,7 @@ export function column(p, d, n = 16) {
     cr += colW[i] * Math.exp(-Math.max(0, h) / RAYLEIGH_HEIGHT);
     cm += colW[i] * Math.exp(-Math.max(0, h) / HAZE_HEIGHT);
   }
-  return [cr, cm];
+  return [cr, cm, ozoneColumn(p, d, len)];
 }
 
 export function eyePosition(height) {
@@ -81,11 +119,11 @@ export function eyePosition(height) {
 }
 
 // The scene for one setting of the controls.
-export function makeScene({ sun, haze, height }) {
-  const coef = coefficients(haze);
+export function makeScene({ sun, haze, height, ozone = 1 }) {
+  const coef = coefficients(haze, ozone);
   const eye = eyePosition(height);
   const sunDir = direction(sun * DEG, 0);
-  return { sun, haze, height, coef, eye, sunDir };
+  return { sun, haze, height, ozone, coef, eye, sunDir };
 }
 
 const viewT = new Float64Array(4096);
@@ -119,11 +157,12 @@ export function skySpectrum(scene, d, out = new Float64Array(NL), steps = 24, su
     const halfR = 0.5 * w[i] * dr, halfM = 0.5 * w[i] * dm;
     viewR += halfR;
     viewM += halfM;
-    const [sr, sm] = column(q, sunDir, sunSteps);
+    const viewO = scene.coef.ozoneAbsorption[12] > 0 ? ozoneColumn(eye, d, t[i]) : 0;
+    const [sr, sm, so] = column(q, sunDir, sunSteps);
     if (sr !== Infinity) {
-      const cr = viewR + sr, cm = viewM + sm;
+      const cr = viewR + sr, cm = viewM + sm, co = viewO + so;
       for (let l = 0; l < NL; l++) {
-        const tr = Math.exp(-(coef.rayleigh[l] * cr + coef.hazeExtinction[l] * cm));
+        const tr = Math.exp(-(coef.rayleigh[l] * cr + coef.hazeExtinction[l] * cm + coef.ozoneAbsorption[l] * co));
         out[l] += SUN[l] * (coef.rayleigh[l] * dr * pr + coef.haze[l] * dm * pm) * tr * w[i];
       }
     }
@@ -137,10 +176,10 @@ export function skySpectrum(scene, d, out = new Float64Array(NL), steps = 24, su
 // the eye's horizon), and how many times more air it crosses than light from straight overhead.
 export function sunlight(scene, n = 400) {
   const { eye, sunDir, coef, height } = scene;
-  const [cr, cm] = column(eye, sunDir, n);
+  const [cr, cm, co] = column(eye, sunDir, n);
   const [vr] = column(eye, [0, 0, 1], n);
-  const transmission = coef.rayleigh.map((b, l) => Math.exp(-(b * cr + coef.hazeExtinction[l] * cm)));
-  return { transmission, airMass: cr / vr, column: [cr, cm], height };
+  const transmission = coef.rayleigh.map((b, l) => Math.exp(-(b * cr + coef.hazeExtinction[l] * cm + coef.ozoneAbsorption[l] * co)));
+  return { transmission, airMass: cr / vr, column: [cr, cm, co], height };
 }
 
 export function sunRGB(scene) {
