@@ -1,4 +1,4 @@
-import { toDisplay, hue, hex } from './spectrum.js';
+import { toDisplay, hue, hex, luminance } from './spectrum.js';
 import { sunLabel, hazeLabel, heightLabel, percent, times, band, brightness, describe } from './readout.js';
 import { DEG } from './sky.js';
 
@@ -36,21 +36,28 @@ function paint(canvas, rgb, w, h, exposure, mask) {
   return { ctx, off };
 }
 
-function drawSun(ctx, x, y, colour, radius) {
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 4);
-  glow.addColorStop(0, colour + 'cc');
+// The sun's position, marked by a disc in its colour. A sun the haze has all but put out (less
+// than a millionth of its light left) is marked by a ring.
+function drawSun(ctx, x, y, rgb, radius) {
+  const colour = hex(hue(rgb));
+  if (luminance(rgb) < 1e-6) {
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    return;
+  }
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
+  glow.addColorStop(0, colour + 'aa');
   glow.addColorStop(1, colour + '00');
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, radius * 4, 0, 2 * Math.PI);
-  ctx.fill();
-  ctx.fillStyle = '#fffdf6';
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, 2 * Math.PI);
+  ctx.arc(x, y, radius * 3, 0, 2 * Math.PI);
   ctx.fill();
   ctx.fillStyle = colour;
   ctx.beginPath();
-  ctx.arc(x, y, radius * 0.8, 0, 2 * Math.PI);
+  ctx.arc(x, y, radius, 0, 2 * Math.PI);
   ctx.fill();
 }
 
@@ -59,10 +66,9 @@ function drawView(r) {
   const { ctx, off } = paint(viewCanvas, view.rgb, view.width, view.height, exposure);
   const W = viewCanvas.width, H = viewCanvas.height;
   ctx.drawImage(off, 0, 0, W, H);
-  const sunColour = hex(hue(r.sun));
   const el = r.params.sun * DEG;
   if (el > -0.3 * DEG && el < view.rise && Number.isFinite(r.airMass)) {
-    drawSun(ctx, W / 2, H * (1 - el / view.rise), sunColour, 7);
+    drawSun(ctx, W / 2, H * (1 - el / view.rise), r.sun, 7);
   }
   const marks = [-60, -30, 0, 30, 60];
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
@@ -88,7 +94,7 @@ function drawDome(r) {
   const el = r.params.sun;
   if (el > -0.3 && Number.isFinite(r.airMass)) {
     const rr = (S / 2) * (1 - el / 90);
-    drawSun(ctx, S / 2, S / 2 + rr, hex(hue(r.sun)), 6);
+    drawSun(ctx, S / 2, S / 2 + rr, r.sun, 6);
   }
   ctx.strokeStyle = 'rgba(128, 128, 128, 0.6)';
   ctx.beginPath();
@@ -96,22 +102,22 @@ function drawDome(r) {
   ctx.stroke();
 }
 
-function chip(el, rgb) {
-  const m = Math.max(...rgb);
-  el.style.background = m > 0 ? hex(hue(rgb)) : '#000000';
-  el.title = m > 0 ? hex(hue(rgb)) : 'no light';
+function chip(id, rgb) {
+  const code = Math.max(...rgb) > 0 ? hex(hue(rgb)) : null;
+  $(id).style.background = code || 'transparent';
+  $(`${id}-code`).textContent = code || 'no light';
 }
 
 function showReadouts(r) {
-  chip($('swatch-sun'), Number.isFinite(r.airMass) ? r.sun : [0, 0, 0]);
-  chip($('swatch-zenith'), r.zenith);
-  chip($('swatch-opposite'), r.opposite);
+  chip('swatch-sun', Number.isFinite(r.airMass) ? r.sun : [0, 0, 0]);
+  chip('swatch-zenith', r.zenith);
+  chip('swatch-opposite', r.opposite);
   $('air-mass').textContent = times(r.airMass);
   $('through-blue').textContent = percent(band(r.transmission, 440));
   $('through-green').textContent = percent(band(r.transmission, 540));
   $('through-red').textContent = percent(band(r.transmission, 660));
   $('sky-brightness').textContent = brightness(r.skyRatio);
-  $('verdict').textContent = describe({ ...r.params, airMass: r.airMass, transmission: r.transmission, skyRatio: r.skyRatio });
+  $('verdict').textContent = describe({ ...r.params, airMass: r.airMass, transmission: r.transmission, skyRatio: r.skyRatio, sunRGB: r.sun });
 }
 
 const worker = new Worker(new URL('./render-worker.js', import.meta.url), { type: 'module' });
@@ -119,9 +125,10 @@ let latest = 0;
 let busy = false;
 let queued = null;
 
+let revision = 0;
 function request(quality) {
   const id = ++latest;
-  const msg = { id, params: params(), quality };
+  const msg = { id, revision, params: params(), quality };
   if (busy) {
     queued = msg;
     return;
@@ -141,7 +148,8 @@ worker.onmessage = (e) => {
     worker.postMessage(next);
   }
   const r = e.data;
-  if (r.id < drawn) return;
+  // Only a picture of the controls as they stand now is drawn.
+  if (r.revision !== revision || r.id < drawn) return;
   drawn = r.id;
   drawView(r);
   drawDome(r);
@@ -149,6 +157,7 @@ worker.onmessage = (e) => {
 };
 
 function update() {
+  revision++;
   showLabels();
   request('rough');
   clearTimeout(fineTimer);

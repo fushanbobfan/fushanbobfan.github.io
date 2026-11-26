@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { sunLabel, hazeLabel, heightLabel, percent, times, brightness, describe } from '../src/readout.js';
+import { sunLabel, hazeLabel, heightLabel, percent, times, brightness, describe, sunColourWord } from '../src/readout.js';
+import { makeScene, sunRGB } from '../src/sky.js';
 import { renderAll, MIDDAY, middaySky } from '../src/render-worker.js';
 import { WAVELENGTHS } from '../src/spectrum.js';
 
@@ -76,13 +77,28 @@ test('the description follows the sun down', () => {
   assert.match(high, /blue sky/);
   const low = describe({ sun: 2, height: 0, airMass: 20, transmission: t(0.001, 0.02), skyRatio: 0.2 });
   assert.match(low, /20 times as much air as with the sun overhead/);
-  assert.match(low, /orange or red/);
+  assert.match(low, /looks (orange|red)/);
   const set = describe({ sun: -4, height: 0, airMass: Infinity, transmission: t(0, 0), skyRatio: 0.004 });
   assert.match(set, /no sunlight reaches you directly/);
   assert.doesNotMatch(set, /gets through/);
   const up = describe({ sun: 30, height: 30000, airMass: 2, transmission: t(0.98, 0.99), skyRatio: 0.03, fixed: true });
   assert.match(up, /turns dark/);
   assert.match(up, /camera is set for a clear midday/);
+});
+
+test('the sun is named by the colour it is drawn in', () => {
+  assert.equal(sunColourWord([1, 0.98, 0.9]), 'white');
+  assert.equal(sunColourWord([1, 0.8, 0.55]), 'yellow');
+  assert.equal(sunColourWord([1, 0.45, 0.05]), 'orange');
+  assert.equal(sunColourWord([1, 0.1, 0]), 'red');
+  assert.equal(sunColourWord([0.6, 0.8, 1]), 'faintly blue');
+  assert.equal(sunColourWord([0, 0, 0]), 'unseen');
+  // Seen from 30 km just below the level horizon, the sunlight skims the ozone layer edge-on.
+  const limb = makeScene({ sun: -2, haze: 0.06, height: 30000 });
+  const word = sunColourWord(sunRGB(limb));
+  const text = describe({ sun: -2, height: 30000, airMass: 91.6, transmission: Array(21).fill(0.5), skyRatio: 0.03, sunRGB: sunRGB(limb) });
+  assert.notEqual(word, 'white');
+  assert.doesNotMatch(text, /so short a path/);
 });
 
 test('a rough render carries everything the page draws, and the balloon sky is far darker than midday', () => {
@@ -94,4 +110,12 @@ test('a rough render carries everything the page draws, and the balloon sky is f
   const noon = renderAll({ ...MIDDAY, fixed: false }, 'rough');
   assert.ok(noon.skyRatio > 0.85 && noon.skyRatio < 1.15, String(noon.skyRatio));
   for (const k of ['sun', 'zenith', 'opposite']) assert.equal(noon[k].length, 3);
+});
+
+test('the worker sends back the revision the page uses to drop stale pictures', () => {
+  const worker = readFileSync(new URL('../src/render-worker.js', import.meta.url), 'utf8');
+  assert.match(main, /revision !== revision/);
+  assert.match(main, /\{ id, revision, params: params\(\), quality \}/);
+  assert.match(worker, /const \{ id, revision, params, quality \} = e\.data/);
+  assert.match(worker, /postMessage\(\{ id, revision, \.\.\.r \}/);
 });

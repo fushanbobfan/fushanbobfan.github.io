@@ -52,9 +52,9 @@
     </section>
 
     <figure class="view">
-      <canvas id="view" width="960" height="320" role="img" aria-describedby="verdict"></canvas>
-      <figcaption>Looking towards the sun: 120° from side to side, from the horizon to 40° up.
-        The sun is drawn larger than it is.</figcaption>
+      <canvas id="view" width="960" height="320" role="img" aria-labelledby="view-caption" aria-describedby="verdict"></canvas>
+      <figcaption id="view-caption">Looking towards the sun: 120° from side to side, from the horizon
+        to 40° up. A disc in the sun's colour, larger than the sun, marks where it is.</figcaption>
     </figure>
 
     <p id="verdict" aria-live="polite"></p>
@@ -68,9 +68,9 @@
 
       <section class="readout-panel" aria-label="Readouts">
         <div class="swatches">
-          <div class="swatch"><span id="swatch-sun" class="chip"></span>The sun's disc</div>
-          <div class="swatch"><span id="swatch-zenith" class="chip"></span>Overhead</div>
-          <div class="swatch"><span id="swatch-opposite" class="chip"></span>Low, opposite the sun</div>
+          <div class="swatch"><span id="swatch-sun" class="chip" aria-hidden="true"></span><span>The sun's disc <span id="swatch-sun-code" class="code"></span></span></div>
+          <div class="swatch"><span id="swatch-zenith" class="chip" aria-hidden="true"></span><span>Overhead <span id="swatch-zenith-code" class="code"></span></span></div>
+          <div class="swatch"><span id="swatch-opposite" class="chip" aria-hidden="true"></span><span>Low, opposite the sun <span id="swatch-opposite-code" class="code"></span></span></div>
         </div>
         <p class="hint">Colours only; each chip is shown at full brightness.</p>
         <dl class="readouts">

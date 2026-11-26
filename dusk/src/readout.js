@@ -49,7 +49,20 @@ export function brightness(x) {
 }
 
 // A few sentences on what the picture shows and why.
-export function describe({ sun, height, airMass, transmission, skyRatio, fixed }) {
+// A word for the colour of the sun's disc, from its linear RGB.
+export function sunColourWord(rgb) {
+  const [r, g, b] = rgb.map((v) => Math.max(0, v));
+  const m = Math.max(r, g, b);
+  if (!(m > 0)) return 'unseen';
+  if (b > 1.15 * r) return 'faintly blue';
+  const ratio = b / r;
+  if (ratio > 0.8) return 'white';
+  if (ratio > 0.45) return 'yellow';
+  if (g / r > 0.12) return 'orange';
+  return 'red';
+}
+
+export function describe({ sun, height, airMass, transmission, skyRatio, fixed, sunRGB = null }) {
   const blue = band(transmission, 440);
   const red = band(transmission, 660);
   const parts = [];
@@ -61,9 +74,11 @@ export function describe({ sun, height, airMass, transmission, skyRatio, fixed }
       ? 'The sun is high, so its light crosses only the air straight above you.'
       : `On its way to you, the sunlight crosses ${times(airMass).replace(' as much', ' as much air')}.`);
     parts.push(`On the way, ${percent(blue)} of its blue (440 nm) gets through and ${percent(red)} of its red (660 nm).`);
-    if (red > 3 * blue) parts.push('The blue has been scattered out of the beam along the way, so the sun looks orange or red.');
-    else if (red > 1.4 * blue) parts.push('The beam has lost some of its blue, so the sun looks yellow.');
-    else parts.push('Little is lost on so short a path, so the sun stays white.');
+    const word = sunRGB ? sunColourWord(sunRGB) : red > 3 * blue ? 'orange' : red > 1.4 * blue ? 'yellow' : 'white';
+    if (word === 'faintly blue') parts.push('Here the ozone has taken more of the green and orange than the air has taken of the blue, so the sun looks faintly blue.');
+    else if (word === 'white') parts.push(band(transmission, 540) > 0.6 ? 'Little is lost on so short a path, so the sun stays white.' : 'The colours are dimmed about equally, so the sun stays white.');
+    else if (word === 'yellow') parts.push('The beam has lost some of its blue, so the sun looks yellow.');
+    else parts.push(`The blue has been scattered out of the beam along the way, so the sun looks ${word}.`);
   }
   if (height >= 15000) parts.push(`At ${heightLabel(height)} most of the air is below you, so there is little left above to scatter light, and the sky overhead turns dark even in daylight.`);
   else if (Number.isFinite(airMass) && sun > 10) parts.push('The blue the beam loses is scattered in all directions; that scattered light is the blue sky.');

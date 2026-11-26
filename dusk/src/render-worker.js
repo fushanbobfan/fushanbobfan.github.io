@@ -1,6 +1,6 @@
 // Traces the pictures off the page's thread.
 
-import { makeScene, renderDome, renderView, exposureFor, meanLuminance, sunlight, sunRGB, skyRGB, DEG } from './sky.js';
+import { makeScene, renderDome, renderView, exposureFor, meanBrightness, sunlight, sunRGB, skyRGB, DEG } from './sky.js';
 
 // A clear midday at sea level: the yardstick for brightness and for the fixed camera.
 export const MIDDAY = { sun: 60, haze: 0.06, height: 0, ozone: 1 };
@@ -8,7 +8,7 @@ let midday = null;
 export function middaySky() {
   if (!midday) {
     const dome = renderDome(makeScene(MIDDAY), 96, 16, 8);
-    midday = { exposure: exposureFor(dome.rgb, dome.sky), mean: meanLuminance(dome.rgb, dome.sky) };
+    midday = { exposure: exposureFor(dome.rgb, dome.sky), mean: meanBrightness(dome) };
   }
   return midday;
 }
@@ -32,14 +32,14 @@ export function renderAll(params, quality) {
     opposite: skyRGB(scene, 5 * DEG, 180 * DEG),
     airMass: light.airMass,
     transmission: light.transmission,
-    skyRatio: meanLuminance(dome.rgb, dome.sky) / ref.mean,
+    skyRatio: meanBrightness(dome) / ref.mean,
   };
 }
 
 if (typeof self !== 'undefined' && typeof window === 'undefined' && typeof self.postMessage === 'function') {
   self.onmessage = (e) => {
-    const { id, params, quality } = e.data;
+    const { id, revision, params, quality } = e.data;
     const r = renderAll(params, quality);
-    self.postMessage({ id, ...r }, [r.dome.rgb.buffer, r.dome.sky.buffer, r.view.rgb.buffer]);
+    self.postMessage({ id, revision, ...r }, [r.dome.rgb.buffer, r.dome.sky.buffer, r.dome.lum.buffer, r.dome.area.buffer, r.view.rgb.buffer]);
   };
 }
