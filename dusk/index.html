@@ -37,6 +37,9 @@
       <div class="field">
         <label class="check"><input id="fixed" type="checkbox"> Keep the camera set for a clear midday</label>
       </div>
+      <div class="field">
+        <label class="check"><input id="ozone" type="checkbox" checked> Ozone layer</label>
+      </div>
       <div class="field presets">
         <span class="label" id="presets-label">Start from</span>
         <div class="row" role="group" aria-labelledby="presets-label">
@@ -82,6 +85,17 @@
         </dl>
       </section>
     </div>
+
+    <h2>Colour by colour</h2>
+    <figure class="spectrum">
+      <div id="spectrum" class="chart-wrap"></div>
+      <figcaption>
+        <span class="key above"></span>Sunlight above the air
+        <span class="key through"></span>Sunlight reaching you, on the same scale
+        <span class="key sky"></span>Light of the sky overhead, scaled to its own peak.
+        <span id="spectrum-words" aria-live="polite"></span>
+      </figcaption>
+    </figure>
 
     <h2>What is in the model, and what is not</h2>
     <p>The air thins out with height, and the Earth is round, so a low sun's light skims a long way

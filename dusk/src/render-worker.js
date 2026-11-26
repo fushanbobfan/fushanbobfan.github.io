@@ -1,6 +1,6 @@
 // Traces the pictures off the page's thread.
 
-import { makeScene, renderDome, renderView, exposureFor, meanBrightness, sunlight, sunRGB, skyRGB, DEG } from './sky.js';
+import { makeScene, renderDome, renderView, exposureFor, meanBrightness, sunlight, sunRGB, skyRGB, skySpectrum, DEG } from './sky.js';
 
 // A clear midday at sea level: the yardstick for brightness and for the fixed camera.
 export const MIDDAY = { sun: 60, haze: 0.06, height: 0, ozone: 1 };
@@ -29,6 +29,7 @@ export function renderAll(params, quality) {
     exposure,
     sun: sunRGB(scene),
     zenith: skyRGB(scene, 90 * DEG, 0),
+    zenithSpectrum: Array.from(skySpectrum(scene, [0, 0, 1])),
     opposite: skyRGB(scene, 5 * DEG, 180 * DEG),
     airMass: light.airMass,
     transmission: light.transmission,

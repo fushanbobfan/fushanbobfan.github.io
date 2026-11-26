@@ -1,15 +1,17 @@
 import { toDisplay, hue, hex, luminance } from './spectrum.js';
 import { sunLabel, hazeLabel, heightLabel, percent, times, band, brightness, describe } from './readout.js';
 import { DEG } from './sky.js';
+import { chartSVG, describeSpectrum } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
 const inputs = { sun: $('sun'), haze: $('haze'), height: $('height') };
 const fixed = $('fixed');
+const ozone = $('ozone');
 const viewCanvas = $('view');
 const domeCanvas = $('dome');
 
 function params() {
-  return { sun: Number(inputs.sun.value), haze: Number(inputs.haze.value), height: Number(inputs.height.value), fixed: fixed.checked };
+  return { sun: Number(inputs.sun.value), haze: Number(inputs.haze.value), height: Number(inputs.height.value), fixed: fixed.checked, ozone: ozone.checked ? 1 : 0 };
 }
 
 function showLabels() {
@@ -117,6 +119,9 @@ function showReadouts(r) {
   $('through-green').textContent = percent(band(r.transmission, 540));
   $('through-red').textContent = percent(band(r.transmission, 660));
   $('sky-brightness').textContent = brightness(r.skyRatio);
+  const spectrum = { transmission: r.transmission, sky: r.zenithSpectrum };
+  $('spectrum').innerHTML = chartSVG(spectrum);
+  $('spectrum-words').textContent = describeSpectrum(spectrum);
   $('verdict').textContent = describe({ ...r.params, airMass: r.airMass, transmission: r.transmission, skyRatio: r.skyRatio, sunRGB: r.sun });
 }
 
@@ -166,10 +171,12 @@ function update() {
 
 for (const el of Object.values(inputs)) el.addEventListener('input', update);
 fixed.addEventListener('change', update);
+ozone.addEventListener('change', update);
 for (const b of document.querySelectorAll('button[data-sun]')) {
   b.addEventListener('click', () => {
     for (const k of Object.keys(inputs)) inputs[k].value = b.dataset[k];
     fixed.checked = b.dataset.fixed === '1';
+    ozone.checked = true;
     update();
   });
 }
