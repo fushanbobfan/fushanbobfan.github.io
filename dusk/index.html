@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dusk · why the sky is blue and the sunset red</title>
+  <meta name="description" content="Why the sky is blue and the setting sun red: follow sunlight through the air, colour by colour, and watch the sky change as the sun goes down.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>dusk</h1>
+    <p class="lede">Sunlight is a mix of every colour. On its way through the air, the molecules
+      knock a little of it sideways, and they knock blue light about five times as often as red.
+      That scattered blue, coming at you from every part of the sky, is the blue sky. When the
+      sun is low its light crosses dozens of times more air before it reaches you, so most of the
+      blue has been scattered out of the beam by the time it arrives, and the sun and the clouds
+      it lights turn orange and red. Every pixel below is worked out from that scattering, one
+      wavelength at a time.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Sun, air and observer">
+      <div class="field grow">
+        <label for="sun">Sun: <output id="sun-value" for="sun"></output></label>
+        <input id="sun" type="range" min="-8" max="90" step="0.5" value="3">
+      </div>
+      <div class="field grow">
+        <label for="haze">Haze, as optical depth at 550 nm: <output id="haze-value" for="haze"></output></label>
+        <input id="haze" type="range" min="0" max="1" step="0.01" value="0.06">
+      </div>
+      <div class="field grow">
+        <label for="height">Your height: <output id="height-value" for="height"></output></label>
+        <input id="height" type="range" min="0" max="30000" step="500" value="0">
+      </div>
+      <div class="field">
+        <label class="check"><input id="fixed" type="checkbox"> Keep the camera set for a clear midday</label>
+      </div>
+      <div class="field presets">
+        <span class="label" id="presets-label">Start from</span>
+        <div class="row" role="group" aria-labelledby="presets-label">
+          <button type="button" data-sun="60" data-haze="0.06" data-height="0" data-fixed="0">Midday</button>
+          <button type="button" data-sun="15" data-haze="0.06" data-height="0" data-fixed="0">Late afternoon</button>
+          <button type="button" data-sun="1" data-haze="0.06" data-height="0" data-fixed="0">Sunset</button>
+          <button type="button" data-sun="2" data-haze="0.35" data-height="0" data-fixed="0">Hazy sunset</button>
+          <button type="button" data-sun="-4" data-haze="0.06" data-height="0" data-fixed="0">After sunset</button>
+          <button type="button" data-sun="30" data-haze="0.06" data-height="11000" data-fixed="0">From an airliner</button>
+          <button type="button" data-sun="30" data-haze="0.06" data-height="30000" data-fixed="1">From a balloon</button>
+        </div>
+      </div>
+    </section>
+
+    <figure class="view">
+      <canvas id="view" width="960" height="320" role="img" aria-describedby="verdict"></canvas>
+      <figcaption>Looking towards the sun: 120° from side to side, from the horizon to 40° up.
+        The sun is drawn larger than it is.</figcaption>
+    </figure>
+
+    <p id="verdict" aria-live="polite"></p>
+
+    <div class="pair">
+      <figure class="dome">
+        <canvas id="dome" width="480" height="480" role="img" aria-label="The whole sky seen from below, the sun's direction at the bottom"></canvas>
+        <figcaption>The whole sky as a fisheye lens sees it: straight overhead in the middle,
+          the horizon round the edge, the sun's direction at the bottom.</figcaption>
+      </figure>
+
+      <section class="readout-panel" aria-label="Readouts">
+        <div class="swatches">
+          <div class="swatch"><span id="swatch-sun" class="chip"></span>The sun's disc</div>
+          <div class="swatch"><span id="swatch-zenith" class="chip"></span>Overhead</div>
+          <div class="swatch"><span id="swatch-opposite" class="chip"></span>Low, opposite the sun</div>
+        </div>
+        <p class="hint">Colours only; each chip is shown at full brightness.</p>
+        <dl class="readouts">
+          <dt>Air the sunlight crosses</dt><dd id="air-mass"></dd>
+          <dt>Blue getting through (440 nm)</dt><dd id="through-blue"></dd>
+          <dt>Green getting through (540 nm)</dt><dd id="through-green"></dd>
+          <dt>Red getting through (660 nm)</dt><dd id="through-red"></dd>
+          <dt>Whole sky, on average</dt><dd id="sky-brightness"></dd>
+        </dl>
+      </section>
+    </div>
+
+    <h2>What is in the model, and what is not</h2>
+    <p>The air thins out with height, and the Earth is round, so a low sun's light skims a long way
+      through the lower air. Molecules scatter light by the inverse fourth power of its wavelength;
+      haze scatters it more evenly and mostly forwards, which is why a hazy sky is whiter and
+      brightest around the sun. The ozone layer, 10 to 40 km up, absorbs a little orange light:
+      by day you hardly notice, but after sunset the sunlight reaching the sky overhead has
+      skimmed through it for hundreds of kilometres, and that is what keeps the twilight sky blue.</p>
+    <p>Each ray of sunlight is scattered at most once before it reaches you. Light scattered two or
+      more times brightens the sky near the horizon and the twilight sky, so both come out darker
+      here than they really are. There are no clouds and no bending of light near the horizon, and
+      the sun's light above the air is taken to be that of a body glowing at 5778 K.</p>
+  </main>
+
+  <footer>
+    <p><a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/dusk">Source</a> · MIT licence</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

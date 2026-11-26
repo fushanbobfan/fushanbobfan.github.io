@@ -59,6 +59,11 @@ export function samplePath(p, d, length, n, t = scratchT, w = scratchW) {
 // Air crossed from p along d to space, in metres of sea-level air for the molecules and the haze
 // and metres of peak-density ozone: [molecules, haze, ozone].
 // Infinity if the ground is in the way.
+function radius(p, d, t) {
+  const x = p[0] + t * d[0], y = p[1] + t * d[1], z = p[2] + t * d[2];
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
 // Distances along the ray where it crosses the sphere of radius r.
 function crossings(p, d, r, out) {
   const b = dot(p, d);
@@ -85,11 +90,11 @@ export function ozoneColumn(p, d, len) {
     const a = ts[i], b = ts[i + 1];
     if (b - a < 1e-6) continue;
     const mid = 0.5 * (a + b), half = 0.5 * (b - a);
-    const hm = Math.hypot(p[0] + mid * d[0], p[1] + mid * d[1], p[2] + mid * d[2]) - EARTH_RADIUS;
+    const hm = radius(p, d, mid) - EARTH_RADIUS;
     if (hm <= 10000 || hm >= 40000) continue;
     for (let k = 0; k < 4; k++) {
       const t = mid + half * GL_X[k];
-      const h = Math.hypot(p[0] + t * d[0], p[1] + t * d[1], p[2] + t * d[2]) - EARTH_RADIUS;
+      const h = radius(p, d, t) - EARTH_RADIUS;
       total += half * GL_W[k] * ozoneDensity(h);
     }
   }
@@ -152,12 +157,12 @@ export function skySpectrum(scene, d, out = new Float64Array(NL), steps = 24, su
     q[0] = eye[0] + t[i] * d[0];
     q[1] = eye[1] + t[i] * d[1];
     q[2] = eye[2] + t[i] * d[2];
-    const h = Math.hypot(q[0], q[1], q[2]) - EARTH_RADIUS;
+    const h = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]) - EARTH_RADIUS;
     const dr = density(h, RAYLEIGH_HEIGHT), dm = density(h, HAZE_HEIGHT);
     const halfR = 0.5 * w[i] * dr, halfM = 0.5 * w[i] * dm;
     viewR += halfR;
     viewM += halfM;
-    const viewO = scene.coef.ozoneAbsorption[12] > 0 ? ozoneColumn(eye, d, t[i]) : 0;
+    const viewO = scene.ozone > 0 ? ozoneColumn(eye, d, t[i]) : 0;
     const [sr, sm, so] = column(q, sunDir, sunSteps);
     if (sr !== Infinity) {
       const cr = viewR + sr, cm = viewM + sm, co = viewO + so;
@@ -234,14 +239,29 @@ export function renderView(scene, width, height, span = 120 * DEG, rise = 40 * D
   return { rgb, width, height, span, rise };
 }
 
-// An exposure that puts the bright end of the sky (its 95th percentile) at a pleasant brightness.
-export function exposureFor(rgb, mask) {
+export function percentileLuminance(rgb, mask, q = 0.95) {
   const ys = [];
   for (let o = 0; o < rgb.length / 3; o++) {
     if (mask && !mask[o]) continue;
     ys.push(luminance([rgb[3 * o], rgb[3 * o + 1], rgb[3 * o + 2]]));
   }
   ys.sort((a, b) => a - b);
-  const y = ys[Math.floor(0.95 * (ys.length - 1))] || 0;
-  return y > 0 ? 1.1 / y : 1;
+  return ys[Math.floor(q * (ys.length - 1))] || 0;
+}
+
+export function meanLuminance(rgb, mask) {
+  let sum = 0, n = 0;
+  for (let o = 0; o < rgb.length / 3; o++) {
+    if (mask && !mask[o]) continue;
+    sum += luminance([rgb[3 * o], rgb[3 * o + 1], rgb[3 * o + 2]]);
+    n++;
+  }
+  return n ? sum / n : 0;
+}
+
+// An exposure that puts the bright end of the sky (its 95th percentile) at a comfortable brightness.
+export const KEY = 0.6;
+export function exposureFor(rgb, mask) {
+  const y = percentileLuminance(rgb, mask);
+  return y > 0 ? KEY / y : 1;
 }
