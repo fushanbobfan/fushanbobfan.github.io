@@ -1,0 +1,130 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { EARTH_RADIUS, RAYLEIGH_HEIGHT, HAZE_HEIGHT, density } from '../src/air.js';
+import { column, exitDistance, direction, eyePosition, makeScene, skySpectrum, sunlight, sunRGB, skyRGB, renderDome, renderView, exposureFor, DEG } from '../src/sky.js';
+import { WAVELENGTHS, SUN } from '../src/spectrum.js';
+
+const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
+const rel = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol * Math.abs(b), `${msg}: ${a} vs ${b}`);
+
+// Brute-force column with very fine uniform steps.
+function reference(p, d) {
+  const len = exitDistance(p, d);
+  if (len < 0) return [Infinity, Infinity];
+  const n = 200000;
+  let cr = 0, cm = 0;
+  for (let i = 0; i < n; i++) {
+    const t = ((i + 0.5) / n) * len;
+    const h = Math.hypot(p[0] + t * d[0], p[1] + t * d[1], p[2] + t * d[2]) - EARTH_RADIUS;
+    cr += density(h, RAYLEIGH_HEIGHT) * (len / n);
+    cm += density(h, HAZE_HEIGHT) * (len / n);
+  }
+  return [cr, cm];
+}
+
+test('straight up from sea level crosses one scale height of air', () => {
+  const [cr, cm] = column(eyePosition(0), [0, 0, 1], 400);
+  rel(cr, RAYLEIGH_HEIGHT, 1e-3, 'molecules');
+  rel(cm, HAZE_HEIGHT, 1e-3, 'haze');
+});
+
+test('the short columns used for the picture agree with a brute-force sum', () => {
+  const cases = [
+    [0, 90], [0, 30], [0, 5], [0, 0.5], [0, 0],
+    [2000, 0], [8000, -1], [20000, -3], [40000, -5], [5000, 10],
+  ];
+  for (const [h, el] of cases) {
+    const p = eyePosition(h), d = direction(el * DEG, 0);
+    const [r0, m0] = reference(p, d);
+    if (r0 === Infinity) continue;
+    const [r, m] = column(p, d, 10);
+    rel(r, r0, 0.01, `molecules at ${h} m, ${el} deg`);
+    rel(m, m0, 0.02, `haze at ${h} m, ${el} deg`);
+  }
+});
+
+test('a ray aimed below the horizon from a height meets the ground', () => {
+  assert.equal(exitDistance(eyePosition(10000), direction(-10 * DEG, 0)), -1);
+  assert.ok(exitDistance(eyePosition(10000), direction(-1 * DEG, 0)) > 0, 'grazes over the curve of the Earth');
+  assert.deepEqual(column(eyePosition(0), direction(-1 * DEG, 0)), [Infinity, Infinity]);
+});
+
+test('the setting sun crosses about 35 times as much air as the sun overhead', () => {
+  const s = sunlight(makeScene({ sun: 0, haze: 0, height: 0 }));
+  // A spherical exponential atmosphere with an 8.4 km scale height gives sqrt(pi R / 2H) = 34.5.
+  rel(s.airMass, Math.sqrt((Math.PI * EARTH_RADIUS) / (2 * RAYLEIGH_HEIGHT)), 0.02, 'air mass at the horizon');
+  const high = sunlight(makeScene({ sun: 30, haze: 0, height: 0 }));
+  rel(high.airMass, 2, 0.01, 'air mass with the sun 30 degrees up');
+});
+
+test('the setting sun loses blue light far faster than red', () => {
+  const s = sunlight(makeScene({ sun: 1, haze: 0.1, height: 0 }));
+  const blue = s.transmission[WAVELENGTHS.indexOf(440)];
+  const red = s.transmission[WAVELENGTHS.indexOf(660)];
+  assert.ok(red > 5 * blue, `${red} vs ${blue}`);
+  const [r, g, b] = sunRGB(makeScene({ sun: 1, haze: 0.1, height: 0 }));
+  assert.ok(r > g && g > b, 'the low sun is orange-red');
+  const [r2, , b2] = sunRGB(makeScene({ sun: 70, haze: 0.05, height: 0 }));
+  assert.ok(b2 / r2 > 0.75, 'the high sun is nearly white');
+});
+
+test('the clear daytime sky is blue overhead and paler near the horizon', () => {
+  const scene = makeScene({ sun: 45, haze: 0.05, height: 0 });
+  const zen = skyRGB(scene, 90 * DEG, 0);
+  assert.ok(zen[2] > zen[1] && zen[1] > zen[0], `zenith ${zen}`);
+  const low = skyRGB(scene, 2 * DEG, 180 * DEG);
+  const sat = (c) => (Math.max(...c) - Math.min(...c)) / Math.max(...c);
+  assert.ok(sat(low) < sat(zen), 'the horizon sky is whiter');
+});
+
+test('the sky light is brightest around the sun when there is haze', () => {
+  const scene = makeScene({ sun: 20, haze: 0.3, height: 0 });
+  const near = skyRGB(scene, 25 * DEG, 0)[1];
+  const away = skyRGB(scene, 25 * DEG, 180 * DEG)[1];
+  assert.ok(near > 3 * away, `${near} vs ${away}`);
+});
+
+test('high above the air the sky grows dark', () => {
+  const ground = skyRGB(makeScene({ sun: 45, haze: 0.05, height: 0 }), 90 * DEG, 0);
+  const balloon = skyRGB(makeScene({ sun: 45, haze: 0.05, height: 30000 }), 90 * DEG, 0);
+  assert.ok(balloon[1] < 0.05 * ground[1], `${balloon[1]} vs ${ground[1]}`);
+});
+
+test('after sunset the sky over the eye is still lit, more faintly, and the sun gives no direct light', () => {
+  const noon = skyRGB(makeScene({ sun: 30, haze: 0.05, height: 0 }), 90 * DEG, 0);
+  const dusk = makeScene({ sun: -4, haze: 0.05, height: 0 });
+  const zen = skyRGB(dusk, 90 * DEG, 0);
+  assert.ok(zen[1] > 0 && zen[1] < 0.05 * noon[1], `${zen[1]} vs ${noon[1]}`);
+  assert.ok(sunlight(dusk).transmission.every((t) => t === 0));
+});
+
+test('the sky light grows with the air it crosses the way the theory says for thin air', () => {
+  // With the sun overhead and no haze, the zenith sky for a thin atmosphere is close to
+  // beta * H * phase(180 deg) at each wavelength.
+  const scene = makeScene({ sun: 90, haze: 0, height: 0 });
+  const spec = skySpectrum(scene, [0, 0, 1], undefined, 200, 50);
+  const l = WAVELENGTHS.indexOf(700);
+  const b = scene.coef.rayleigh[l];
+  const thin = b * RAYLEIGH_HEIGHT * (3 / (16 * Math.PI)) * 2;
+  // Down to the scattering point and on down to the eye, the light crosses the whole column once.
+  rel(spec[l], SUN[l] * thin * Math.exp(-b * RAYLEIGH_HEIGHT), 0.01, 'zenith radiance at 700 nm');
+});
+
+test('the dome is symmetric about the sun and covers a disc, and the view is mirrored too', () => {
+  const scene = makeScene({ sun: 10, haze: 0.1, height: 0 });
+  const dome = renderDome(scene, 24, 8, 6);
+  let skyCount = 0;
+  for (let j = 0; j < 24; j++) {
+    for (let i = 0; i < 24; i++) {
+      const o = j * 24 + i, m = j * 24 + 23 - i;
+      skyCount += dome.sky[o];
+      assert.equal(dome.sky[o], dome.sky[m]);
+      assert.equal(dome.rgb[3 * o], dome.rgb[3 * m]);
+    }
+  }
+  close(skyCount / (24 * 24), Math.PI / 4, 0.05, 'share of pixels inside the disc');
+  const view = renderView(scene, 12, 4, undefined, undefined, 8, 6);
+  assert.equal(view.rgb[0], view.rgb[3 * 11]);
+  const k = exposureFor(dome.rgb, dome.sky);
+  assert.ok(Number.isFinite(k) && k > 0);
+});
