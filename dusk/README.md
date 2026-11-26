@@ -64,8 +64,8 @@ Run the tests with `npm test` (Node 20 or later).
   summed with samples crowded where the air is densest; the ozone column is
   cut where the ray enters and leaves the layer and integrated with a
   Gauss-Legendre rule. The tests check every column against a brute-force sum.
-- Colour: 21 wavelengths from 380 to 780 nm, the CIE 1931 colour matching
-  functions (the multi-lobe fit of Wyman, Sloan and Shirley 2013), the sRGB
+- Colour: 21 wavelengths from 380 to 780 nm, each standing for a 20 nm band,
+  the CIE 1931 colour matching functions from the CIE's own table, the sRGB
   primaries, and a white balance that draws the sun seen from above the air as
   white. Sunlight above the air is a 5778 K black body.
 - Left out: light scattered more than once (the horizon and the twilight sky
@@ -74,6 +74,7 @@ Run the tests with `npm test` (Node 20 or later).
 
 ## Files
 
+- `src/cie1931.js` the CIE 1931 colour matching table
 - `src/spectrum.js` wavelengths, sunlight and the path from a spectrum to a colour
 - `src/air.js` scattering and absorption by molecules, haze and ozone
 - `src/sky.js` ray geometry, columns of air and the single-scattering sky
@@ -84,6 +85,7 @@ Run the tests with `npm test` (Node 20 or later).
 
 ## Licence
 
-MIT. The ozone cross-sections in `src/air.js` come from Eric Bruneton's
-precomputed atmospheric scattering code under the BSD 3-clause licence; see
-[THIRD-PARTY.md](THIRD-PARTY.md).
+MIT, except `src/cie1931.js`, which holds the CIE's colour matching table under
+CC BY-SA 4.0. The ozone cross-sections in `src/air.js` come from Eric
+Bruneton's precomputed atmospheric scattering code under the BSD 3-clause
+licence. See [THIRD-PARTY.md](THIRD-PARTY.md).

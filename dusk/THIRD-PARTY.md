@@ -1,5 +1,16 @@
 # Third-party material
 
+## CIE 1931 colour matching functions
+
+`src/cie1931.js` holds the rows from 370 to 790 nm at every 10 nm of
+CIE 2019, "Colour-matching functions of CIE 1931 standard colorimetric
+observer", International Commission on Illumination (CIE), Vienna, AT,
+DOI: [10.25039/CIE.DS.xvudnb9b](https://doi.org/10.25039/CIE.DS.xvudnb9b)
+(file `CIE_xyz_1931_2deg.csv`). The dataset and this file are licensed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The values are
+copied unchanged; `src/spectrum.js` interpolates them and averages them over
+each 20 nm band.
+
 ## Ozone absorption cross-sections
 
 The table `OZONE_BINS` in `src/air.js` is copied from `atmosphere/demo/demo.cc` of

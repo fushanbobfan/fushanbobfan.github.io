@@ -5,21 +5,22 @@ import { airIndex, rayleighCoefficient, hazeCoefficient, rayleighPhase, hazePhas
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 
-test('the colour matching fit peaks where the eye is most sensitive', () => {
+test('the colour matching table peaks where the eye is most sensitive', () => {
   let best = 0, at = 0;
   for (let nm = 400; nm <= 700; nm++) {
     const y = cmf(nm)[1];
     if (y > best) { best = y; at = nm; }
   }
-  close(best, 1, 0.03, 'peak of y-bar');
-  close(at, 557, 6, 'wavelength of the peak');
+  // The 10 nm rows give 0.99495 at 550 nm and 0.995 at 560 nm around the true peak of 1 at 555 nm.
+  close(best, 0.995, 1e-9, 'peak of y-bar');
+  assert.ok(at >= 550 && at <= 560, String(at));
 });
 
 test('light with equal energy at every wavelength sits at the white point of XYZ', () => {
   const xyz = toXYZ(WAVELENGTHS.map(() => 1));
   const sum = xyz[0] + xyz[1] + xyz[2];
-  close(xyz[0] / sum, 1 / 3, 0.01, 'x');
-  close(xyz[1] / sum, 1 / 3, 0.01, 'y');
+  close(xyz[0] / sum, 1 / 3, 0.002, 'x');
+  close(xyz[1] / sum, 1 / 3, 0.002, 'y');
 });
 
 test('sunlight above the air is drawn white and keeps its brightness', () => {
@@ -92,4 +93,16 @@ test('brightness is the photometric Y, untouched by the white balance', () => {
   for (const nm of [440, 560, 660]) {
     close(brightnessY(line(nm)), (toXYZ(line(nm))[1]) / toXYZ(SUN)[1], 1e-12, `${nm} nm`);
   }
+});
+
+test('the deep red and violet ends follow the CIE table', () => {
+  // CIE 1931 at 700 nm: x-bar 0.01135916, y-bar 0.004102.
+  close(cmf(700)[0] / cmf(700)[1], 0.01135916 / 0.004102, 1e-9, 'x/y at 700 nm');
+  close(cmf(445)[2], (1.74706 + 1.77211) / 2, 1e-9, 'z-bar interpolated between 440 and 450 nm');
+  assert.deepEqual(cmf(830), [0, 0, 0]);
+  assert.deepEqual(cmf(790), [2.067383e-05, 7.4657e-06, 0], 'the last row counts');
+  assert.deepEqual(cmf(370), [0.0004149, 1.239e-05, 0.001946], 'the first row counts');
+  // The 780 nm band: 1/4 of 770 nm, 1/2 of 780 nm, 1/4 of 790 nm, times the 20 nm step.
+  const xyz = toXYZ(WAVELENGTHS.map((nm) => (nm === 780 ? 1 : 0)));
+  close(xyz[0], 20 * (0.25 * 8.307527e-05 + 0.5 * 4.150994e-05 + 0.25 * 2.067383e-05), 1e-12, 'X of the 780 nm band');
 });

@@ -12,10 +12,9 @@ export function y(v, c = CHART) {
   return c.top + (1 - v) * (c.height - c.top - c.bottom);
 }
 
-// The colour of light of a single wavelength, as near as the screen can show it. Beyond 650 nm
-// every wavelength is the same red on screen.
+// The colour of light of a single wavelength, as near as the screen can show it.
 export function spectralColour(nm) {
-  const lin = xyzToLinear(cmf(Math.min(nm, 650))).map((v, i) => Math.max(0, v * BALANCE[i]));
+  const lin = xyzToLinear(cmf(nm)).map((v, i) => Math.max(0, v * BALANCE[i]));
   return hex(hue(lin));
 }
 
