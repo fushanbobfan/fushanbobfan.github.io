@@ -10,20 +10,23 @@ export function niceStep(span, target) {
   return 10 * mag;
 }
 
-export function histogram(radii, count, rMax, bins) {
+export function histogram(radii, count, rMax, bins, weights = null) {
   const h = new Float64Array(bins);
   const w = rMax / bins;
+  let total = 0;
   for (let k = 0; k < count; k++) {
+    const wk = weights ? weights[k] : 1;
+    total += wk;
     const b = Math.floor(radii[k] / w);
-    if (b >= 0 && b < bins) h[b]++;
+    if (b >= 0 && b < bins) h[b] += wk;
   }
   // As a density per unit radius, comparable with r^2 R^2.
-  for (let b = 0; b < bins; b++) h[b] /= count * w;
+  for (let b = 0; b < bins; b++) h[b] /= total * w;
   return h;
 }
 
 export function drawChart(ctx, width, height, info) {
-  const { table, rView, nodes, peakRadius, mean, sample, colors } = info;
+  const { table, rView, nodes, peakRadius, mean, sample, weights, colors } = info;
   const pad = { l: 44, r: 12, t: 12, b: 34 };
   const W = width - pad.l - pad.r;
   const H = height - pad.t - pad.b;
@@ -33,7 +36,7 @@ export function drawChart(ctx, width, height, info) {
   let pMax = 0;
   for (let i = 0; i < r.length && r[i] <= rView; i++) pMax = Math.max(pMax, p[i]);
   const bins = 60;
-  const hist = sample ? histogram(sample.radii, sample.count, rView, bins) : null;
+  const hist = sample ? histogram(sample.radii, sample.count, rView, bins, weights) : null;
   if (hist) for (const v of hist) pMax = Math.max(pMax, v);
   pMax *= 1.08;
   const X = (x) => pad.l + (x / rView) * W;
@@ -83,7 +86,7 @@ export function drawChart(ctx, width, height, info) {
   ctx.stroke();
 
   const marker = (x, color, dash, label, row) => {
-    if (x > rView) return;
+    if (x == null || x > rView) return;
     ctx.strokeStyle = color;
     ctx.setLineDash(dash);
     ctx.lineWidth = 1.5;

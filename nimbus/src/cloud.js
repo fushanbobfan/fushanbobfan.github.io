@@ -1,7 +1,7 @@
 // The sampled electron positions seen from any direction: an orthographic
 // view, each point splatted into a light buffer for its sign of psi.
 
-import { POSITIVE, NEGATIVE } from './slice.js';
+import { POSITIVE, NEGATIVE, MIXED } from './slice.js';
 
 // Rotation that turns world coordinates (z up) into screen coordinates:
 // yaw about the world z axis, then pitch about the screen's horizontal axis.
@@ -26,7 +26,10 @@ export function project(M, x, y, z) {
   ];
 }
 
-export function renderCloud(sample, M, half, size, out = new Uint8ClampedArray(size * size * 4)) {
+// Splats every point into a light buffer, one per sign of psi. With weights
+// (a mix of two orbitals, whose psi is complex) all points go into the first
+// buffer, each counted with its weight.
+export function splat(sample, M, half, size, weights = null) {
   const pos = new Float32Array(size * size);
   const neg = new Float32Array(size * size);
   const scale = size / (2 * half);
@@ -42,20 +45,29 @@ export function renderCloud(sample, M, half, size, out = new Uint8ClampedArray(s
     if (i0 < 0 || j0 < 0 || i0 >= size - 1 || j0 >= size - 1) continue;
     const fx = sx - i0;
     const fy = sy - j0;
-    const buf = signs[k] >= 0 ? pos : neg;
+    const buf = weights || signs[k] >= 0 ? pos : neg;
+    const w = weights ? weights[k] : 1;
     const p = j0 * size + i0;
-    buf[p] += (1 - fx) * (1 - fy);
-    buf[p + 1] += fx * (1 - fy);
-    buf[p + size] += (1 - fx) * fy;
-    buf[p + size + 1] += fx * fy;
+    buf[p] += w * (1 - fx) * (1 - fy);
+    buf[p + 1] += w * fx * (1 - fy);
+    buf[p + size] += w * (1 - fx) * fy;
+    buf[p + size + 1] += w * fx * fy;
   }
-  const level = exposureLevel(pos, neg);
+  return { pos, neg };
+}
+
+// The exposure normally follows the picture. An animated mix passes the level
+// of its time-averaged cloud instead, so the brightness does not pump.
+export function renderCloud(sample, M, half, size, out = new Uint8ClampedArray(size * size * 4), weights = null, fixedLevel = null) {
+  const { pos, neg } = splat(sample, M, half, size, weights);
+  const level = fixedLevel ?? exposureLevel(pos, neg);
+  const first = weights ? MIXED : POSITIVE;
   for (let p = 0; p < size * size; p++) {
     const a = 1 - Math.exp(-pos[p] / level);
     const b = 1 - Math.exp(-neg[p] / level);
-    out[4 * p] = POSITIVE[0] * a + NEGATIVE[0] * b;
-    out[4 * p + 1] = POSITIVE[1] * a + NEGATIVE[1] * b;
-    out[4 * p + 2] = POSITIVE[2] * a + NEGATIVE[2] * b;
+    out[4 * p] = first[0] * a + NEGATIVE[0] * b;
+    out[4 * p + 1] = first[1] * a + NEGATIVE[1] * b;
+    out[4 * p + 2] = first[2] * a + NEGATIVE[2] * b;
     out[4 * p + 3] = 255;
   }
   return out;
