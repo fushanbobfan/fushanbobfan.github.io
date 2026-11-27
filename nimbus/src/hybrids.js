@@ -78,10 +78,11 @@ export function makeCombination(terms) {
   };
 }
 
-// Dots for a combination of orthonormal orbitals with sum c_i^2 = 1. The
-// mixture sum c_i^2 psi_i^2 is drawn by taking a c_i^2 share of the dots from
-// each orbital; each dot is then weighted by (sum c_i psi_i)^2 over the
-// mixture density and coloured by the sign of the combination there.
+// Dots for a combination of orthonormal orbitals with sum c_i^2 = 1. About a
+// c_i^2 share of the dots comes from each orbital; with q_i the actual share
+// after rounding, the dots follow sum q_i psi_i^2, and each is weighted by
+// (sum c_i psi_i)^2 over that blend, so the weighted cloud is an unbiased
+// sample of the combination. Each dot is coloured by the combination's sign.
 export function sampleCombination(terms, count, seed = 1) {
   const combo = makeCombination(terms);
   const counts = terms.map((t) => Math.round(t.c * t.c * count));
@@ -89,15 +90,16 @@ export function sampleCombination(terms, count, seed = 1) {
   const positions = new Float32Array(count * 3);
   const radii = new Float32Array(count);
   let at = 0;
-  let accepted = 0;
+  let tries = 0;
   terms.forEach((t, i) => {
     if (counts[i] <= 0) return;
     const s = sampleOrbital(t.n, t.l, t.m, counts[i], seed + 7919 * i, radialTable(t.n, t.l));
     positions.set(s.positions, at * 3);
     radii.set(s.radii, at);
-    accepted += s.acceptance * counts[i];
+    tries += counts[i] / s.acceptance;
     at += counts[i];
   });
+  const shares = counts.map((c) => c / count);
   const weights = new Float32Array(count);
   const signs = new Int8Array(count);
   for (let k = 0; k < count; k++) {
@@ -106,13 +108,13 @@ export function sampleCombination(terms, count, seed = 1) {
     const z = positions[3 * k + 2];
     let v = 0;
     let mix = 0;
-    for (const { c, orb } of combo.parts) {
+    combo.parts.forEach(({ c, orb }, i) => {
       const p = orb.psi(x, y, z);
       v += c * p;
-      mix += c * c * p * p;
-    }
+      mix += shares[i] * p * p;
+    });
     weights[k] = mix > 0 ? (v * v) / mix : 0;
     signs[k] = v >= 0 ? 1 : -1;
   }
-  return { positions, radii, weights, signs, count, acceptance: accepted / count };
+  return { positions, radii, weights, signs, count, acceptance: count / tries };
 }

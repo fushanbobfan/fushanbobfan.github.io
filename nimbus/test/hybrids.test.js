@@ -105,3 +105,19 @@ test('dots carry the sign of the combination', () => {
   assert.ok(agree >= s.count - 3);
   assert.equal(s.count, 4000);
 });
+
+test('uneven dot counts still give an unbiased cloud and the true acceptance', async () => {
+  const { sampleOrbital } = await import('../src/sampler.js');
+  // 5000 dots of sp2 member 1 split 1667 / 3333, not exactly 1/3 and 2/3.
+  // With weights over the actual blend, the mean weight estimates 1.
+  const terms = hybridTerms('sp2', 0, 2);
+  const s = sampleCombination(terms, 5000, 1);
+  let sum = 0;
+  for (let k = 0; k < s.count; k++) sum += s.weights[k];
+  assert.ok(Math.abs(sum / s.count - 1) < 0.03, `${sum / s.count}`);
+  // Acceptance is dots kept over directions tried, pooled over both orbitals.
+  const a = sampleOrbital(2, 0, 0, 1667, 1);
+  const b = sampleOrbital(2, 1, 1, 3333, 1 + 7919);
+  const pooled = 5000 / (1667 / a.acceptance + 3333 / b.acceptance);
+  assert.ok(Math.abs(s.acceptance - pooled) < 1e-12, `${s.acceptance} vs ${pooled}`);
+});

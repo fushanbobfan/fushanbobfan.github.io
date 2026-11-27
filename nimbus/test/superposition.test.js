@@ -140,3 +140,19 @@ test('3d z2 drops to 2p z at two thirds of the 3d -> 2p rate', () => {
 test('an orbital cannot be mixed with itself', () => {
   assert.throws(() => mixedSample(orb(2, 1, 0), orb(2, 1, 0), 10), RangeError);
 });
+
+test('an odd number of dots keeps the mix weights unbiased', () => {
+  // 1s + 2p z with 7 dots: 3 from 1s, 4 from 2p z. At phase pi/2 the density
+  // is the plain average, so each weight is that average over the 3:4 blend.
+  const s = mixedSample(orb(1, 0, 0), orb(2, 1, 0), 7, 2);
+  const w = weightsAt(s, Math.PI / 2);
+  const a = makeOrbital(1, 0, 0).psi;
+  const b = makeOrbital(2, 1, 0).psi;
+  for (let k = 0; k < 7; k++) {
+    const [x, y, z] = [s.positions[3 * k], s.positions[3 * k + 1], s.positions[3 * k + 2]];
+    const pa = a(x, y, z);
+    const pb = b(x, y, z);
+    const want = (0.5 * (pa * pa + pb * pb)) / ((3 / 7) * pa * pa + (4 / 7) * pb * pb);
+    assert.ok(Math.abs(w[k] - want) < 1e-5 * want + 1e-7, `${w[k]} vs ${want}`);
+  }
+});

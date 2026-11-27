@@ -127,10 +127,12 @@ export function bandOf(nm) {
   return 'visible, red';
 }
 
-// Points drawn from the time-averaged density (psi_a^2 + psi_b^2) / 2: half
-// of them from each orbital. Each carries psi_a and psi_b, so its weight at
-// any moment is rho(t) / average, between 0 and 2, and the weighted cloud
-// follows rho(t) exactly without being drawn again.
+// Points drawn half from each orbital, so from q_a psi_a^2 + q_b psi_b^2 with
+// q the actual shares of the dots (one half each for an even count). Each
+// dot's weight at any moment is rho(t) divided by that blend, base + cross
+// cos(omega t), so the weighted cloud is an unbiased sample of rho(t) at every
+// moment without being drawn again. For an even split the weight runs from
+// 0 to 2.
 export function mixedSample(a, b, count, seed = 1) {
   // The 1/sqrt 2 normalisation needs two different (orthogonal) orbitals.
   if (a.n === b.n && a.l === b.l && a.m === b.m) throw new RangeError('mix two different orbitals');
@@ -142,6 +144,9 @@ export function mixedSample(a, b, count, seed = 1) {
   positions.set(sb.positions, half * 3);
   const oa = makeOrbital(a.n, a.l, a.m);
   const ob = makeOrbital(b.n, b.l, b.m);
+  const qa = half / count;
+  const qb = 1 - qa;
+  const base = new Float32Array(count);
   const cross = new Float32Array(count);
   const radii = new Float32Array(count);
   radii.set(sa.radii, 0);
@@ -152,15 +157,17 @@ export function mixedSample(a, b, count, seed = 1) {
     const z = positions[3 * k + 2];
     const pa = oa.psi(x, y, z);
     const pb = ob.psi(x, y, z);
-    const avg = pa * pa + pb * pb;
-    cross[k] = avg > 0 ? (2 * pa * pb) / avg : 0;
+    const blend = qa * pa * pa + qb * pb * pb;
+    base[k] = blend > 0 ? (0.5 * (pa * pa + pb * pb)) / blend : 0;
+    cross[k] = blend > 0 ? (pa * pb) / blend : 0;
   }
-  return { positions, cross, radii, count, acceptance: (sa.acceptance + sb.acceptance) / 2 };
+  const tries = half / sa.acceptance + (count - half) / sb.acceptance;
+  return { positions, base, cross, radii, count, acceptance: count / tries };
 }
 
 export function weightsAt(sample, phase, out = new Float32Array(sample.count)) {
   const c = Math.cos(phase);
-  for (let k = 0; k < sample.count; k++) out[k] = 1 + sample.cross[k] * c;
+  for (let k = 0; k < sample.count; k++) out[k] = sample.base[k] + sample.cross[k] * c;
   return out;
 }
 
