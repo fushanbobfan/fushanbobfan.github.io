@@ -13,7 +13,7 @@ import { sampleOrbital, peakDensity } from './sampler.js';
 import { sliceValues, shadeSlice, PLANES } from './slice.js';
 import { viewMatrix, project, renderCloud } from './cloud.js';
 import { drawChart } from './chart.js';
-import { SHELL_LETTERS, shapeLabel, orbitalName } from './names.js';
+import { SHELL_LETTERS, shapeLabel, orbitalName, describeNodes } from './names.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -66,22 +66,6 @@ function syncSelects() {
 }
 
 const fmt = (x, d = 2) => x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-const plural = (k, one, many) => `${k} ${k === 1 ? one : many}`;
-
-function describeNodes(n, l, m) {
-  const radialCount = n - l - 1;
-  const parts = [];
-  parts.push(radialCount ? plural(radialCount, 'spherical node', 'spherical nodes') : 'no spherical nodes');
-  const am = Math.abs(m);
-  const cones = l - am;
-  const planes = am;
-  const angular = [];
-  if (planes) angular.push(plural(planes, 'plane', 'planes'));
-  if (cones) angular.push(plural(cones, 'cone', 'cones') + (cones % 2 === 1 ? ' (one of them flat, the xy plane)' : ''));
-  parts.push(angular.length ? angular.join(' and ') + ' through the nucleus' : 'no angular nodes');
-  if (n === 1) return 'No nodes at all: the only orbital of shell 1.';
-  return `${parts.join(', ')}: ${plural(n - 1, 'node', 'nodes')} in all, n − 1 for every orbital of shell ${n}.`;
-}
 
 function computeOrbital() {
   const { n, l, m } = state;

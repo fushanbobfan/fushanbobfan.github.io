@@ -28,3 +28,28 @@ export function orbitalName(n, l, m) {
   const shape = shapeLabel(l, m);
   return `${n}${SHELL_LETTERS[l]}${shape ? ' ' + shape : ''}`;
 }
+
+const plural = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+
+// The n - 1 nodes of an orbital: n - l - 1 spheres where R changes sign, and
+// l surfaces through the nucleus where Y does. cos(m phi) or sin(|m| phi)
+// gives |m| planes containing the z axis; the l - |m| roots of the Legendre
+// factor in cos(theta) give cones, and when there is an odd number of them
+// the middle one, at cos(theta) = 0, is the flat xy plane.
+export function nodeCounts(n, l, m) {
+  const am = Math.abs(m);
+  const legendreRoots = l - am;
+  const flat = legendreRoots % 2;
+  return { spheres: n - l - 1, planes: am + flat, cones: legendreRoots - flat };
+}
+
+export function describeNodes(n, l, m) {
+  if (n === 1) return 'No nodes at all: the only orbital of shell 1.';
+  const { spheres, planes, cones } = nodeCounts(n, l, m);
+  const parts = [spheres ? plural(spheres, 'sphere', 'spheres') : 'no spheres'];
+  const through = [];
+  if (planes) through.push(plural(planes, 'plane', 'planes'));
+  if (cones) through.push(plural(cones, 'cone', 'cones'));
+  parts.push(through.length ? through.join(' and ') + ' through the nucleus' : 'nothing through the nucleus');
+  return `Nodes: ${parts.join(', ')}. That makes ${n - 1}, n − 1 for every orbital of shell ${n}.`;
+}

@@ -87,3 +87,22 @@ test('orbital names', () => {
   assert.equal(orbitalName(5, 4, -3), '5g m=−3');
   for (let l = 1; l < MAX_N; l++) for (let m = -l; m <= l; m++) assert.ok(shapeLabel(l, m));
 });
+
+test('node counts and the node sentence', async () => {
+  const { nodeCounts, describeNodes } = await import('../src/names.js');
+  assert.deepEqual(nodeCounts(2, 1, 0), { spheres: 0, planes: 1, cones: 0 });
+  assert.deepEqual(nodeCounts(3, 2, 0), { spheres: 0, planes: 0, cones: 2 });
+  assert.deepEqual(nodeCounts(4, 3, -2), { spheres: 0, planes: 3, cones: 0 });
+  assert.deepEqual(nodeCounts(4, 3, 0), { spheres: 0, planes: 1, cones: 2 });
+  assert.deepEqual(nodeCounts(3, 0, 0), { spheres: 2, planes: 0, cones: 0 });
+  for (let n = 1; n <= MAX_N; n++) {
+    for (let l = 0; l < n; l++) {
+      for (let m = -l; m <= l; m++) {
+        const c = nodeCounts(n, l, m);
+        assert.equal(c.spheres + c.planes + c.cones, n - 1);
+      }
+    }
+  }
+  assert.equal(describeNodes(4, 3, -2), 'Nodes: no spheres, 3 planes through the nucleus. That makes 3, n − 1 for every orbital of shell 4.');
+  assert.equal(describeNodes(2, 0, 0), 'Nodes: 1 sphere, nothing through the nucleus. That makes 1, n − 1 for every orbital of shell 2.');
+});

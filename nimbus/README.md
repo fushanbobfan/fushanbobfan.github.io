@@ -27,8 +27,9 @@ Run the tests with `npm test` (Node 20 or later).
 
 - **Pickers** for the shell n, the shape l (s, p, d, f, g, h) and the
   orientation m, named the way chemistry texts name them (2p x, 3d x²−y²,
-  4f xyz, ...), with a sentence counting the orbital's nodes: n − l − 1
-  spheres, |m| planes and l − |m| cones through the nucleus.
+  4f xyz, ...), with a sentence counting the orbital's n − 1 nodes: n − l − 1
+  spheres, and l planes or cones through the nucleus (|m| planes containing
+  the z axis, plus the xy plane when l − |m| is odd, and cones for the rest).
 - **A point cloud** of up to 150 000 places the electron could be found, each
   drawn from |ψ|² and coloured by the sign of ψ. Drag it or use the arrow
   keys to turn it; it turns slowly on its own unless your system asks for
