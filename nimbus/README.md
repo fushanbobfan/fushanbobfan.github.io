@@ -64,6 +64,12 @@ Run the tests with `npm test` (Node 20 or later).
   far more slowly, by sending out two photons at once). Two orbitals of the
   same shell do not beat at all, though 2s with 2p z holds its charge off to
   one side. An orbital mixed with itself is just that orbital.
+- **Hybrid orbitals**: the sp, sp² and sp³ sets of any shell from n = 2, the
+  shapes chemistry uses for bonds. Pick a set and one of its members to see
+  it lean along its own direction, with its share of s, the angle between
+  the hybrids of the set (180°, 120°, 109.47°) and where it points. In
+  hydrogen ns and np have the same energy, so each hybrid is also an exact
+  state of the atom.
 
 ## The model
 
@@ -82,6 +88,13 @@ Run the tests with `npm test` (Node 20 or later).
   and each dot is weighted by the density at that moment over the average
   (between 0 and 2). The weights are that ratio exactly, so the weighted
   cloud is an unbiased sample of the beating density at every moment.
+- A hybrid is a real combination of ns and the three np orbitals with the
+  textbook coefficients (for example ½(s + p x + p y + p z) for the first
+  sp³). Far from the nucleus R_ns and R_np always have opposite signs, so the
+  s part enters with a minus sign; with the usual plus sign, the 2s hybrids
+  would point backwards. Its dots are drawn from each orbital in proportion
+  to its squared coefficient and weighted by the hybrid's density over that
+  blend, so the weighted cloud is an unbiased sample of the hybrid.
 - The dipole ⟨a|r|b⟩ is a radial integral of r³R_aR_b by Simpson's rule and
   an angular integral by Gauss–Legendre quadrature, exact for these
   polynomials. Wavelengths and beat periods use the reduced mass of the
@@ -118,7 +131,12 @@ Run the tests with `npm test` (Node 20 or later).
   against their measured vacuum wavelengths, the 2p lifetime of 1.60 ns, the
   3d→2p rate of 6.47 × 10⁷ per second shared two thirds to 2p z from 3d z²,
   that the weighted cloud's centre swings as ⟨a|r|b⟩ cos ωt, and that the
-  slice density equals |Ψ|².
+  slice density equals |Ψ|²;
+- for hybrids: that each set is orthonormal with equal s shares of ½, ⅓ and
+  ¼, that the members point 180°, 120° and 109.47° apart, that each one's
+  density along its direction outweighs the density behind it in shells 2
+  to 4, and that the weighted cloud of an sp hybrid leans 3 a₀ along +z, as
+  a direct quadrature of z|ψ|² gives.
 
 ## Layout
 
@@ -131,6 +149,7 @@ src/slice.js            psi on a plane and its shading
 src/cloud.js            view rotation and the point cloud
 src/chart.js            radial distribution chart
 src/superposition.js    mixes of two orbitals: dipoles, lines, rates, weights
+src/hybrids.js          sp, sp2 and sp3 hybrids and their weighted sampling
 src/main.js             controls and drawing
 test/                   Node test suite
 ```
