@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeOrbital, radialTable } from '../src/hydrogen.js';
 import { sampleOrbital, peakDensity } from '../src/sampler.js';
-import { sliceValues, shadeSlice, POSITIVE, NEGATIVE } from '../src/slice.js';
+import { sliceValues, shadeSlice, POSITIVE, NEGATIVE, MIXED } from '../src/slice.js';
 import { viewMatrix, project, renderCloud } from '../src/cloud.js';
 import { histogram, niceStep } from '../src/chart.js';
 
@@ -104,4 +104,24 @@ test('the histogram is a density that integrates to the share in view', () => {
   assert.equal(niceStep(24, 6), 5);
   assert.equal(niceStep(7, 6), 2);
   assert.equal(niceStep(70, 6), 20);
+});
+
+test('a weighted cloud with signs keeps both colours', () => {
+  const sample = {
+    positions: Float32Array.from([0, 0, 3, 0, 0, -3]),
+    signs: Int8Array.from([1, -1]),
+    count: 2,
+  };
+  const size = 32;
+  const px = renderCloud(sample, viewMatrix(0, 0), 6, size, undefined, Float32Array.from([1, 1]), 0.5);
+  const at = (z) => 4 * (Math.round((6 - z) * (size / 12) - 0.5) * size + Math.round(6 * (size / 12) - 0.5));
+  assert.ok(px[at(3)] > px[at(3) + 2], 'upper dot warm');
+  assert.ok(px[at(-3) + 2] > px[at(-3)], 'lower dot cool');
+  // Unsigned dots take the mix colour, scaled by their weight; weight 0 is dark.
+  const mono = renderCloud({ positions: sample.positions, count: 2 }, viewMatrix(0, 0), 6, size, undefined, Float32Array.from([2, 0]), 0.5);
+  const lit = mono.slice(at(3), at(3) + 3);
+  const ratio = (a, b) => a / b;
+  assert.ok(Math.abs(ratio(lit[0], lit[2]) - MIXED[0] / MIXED[2]) < 0.02, `${lit}`);
+  assert.ok(Math.abs(ratio(lit[1], lit[2]) - MIXED[1] / MIXED[2]) < 0.02, `${lit}`);
+  assert.deepEqual([...mono.slice(at(-3), at(-3) + 3)], [0, 0, 0]);
 });

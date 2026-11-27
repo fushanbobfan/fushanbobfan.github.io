@@ -138,6 +138,7 @@ legend {
 .swatch.mixed { background: rgb(214, 196, 255); }
 
 .numbers.three { grid-template-columns: repeat(3, 1fr); }
+.numbers.two { grid-template-columns: repeat(2, 1fr); }
 
 .mix-controls { display: grid; gap: 8px; }
 .mix-controls[hidden] { display: none; }

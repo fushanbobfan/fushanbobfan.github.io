@@ -17,12 +17,13 @@ import { viewMatrix, project, renderCloud, splat, exposureLevel } from './cloud.
 import { drawChart } from './chart.js';
 import { SHELL_LETTERS, shapeLabel, orbitalName, describeNodes } from './names.js';
 import { transition, bandOf, mixedSample, weightsAt, mixedDensity } from './superposition.js';
+import { HYBRIDS, hybridTerms, hybridDirection, sShare, makeCombination, sampleCombination } from './hybrids.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
   n: $('n'), l: $('l'), m: $('m'), name: $('name'), note: $('note'),
   mix: $('mix'), mixControls: $('mix-controls'), n2: $('n2'), l2: $('l2'), m2: $('m2'),
-  play: $('play'), phase: $('phase'), time: $('time'),
+  play: $('play'), phase: $('phase'), time: $('time'), hybrid: $('hybrid'), which: $('which'),
   count: $('count'), spin: $('spin'), resample: $('resample'),
   plane: $('plane'), shade: $('shade'),
   cloud: $('cloud'), slice: $('slice'), chart: $('chart'),
@@ -40,6 +41,8 @@ const state = {
   a: { n: 3, l: 2, m: 0 },
   b: { n: 2, l: 1, m: 0 },
   wantMix: false,
+  hybrid: 'none',
+  hybridIndex: 0,
   mixing: false,
   phase: 0,
   playing: false,
@@ -91,7 +94,41 @@ const fmt = (x, d = 2) => x.toLocaleString('en-US', { minimumFractionDigits: d, 
 const nameOf = (q) => orbitalName(q.n, q.l, q.m);
 const beats = () => state.mixing && !state.info.sameShell;
 
+function computeHybrid() {
+  const { n } = state.a;
+  const kind = state.hybrid;
+  const set = HYBRIDS[kind];
+  state.terms = hybridTerms(kind, state.hybridIndex, n);
+  const combo = makeCombination(state.terms);
+  state.orbital = { psi: combo.psi };
+  const tableS = radialTable(n, 0);
+  const tableP = radialTable(n, 1);
+  state.table = tableS;
+  state.half = Math.max(enclosingRadius(tableS, 0.99), enclosingRadius(tableP, 0.99)) * 1.08;
+  state.radialParts = [[sShare(kind), tableS], [1 - sShare(kind), tableP]];
+  state.nodes = [];
+  // Highest density: along the hybrid's own axis, both ways.
+  const dir = hybridDirection(kind, state.hybridIndex);
+  let top = 0;
+  for (let k = -4000; k <= 4000; k++) {
+    const r = (k / 4000) * state.half;
+    top = Math.max(top, combo.psi(r * dir[0], r * dir[1], r * dir[2]) ** 2);
+  }
+  state.densityPeak = top;
+  els.name.textContent = `${set.label} hybrid ${state.hybridIndex + 1} of shell ${n}`;
+  const sPct = Math.round(100 * sShare(kind));
+  els.note.textContent = `${sPct}% ${n}s and ${100 - sPct}% ${n}p. The ${set.rows.length} hybrids of the set point ` +
+    `${fmt(set.angle, set.angle % 1 ? 2 : 0)}° apart. In hydrogen ${n}s and ${n}p have the same energy, so each hybrid is an exact state of the atom as well as the shape chemists use for bonds.`;
+}
+
 function computeOrbital() {
+  state.mixing = false;
+  if (state.hybrid !== 'none') {
+    computeHybrid();
+    els.play.disabled = true;
+    els.phase.disabled = true;
+    return;
+  }
   const { n, l, m } = state.a;
   state.orbital = makeOrbital(n, l, m);
   state.table = radialTable(n, l);
@@ -134,9 +171,14 @@ function mixNote() {
   return `An electron half in each orbital. Its cloud swings back and forth every ${fmt(t.periodFs, t.periodFs < 10 ? 3 : 1)} fs, shown here about ${slow.toExponential(0).replace('e+', ' × 10^')} times slower.`;
 }
 
+const n2pct = (w) => `${fmt(100 * w, 0)}%`;
+
 function computeSample() {
   const count = Number(els.count.value);
-  if (state.mixing) {
+  if (state.hybrid !== 'none') {
+    state.sample = sampleCombination(state.terms, count, state.seed);
+    state.weights = null;
+  } else if (state.mixing) {
     state.sample = mixedSample(state.a, state.b, count, state.seed);
     state.weights = new Float32Array(count);
     state.ones = new Float32Array(count).fill(1);
@@ -148,7 +190,7 @@ function computeSample() {
 
 function drawSlice() {
   const plane = els.plane.value;
-  const key = [plane, state.half, state.mixing, state.a.n, state.a.l, state.a.m, state.b.n, state.b.l, state.b.m].join();
+  const key = [plane, state.half, state.mixing, state.hybrid, state.hybridIndex, state.a.n, state.a.l, state.a.m, state.b.n, state.b.l, state.b.m].join();
   if (key !== state.sliceKey) {
     state.slice = sliceValues(state.orbital.psi, plane, state.half, SIZE);
     state.sliceB = state.mixing ? sliceValues(state.orbitalB.psi, plane, state.half, SIZE) : null;
@@ -269,7 +311,7 @@ function drawCloud() {
     const { pos, neg } = splat(state.sample, M, state.half, SIZE, state.ones);
     renderCloud(state.sample, M, state.half, SIZE, cloudImage.data, state.weights, exposureLevel(pos, neg));
   } else {
-    renderCloud(state.sample, M, state.half, SIZE, cloudImage.data);
+    renderCloud(state.sample, M, state.half, SIZE, cloudImage.data, state.sample.weights || null);
   }
   cloudCtx.putImageData(cloudImage, 0, 0);
   drawAxes(M);
@@ -332,6 +374,26 @@ function drawRadialChart() {
     node: cssColor('--node'),
     mean: cssColor('--mean'),
   };
+  if (state.hybrid !== 'none') {
+    const [[ws, ts], [wp, tp]] = state.radialParts;
+    const p = new Float64Array(ts.r.length);
+    // Both tables share one radial grid (it depends only on n).
+    for (let i = 0; i < p.length; i++) p[i] = ws * ts.p[i] + wp * tp.p[i];
+    const mean = ws * meanRadius(state.a.n, 0) + wp * meanRadius(state.a.n, 1);
+    drawChart(chartCtx, els.chart.width, els.chart.height, {
+      table: { r: ts.r, p },
+      rView: state.half,
+      nodes: [],
+      peakRadius: null,
+      mean,
+      sample: state.sample,
+      weights: state.sample.weights,
+      colors,
+    });
+    els.chartNote.textContent = `How far out the electron sits is the ${n2pct(ws)} s and ${n2pct(wp)} p blend of the two radial distributions: s and p have different shapes, so they do not interfere on any sphere. The bars count the weighted dots.`;
+    els.chart.setAttribute('aria-label', `Radial distribution of ${els.name.textContent}, mean ${fmt(mean)} Bohr radii`);
+    return;
+  }
   if (state.mixing) {
     drawChart(chartCtx, els.chart.width, els.chart.height, {
       table: mixedRadialTable(),
@@ -401,9 +463,30 @@ function mixRows() {
   return rows;
 }
 
+function hybridRows() {
+  const { n } = state.a;
+  const kind = state.hybrid;
+  const set = HYBRIDS[kind];
+  const d = hybridDirection(kind, state.hybridIndex);
+  const ws = sShare(kind);
+  const wp = 1 - ws;
+  const mean = ws * meanRadius(n, 0) + wp * meanRadius(n, 1);
+  const E = energyEV(n);
+  const dir = `(${d.map((v) => fmt(v, 2)).join(', ')})`;
+  return [
+    ['Energy', `${fmt(E, 3)} eV`, `the same as ${n}s and ${n}p alone`],
+    ['Share of s', `${fmt(100 * ws, 0)}%`, `the rest is ${n}p`],
+    ['Angle between hybrids', `${fmt(set.angle, set.angle % 1 ? 2 : 0)}°`, `${set.rows.length} hybrids in the ${set.label} set`],
+    ['Points along', dir, 'the direction of its big lobe'],
+    ['Mean distance', `${fmt(mean)} a₀`, `${fmt(mean * BOHR_ANGSTROM, 3)} Å`],
+  ];
+}
+
 function writeReadouts() {
   let rows;
-  if (state.mixing) {
+  if (state.hybrid !== 'none') {
+    rows = hybridRows();
+  } else if (state.mixing) {
     rows = mixRows();
   } else {
     const { n, l } = state.a;
@@ -438,7 +521,9 @@ function writeReadouts() {
   els.legend.innerHTML = state.mixing
     ? '<span class="swatch mixed"></span> density of the mix (its ψ is complex, so it has no single sign)'
     : '<span class="swatch pos"></span> ψ positive <span class="swatch neg"></span> ψ negative';
-  els.cloudCaption.textContent = state.mixing
+  els.cloudCaption.textContent = state.hybrid !== 'none'
+    ? 'Each dot is a place the electron could be found, drawn from the s and p orbitals and weighted by the hybrid\'s density there. Drag, or use the arrow keys, to turn it.'
+    : state.mixing
     ? 'Each dot is a place the electron could be found, brighter where the mix is denser at this moment. Drag, or use the arrow keys, to turn it.'
     : 'Each dot is one place the electron could be found. Drag, or use the arrow keys, to turn it.';
 }
@@ -480,9 +565,15 @@ const pick = (q, key, el, all) => () => {
   if (all) syncAll();
   refreshAll();
 };
-els.n.addEventListener('change', pick(state.a, 'n', els.n, true));
-els.l.addEventListener('change', pick(state.a, 'l', els.l, true));
-els.m.addEventListener('change', pick(state.a, 'm', els.m, false));
+els.n.addEventListener('change', () => {
+  state.a.n = Number(els.n.value);
+  if (state.hybrid !== 'none' && state.a.n < 2) setHybrid('none');
+  syncAll();
+  refreshAll();
+});
+const leaveHybrid = (f) => () => { if (state.hybrid !== 'none') setHybrid('none'); f(); };
+els.l.addEventListener('change', leaveHybrid(pick(state.a, 'l', els.l, true)));
+els.m.addEventListener('change', leaveHybrid(pick(state.a, 'm', els.m, false)));
 els.n2.addEventListener('change', pick(state.b, 'n', els.n2, true));
 els.l2.addEventListener('change', pick(state.b, 'l', els.l2, true));
 els.m2.addEventListener('change', pick(state.b, 'm', els.m2, false));
@@ -490,8 +581,33 @@ els.mix.addEventListener('change', () => {
   state.wantMix = els.mix.checked;
   els.mixControls.hidden = !state.wantMix;
   if (!state.wantMix) setPlaying(false);
+  if (state.wantMix) setHybrid('none');
   refreshAll();
 });
+
+function fillWhich() {
+  const rows = state.hybrid === 'none' ? [] : HYBRIDS[state.hybrid].rows;
+  if (state.hybridIndex >= rows.length) state.hybridIndex = 0;
+  fillSelect(els.which, rows.map((_, i) => [i, String(i + 1)]), state.hybridIndex);
+  els.which.disabled = rows.length === 0;
+}
+
+// Hybrids and two-orbital mixes take turns; hybrids need a shell with p.
+function setHybrid(kind) {
+  state.hybrid = kind;
+  els.hybrid.value = kind;
+  if (kind !== 'none') {
+    state.wantMix = false;
+    els.mix.checked = false;
+    els.mixControls.hidden = true;
+    setPlaying(false);
+    if (state.a.n < 2) state.a.n = 2;
+    syncAll();
+  }
+  fillWhich();
+}
+els.hybrid.addEventListener('change', () => { setHybrid(els.hybrid.value); refreshAll(); });
+els.which.addEventListener('change', () => { state.hybridIndex = Number(els.which.value); refreshAll(); });
 els.count.addEventListener('change', refreshSample);
 els.resample.addEventListener('click', () => { state.seed += 1; refreshSample(); });
 els.plane.addEventListener('change', drawSlice);
@@ -638,5 +754,6 @@ function tick(now) {
 
 syncAll();
 setPlaying(false);
+fillWhich();
 refreshAll();
 requestAnimationFrame(tick);

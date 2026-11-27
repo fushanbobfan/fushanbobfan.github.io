@@ -26,9 +26,9 @@ export function project(M, x, y, z) {
   ];
 }
 
-// Splats every point into a light buffer, one per sign of psi. With weights
-// (a mix of two orbitals, whose psi is complex) all points go into the first
-// buffer, each counted with its weight.
+// Splats every point into a light buffer, one per sign of psi, each counted
+// with its weight if there are weights. A sample without signs (a mix of two
+// orbitals, whose psi is complex) goes wholly into the first buffer.
 export function splat(sample, M, half, size, weights = null) {
   const pos = new Float32Array(size * size);
   const neg = new Float32Array(size * size);
@@ -45,7 +45,7 @@ export function splat(sample, M, half, size, weights = null) {
     if (i0 < 0 || j0 < 0 || i0 >= size - 1 || j0 >= size - 1) continue;
     const fx = sx - i0;
     const fy = sy - j0;
-    const buf = weights || signs[k] >= 0 ? pos : neg;
+    const buf = !signs || signs[k] >= 0 ? pos : neg;
     const w = weights ? weights[k] : 1;
     const p = j0 * size + i0;
     buf[p] += w * (1 - fx) * (1 - fy);
@@ -61,7 +61,7 @@ export function splat(sample, M, half, size, weights = null) {
 export function renderCloud(sample, M, half, size, out = new Uint8ClampedArray(size * size * 4), weights = null, fixedLevel = null) {
   const { pos, neg } = splat(sample, M, half, size, weights);
   const level = fixedLevel ?? exposureLevel(pos, neg);
-  const first = weights ? MIXED : POSITIVE;
+  const first = sample.signs ? POSITIVE : MIXED;
   for (let p = 0; p < size * size; p++) {
     const a = 1 - Math.exp(-pos[p] / level);
     const b = 1 - Math.exp(-neg[p] / level);
