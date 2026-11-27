@@ -75,3 +75,15 @@ export function sampleOrbital(n, l, m, count, seed = 1, table = radialTable(n, l
   }
   return { positions, signs, radii, count, acceptance: count / tries };
 }
+
+// Highest value of |psi|^2 anywhere: the largest R^2 on the radial grid
+// (at the nucleus for s orbitals) times the angular peak.
+export function peakDensity(n, l, m, table = radialTable(n, l)) {
+  const rn = radialNorm(n, l);
+  let best = 0;
+  for (let i = 0; i < table.r.length; i++) {
+    const v = radial(n, l, table.r[i], rn);
+    if (v * v > best) best = v * v;
+  }
+  return best * angularPeak(l, m);
+}
