@@ -52,14 +52,18 @@ Run the tests with `npm test` (Node 20 or later).
   half in each. Its cloud then swings back and forth at the frequency of the
   light the atom gives out when it drops from one orbital to the other:
   2p z with 1s rocks along z every 0.41 femtoseconds and gives Lyman alpha at
-  121.57 nm. Play or scrub the beat (slowed down 10¹⁵ times or more); a ring on
-  the slice marks the centre of the charge. The readouts give the wavelength
+  121.57 nm. Play or scrub the beat (slowed down between 10¹⁴ and 10¹⁶ times,
+  depending on the pair); a ring on the slice marks where the centre of the
+  charge falls on that plane. The readouts give the wavelength
   and its series, the energy gap, the length of one beat, the size and
   direction of the swing (the dipole), and how fast the upper orbital would
-  drop to the lower one. Pairs whose l does not change by exactly one beat
-  without moving the centre of charge, so they give out no light (1s with 2s
-  breathes in and out instead); two orbitals of the same shell do not beat
-  at all, though 2s with 2p z holds its charge off to one side.
+  drop to the lower one by giving out that light. All of this is electric
+  dipole light, the fast and bright kind. Pairs whose l does not change by
+  exactly one beat without moving the centre of charge, so they give out no
+  dipole light (1s with 2s breathes in and out instead, and 2s really decays
+  far more slowly, by sending out two photons at once). Two orbitals of the
+  same shell do not beat at all, though 2s with 2p z holds its charge off to
+  one side. An orbital mixed with itself is just that orbital.
 
 ## The model
 
@@ -76,14 +80,14 @@ Run the tests with `npm test` (Node 20 or later).
   (ψ_a² + ψ_b²)/2 + ψ_a ψ_b cos ωt beats at ω = (E_b − E_a)/ħ. The cloud for
   a mix is drawn once from the time average, half its dots from each orbital,
   and each dot is weighted by the density at that moment over the average
-  (between 0 and 2), so the weighted cloud follows the beating density
-  exactly.
+  (between 0 and 2). The weights are that ratio exactly, so the weighted
+  cloud is an unbiased sample of the beating density at every moment.
 - The dipole ⟨a|r|b⟩ is a radial integral of r³R_aR_b by Simpson's rule and
   an angular integral by Gauss–Legendre quadrature, exact for these
   polynomials. Wavelengths and beat periods use the reduced mass of the
   electron and proton, which moves every line 0.054% longer than a fixed
-  nucleus would. The drop rate is A = (4/3) α³ ω³ |⟨a|r|b⟩|² in atomic units,
-  with the nucleus held fixed.
+  nucleus would. The drop rate is the electric dipole rate
+  A = (4/3) α³ ω³ |⟨a|r|b⟩|² in atomic units, with the nucleus held fixed.
 - Sampling is exact, both factors by rejection. The radius is drawn under a
   step-shaped ceiling a little above r²R² on each of 4095 grid cells and kept
   with probability r²R² / ceiling; the grid stops where less than 10⁻¹⁵ of

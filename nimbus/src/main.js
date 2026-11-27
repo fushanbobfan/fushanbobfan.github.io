@@ -39,6 +39,7 @@ const BEAT_SECONDS = 2.5;
 const state = {
   a: { n: 3, l: 2, m: 0 },
   b: { n: 2, l: 1, m: 0 },
+  wantMix: false,
   mixing: false,
   phase: 0,
   playing: false,
@@ -98,18 +99,26 @@ function computeOrbital() {
   state.nodes = radialNodes(n, l);
   state.peakRadius = mostProbableRadius(n, l, state.table);
   state.densityPeak = peakDensity(n, l, m, state.table);
+  const b = state.b;
+  const same = b.n === n && b.l === l && b.m === m;
+  state.mixing = state.wantMix && !same;
   if (state.mixing) {
-    const b = state.b;
     state.orbitalB = makeOrbital(b.n, b.l, b.m);
     state.tableB = radialTable(b.n, b.l);
     state.half = Math.max(state.half, enclosingRadius(state.tableB, 0.99) * 1.08);
+    state.densityPeakB = peakDensity(b.n, b.l, b.m, state.tableB);
     state.info = transition(state.a, b);
-    if (state.info.sameShell) state.phase = 0;
+    if (state.info.sameShell) {
+      state.phase = 0;
+      setPlaying(false);
+    }
     els.name.textContent = `${nameOf(state.a)} + ${nameOf(b)}`;
     els.note.textContent = mixNote();
   } else {
     els.name.textContent = nameOf(state.a);
-    els.note.textContent = describeNodes(n, l, m);
+    els.note.textContent = state.wantMix
+      ? 'Pick a different second orbital: an orbital mixed with itself is just itself.'
+      : describeNodes(n, l, m);
   }
   const still = state.mixing && state.info.sameShell;
   els.play.disabled = still;
@@ -157,8 +166,10 @@ function drawSlice() {
   let nodal = false;
   if (state.mixing) {
     state.density = mixedDensity(state.slice.values, state.sliceB.values, state.phase, state.density || undefined);
-    nodal = state.mixPeak === 0;
-    shadeDensity(state.density, els.shade.value, state.mixPeak || 1, sliceImage.data);
+    // A plane that is a node of both orbitals holds only rounding noise.
+    const top = Math.max(state.densityPeak, state.densityPeakB);
+    nodal = state.mixPeak <= 1e-9 * top;
+    shadeDensity(state.density, els.shade.value, nodal ? top : state.mixPeak, sliceImage.data);
   } else {
     // On a nodal plane psi is only rounding noise; shade it against the
     // orbital's own peak so it stays black.
@@ -176,17 +187,14 @@ function drawSlice() {
   sliceCtx.textAlign = 'center';
   sliceCtx.textBaseline = 'top';
   sliceCtx.fillText('↑ ' + p.v, SIZE / 2 + 12, 6);
-  if (state.mixing && state.info.allowed) drawChargeCentre(p);
+  const centre = state.mixing && state.info.allowed ? drawChargeCentre(p) : null;
 
   const name = els.name.textContent;
   const reading = 'Point at it, or tab to it and use the arrow keys, to read the density.';
   if (nodal) {
     els.sliceCaption.textContent = `The ${p.label} is a node of ${name}: ψ is zero everywhere on it, so the electron is never found there. Try another plane.`;
   } else if (state.mixing) {
-    els.sliceCaption.textContent = `Density of the mix on the ${p.label}.` +
-      (!state.info.allowed ? ''
-        : state.info.sameShell ? ' The ring is the centre of the electron\'s charge, held off the nucleus.'
-          : ' The ring is the centre of the electron\'s charge; as it swings, the atom gives out light.') + ` ${reading}`;
+    els.sliceCaption.textContent = `Density of the mix on the ${p.label}. ${centreWords(centre)}${reading}`;
   } else {
     els.sliceCaption.textContent = `ψ on the ${p.label}, through the nucleus. Dark lines are nodes, where ψ is zero. ${reading}`;
   }
@@ -195,11 +203,18 @@ function drawSlice() {
   showProbe();
 }
 
-// The mean position of the charge is d cos(omega t), d = <a| r |b>.
+// The mean position of the charge is d cos(omega t), d = <a| r |b>. The ring
+// is where that point falls on the plane; the part of d across the plane is
+// reported in the caption instead.
 function drawChargeCentre(p) {
   const d = state.info.dipole;
-  const c = Math.cos(state.phase);
+  const c = state.info.sameShell ? 1 : Math.cos(state.phase);
   const axis = { x: 0, y: 1, z: 2 };
+  const normal = 3 - axis[p.h] - axis[p.v];
+  const size = Math.hypot(...d);
+  const across = Math.abs(d[normal]) > 1e-9 * size ? 'xyz'[normal] : null;
+  const inPlane = Math.hypot(d[axis[p.h]], d[axis[p.v]]) > 1e-9 * size;
+  if (!inPlane) return { inPlane, across };
   const h = d[axis[p.h]] * c;
   const v = d[axis[p.v]] * c;
   const scale = SIZE / (2 * state.half);
@@ -210,6 +225,19 @@ function drawChargeCentre(p) {
   sliceCtx.beginPath();
   sliceCtx.arc(x, y, 6, 0, 2 * Math.PI);
   sliceCtx.stroke();
+  return { inPlane, across };
+}
+
+function centreWords(centre) {
+  if (!centre) return '';
+  const moving = !state.info.sameShell;
+  if (!centre.inPlane) {
+    return `The centre of the electron's charge ${moving ? 'swings' : 'sits off the nucleus'} along ${centre.across}, across this plane; pick another plane to see it. `;
+  }
+  const lead = moving
+    ? 'The ring marks the centre of the electron\'s charge as it swings; that swing is what gives out the light.'
+    : 'The ring marks the centre of the electron\'s charge, held off the nucleus.';
+  return `${lead}${centre.across ? ` Part of its ${moving ? 'swing' : 'offset'} runs along ${centre.across}, across this plane, and is not shown.` : ''} `;
 }
 
 function drawScaleBar(ctx) {
@@ -354,13 +382,13 @@ function mixRows() {
   }
   const nm = t.wavelengthNm;
   if (t.allowed) {
-    rows.push(['Light given out', `${fmt(nm, nm < 1000 ? 2 : 1)} nm`, `${bandOf(nm)}; a ${t.series} line, ending in shell ${t.lower.n}`]);
+    rows.push(['Dipole light', `${fmt(nm, nm < 1000 ? 2 : 1)} nm`, `${bandOf(nm)}; a ${t.series} line, ending in shell ${t.lower.n}`]);
   } else {
     const dl = Math.abs(state.a.l - state.b.l);
     const why = dl === 1
       ? 'the two orbitals do not line up along any axis'
-      : `l changes by ${dl}, and light needs a change of exactly 1`;
-    rows.push(['Light given out', 'none (to first order)', `the charge reshapes but its centre stays at the nucleus: ${why}`]);
+      : `l changes by ${dl}, and dipole light needs a change of exactly 1`;
+    rows.push(['Dipole light', 'none', `the charge reshapes but its centre stays at the nucleus: ${why}. Slower ways down remain, such as two photons at once`]);
   }
   rows.push(['Energy gap', `${fmt(t.photonEV, 4)} eV`, 'with the proton\'s own small motion included']);
   rows.push(['One beat', `${fmt(t.periodFs, 3)} fs`, `${fmt(t.frequencyHz / 1e12, 0)} trillion beats a second`]);
@@ -368,7 +396,7 @@ function mixRows() {
     rows.push(['Swing of the charge', `${fmt(t.dipoleSize, 3)} a₀ × e`, `the dipole, ${axisWords(t.dipole)}`]);
     const ns = 1e9 / t.rate;
     rows.push(['Drop rate', `${t.rate.toExponential(2).replace('e+', ' × 10^')} per second`,
-      `the upper orbital would last ${ns < 1000 ? fmt(ns, ns < 10 ? 2 : 0) + ' ns' : fmt(ns / 1000, 1) + ' µs'} if this were its only way down`]);
+      `by dipole light; the upper orbital would last ${ns < 1000 ? fmt(ns, ns < 10 ? 2 : 0) + ' ns' : fmt(ns / 1000, 1) + ' µs'} if this were its only way down`]);
   }
   return rows;
 }
@@ -418,6 +446,7 @@ function writeReadouts() {
 function writeTime() {
   if (!state.mixing || state.info.sameShell) {
     els.time.textContent = '';
+    els.phase.value = '0';
     return;
   }
   const deg = ((state.phase * 180) / Math.PI) % 360;
@@ -458,9 +487,9 @@ els.n2.addEventListener('change', pick(state.b, 'n', els.n2, true));
 els.l2.addEventListener('change', pick(state.b, 'l', els.l2, true));
 els.m2.addEventListener('change', pick(state.b, 'm', els.m2, false));
 els.mix.addEventListener('change', () => {
-  state.mixing = els.mix.checked;
-  els.mixControls.hidden = !state.mixing;
-  if (!state.mixing) setPlaying(false);
+  state.wantMix = els.mix.checked;
+  els.mixControls.hidden = !state.wantMix;
+  if (!state.wantMix) setPlaying(false);
   refreshAll();
 });
 els.count.addEventListener('change', refreshSample);
@@ -472,6 +501,9 @@ function setPlaying(on) {
   state.playing = on;
   els.play.textContent = on ? 'Pause' : 'Play the beat';
   els.play.setAttribute('aria-pressed', String(on));
+  // The time readout changes every frame while playing; announce it only
+  // when the beat is paused or scrubbed.
+  els.time.setAttribute('aria-live', on ? 'off' : 'polite');
 }
 els.play.addEventListener('click', () => setPlaying(!state.playing));
 els.phase.addEventListener('input', () => {
