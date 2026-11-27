@@ -105,3 +105,18 @@ test('the histogram is a density that integrates to the share in view', () => {
   assert.equal(niceStep(7, 6), 2);
   assert.equal(niceStep(70, 6), 20);
 });
+
+test('a weighted cloud with signs keeps both colours', () => {
+  const sample = {
+    positions: Float32Array.from([0, 0, 3, 0, 0, -3]),
+    signs: Int8Array.from([1, -1]),
+    count: 2,
+  };
+  const size = 32;
+  const px = renderCloud(sample, viewMatrix(0, 0), 6, size, undefined, Float32Array.from([1, 1]), 0.5);
+  const at = (z) => 4 * (Math.round((6 - z) * (size / 12) - 0.5) * size + Math.round(6 * (size / 12) - 0.5));
+  assert.ok(px[at(3)] > px[at(3) + 2], 'upper dot warm');
+  assert.ok(px[at(-3) + 2] > px[at(-3)], 'lower dot cool');
+  const mono = renderCloud({ positions: sample.positions, count: 2 }, viewMatrix(0, 0), 6, size, undefined, Float32Array.from([1, 1]), 0.5);
+  assert.ok(mono[at(-3)] > 0 && mono[at(-3) + 2] > 0, 'unsigned sample drawn in the mix colour');
+});
