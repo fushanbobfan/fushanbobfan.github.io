@@ -135,6 +135,23 @@ legend {
 
 .swatch.pos { background: var(--pos); }
 .swatch.neg { background: var(--neg); }
+.swatch.mixed { background: rgb(214, 196, 255); }
+
+.numbers.three { grid-template-columns: repeat(3, 1fr); }
+
+.mix-controls { display: grid; gap: 8px; }
+.mix-controls[hidden] { display: none; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+output {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-height: 1.5em;
+}
+
+button:disabled, input:disabled { opacity: 0.5; cursor: default; }
 
 .views {
   display: grid;

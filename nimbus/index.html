@@ -33,6 +33,22 @@
       <div class="name" id="name" aria-live="polite"></div>
       <p class="note" id="note"></p>
       <fieldset>
+        <legend>Two orbitals at once</legend>
+        <label class="check"><input type="checkbox" id="mix"> Mix in a second orbital</label>
+        <div id="mix-controls" class="mix-controls" hidden>
+          <div class="numbers three">
+            <label>n <select id="n2"></select></label>
+            <label>l <select id="l2"></select></label>
+            <label>m <select id="m2"></select></label>
+          </div>
+          <button type="button" id="play" aria-pressed="false">Play the beat</button>
+          <label>Moment in the beat
+            <input type="range" id="phase" min="0" max="359" step="1" value="0">
+          </label>
+          <output id="time" for="phase"></output>
+        </div>
+      </fieldset>
+      <fieldset>
         <legend>Point cloud</legend>
         <label>Electrons caught
           <select id="count">
@@ -61,14 +77,14 @@
           </select>
         </label>
       </fieldset>
-      <p class="legend"><span class="swatch pos"></span> ψ positive <span class="swatch neg"></span> ψ negative</p>
+      <p class="legend" id="legend"><span class="swatch pos"></span> ψ positive <span class="swatch neg"></span> ψ negative</p>
     </section>
 
     <section class="views">
       <figure>
         <canvas id="cloud" width="480" height="480" tabindex="0"
           aria-label="Point cloud of the orbital"></canvas>
-        <figcaption>Each dot is one place the electron could be found. Drag, or use the arrow keys, to turn it. <span id="axes-note"></span></figcaption>
+        <figcaption id="cloud-caption">Each dot is one place the electron could be found. Drag, or use the arrow keys, to turn it.</figcaption>
       </figure>
       <figure>
         <canvas id="slice" width="480" height="480" tabindex="0"
@@ -81,7 +97,7 @@
     <section class="chart-wrap" aria-label="Radial distribution">
       <h2>How far from the nucleus</h2>
       <canvas id="chart" width="980" height="260" role="img" aria-label="Radial distribution chart"></canvas>
-      <p class="note">The curve is r²R(r)², the chance per unit distance of finding the electron at
+      <p class="note" id="chart-note">The curve is r²R(r)², the chance per unit distance of finding the electron at
         radius r; it takes the r² because a shell at radius r has more room in it than one near
         the centre. The bars count the dots in the cloud by distance.</p>
     </section>
@@ -92,7 +108,7 @@
   </main>
 
   <footer>
-    <p>Exact hydrogen wavefunctions in Bohr radii, nucleus held fixed. <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/nimbus">Source</a></p>
+    <p>Exact hydrogen wavefunctions in Bohr radii with the nucleus held fixed; spectral lines include the proton's own motion. <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/nimbus">Source</a></p>
   </footer>
   <script type="module" src="src/main.js"></script>
 </body>

@@ -9,6 +9,7 @@ export const PLANES = {
 
 export const POSITIVE = [255, 168, 92];
 export const NEGATIVE = [92, 172, 255];
+export const MIXED = [214, 196, 255];
 
 // psi on a size x size grid covering [-half, half]^2; row 0 is the top edge.
 export function sliceValues(psi, plane, half, size) {
@@ -48,6 +49,24 @@ export function shadeSlice(slice, mode, out = new Uint8ClampedArray(slice.size *
     out[4 * k] = base[0] * t;
     out[4 * k + 1] = base[1] * t;
     out[4 * k + 2] = base[2] * t;
+    out[4 * k + 3] = 255;
+  }
+  return out;
+}
+
+// Shading for a density with no sign (a mix of two orbitals), in one colour.
+export function shadeDensity(density, mode, peak, out = new Uint8ClampedArray(density.length * 4)) {
+  const decades = 4;
+  for (let k = 0; k < density.length; k++) {
+    let t = 0;
+    if (peak > 0) {
+      const rel = density[k] / peak;
+      if (mode === 'log') t = rel > 0 ? Math.max(0, 1 + Math.log10(rel) / decades) : 0;
+      else t = toSrgb(Math.min(1, rel));
+    }
+    out[4 * k] = MIXED[0] * t;
+    out[4 * k + 1] = MIXED[1] * t;
+    out[4 * k + 2] = MIXED[2] * t;
     out[4 * k + 3] = 255;
   }
   return out;

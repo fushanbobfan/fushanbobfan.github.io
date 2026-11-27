@@ -48,6 +48,22 @@ Run the tests with `npm test` (Node 20 or later).
 - **Numbers**: the energy, the most likely and mean distances, the radius
   holding nine tenths of the electron, and where the spherical nodes are, in
   Bohr radii and ångströms.
+- **Two orbitals at once**: mix in a second orbital and the electron sits
+  half in each. Its cloud then swings back and forth at the frequency of the
+  light the atom gives out when it drops from one orbital to the other:
+  2p z with 1s rocks along z every 0.41 femtoseconds and gives Lyman alpha at
+  121.57 nm. Play or scrub the beat (slowed down between 10¹⁴ and 10¹⁶ times,
+  depending on the pair); a ring on the slice marks where the centre of the
+  charge falls on that plane. The readouts give the wavelength
+  and its series, the energy gap, the length of one beat, the size and
+  direction of the swing (the dipole), and how fast the upper orbital would
+  drop to the lower one by giving out that light. All of this is electric
+  dipole light, the fast and bright kind. Pairs whose l does not change by
+  exactly one beat without moving the centre of charge, so they give out no
+  dipole light (1s with 2s breathes in and out instead, and 2s really decays
+  far more slowly, by sending out two photons at once). Two orbitals of the
+  same shell do not beat at all, though 2s with 2p z holds its charge off to
+  one side. An orbital mixed with itself is just that orbital.
 
 ## The model
 
@@ -60,6 +76,18 @@ Run the tests with `npm test` (Node 20 or later).
 - The angular part is the real spherical harmonics, cos(mφ) for m > 0 and
   sin(|m|φ) for m < 0, built on associated Legendre functions without the
   Condon–Shortley phase so that p x is positive along +x.
+- A mix is Ψ = (ψ_a e^(−iE_a t/ħ) + ψ_b e^(−iE_b t/ħ)) / √2, whose density
+  (ψ_a² + ψ_b²)/2 + ψ_a ψ_b cos ωt beats at ω = (E_b − E_a)/ħ. The cloud for
+  a mix is drawn once from the time average, half its dots from each orbital,
+  and each dot is weighted by the density at that moment over the average
+  (between 0 and 2). The weights are that ratio exactly, so the weighted
+  cloud is an unbiased sample of the beating density at every moment.
+- The dipole ⟨a|r|b⟩ is a radial integral of r³R_aR_b by Simpson's rule and
+  an angular integral by Gauss–Legendre quadrature, exact for these
+  polynomials. Wavelengths and beat periods use the reduced mass of the
+  electron and proton, which moves every line 0.054% longer than a fixed
+  nucleus would. The drop rate is the electric dipole rate
+  A = (4/3) α³ ω³ |⟨a|r|b⟩|² in atomic units, with the nucleus held fixed.
 - Sampling is exact, both factors by rejection. The radius is drawn under a
   step-shaped ceiling a little above r²R² on each of 4095 grid cells and kept
   with probability r²R² / ceiling; the grid stops where less than 10⁻¹⁵ of
@@ -84,7 +112,13 @@ Run the tests with `npm test` (Node 20 or later).
   distribution, that sampled radii have the right mean and mean square,
   sampled directions the right ⟨cos²θ⟩ and azimuthal moments (p x against
   p y, d x²−y² against d xy), and every dot the sign of ψ where it landed;
-- that nodal planes come out as zero in the slice and dark in the cloud.
+- that nodal planes come out as zero in the slice and dark in the cloud;
+- for mixes: the 2p–1s dipole against its closed form 128√2/243 a₀, the
+  dipole selection rule, Lyman alpha, Balmer alpha and beta and Paschen alpha
+  against their measured vacuum wavelengths, the 2p lifetime of 1.60 ns, the
+  3d→2p rate of 6.47 × 10⁷ per second shared two thirds to 2p z from 3d z²,
+  that the weighted cloud's centre swings as ⟨a|r|b⟩ cos ωt, and that the
+  slice density equals |Ψ|².
 
 ## Layout
 
@@ -96,6 +130,7 @@ src/names.js            orbital names
 src/slice.js            psi on a plane and its shading
 src/cloud.js            view rotation and the point cloud
 src/chart.js            radial distribution chart
+src/superposition.js    mixes of two orbitals: dipoles, lines, rates, weights
 src/main.js             controls and drawing
 test/                   Node test suite
 ```
