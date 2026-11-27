@@ -38,8 +38,10 @@ Run the tests with `npm test` (Node 20 or later).
   shading spans four decades of density, so faint outer lobes and the dark
   lines of the nodes show; the other shows density as emitted light. When the
   plane is itself a node (the xz plane of 2p y, any coordinate plane of
-  4f xyz) the page says so. Hover for the coordinates, the sign of ψ and the
-  density there compared with the orbital's highest.
+  4f xyz) the page says so. Point at the slice, or tab to it and move a
+  probe with the arrow keys (Shift for bigger steps, Home to recentre), for
+  the coordinates, the sign of ψ and the density there compared with the
+  orbital's highest.
 - **How far from the nucleus**: the radial distribution r²R², with the
   spherical nodes, the most likely distance and the mean distance marked, and
   the cloud's dots counted by distance on top of it.

@@ -71,9 +71,10 @@
         <figcaption>Each dot is one place the electron could be found. Drag, or use the arrow keys, to turn it. <span id="axes-note"></span></figcaption>
       </figure>
       <figure>
-        <canvas id="slice" width="480" height="480" aria-label="Slice through the orbital"></canvas>
+        <canvas id="slice" width="480" height="480" tabindex="0"
+          aria-label="Slice through the orbital" aria-describedby="hover"></canvas>
         <figcaption id="slice-caption">ψ on a plane through the nucleus. Dark lines are nodes, where ψ is zero.</figcaption>
-        <p class="hover" id="hover" aria-live="off">&nbsp;</p>
+        <p class="hover" id="hover" aria-live="polite">&nbsp;</p>
       </figure>
     </section>
 

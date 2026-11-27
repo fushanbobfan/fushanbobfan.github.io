@@ -31,7 +31,7 @@ const state = {
   n: 3, l: 2, m: 0,
   seed: 1,
   yaw: -0.6, pitch: 0.35,
-  orbital: null, table: null, half: 1, sample: null, slice: null, densityPeak: 0,
+  orbital: null, table: null, half: 1, sample: null, slice: null, densityPeak: 0, probe: null,
 };
 
 const SIZE = els.cloud.width;
@@ -107,9 +107,11 @@ function drawSlice() {
   if (nodal) {
     els.sliceCaption.textContent = `The ${p.label} is a node of ${name}: ψ is zero everywhere on it, so the electron is never found there. Try another plane.`;
   } else {
-    els.sliceCaption.textContent = `ψ on the ${p.label}, through the nucleus. Dark lines are nodes, where ψ is zero.`;
+    els.sliceCaption.textContent = `ψ on the ${p.label}, through the nucleus. Dark lines are nodes, where ψ is zero. Point at it, or tab to it and use the arrow keys, to read the density.`;
   }
-  els.slice.setAttribute('aria-label', `${name} on the ${p.label}${nodal ? ', which is a node' : ''}`);
+  els.slice.setAttribute('aria-label',
+    `${name} on the ${p.label}${nodal ? ', which is a node' : ''}. Arrow keys move a probe that reads the density.`);
+  showProbe();
 }
 
 function drawScaleBar(ctx) {
@@ -275,12 +277,18 @@ els.cloud.addEventListener('keydown', (e) => {
   drawCloud();
 });
 
-// Where the pointer is on the slice.
-els.slice.addEventListener('pointermove', (e) => {
-  const rect = els.slice.getBoundingClientRect();
-  const i = Math.floor(((e.clientX - rect.left) / rect.width) * SIZE);
-  const j = Math.floor(((e.clientY - rect.top) / rect.height) * SIZE);
-  if (i < 0 || j < 0 || i >= SIZE || j >= SIZE || !state.slice) return;
+// A probe on the slice, moved by the pointer or by the arrow keys, that
+// reports the position, the sign of psi and the density there. It is kept
+// as grid indices and re-read whenever the slice is redrawn.
+function showProbe() {
+  const probe = state.probe;
+  // Announce readings only for the keyboard probe, so pointer moves stay quiet.
+  els.hover.setAttribute('aria-live', probe?.marked ? 'polite' : 'off');
+  if (!probe || !state.slice) {
+    els.hover.innerHTML = '&nbsp;';
+    return;
+  }
+  const { i, j } = probe;
   const a = -state.half + ((i + 0.5) / SIZE) * 2 * state.half;
   const b = state.half - ((j + 0.5) / SIZE) * 2 * state.half;
   const p = PLANES[state.slice.plane];
@@ -288,8 +296,59 @@ els.slice.addEventListener('pointermove', (e) => {
   const rel = state.densityPeak > 0 ? (v * v) / state.densityPeak : 0;
   const share = rel >= 0.01 ? `${fmt(100 * rel, 0)}%` : rel > 0 ? `1 in ${Math.round(1 / rel).toLocaleString('en-US')}` : '0';
   els.hover.textContent = `${p.h} = ${fmt(a, 1)}, ${p.v} = ${fmt(b, 1)} a₀ · ψ ${v >= 0 ? 'positive' : 'negative'} · density ${share} of the orbital's highest`;
+  if (probe.marked) {
+    sliceCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+    sliceCtx.lineWidth = 1.5;
+    const x = i + 0.5;
+    const y = j + 0.5;
+    sliceCtx.beginPath();
+    sliceCtx.moveTo(x - 9, y); sliceCtx.lineTo(x - 3, y);
+    sliceCtx.moveTo(x + 3, y); sliceCtx.lineTo(x + 9, y);
+    sliceCtx.moveTo(x, y - 9); sliceCtx.lineTo(x, y - 3);
+    sliceCtx.moveTo(x, y + 3); sliceCtx.lineTo(x, y + 9);
+    sliceCtx.stroke();
+  }
+}
+
+els.slice.addEventListener('pointermove', (e) => {
+  const rect = els.slice.getBoundingClientRect();
+  const i = Math.floor(((e.clientX - rect.left) / rect.width) * SIZE);
+  const j = Math.floor(((e.clientY - rect.top) / rect.height) * SIZE);
+  if (i < 0 || j < 0 || i >= SIZE || j >= SIZE) return;
+  const hadMark = state.probe?.marked;
+  state.probe = { i, j, marked: false };
+  if (hadMark) drawSlice();
+  else showProbe();
 });
-els.slice.addEventListener('pointerleave', () => { els.hover.innerHTML = '&nbsp;'; });
+els.slice.addEventListener('pointerleave', () => {
+  if (state.probe && !state.probe.marked) {
+    state.probe = null;
+    showProbe();
+  }
+});
+els.slice.addEventListener('focus', () => {
+  if (!state.probe) state.probe = { i: SIZE / 2, j: SIZE / 2, marked: true };
+  else state.probe.marked = true;
+  drawSlice();
+});
+els.slice.addEventListener('blur', () => {
+  state.probe = null;
+  drawSlice();
+});
+els.slice.addEventListener('keydown', (e) => {
+  const step = e.shiftKey ? 24 : 4;
+  const probe = state.probe || { i: SIZE / 2, j: SIZE / 2 };
+  let { i, j } = probe;
+  if (e.key === 'ArrowLeft') i -= step;
+  else if (e.key === 'ArrowRight') i += step;
+  else if (e.key === 'ArrowUp') j -= step;
+  else if (e.key === 'ArrowDown') j += step;
+  else if (e.key === 'Home') { i = SIZE / 2; j = SIZE / 2; }
+  else return;
+  e.preventDefault();
+  state.probe = { i: Math.max(0, Math.min(SIZE - 1, i)), j: Math.max(0, Math.min(SIZE - 1, j)), marked: true };
+  drawSlice();
+});
 
 let last = performance.now();
 function tick(now) {
