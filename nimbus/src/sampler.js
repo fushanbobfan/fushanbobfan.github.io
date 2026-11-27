@@ -1,9 +1,9 @@
-// Draws electron positions from |psi|^2 exactly: the radius from the radial
-// distribution by inverting its cumulative table, the direction from Y^2 by
-// rejection on the sphere. The two factors are independent, so the product
+// Draws electron positions from |psi|^2 exactly: the radius by rejection
+// under a step-shaped envelope of the radial distribution, the direction from
+// Y^2 by rejection on the sphere. The two factors are independent, so the product
 // is the full three-dimensional density.
 
-import { radialTable, radial, radialNorm, realHarmonic, harmonicNorm } from './hydrogen.js';
+import { radialTable, radial, radialNorm, radialDensity, realHarmonic, harmonicNorm } from './hydrogen.js';
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -31,6 +31,49 @@ export function angularPeak(l, m) {
   return best;
 }
 
+// A constant ceiling over each cell of the radial grid, a little above the
+// largest r^2 R^2 in the cell, and the running total of ceiling x width.
+// The cells are so narrow that a 6% margin over the endpoint and midpoint
+// values clears every peak (checked in the tests).
+export const ENVELOPE_MARGIN = 1.06;
+
+export function radialEnvelope(n, l, table = radialTable(n, l)) {
+  if (table.envelope) return table.envelope;
+  const { r, p } = table;
+  const cells = r.length - 1;
+  const ceiling = new Float64Array(cells);
+  const cumulative = new Float64Array(cells + 1);
+  for (let i = 0; i < cells; i++) {
+    const mid = radialDensity(n, l, 0.5 * (r[i] + r[i + 1]));
+    ceiling[i] = ENVELOPE_MARGIN * Math.max(p[i], p[i + 1], mid);
+    cumulative[i + 1] = cumulative[i] + ceiling[i] * (r[i + 1] - r[i]);
+  }
+  table.envelope = { r, ceiling, cumulative };
+  return table.envelope;
+}
+
+// Picks a cell in proportion to its share of the envelope, a uniform radius
+// inside it, and keeps it with probability r^2 R^2 / ceiling. The kept radii
+// follow r^2 R^2 exactly on [0, rMax]; beyond rMax lies less than 1e-15 of
+// the electron (see the tests).
+export function sampleRadius(n, l, envelope, rn, rand) {
+  const { r, ceiling, cumulative } = envelope;
+  const total = cumulative[cumulative.length - 1];
+  for (;;) {
+    const u = rand() * total;
+    let lo = 0;
+    let hi = ceiling.length;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (cumulative[mid] <= u) lo = mid;
+      else hi = mid;
+    }
+    const radius = r[lo] + rand() * (r[lo + 1] - r[lo]);
+    const R = radial(n, l, radius, rn);
+    if (rand() * ceiling[lo] < radius * radius * R * R) return radius;
+  }
+}
+
 // Returns positions (x, y, z interleaved) and the sign of psi at each.
 export function sampleOrbital(n, l, m, count, seed = 1, table = radialTable(n, l)) {
   const rand = mulberry32(seed);
@@ -40,19 +83,10 @@ export function sampleOrbital(n, l, m, count, seed = 1, table = radialTable(n, l
   const positions = new Float32Array(count * 3);
   const signs = new Int8Array(count);
   const radii = new Float32Array(count);
-  const { r, cdf } = table;
+  const envelope = radialEnvelope(n, l, table);
   let tries = 0;
   for (let k = 0; k < count; k++) {
-    const u = rand();
-    let lo = 0;
-    let hi = cdf.length - 1;
-    while (hi - lo > 1) {
-      const mid = (lo + hi) >> 1;
-      if (cdf[mid] < u) lo = mid;
-      else hi = mid;
-    }
-    const span = cdf[hi] - cdf[lo];
-    const radius = r[lo] + (span > 0 ? (u - cdf[lo]) / span : 0) * (r[hi] - r[lo]);
+    const radius = sampleRadius(n, l, envelope, rn, rand);
 
     let c;
     let phi;

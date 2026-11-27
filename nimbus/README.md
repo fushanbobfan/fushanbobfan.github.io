@@ -58,10 +58,12 @@ Run the tests with `npm test` (Node 20 or later).
 - The angular part is the real spherical harmonics, cos(mφ) for m > 0 and
   sin(|m|φ) for m < 0, built on associated Legendre functions without the
   Condon–Shortley phase so that p x is positive along +x.
-- Sampling is exact: the radius comes from inverting the cumulative radial
-  distribution (tabulated on 4096 points), the direction from Y² by rejection
-  on the sphere. The two factors are independent, so together they give the
-  full three-dimensional density.
+- Sampling is exact, both factors by rejection. The radius is drawn under a
+  step-shaped ceiling a little above r²R² on each of 4095 grid cells and kept
+  with probability r²R² / ceiling; the grid stops where less than 10⁻¹⁵ of
+  the electron lies beyond it. The direction is drawn uniformly on the sphere
+  and kept with probability Y² / max Y². The two factors are independent, so
+  together they give the full three-dimensional density.
 
 ## Tests
 
@@ -75,8 +77,11 @@ Run the tests with `npm test` (Node 20 or later).
   way their names say;
 - the n − l − 1 spherical nodes (the 3s nodes at (9 ± 3√3)/2 a₀) and the most
   likely radii n² of the orbitals with l = n − 1;
-- that sampled radii have the right mean and mean square, sampled directions
-  the right ⟨cos²θ⟩, and every dot the sign of ψ where it landed;
+- that the radial ceiling clears r²R² at 17 points in every cell of every
+  orbital, that 1s radii pass a Kolmogorov–Smirnov test against the exact
+  distribution, that sampled radii have the right mean and mean square,
+  sampled directions the right ⟨cos²θ⟩ and azimuthal moments (p x against
+  p y, d x²−y² against d xy), and every dot the sign of ψ where it landed;
 - that nodal planes come out as zero in the slice and dark in the cloud.
 
 ## Layout

@@ -106,3 +106,85 @@ test('node counts and the node sentence', async () => {
   assert.equal(describeNodes(4, 3, -2), 'Nodes: no spheres, 3 planes through the nucleus. That makes 3, n − 1 for every orbital of shell 4.');
   assert.equal(describeNodes(2, 0, 0), 'Nodes: 1 sphere, nothing through the nucleus. That makes 1, n − 1 for every orbital of shell 2.');
 });
+
+test('the radial envelope sits above r^2 R^2 everywhere and the cut-off tail is negligible', async () => {
+  const { radialEnvelope } = await import('../src/sampler.js');
+  const { radialTable, radialDensity } = await import('../src/hydrogen.js');
+  for (let n = 1; n <= MAX_N; n++) {
+    for (let l = 0; l < n; l++) {
+      const t = radialTable(n, l);
+      const { r, ceiling } = radialEnvelope(n, l, t);
+      for (let i = 0; i < ceiling.length; i++) {
+        for (let q = 0; q <= 16; q++) {
+          const x = r[i] + (q / 16) * (r[i + 1] - r[i]);
+          assert.ok(radialDensity(n, l, x) <= ceiling[i], `n=${n} l=${l} cell ${i}`);
+        }
+      }
+      // Probability beyond the table's last radius.
+      const a = t.rMax;
+      const b = 4 * t.rMax;
+      const N = 4000;
+      const h = (b - a) / N;
+      let tail = radialDensity(n, l, a) + radialDensity(n, l, b);
+      for (let i = 1; i < N; i++) tail += radialDensity(n, l, a + i * h) * (i % 2 ? 4 : 2);
+      tail *= h / 3;
+      assert.ok(tail < 1e-15, `n=${n} l=${l} tail ${tail}`);
+    }
+  }
+});
+
+test('1s radii pass a Kolmogorov-Smirnov test against the exact distribution', () => {
+  const N = 40000;
+  const s = sampleOrbital(1, 0, 0, N, 21);
+  const sorted = Array.from(s.radii).sort((a, b) => a - b);
+  const cdf = (R) => 1 - Math.exp(-2 * R) * (1 + 2 * R + 2 * R * R);
+  let D = 0;
+  for (let i = 0; i < N; i++) {
+    const F = cdf(sorted[i]);
+    D = Math.max(D, Math.abs(F - i / N), Math.abs(F - (i + 1) / N));
+  }
+  // 1.63 / sqrt(N) is the 1% critical value.
+  assert.ok(D < 1.63 / Math.sqrt(N), `D = ${D}`);
+  // Near the nucleus: P(r < 0.2) = 0.00791.
+  const near = sorted.filter((r) => r < 0.2).length / N;
+  assert.ok(Math.abs(near - cdf(0.2)) < 4 * Math.sqrt(cdf(0.2) / N));
+});
+
+test('sampled azimuths follow the orbital, not only the polar angle', () => {
+  const N = 40000;
+  const moments = (n, l, m) => {
+    const s = sampleOrbital(n, l, m, N, 9);
+    const acc = { xx: 0, yy: 0, cos: 0, sin: 0, cos2: 0, sin2: 0, cos4: 0 };
+    for (let k = 0; k < N; k++) {
+      const x = s.positions[3 * k];
+      const y = s.positions[3 * k + 1];
+      const r = s.radii[k];
+      const phi = Math.atan2(y, x);
+      acc.xx += (x / r) ** 2;
+      acc.yy += (y / r) ** 2;
+      acc.cos += Math.cos(phi);
+      acc.sin += Math.sin(phi);
+      acc.cos2 += Math.cos(2 * phi);
+      acc.sin2 += Math.sin(2 * phi);
+      acc.cos4 += Math.cos(4 * phi);
+    }
+    for (const key in acc) acc[key] /= N;
+    return acc;
+  };
+  // p_x: <x^2/r^2> = 3/5, <y^2/r^2> = 1/5.
+  const px = moments(2, 1, 1);
+  assert.ok(Math.abs(px.xx - 0.6) < 0.01 && Math.abs(px.yy - 0.2) < 0.01, JSON.stringify(px));
+  const py = moments(2, 1, -1);
+  assert.ok(Math.abs(py.yy - 0.6) < 0.01 && Math.abs(py.xx - 0.2) < 0.01, JSON.stringify(py));
+  // d_z2 and s: no preferred azimuth.
+  for (const [n, l, m] of [[3, 2, 0], [2, 0, 0]]) {
+    const a = moments(n, l, m);
+    for (const key of ['cos', 'sin', 'cos2', 'sin2']) assert.ok(Math.abs(a[key]) < 0.02, `${n}${l}${m} ${key} ${a[key]}`);
+  }
+  // Weight cos^2(2 phi) for d_x2-y2 and sin^2(2 phi) for d_xy: <cos 4 phi> = +1/2
+  // with lobes on the axes, -1/2 with lobes on the diagonals.
+  const dx2y2 = moments(3, 2, 2);
+  assert.ok(Math.abs(dx2y2.cos4 - 0.5) < 0.02, `${dx2y2.cos4}`);
+  const dxy = moments(3, 2, -2);
+  assert.ok(Math.abs(dxy.cos4 + 0.5) < 0.02, `${dxy.cos4}`);
+});
