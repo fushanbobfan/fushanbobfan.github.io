@@ -110,7 +110,7 @@ export function transition(a, b) {
     photonEV,
     wavelengthNm: HC_EV_NM / photonEV,
     frequencyHz: photonEV / PLANCK_EV_S,
-    periodFs: (PLANCK_EV_S / fixedEV) * 1e15,
+    periodFs: (PLANCK_EV_S / photonEV) * 1e15,
     series: SERIES[lo.n - 1],
     rate,
   };
@@ -141,6 +141,9 @@ export function mixedSample(a, b, count, seed = 1) {
   const oa = makeOrbital(a.n, a.l, a.m);
   const ob = makeOrbital(b.n, b.l, b.m);
   const cross = new Float32Array(count);
+  const radii = new Float32Array(count);
+  radii.set(sa.radii, 0);
+  radii.set(sb.radii, half);
   for (let k = 0; k < count; k++) {
     const x = positions[3 * k];
     const y = positions[3 * k + 1];
@@ -150,7 +153,7 @@ export function mixedSample(a, b, count, seed = 1) {
     const avg = pa * pa + pb * pb;
     cross[k] = avg > 0 ? (2 * pa * pb) / avg : 0;
   }
-  return { positions, cross, count, acceptance: (sa.acceptance + sb.acceptance) / 2 };
+  return { positions, cross, radii, count, acceptance: (sa.acceptance + sb.acceptance) / 2 };
 }
 
 export function weightsAt(sample, phase, out = new Float32Array(sample.count)) {

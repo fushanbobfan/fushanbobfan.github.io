@@ -121,3 +121,18 @@ test('the mixed slice density is never negative and matches |Psi|^2', () => {
     }
   }
 });
+
+test('3d z2 drops to 2p z at two thirds of the 3d -> 2p rate', () => {
+  // A(3d -> 2p) = 6.47e7 per second summed over the three 2p orbitals.
+  let total = 0;
+  for (const m of [-1, 0, 1]) total += transition(orb(3, 2, 0), orb(2, 1, m)).rate;
+  assert.ok(Math.abs(total - 6.465e7) / 6.465e7 < 2e-3, `${total}`);
+  const zz = transition(orb(3, 2, 0), orb(2, 1, 0)).rate;
+  assert.ok(Math.abs(zz / total - 2 / 3) < 1e-9);
+  // Every 3d orbital decays at the same total rate.
+  for (const m3 of [-2, -1, 1, 2]) {
+    let t = 0;
+    for (const m of [-1, 0, 1]) t += transition(orb(3, 2, m3), orb(2, 1, m)).rate;
+    assert.ok(Math.abs(t - total) / total < 1e-9, `m=${m3}: ${t}`);
+  }
+});
