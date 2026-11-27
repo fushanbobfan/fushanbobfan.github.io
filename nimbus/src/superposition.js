@@ -132,6 +132,8 @@ export function bandOf(nm) {
 // any moment is rho(t) / average, between 0 and 2, and the weighted cloud
 // follows rho(t) exactly without being drawn again.
 export function mixedSample(a, b, count, seed = 1) {
+  // The 1/sqrt 2 normalisation needs two different (orthogonal) orbitals.
+  if (a.n === b.n && a.l === b.l && a.m === b.m) throw new RangeError('mix two different orbitals');
   const half = Math.floor(count / 2);
   const sa = sampleOrbital(a.n, a.l, a.m, half, seed);
   const sb = sampleOrbital(b.n, b.l, b.m, count - half, seed + 7919);

@@ -136,3 +136,7 @@ test('3d z2 drops to 2p z at two thirds of the 3d -> 2p rate', () => {
     assert.ok(Math.abs(t - total) / total < 1e-9, `m=${m3}: ${t}`);
   }
 });
+
+test('an orbital cannot be mixed with itself', () => {
+  assert.throws(() => mixedSample(orb(2, 1, 0), orb(2, 1, 0), 10), RangeError);
+});
