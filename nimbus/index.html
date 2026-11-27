@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nimbus · the electron clouds of hydrogen</title>
+  <meta name="description" content="Every orbital of the hydrogen atom up to n = 6 as a point cloud, a slice and a radial distribution, worked out from the exact solutions of the Schrödinger equation.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>nimbus</h1>
+    <p class="lede">An electron in a hydrogen atom has no path. It has a cloud: the chance of
+      finding it at each point, given by the square of its wavefunction ψ. Pick an orbital
+      and see that cloud as electrons caught one at a time, as a cut through the nucleus,
+      and as a chart of how far from the nucleus the electron sits.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Orbital">
+      <div class="numbers">
+        <label>Shell n
+          <select id="n"></select>
+        </label>
+        <label>Shape l
+          <select id="l"></select>
+        </label>
+        <label>Orientation m
+          <select id="m"></select>
+        </label>
+      </div>
+      <div class="name" id="name" aria-live="polite"></div>
+      <p class="note" id="note"></p>
+      <fieldset>
+        <legend>Point cloud</legend>
+        <label>Electrons caught
+          <select id="count">
+            <option value="5000">5 000</option>
+            <option value="20000">20 000</option>
+            <option value="60000" selected>60 000</option>
+            <option value="150000">150 000</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="spin" checked> Turn slowly</label>
+        <button type="button" id="resample">Catch a new set</button>
+      </fieldset>
+      <fieldset>
+        <legend>Slice</legend>
+        <label>Plane
+          <select id="plane">
+            <option value="xz" selected>xz plane (y = 0)</option>
+            <option value="xy">xy plane (z = 0)</option>
+            <option value="yz">yz plane (x = 0)</option>
+          </select>
+        </label>
+        <label>Shading
+          <select id="shade">
+            <option value="log" selected>Four decades (shows faint lobes)</option>
+            <option value="linear">Density as light</option>
+          </select>
+        </label>
+      </fieldset>
+      <p class="legend"><span class="swatch pos"></span> ψ positive <span class="swatch neg"></span> ψ negative</p>
+    </section>
+
+    <section class="views">
+      <figure>
+        <canvas id="cloud" width="480" height="480" tabindex="0"
+          aria-label="Point cloud of the orbital"></canvas>
+        <figcaption>Each dot is one place the electron could be found. Drag, or use the arrow keys, to turn it. <span id="axes-note"></span></figcaption>
+      </figure>
+      <figure>
+        <canvas id="slice" width="480" height="480" tabindex="0"
+          aria-label="Slice through the orbital" aria-describedby="hover"></canvas>
+        <figcaption id="slice-caption">ψ on a plane through the nucleus. Dark lines are nodes, where ψ is zero.</figcaption>
+        <p class="hover" id="hover" aria-live="polite">&nbsp;</p>
+      </figure>
+    </section>
+
+    <section class="chart-wrap" aria-label="Radial distribution">
+      <h2>How far from the nucleus</h2>
+      <canvas id="chart" width="980" height="260" role="img" aria-label="Radial distribution chart"></canvas>
+      <p class="note">The curve is r²R(r)², the chance per unit distance of finding the electron at
+        radius r; it takes the r² because a shell at radius r has more room in it than one near
+        the centre. The bars count the dots in the cloud by distance.</p>
+    </section>
+
+    <section class="readouts" aria-label="Numbers for this orbital">
+      <dl id="readouts"></dl>
+    </section>
+  </main>
+
+  <footer>
+    <p>Exact hydrogen wavefunctions in Bohr radii, nucleus held fixed. <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/nimbus">Source</a></p>
+  </footer>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
