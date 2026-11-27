@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [nimbus](https://fushanbobfan.github.io/nimbus/) | The electron clouds of the hydrogen atom: pick any orbital up to n = 6 and see it as a turnable cloud of sampled electrons, a cut through the nucleus and a chart of how far out the electron sits. | [`nimbus/`](nimbus/) |
 | [dusk](https://fushanbobfan.github.io/dusk/) | Why the sky is blue and the setting sun red: follow sunlight through the air colour by colour, lower the sun, add haze or climb to 30 km, and watch the whole sky change. | [`dusk/`](dusk/) |
 | [mirage](https://fushanbobfan.github.io/mirage/) | Why a hot road looks wet: trace light through the hot air above the asphalt, see the sky on the road and a board hanging upside down beneath itself. | [`mirage/`](mirage/) |
 | [shutterwarp](https://fushanbobfan.github.io/shutterwarp/) | Why a phone photo bends a spinning propeller: watch the sensor read its rows one after another while the blades turn, and the photo build up row by row. | [`shutterwarp/`](shutterwarp/) |
