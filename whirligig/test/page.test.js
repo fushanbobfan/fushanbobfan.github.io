@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory, frictionNote, nowLabel } from '../src/readout.js';
-import { makeView, pathPoint, potentialCurve, potentialRange, historyScales } from '../src/draw.js';
+import { makeView, pathPoint, potentialCurve, potentialRange, historyScales, niceStep } from '../src/draw.js';
 import { TOY, bodyAxes, thetaAccel, constants, turningPoints, classify, floorAngle, rpmToRad, steadyPrecession, effectivePotential } from '../src/top.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -213,4 +213,22 @@ test('the history chart maps time, tilt and spin onto the canvas', () => {
   assert.ok(sc.Ytilt(floor) > sc.pad.t);
   assert.ok(sc.Yspin(2000) >= sc.pad.t && sc.Yspin(2000) < sc.Yspin(950));
   assert.equal(historyScales([], 820, 240, floor, 2000).tMax, 1);
+});
+
+test('the history chart keeps the critical spin and its time ticks in view', () => {
+  const floor = floorAngle();
+  const crit = 1135.76;
+  for (const rpm0 of [900, 1000, 2000, 5000]) {
+    const sc = historyScales([[0, 25 * deg, rpm0]], 820, 240, floor, rpm0, crit);
+    assert.ok(sc.Yspin(crit) >= sc.pad.t && sc.Yspin(crit) <= 240 - sc.pad.b, `${rpm0}`);
+    assert.ok(sc.Yspin(rpm0) >= sc.pad.t);
+  }
+  for (const tMax of [1, 7.3, 46, 480, 500, 12345]) {
+    const step = niceStep(tMax / 8);
+    const ticks = Math.floor(tMax / step) + 1;
+    assert.ok(ticks >= 4 && ticks <= 9, `${tMax}: ${step}`);
+  }
+  assert.equal(niceStep(0.5), 0.5);
+  assert.equal(niceStep(0.51), 1);
+  assert.equal(niceStep(60.1), 100);
 });

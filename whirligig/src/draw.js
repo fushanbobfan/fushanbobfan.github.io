@@ -259,13 +259,19 @@ export function drawPotential(ctx, width, height, c, band, theta, floor, colours
   return { X, Y, E, ylo, yhi };
 }
 
+// Smallest of 1, 2 or 5 times a power of ten that is at least `raw`.
+export function niceStep(raw) {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 5, 10].map((k) => k * mag).find((d) => d >= raw * (1 - 1e-12));
+}
+
 // Tilt and spin against time since release, on one chart with two scales.
-export function historyScales(history, width, height, floor, rpm0) {
+export function historyScales(history, width, height, floor, rpm0, critRpm = 0) {
   const pad = { l: 46, r: 58, t: 12, b: 30 };
   const tEnd = history.length ? history[history.length - 1][0] : 0;
   const tMax = Math.max(1, tEnd * 1.05);
   const tiltMax = Math.max(floor * 1.15, ...history.map((p) => p[1]));
-  const rpmMax = Math.max(rpm0 * 1.05, 1);
+  const rpmMax = Math.max(Math.max(rpm0, critRpm) * 1.05, 1);
   return {
     pad,
     tMax,
@@ -279,13 +285,13 @@ export function historyScales(history, width, height, floor, rpm0) {
 
 export function drawHistory(ctx, width, height, history, floor, critRpm, rpm0, colours) {
   ctx.clearRect(0, 0, width, height);
-  const sc = historyScales(history, width, height, floor, rpm0);
+  const sc = historyScales(history, width, height, floor, rpm0, critRpm);
   const { pad, X, Ytilt, Yspin } = sc;
   ctx.font = '12px Georgia, serif';
   ctx.lineWidth = 1;
   ctx.strokeStyle = colours.rule;
   ctx.fillStyle = colours.muted;
-  const tickStep = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30, 60].find((d) => sc.tMax / d <= 8);
+  const tickStep = niceStep(sc.tMax / 8);
   for (let t = 0; t <= sc.tMax + 1e-9; t += tickStep) {
     ctx.beginPath();
     ctx.moveTo(X(t), pad.t);
