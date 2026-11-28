@@ -1,0 +1,22 @@
+{
+  "name": "whirligig",
+  "version": "0.1.0",
+  "description": "Why a spinning top does not fall: precession and nutation of a heavy symmetric top.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.js"
+  },
+  "keywords": [
+    "spinning-top",
+    "gyroscope",
+    "precession",
+    "nutation",
+    "physics",
+    "visualization",
+    "education"
+  ],
+  "license": "MIT",
+  "author": "Jiayi Fan",
+  "private": false
+}
