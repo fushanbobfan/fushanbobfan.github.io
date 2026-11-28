@@ -128,7 +128,10 @@ Run the tests with `npm test` (Node 20 or later).
 - Each preset produces the motion its name promises for its own shape, and
   the two shape presets lie on either side of their critical spins.
 - Every call the page makes into the physics passes the top the sliders
-  describe.
+  describe, and the page script itself runs in the tests against a small
+  stand-in for the browser: presets rebuild the top, the spin reads right for
+  each shape, pause holds the clock, the tilt cap follows the shape and a
+  friction preset drains the spin at the set rate.
 - The wording, the camera, the map, the energy curve and the history chart
   are checked separately.
 
