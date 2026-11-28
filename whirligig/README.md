@@ -32,6 +32,9 @@ Run the tests with `npm test` (Node 20 or later).
   of steady precession at that tilt. Seven starting points cover the three
   shapes, the steady cone, a top spun too slowly, and a nearly upright top
   spun above and below the rate it needs to stand.
+- **Friction at the tip**, set by how long the spin would last (60, 30 or
+  15 s), and two presets that let an upright and a tilted top spin down until
+  they fall.
 - **Playback** from real time down to 50 times slower. At 2,000 rpm the top
   nods about seven times a second, too fast to follow by eye at full speed.
 - **The top** on a table, with two painted stripes that turn with the spin and
@@ -41,6 +44,9 @@ Run the tests with `npm test` (Node 20 or later).
 - **Readouts**: the shape the axle draws, the two ends of the nod, how long one
   nod and one turn round take, the fast-top estimate of the turn, the two
   steady-cone rates at this tilt, and the spin needed to stand upright.
+- **Spin and tilt over time**: a live line under the pictures and a chart of
+  both since release, with the tilt at which the rim meets the table and the
+  spin needed to stand upright marked.
 - **The energy curve**: the energy the nodding needs at each tilt against the
   energy the top has. The top can only lean where the curve lies below it.
 
@@ -82,6 +88,11 @@ Run the tests with `npm test` (Node 20 or later).
   measured against m g l / (I3 ω3).
 - The top can stand straight up only with ω3 > 2 √(I1 m g l) / I3, about
   1,136 rpm for this top.
+- Friction is a steady couple at the tip against the spin about the axle,
+  the size that would stop the starting spin in the chosen time. It drains the
+  spin at a constant rate and stops acting once the spin is gone. The
+  readouts describe the moment of release; with friction on, the motion drifts
+  away from them.
 - The rim of the disc touches the table at θ = atan(l / r), about 53°. If the
   nod would reach that far, the run stops there and says when.
 
@@ -101,6 +112,10 @@ Run the tests with `npm test` (Node 20 or later).
 - The vector integration keeps the energy and both angular momenta, stays
   inside the predicted band when the nod passes within 0.01° of upright, and
   matches the mean precession there.
+- With friction, the spin about the axle falls at exactly the set rate, the
+  angular momentum about the vertical falls as the couple's vertical share
+  says, an upright top stays within 5° until its spin passes the critical
+  rate and then falls, and a tilted top's precession speeds up as it slows.
 - A run stops at the rim exactly when the turning points say it should,
   including a nod whose outer end just grazes the rim, and simulated time
   follows the clock at 30, 60 and 144 frames a second.
@@ -109,8 +124,8 @@ Run the tests with `npm test` (Node 20 or later).
 
 ## What it leaves out
 
-Friction at the tip and in the air, so the spin never dies away; a tip that
-slides or rolls, which is what makes a real top rise towards upright; the
+Air drag, and any friction other than a steady couple at the tip; a tip
+that slides or rolls, which is what makes a real top rise towards upright; the
 stalk's own mass; and the floor pushing back once the rim touches.
 
 ## Files
