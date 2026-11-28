@@ -32,6 +32,10 @@ Run the tests with `npm test` (Node 20 or later).
   of steady precession at that tilt. Seven starting points cover the three
   shapes, the steady cone, a top spun too slowly, and a nearly upright top
   spun above and below the rate it needs to stand.
+- **The shape of the top**: the disc's radius (2 to 4 cm) and its height
+  above the tip (3 to 6 cm). The starting tilt is capped 2° short of where the
+  rim would meet the table. Two presets compare a flat, wide top, which
+  stands at 700 rpm, with a tall, narrow one, which falls at 3,000 rpm.
 - **Friction at the tip**, set by how long the spin would last (60, 30 or
   15 s), and two presets that let an upright and a tilted top spin down until
   they fall.
@@ -52,7 +56,8 @@ Run the tests with `npm test` (Node 20 or later).
 
 ## The model
 
-- A thin disc of 100 g and 3 cm radius sits 4 cm up a weightless stalk. Its
+- A thin disc of 100 g, 3 cm in radius unless changed, sits 4 cm up a
+  weightless stalk unless changed. Its
   moment of inertia about the axle is I3 = ½ m r² and about a horizontal line
   through the tip I1 = ¼ m r² + m l². The tip stays put and does not slide.
 - The motion is written in Euler angles: tilt θ from the vertical, the
@@ -86,8 +91,9 @@ Run the tests with `npm test` (Node 20 or later).
   the push slider is measured against the slower root. Below
   ω3 = 2 √(I1 m g l cos θ) / I3 neither root exists, and the push is then
   measured against m g l / (I3 ω3).
-- The top can stand straight up only with ω3 > 2 √(I1 m g l) / I3, about
-  1,136 rpm for this top.
+- The top can stand straight up only with ω3 > 2 √(I1 m g l) / I3: about
+  1,136 rpm for the standard top, 467 rpm for the widest and lowest disc and
+  4,456 rpm for the narrowest and highest.
 - Friction is a steady couple at the tip against the spin about the axle,
   the size that would stop the starting spin in the chosen time. It drains the
   spin at a constant rate and stops acting once the spin is gone. The
@@ -119,8 +125,12 @@ Run the tests with `npm test` (Node 20 or later).
 - A run stops at the rim exactly when the turning points say it should,
   including a nod whose outer end just grazes the rim, and simulated time
   follows the clock at 30, 60 and 144 frames a second.
-- Each preset produces the motion its name promises, and the wording, the
-  camera, the map and the energy curve are checked separately.
+- Each preset produces the motion its name promises for its own shape, and
+  the two shape presets lie on either side of their critical spins.
+- Every call the page makes into the physics passes the top the sliders
+  describe.
+- The wording, the camera, the map, the energy curve and the history chart
+  are checked separately.
 
 ## What it leaves out
 
