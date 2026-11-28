@@ -1,21 +1,23 @@
 import {
-  TOY, rpmToRad, floorAngle, criticalSpin, radToRpm, steadyPrecession, constants,
+  makeTop, rpmToRad, floorAngle, criticalSpin, radToRpm, steadyPrecession, constants,
   turningPoints, classify, nodding, thetaAccel, bodyTilt, bodySpin, constantsFromBody,
 } from './top.js';
 import { createRun } from './run.js';
 import {
-  rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory, frictionNote, nowLabel,
+  rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory, frictionNote, nowLabel, cm, shapeNote,
 } from './readout.js';
 import { drawTop, drawPath, drawPotential, drawHistory } from './draw.js';
 
 const $ = (id) => document.getElementById(id);
-const controls = { rpm: $('rpm'), tilt: $('tilt'), push: $('push') };
+const controls = { rpm: $('rpm'), tilt: $('tilt'), push: $('push'), radius: $('radius'), height: $('height') };
 const topCanvas = $('top-canvas');
 const pathCanvas = $('path-canvas');
 const potCanvas = $('pot-canvas');
 const historyCanvas = $('history');
 const HISTORY_POINTS = 6000;
-const FLOOR = floorAngle(TOY);
+// The top and the tilt at which its rim meets the table follow the shape sliders.
+let TOY = makeTop();
+let FLOOR = floorAngle(TOY);
 const TRAIL_POINTS = 2400;
 
 let motion = null;
@@ -37,14 +39,19 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 });
 
 function setUp() {
+  TOY = makeTop({ radius: Number(controls.radius.value) / 100, height: Number(controls.height.value) / 100 });
+  FLOOR = floorAngle(TOY);
+  // Keep the starting tilt at least 2 degrees short of the rim touching.
+  controls.tilt.max = String(Math.min(50, Math.floor((FLOOR * 180) / Math.PI) - 2));
+  if (Number(controls.tilt.value) > Number(controls.tilt.max)) controls.tilt.value = controls.tilt.max;
   const rpm = Number(controls.rpm.value);
   const tilt = (Number(controls.tilt.value) * Math.PI) / 180;
   const push = Number(controls.push.value);
   const omega3 = rpmToRad(rpm);
-  const steady = steadyPrecession(tilt, omega3);
+  const steady = steadyPrecession(tilt, omega3, TOY);
   const ref = steady ? steady.slow : TOY.mgl / (TOY.I3 * omega3);
   const release = { theta: tilt, phiDot: push * ref, omega3 };
-  const c = constants(release);
+  const c = constants(release, TOY);
   const band = turningPoints(c);
   band.touches = band.thetaMax >= FLOOR;
   const kind = classify(c, band);
@@ -58,6 +65,9 @@ function setUp() {
 
   $('rpm-value').textContent = rpmLabel(rpm);
   $('tilt-value').textContent = angleLabel(tilt);
+  $('radius-value').textContent = cm(TOY.radius);
+  $('height-value').textContent = cm(TOY.height);
+  $('shape-note').textContent = shapeNote(TOY);
   $('push-value').textContent = steady || push === 0 ? pushLabel(push) : `${pushLabel(push)} (measured against m g l / I3 ω, as no steady cone exists at this spin)`;
   $('r-shape').textContent = shapeLabel(kind, band.touches);
   $('r-band').textContent = band.touches
@@ -70,7 +80,7 @@ function setUp() {
   $('r-steady').textContent = steady
     ? `once every ${seconds((2 * Math.PI) / steady.slow)} (slow), or every ${seconds((2 * Math.PI) / steady.fast)} (fast)`
     : 'none: the spin is too slow for any steady cone at this tilt';
-  $('r-critical').textContent = `${Math.round(radToRpm(criticalSpin())).toLocaleString('en-US')} rpm or more`;
+  $('r-critical').textContent = `${Math.round(radToRpm(criticalSpin(TOY))).toLocaleString('en-US')} rpm or more`;
   $('story').textContent = describe({
     kind, thetaMin: band.thetaMin, thetaMax: band.thetaMax, tilt, floor: FLOOR, touches: band.touches, push,
     rises: thetaAccel(tilt, c) < 0,
@@ -85,7 +95,7 @@ function record(s) {
   motion.trail2.push([bodyTilt(s), Math.atan2(s.e3[1], s.e3[0])]);
   const h = motion.history;
   if (!h.length || s.t - h[h.length - 1][0] >= 0.004 || motion.run.fell) {
-    h.push([s.t, bodyTilt(s), (bodySpin(s) * 60) / (2 * Math.PI)]);
+    h.push([s.t, bodyTilt(s), (bodySpin(s, TOY) * 60) / (2 * Math.PI)]);
     // Past the cap, keep every other point so the whole run stays on the chart.
     if (h.length > HISTORY_POINTS) motion.history = h.filter((_, i) => i % 2 === 0 || i === h.length - 1);
   }
@@ -99,7 +109,7 @@ function advance(simSeconds) {
   const { run } = motion;
   run.advance(simSeconds, record);
   if (run.fell) {
-    $('status').textContent = fallStory(run.state.t, FLOOR, radToRpm(bodySpin(run.state)));
+    $('status').textContent = fallStory(run.state.t, FLOOR, radToRpm(bodySpin(run.state, TOY)));
     setRunning(false);
   }
 }
@@ -117,8 +127,8 @@ function draw() {
   drawTop(topCanvas.getContext('2d'), topCanvas.width, topCanvas.height, m.run.state, TOY, m.trail3, palette);
   drawPath(pathCanvas.getContext('2d'), pathCanvas.width, m.trail2, band, FLOOR, palette);
   drawPotential(potCanvas.getContext('2d'), potCanvas.width, potCanvas.height, c, band, bodyTilt(m.run.state), FLOOR, palette);
-  drawHistory(historyCanvas.getContext('2d'), historyCanvas.width, historyCanvas.height, m.history, FLOOR, radToRpm(criticalSpin()), m.rpm, palette);
-  $('r-now').textContent = nowLabel(m.run.state.t, radToRpm(bodySpin(m.run.state)), bodyTilt(m.run.state));
+  drawHistory(historyCanvas.getContext('2d'), historyCanvas.width, historyCanvas.height, m.history, FLOOR, radToRpm(criticalSpin(TOY)), m.rpm, palette);
+  $('r-now').textContent = nowLabel(m.run.state.t, radToRpm(bodySpin(m.run.state, TOY)), bodyTilt(m.run.state));
 }
 
 function setRunning(on) {
@@ -156,8 +166,13 @@ $('restart').addEventListener('click', () => {
 for (const b of document.querySelectorAll('button[data-rpm]')) {
   b.addEventListener('click', () => {
     controls.rpm.value = b.dataset.rpm;
-    controls.tilt.value = b.dataset.tilt;
     controls.push.value = b.dataset.push;
+    controls.radius.value = b.dataset.radius;
+    controls.height.value = b.dataset.height;
+    // Lift the limit the last shape set, so the preset's tilt is not clipped;
+    // setUp() then sets the limit for the new shape.
+    controls.tilt.max = '50';
+    controls.tilt.value = b.dataset.tilt;
     $('friction').value = b.dataset.friction;
     if (b.dataset.speed) $('speed').value = b.dataset.speed;
     setUp();

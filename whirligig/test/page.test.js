@@ -1,13 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory, frictionNote, nowLabel } from '../src/readout.js';
+import { rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory, frictionNote, nowLabel, cm, shapeNote } from '../src/readout.js';
 import { makeView, pathPoint, potentialCurve, potentialRange, historyScales, niceStep } from '../src/draw.js';
-import { TOY, bodyAxes, thetaAccel, constants, turningPoints, classify, floorAngle, rpmToRad, steadyPrecession, effectivePotential } from '../src/top.js';
+import { TOY, makeTop, criticalSpin, radToRpm, bodyAxes, thetaAccel, constants, turningPoints, classify, floorAngle, rpmToRad, steadyPrecession, effectivePotential } from '../src/top.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const deg = Math.PI / 180;
+
+// Every preset as an object of its data attributes, with its label.
+const presets = [...html.matchAll(/<button type="button"((?: data-\w+="[-\d.]+")+)>([^<]+)</g)].map((m) => ({
+  label: m[2],
+  ...Object.fromEntries([...m[1].matchAll(/data-(\w+)="([-\d.]+)"/g)].map((d) => [d[1], Number(d[2])])),
+}));
+const presetTop = (p) => makeTop({ radius: p.radius / 100, height: p.height / 100 });
 
 test('every element the script looks up by id is on the page', () => {
   const ids = new Set([...main.matchAll(/\$\('([\w-]+)'\)/g)].map((m) => m[1]));
@@ -22,21 +29,21 @@ test('every slider and preset starts inside the limits and on a step', () => {
     ranges[m[1]] = [min, max, step];
     assert.ok(value >= min && value <= max, m[1]);
   }
-  assert.deepEqual(Object.keys(ranges).sort(), ['push', 'rpm', 'tilt']);
-  let presets = 0;
-  for (const m of html.matchAll(/<button type="button"((?: data-\w+="[-\d.]+")+)>([^<]+)</g)) {
-    presets++;
-    const data = Object.fromEntries([...m[1].matchAll(/data-(\w+)="([-\d.]+)"/g)].map((d) => [d[1], Number(d[2])]));
+  assert.deepEqual(Object.keys(ranges).sort(), ['height', 'push', 'radius', 'rpm', 'tilt']);
+  for (const p of presets) {
     for (const k of Object.keys(ranges)) {
       const [min, max, step] = ranges[k];
-      assert.ok(data[k] >= min && data[k] <= max, `${m[2]}: ${k}`);
-      const steps = (data[k] - min) / step;
-      assert.ok(Math.abs(steps - Math.round(steps)) < 1e-9, `${m[2]}: ${k} on a step`);
+      assert.ok(p[k] >= min && p[k] <= max, `${p.label}: ${k}`);
+      const steps = (p[k] - min) / step;
+      assert.ok(Math.abs(steps - Math.round(steps)) < 1e-9, `${p.label}: ${k} on a step`);
     }
+    // The page caps the tilt 2 degrees short of where this shape's rim meets the table.
+    assert.ok(p.tilt <= Math.floor(floorAngle(presetTop(p)) / deg) - 2, `${p.label}: tilt under the cap`);
   }
-  assert.equal(presets, 9);
-  // The tilt slider stops short of the angle where the rim meets the table.
-  assert.ok(ranges.tilt[1] * deg < floorAngle());
+  assert.equal(presets.length, 11);
+  // Even the lowest rim angle the shape sliders allow leaves room above the tilt slider's minimum.
+  const lowest = floorAngle(makeTop({ radius: ranges.radius[1] / 100, height: ranges.height[0] / 100 }));
+  assert.ok(Math.floor(lowest / deg) - 2 > ranges.tilt[0] + 20);
 });
 
 test('each preset shows the motion its name promises', () => {
@@ -48,20 +55,40 @@ test('each preset shows the motion its name promises', () => {
     'Too slow': 'falls',
     'Nearly upright, fast': 'cusps',
     'Nearly upright, slow': 'falls',
+    'Flat and wide, 700 rpm': 'cusps',
+    'Tall and narrow, 3,000 rpm': 'falls',
   };
   let checked = 0;
-  for (const m of html.matchAll(/<button type="button" data-rpm="([\d.]+)" data-tilt="([\d.]+)" data-push="([-\d.]+)" data-friction="0">([^<]+)</g)) {
+  for (const p of presets.filter((q) => q.friction === 0)) {
     checked++;
-    const [rpm, tilt, push] = m.slice(1, 4).map(Number);
-    const omega3 = rpmToRad(rpm);
-    const sp = steadyPrecession(tilt * deg, omega3);
-    const ref = sp ? sp.slow : TOY.mgl / (TOY.I3 * omega3);
-    const c = constants({ theta: tilt * deg, phiDot: push * ref, omega3 });
+    const top = presetTop(p);
+    const omega3 = rpmToRad(p.rpm);
+    const sp = steadyPrecession(p.tilt * deg, omega3, top);
+    const ref = sp ? sp.slow : top.mgl / (top.I3 * omega3);
+    const c = constants({ theta: p.tilt * deg, phiDot: p.push * ref, omega3 }, top);
     const tp = turningPoints(c);
-    const got = tp.thetaMax >= floorAngle() ? 'falls' : classify(c, tp);
-    assert.equal(got, expect[m[4]], m[4]);
+    const got = tp.thetaMax >= floorAngle(top) ? 'falls' : classify(c, tp);
+    assert.equal(got, expect[p.label], p.label);
   }
   assert.equal(checked, Object.keys(expect).length);
+});
+
+test('the shape presets straddle their critical spins', () => {
+  const flat = presets.find((p) => p.label.startsWith('Flat'));
+  const tall = presets.find((p) => p.label.startsWith('Tall'));
+  assert.ok(radToRpm(criticalSpin(presetTop(flat))) < flat.rpm);
+  assert.ok(radToRpm(criticalSpin(presetTop(tall))) > tall.rpm);
+  // The default top sits between them.
+  const def = radToRpm(criticalSpin(TOY));
+  assert.ok(radToRpm(criticalSpin(presetTop(flat))) < def && def < radToRpm(criticalSpin(presetTop(tall))));
+  assert.ok(html.includes('the flat top stands at 700 rpm, the tall one falls at 3,000'));
+});
+
+test('shape labels read naturally', () => {
+  assert.equal(cm(0.03), '3 cm');
+  assert.equal(cm(0.0325), '3.25 cm');
+  assert.equal(shapeNote(TOY), 'A thin disc of 100 g and 3 cm radius, 4 cm up a weightless stalk.');
+  assert.ok(html.includes(`<span id="shape-note">${shapeNote(TOY)}</span>`));
 });
 
 test('preset friction and playback values are options of their menus', () => {
@@ -231,4 +258,40 @@ test('the history chart keeps the critical spin and its time ticks in view', () 
   assert.equal(niceStep(0.5), 0.5);
   assert.equal(niceStep(0.51), 1);
   assert.equal(niceStep(60.1), 100);
+});
+
+test('the page passes its current top to every function that would default to the standard one', () => {
+  // A call that leaves `top` out silently uses the 3 cm by 4 cm top, whatever the sliders say.
+  const src = readFileSync(new URL('../src/top.js', import.meta.url), 'utf8');
+  const fns = [...src.matchAll(/export function (\w+)\(([^)]*top = TOY[^)]*)\)/g)].map((m) => ({
+    name: m[1],
+    raw: m[2],
+  }));
+  assert.ok(fns.length >= 8);
+  const args = (text) => {
+    let depth = 0;
+    let n = text.trim() ? 1 : 0;
+    for (const ch of text) {
+      if ('([{'.includes(ch)) depth++;
+      else if (')]}'.includes(ch)) depth--;
+      else if (ch === ',' && depth === 0) n++;
+    }
+    return n;
+  };
+  let calls = 0;
+  for (const { name, raw } of fns) {
+    const params = args(raw);
+    for (const m of main.matchAll(new RegExp(String.raw`\b${name}\(`, 'g'))) {
+      let depth = 1;
+      let i = m.index + m[0].length;
+      const start = i;
+      for (; depth > 0; i++) {
+        if (main[i] === '(') depth++;
+        else if (main[i] === ')') depth--;
+      }
+      calls++;
+      assert.equal(args(main.slice(start, i - 1)), params, `${name}(${main.slice(start, i - 1)})`);
+    }
+  }
+  assert.ok(calls >= 8);
 });

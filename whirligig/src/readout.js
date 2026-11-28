@@ -69,6 +69,14 @@ export function describe({ kind, thetaMin, thetaMax, tilt, floor, touches, push,
   return `Pushed sideways at ${pushLabel(push)}, the top first ${rises ? 'rises' : 'sinks'}; the axle nods between ${a(thetaMin)} and ${a(thetaMax)} while it keeps going round the same way, so its tip draws waves.`;
 }
 
+export function cm(m) {
+  return `${Number((m * 100).toFixed(2))} cm`;
+}
+
+export function shapeNote(top) {
+  return `A thin disc of ${Math.round(top.mass * 1000)} g and ${cm(top.radius)} radius, ${cm(top.height)} up a weightless stalk.`;
+}
+
 export function fallStory(t, floor, rpm) {
   return `The rim hit the table ${seconds(t)} after the top was let go, with the axle ${angleLabel(floor)} from upright and the spin at ${Math.round(rpm).toLocaleString('en-US')} rpm.`;
 }

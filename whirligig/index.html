@@ -33,6 +33,14 @@
         <label for="push">Sideways push when let go: <output id="push-value" for="push"></output></label>
         <input id="push" type="range" min="-1.5" max="2.5" step="0.05" value="0">
       </div>
+      <div class="field grow">
+        <label for="radius">Disc radius: <output id="radius-value" for="radius"></output></label>
+        <input id="radius" type="range" min="2" max="4" step="0.25" value="3">
+      </div>
+      <div class="field grow">
+        <label for="height">Disc height above the tip: <output id="height-value" for="height"></output></label>
+        <input id="height" type="range" min="3" max="6" step="0.25" value="4">
+      </div>
       <div class="field">
         <label for="speed">Playback</label>
         <select id="speed">
@@ -62,15 +70,17 @@
       <div class="field presets">
         <span class="label" id="presets-label">Start from</span>
         <div class="row" role="group" aria-labelledby="presets-label">
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="0" data-friction="0">Let go from rest</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="1" data-friction="0">Steady cone</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="1.8" data-friction="0">Pushed ahead</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="-0.8" data-friction="0">Pushed back</button>
-          <button type="button" data-rpm="900" data-tilt="25" data-push="0" data-friction="0">Too slow</button>
-          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="0">Nearly upright, fast</button>
-          <button type="button" data-rpm="1000" data-tilt="3" data-push="0" data-friction="0">Nearly upright, slow</button>
-          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="15" data-speed="1">Spinning down, upright</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="1" data-friction="15" data-speed="0.25">Spinning down, tilted</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="0" data-friction="0" data-radius="3" data-height="4">Let go from rest</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1" data-friction="0" data-radius="3" data-height="4">Steady cone</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1.8" data-friction="0" data-radius="3" data-height="4">Pushed ahead</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="-0.8" data-friction="0" data-radius="3" data-height="4">Pushed back</button>
+          <button type="button" data-rpm="900" data-tilt="25" data-push="0" data-friction="0" data-radius="3" data-height="4">Too slow</button>
+          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="0" data-radius="3" data-height="4">Nearly upright, fast</button>
+          <button type="button" data-rpm="1000" data-tilt="3" data-push="0" data-friction="0" data-radius="3" data-height="4">Nearly upright, slow</button>
+          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="15" data-speed="1" data-radius="3" data-height="4">Spinning down, upright</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1" data-friction="15" data-speed="0.25" data-radius="3" data-height="4">Spinning down, tilted</button>
+          <button type="button" data-rpm="700" data-tilt="3" data-push="0" data-friction="0" data-radius="4" data-height="3">Flat and wide, 700 rpm</button>
+          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="0" data-radius="2" data-height="6">Tall and narrow, 3,000 rpm</button>
         </div>
       </div>
     </section>
@@ -107,14 +117,21 @@
     <h2>As the spin dies</h2>
     <p>With friction at the tip the spin slowly runs down. A slower spin needs a faster swing
       round to hold the top up, so the precession speeds up and the nod grows. A top standing
-      nearly upright stays upright until its spin drops below the rate it needs to stand, about
-      1,136 rpm for this one, and then wobbles outwards. In the end the rim meets the table. Real
+      nearly upright stays upright until its spin drops below the rate it needs to stand, given
+      in the readouts above, and then wobbles outwards. In the end the rim meets the table. Real
       tops also climb back towards upright while they spin fast, because their tip slides on the
       table; this tip stays put, so that part is missing.</p>
     <figure class="chart">
       <canvas id="history" width="820" height="240" role="img" aria-label="Tilt and spin of the top against time since it was let go"></canvas>
       <figcaption>Tilt (dark) and spin (coloured) since the top was let go. The dashed line is the tilt at which the rim meets the table; the dotted line is the spin it needs to stand upright.</figcaption>
     </figure>
+
+    <h2>Wide or tall</h2>
+    <p>A wide, flat top stands up at a far slower spin than a tall, narrow one. To stand
+      straight up the spin ω has to exceed 2√(I1 m g l) / I3. A wide disc carries its mass far
+      from the axle, which raises I3, the resistance to turning about the axle. A disc low on the
+      stalk shortens gravity's lever l and lowers I1, the resistance to tipping. Compare the two
+      shape presets: the flat top stands at 700 rpm, the tall one falls at 3,000.</p>
 
     <h2>Why it cannot fall</h2>
     <p>Without friction, two things stay fixed while the top moves: its spin about the axle, and its angular
@@ -137,8 +154,8 @@
   </main>
 
   <footer>
-    <p>A thin disc of 100 g and 3 cm radius, 4 cm up a weightless stalk from a tip that does not
-      slide. <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/whirligig">Source and notes</a>.</p>
+    <p><span id="shape-note">A thin disc of 100 g and 3 cm radius, 4 cm up a weightless stalk.</span>
+      The tip does not slide. <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/whirligig">Source and notes</a>.</p>
   </footer>
 
   <script type="module" src="src/main.js"></script>
