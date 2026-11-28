@@ -1,6 +1,6 @@
 import {
   TOY, rpmToRad, floorAngle, criticalSpin, radToRpm, steadyPrecession, constants,
-  turningPoints, classify, nodding, thetaAccel, bodyTilt, bodySpin,
+  turningPoints, classify, nodding, thetaAccel, bodyTilt, bodySpin, constantsFromBody,
 } from './top.js';
 import { createRun } from './run.js';
 import {
@@ -106,9 +106,17 @@ function advance(simSeconds) {
 
 function draw() {
   const m = motion;
+  // With friction the walls move as the spin dies, so the energy picture and
+  // the band follow the present state; without it they never change.
+  let { c, band } = m;
+  if (m.life && m.run.state.t > 0) {
+    c = constantsFromBody(m.run.state, TOY);
+    band = turningPoints(c);
+    band.touches = band.thetaMax >= FLOOR;
+  }
   drawTop(topCanvas.getContext('2d'), topCanvas.width, topCanvas.height, m.run.state, TOY, m.trail3, palette);
-  drawPath(pathCanvas.getContext('2d'), pathCanvas.width, m.trail2, m.band, FLOOR, palette);
-  drawPotential(potCanvas.getContext('2d'), potCanvas.width, potCanvas.height, m.c, m.band, bodyTilt(m.run.state), FLOOR, palette);
+  drawPath(pathCanvas.getContext('2d'), pathCanvas.width, m.trail2, band, FLOOR, palette);
+  drawPotential(potCanvas.getContext('2d'), potCanvas.width, potCanvas.height, c, band, bodyTilt(m.run.state), FLOOR, palette);
   drawHistory(historyCanvas.getContext('2d'), historyCanvas.width, historyCanvas.height, m.history, FLOOR, radToRpm(criticalSpin()), m.rpm, palette);
   $('r-now').textContent = nowLabel(m.run.state.t, radToRpm(bodySpin(m.run.state)), bodyTilt(m.run.state));
 }
