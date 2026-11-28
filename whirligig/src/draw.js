@@ -258,3 +258,69 @@ export function drawPotential(ctx, width, height, c, band, theta, floor, colours
   ctx.restore();
   return { X, Y, E, ylo, yhi };
 }
+
+// Tilt and spin against time since release, on one chart with two scales.
+export function historyScales(history, width, height, floor, rpm0) {
+  const pad = { l: 46, r: 58, t: 12, b: 30 };
+  const tEnd = history.length ? history[history.length - 1][0] : 0;
+  const tMax = Math.max(1, tEnd * 1.05);
+  const tiltMax = Math.max(floor * 1.15, ...history.map((p) => p[1]));
+  const rpmMax = Math.max(rpm0 * 1.05, 1);
+  return {
+    pad,
+    tMax,
+    X: (t) => pad.l + (t / tMax) * (width - pad.l - pad.r),
+    Ytilt: (a) => height - pad.b - (a / tiltMax) * (height - pad.t - pad.b),
+    Yspin: (r) => height - pad.b - (r / rpmMax) * (height - pad.t - pad.b),
+    tiltMax,
+    rpmMax,
+  };
+}
+
+export function drawHistory(ctx, width, height, history, floor, critRpm, rpm0, colours) {
+  ctx.clearRect(0, 0, width, height);
+  const sc = historyScales(history, width, height, floor, rpm0);
+  const { pad, X, Ytilt, Yspin } = sc;
+  ctx.font = '12px Georgia, serif';
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = colours.rule;
+  ctx.fillStyle = colours.muted;
+  const tickStep = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30, 60].find((d) => sc.tMax / d <= 8);
+  for (let t = 0; t <= sc.tMax + 1e-9; t += tickStep) {
+    ctx.beginPath();
+    ctx.moveTo(X(t), pad.t);
+    ctx.lineTo(X(t), height - pad.b);
+    ctx.stroke();
+    ctx.fillText(`${Number(t.toFixed(1))} s`, X(t) - 8, height - pad.b + 16);
+  }
+  const deg = Math.PI / 180;
+  for (let a = 0; a <= sc.tiltMax; a += 15 * deg) ctx.fillText(`${Math.round(a / deg)}°`, 8, Ytilt(a) + 4);
+  ctx.fillStyle = colours.trail;
+  const rpmStep = sc.rpmMax > 2500 ? 1000 : 500;
+  for (let r = 0; r <= sc.rpmMax; r += rpmStep) ctx.fillText(`${r}`, width - pad.r + 6, Yspin(r) + 4);
+  ctx.fillText('rpm', width - pad.r + 6, height - pad.b + 16);
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = colours.warn;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, Ytilt(floor));
+  ctx.lineTo(width - pad.r, Ytilt(floor));
+  ctx.stroke();
+  ctx.setLineDash([2, 3]);
+  ctx.strokeStyle = colours.muted;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, Yspin(critRpm));
+  ctx.lineTo(width - pad.r, Yspin(critRpm));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (history.length > 1) {
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = colours.ink;
+    poly(ctx, history.map(([t, a]) => [X(t), Ytilt(a)]));
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = colours.trail;
+    poly(ctx, history.map(([t, , r]) => [X(t), Yspin(r)]));
+    ctx.stroke();
+  }
+  return sc;
+}
