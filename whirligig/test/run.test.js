@@ -120,3 +120,17 @@ test('a nod whose outer end just reaches the rim still counts as touching', () =
   run.advance(3, null, 1, 1e9);
   assert.equal(run.fell, true);
 });
+
+test('the nod integrals stay quick near upright', () => {
+  // A slider setting once took 22 s here while rounding noise was subdivided.
+  for (const [rpm, tilt, push] of [[1300, 3, 1.95], [1400, 17, 2.5], [5000, 2, 2.5], [1150, 2, 1.5], [300, 2, -1.5]]) {
+    const c = constants(release(rpm, tilt, push));
+    const t0 = performance.now();
+    const nod = nodding(c);
+    const ms = performance.now() - t0;
+    assert.ok(Number.isFinite(nod.precessionRate), `${rpm} ${tilt} ${push}`);
+    assert.ok(ms < 200, `${rpm} ${tilt} ${push}: ${ms} ms`);
+  }
+  const near = nodding(constants(release(1300, 3, 1.95)));
+  assert.ok(Math.abs(near.precessionRate - 8.6072646) < 1e-5);
+});
