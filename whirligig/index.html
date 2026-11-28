@@ -44,6 +44,15 @@
         </select>
       </div>
       <div class="field">
+        <label for="friction">Friction at the tip</label>
+        <select id="friction">
+          <option value="0" selected>none</option>
+          <option value="60">spin lasts 60 s</option>
+          <option value="30">spin lasts 30 s</option>
+          <option value="15">spin lasts 15 s</option>
+        </select>
+      </div>
+      <div class="field">
         <span class="label">Run</span>
         <div class="row">
           <button type="button" id="run">Pause</button>
@@ -53,13 +62,15 @@
       <div class="field presets">
         <span class="label" id="presets-label">Start from</span>
         <div class="row" role="group" aria-labelledby="presets-label">
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="0">Let go from rest</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="1">Steady cone</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="1.8">Pushed ahead</button>
-          <button type="button" data-rpm="2000" data-tilt="25" data-push="-0.8">Pushed back</button>
-          <button type="button" data-rpm="900" data-tilt="25" data-push="0">Too slow</button>
-          <button type="button" data-rpm="3000" data-tilt="3" data-push="0">Nearly upright, fast</button>
-          <button type="button" data-rpm="1000" data-tilt="3" data-push="0">Nearly upright, slow</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="0" data-friction="0">Let go from rest</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1" data-friction="0">Steady cone</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1.8" data-friction="0">Pushed ahead</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="-0.8" data-friction="0">Pushed back</button>
+          <button type="button" data-rpm="900" data-tilt="25" data-push="0" data-friction="0">Too slow</button>
+          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="0">Nearly upright, fast</button>
+          <button type="button" data-rpm="1000" data-tilt="3" data-push="0" data-friction="0">Nearly upright, slow</button>
+          <button type="button" data-rpm="3000" data-tilt="3" data-push="0" data-friction="15" data-speed="1">Spinning down, upright</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1" data-friction="15" data-speed="0.25">Spinning down, tilted</button>
         </div>
       </div>
     </section>
@@ -79,6 +90,9 @@
     </div>
 
     <section class="readout-panel" aria-label="Numbers">
+      <p id="r-now" class="now"></p>
+      <p class="hint">The numbers below are for the moment the top is let go. With friction on, the
+        top drifts away from them as its spin dies.</p>
       <dl class="readouts">
         <dt>The axle's tip draws</dt><dd id="r-shape"></dd>
         <dt>It nods between</dt><dd id="r-band"></dd>
@@ -90,8 +104,20 @@
       </dl>
     </section>
 
+    <h2>As the spin dies</h2>
+    <p>With friction at the tip the spin slowly runs down. A slower spin needs a faster swing
+      round to hold the top up, so the precession speeds up and the nod grows. A top standing
+      nearly upright stays upright until its spin drops below the rate it needs to stand, about
+      1,136 rpm for this one, and then wobbles outwards. In the end the rim meets the table. Real
+      tops also climb back towards upright while they spin fast, because their tip slides on the
+      table; this tip stays put, so that part is missing.</p>
+    <figure class="chart">
+      <canvas id="history" width="820" height="240" role="img" aria-label="Tilt and spin of the top against time since it was let go"></canvas>
+      <figcaption>Tilt (dark) and spin (coloured) since the top was let go. The dashed line is the tilt at which the rim meets the table; the dotted line is the spin it needs to stand upright.</figcaption>
+    </figure>
+
     <h2>Why it cannot fall</h2>
-    <p>Two things stay fixed while the top moves: its spin about the axle, and its angular
+    <p>Without friction, two things stay fixed while the top moves: its spin about the axle, and its angular
       momentum about the vertical. With both fixed, each tilt comes with its own rate of swinging
       round, and with the energy that swing needs. Beyond some tilt the swing needs more energy
       than the fall has released, so the tilt is walled in. The curve is the energy the nod needs at each tilt; the top can only lean where

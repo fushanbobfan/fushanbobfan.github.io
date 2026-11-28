@@ -123,6 +123,8 @@ figcaption { color: var(--muted); font-size: 0.93rem; margin-top: 6px; }
 .readouts dd { margin: 0; overflow-wrap: anywhere; }
 
 .chart { max-width: 820px; }
+.now { margin: 0 0 4px; font-weight: bold; }
+.readout-panel .hint { color: var(--muted); font-size: 0.9rem; margin: 0 0 10px; }
 
 footer { color: var(--muted); font-size: 0.93rem; padding-bottom: 32px; margin-top: 24px; }
 footer a, main a { color: var(--accent); }
