@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>whirligig · why a spinning top does not fall</title>
+  <meta name="description" content="Why a spinning top does not fall: tilt a heavy top, give it a spin and a push, and watch its axle precess and nod in cusps, waves and loops.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>whirligig</h1>
+    <p class="lede">A tilted top that is not spinning falls straight over. Spin it, and gravity's
+      pull no longer topples it: the spin turns that pull into a slow sideways swing, so the axle
+      goes round in a cone instead of falling. Let go of a spinning top and it does fall a little
+      at first, and the falling itself is what swings it sideways; it bobs back up, again and
+      again, while it goes round. The faster it spins, the smaller that nod and the slower the
+      swing. Below is a toy top worked out from Newton's laws for a spinning body.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Spin, tilt and push">
+      <div class="field grow">
+        <label for="rpm">Spin: <output id="rpm-value" for="rpm"></output></label>
+        <input id="rpm" type="range" min="300" max="5000" step="50" value="2000">
+      </div>
+      <div class="field grow">
+        <label for="tilt">Tilt when let go: <output id="tilt-value" for="tilt"></output></label>
+        <input id="tilt" type="range" min="2" max="50" step="1" value="25">
+      </div>
+      <div class="field grow">
+        <label for="push">Sideways push when let go: <output id="push-value" for="push"></output></label>
+        <input id="push" type="range" min="-1.5" max="2.5" step="0.05" value="0">
+      </div>
+      <div class="field">
+        <label for="speed">Playback</label>
+        <select id="speed">
+          <option value="1">real time</option>
+          <option value="0.25">4 times slower</option>
+          <option value="0.1" selected>10 times slower</option>
+          <option value="0.04">25 times slower</option>
+          <option value="0.02">50 times slower</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="label">Run</span>
+        <div class="row">
+          <button type="button" id="run">Pause</button>
+          <button type="button" id="restart">Let go again</button>
+        </div>
+      </div>
+      <div class="field presets">
+        <span class="label" id="presets-label">Start from</span>
+        <div class="row" role="group" aria-labelledby="presets-label">
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="0">Let go from rest</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1">Steady cone</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="1.8">Pushed ahead</button>
+          <button type="button" data-rpm="2000" data-tilt="25" data-push="-0.8">Pushed back</button>
+          <button type="button" data-rpm="900" data-tilt="25" data-push="0">Too slow</button>
+          <button type="button" data-rpm="3000" data-tilt="3" data-push="0">Nearly upright, fast</button>
+          <button type="button" data-rpm="1000" data-tilt="3" data-push="0">Nearly upright, slow</button>
+        </div>
+      </div>
+    </section>
+
+    <p id="story" aria-live="polite"></p>
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <div class="pair">
+      <figure class="stage">
+        <canvas id="top-canvas" width="640" height="440" role="img" aria-label="The spinning top on a table, with the path the end of its handle has drawn"></canvas>
+        <figcaption>The top. The two painted stripes turn with the spin; the coloured line is the path of the end of the handle.</figcaption>
+      </figure>
+      <figure class="map">
+        <canvas id="path-canvas" width="440" height="440" role="img" aria-label="The direction of the axle seen from above"></canvas>
+        <figcaption>The axle seen from straight above: the further from the centre, the more it leans. The shaded ring is the band it nods across.</figcaption>
+      </figure>
+    </div>
+
+    <section class="readout-panel" aria-label="Numbers">
+      <dl class="readouts">
+        <dt>The axle's tip draws</dt><dd id="r-shape"></dd>
+        <dt>It nods between</dt><dd id="r-band"></dd>
+        <dt>One nod takes</dt><dd id="r-nod"></dd>
+        <dt>One turn round takes</dt><dd id="r-prec"></dd>
+        <dt>Fast-top estimate</dt><dd id="r-est"></dd>
+        <dt>Steady cone at this tilt</dt><dd id="r-steady"></dd>
+        <dt>Spin to stand upright</dt><dd id="r-critical"></dd>
+      </dl>
+    </section>
+
+    <h2>Why it cannot fall</h2>
+    <p>Two things stay fixed while the top moves: its spin about the axle, and its turning about
+      the vertical. With both fixed, leaning further out makes the top swing round faster and
+      faster, and beyond some tilt that swing costs more energy than the fall releases. So the
+      tilt is walled in. The curve is the energy the nod needs at each tilt; the top can only lean where
+      the curve is below its energy, the shaded band. A slow spin lowers the outer wall until it
+      lies past the point where the rim meets the table.</p>
+    <figure class="chart">
+      <canvas id="pot-canvas" width="820" height="300" role="img" aria-label="The energy needed for each tilt, with the energy the top has and the band of tilts it can reach"></canvas>
+      <figcaption>The energy the nodding needs at each tilt, with the spin's own energy left out. The dot is the top now.</figcaption>
+    </figure>
+
+    <h2>The three shapes</h2>
+    <p>Let go from rest, the axle starts with no sideways motion, so at the top of every nod it
+      stops dead for an instant: the tip draws cusps. Give it a push in the direction it would go
+      anyway and it never stops: waves. Push it the other way and for part of each nod it runs
+      backwards: loops. Push it at exactly the steady rate and the nod vanishes, leaving a smooth
+      cone.</p>
+  </main>
+
+  <footer>
+    <p>A thin disc of 100 g and 3 cm radius, 4 cm up a weightless stalk from a tip that does not
+      slide. <a href="https://github.com/fushanbobfan/fushanbobfan.github.io/tree/main/whirligig">Source and notes</a>.</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
