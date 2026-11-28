@@ -56,8 +56,15 @@ Run the tests with `npm test` (Node 20 or later).
 
   I1 θ'' = I1 φ'² sin θ cos θ − I3 ω3 φ' sin θ + m g l sin θ,
 
-  with φ' fixed by the second conserved quantity. It is stepped with
-  fourth-order Runge–Kutta, a few hundred steps per nod.
+  with φ' fixed by the second conserved quantity. These equations give the
+  turning points, the shapes and the periods below.
+- The animation integrates the same body as vectors: the angular momentum
+  about the tip and two axes fixed in the body, stepped with fourth-order
+  Runge–Kutta. Euler angles become singular when the axle passes through
+  upright, and a fast nod can pass within a hundredth of a degree of it; the
+  vector form has no such point. The step keeps every turn of the body per
+  step below 0.03 rad, and simulated time carries over between frames, so the
+  playback speed holds at any frame rate.
 - With u = cos θ, energy conservation gives u'² = f(u), a cubic. Its two roots
   between −1 and 1 are the ends of the nod; the band between them is where
   the effective potential lies below the energy. They are found by bisection.
@@ -66,7 +73,9 @@ Run the tests with `npm test` (Node 20 or later).
   the top is let go without a push), opposite signs give loops.
 - One nod's period and the turn in φ it carries are integrals of 1/√f(u),
   taken after the substitution u = m + h sin s that removes the square-root
-  singularities at the ends. Their ratio is the mean precession rate.
+  singularities at the ends, with adaptive Simpson's rule, since the turn
+  peaks sharply when the nod passes close to upright. Their ratio is the mean
+  precession rate.
 - Steady precession at a fixed tilt solves I1 cos θ Ω² − I3 ω3 Ω + m g l = 0;
   the push slider is measured against the slower root. Below
   ω3 = 2 √(I1 m g l cos θ) / I3 neither root exists, and the push is then
@@ -89,6 +98,12 @@ Run the tests with `npm test` (Node 20 or later).
   1 part in 10⁵.
 - A fast top follows the textbook estimates: precession m g l / (I3 ω3), nod
   rate I3 ω3 / I1 and, let go from rest, a drop of 2 I1 m g l sin θ / (I3 ω3)².
+- The vector integration keeps the energy and both angular momenta, stays
+  inside the predicted band when the nod passes within 0.01° of upright, and
+  matches the mean precession there.
+- A run stops at the rim exactly when the turning points say it should,
+  including a nod whose outer end just grazes the rim, and simulated time
+  follows the clock at 30, 60 and 144 frames a second.
 - Each preset produces the motion its name promises, and the wording, the
   camera, the map and the energy curve are checked separately.
 
@@ -100,8 +115,9 @@ stalk's own mass; and the floor pushing back once the rim touches.
 
 ## Files
 
-- `src/top.js` the top, its equations of motion, the turning points, the nod
-  and the steady rates
+- `src/top.js` the top, its equations of motion in Euler angles and as
+  vectors, the turning points, the nod and the steady rates
+- `src/run.js` one run from release: exact playback time and the fall check
 - `src/draw.js` the three pictures
 - `src/readout.js` labels and the sentence under the controls
 - `src/main.js` the page
