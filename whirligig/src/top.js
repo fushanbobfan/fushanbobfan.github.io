@@ -274,26 +274,58 @@ export function bodyState(release, top = TOY) {
   return { t: 0, L, e1, e3 };
 }
 
-function bodyDeriv(L, e1, e3, top) {
+// `friction` is a steady couple at the tip, in N m, acting against the spin
+// about the axle: dry friction, which slows a top at a roughly constant rate.
+// It stops acting once the spin is used up.
+function bodyDeriv(L, e1, e3, top, friction) {
   const l3 = dot(L, e3);
   const w = L.map((v, i) => v / top.I1 + (1 / top.I3 - 1 / top.I1) * l3 * e3[i]);
-  return [cross(e3, [0, 0, -top.mgl]), cross(w, e1), cross(w, e3)];
+  const gravity = cross(e3, [0, 0, -top.mgl]);
+  const couple = l3 > 0 ? friction : 0;
+  return [gravity.map((v, i) => v - couple * e3[i]), cross(w, e1), cross(w, e3)];
 }
 
-export function bodyStep(st, h, top = TOY) {
+export function bodyStep(st, h, top = TOY, friction = 0) {
   const at = (k, f) => [0, 1, 2].map((j) => [st.L, st.e1, st.e3][j].map((v, i) => v + f * k[j][i]));
-  const k1 = bodyDeriv(st.L, st.e1, st.e3, top);
-  const k2 = bodyDeriv(...at(k1, h / 2), top);
-  const k3 = bodyDeriv(...at(k2, h / 2), top);
-  const k4 = bodyDeriv(...at(k3, h), top);
+  const k1 = bodyDeriv(st.L, st.e1, st.e3, top, friction);
+  const k2 = bodyDeriv(...at(k1, h / 2), top, friction);
+  const k3 = bodyDeriv(...at(k2, h / 2), top, friction);
+  const k4 = bodyDeriv(...at(k3, h), top, friction);
   const next = [st.L, st.e1, st.e3].map((x, j) => x.map((v, i) => v + (h / 6) * (k1[j][i] + 2 * k2[j][i] + 2 * k3[j][i] + k4[j][i])));
-  const [L, e1raw, e3raw] = next;
+  const [Lraw, e1raw, e3raw] = next;
   const n3 = Math.hypot(...e3raw);
   const e3 = e3raw.map((v) => v / n3);
+  // Friction can only stop the spin: a step that would carry it past zero
+  // ends with no spin about the axle, keeping the rest of L.
+  const l3 = dot(Lraw, e3);
+  const L = friction > 0 && l3 < 0 && dot(st.L, st.e3) >= 0 ? Lraw.map((v, i) => v - l3 * e3[i]) : Lraw;
   const p = dot(e1raw, e3);
   const e1o = e1raw.map((v, i) => v - p * e3[i]);
   const n1 = Math.hypot(...e1o);
   return { t: st.t + h, L, e1: e1o.map((v) => v / n1), e3 };
+}
+
+// Fixed quantities of the frictionless motion through the current state, in
+// the same form as constants(): with friction on they drift, and the energy
+// picture is redrawn from them.
+export function constantsFromBody(st, top = TOY) {
+  const l3 = dot(st.L, st.e3);
+  const L2 = dot(st.L, st.L);
+  const beta = (2 * top.mgl) / top.I1;
+  return {
+    a: l3 / top.I1,
+    b: st.L[2] / top.I1,
+    beta,
+    alpha: (L2 - l3 * l3) / (top.I1 * top.I1) + beta * st.e3[2],
+    omega3: l3 / top.I3,
+    u0: Math.max(-1, Math.min(1, st.e3[2])),
+    top,
+  };
+}
+
+// Spin about the axle, in rad/s.
+export function bodySpin(st, top = TOY) {
+  return dot(st.L, st.e3) / top.I3;
 }
 
 export function bodyTilt(st) {

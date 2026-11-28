@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory } from '../src/readout.js';
-import { makeView, pathPoint, potentialCurve, potentialRange } from '../src/draw.js';
+import { rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory, frictionNote, nowLabel } from '../src/readout.js';
+import { makeView, pathPoint, potentialCurve, potentialRange, historyScales, niceStep } from '../src/draw.js';
 import { TOY, bodyAxes, thetaAccel, constants, turningPoints, classify, floorAngle, rpmToRad, steadyPrecession, effectivePotential } from '../src/top.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -34,7 +34,7 @@ test('every slider and preset starts inside the limits and on a step', () => {
       assert.ok(Math.abs(steps - Math.round(steps)) < 1e-9, `${m[2]}: ${k} on a step`);
     }
   }
-  assert.equal(presets, 7);
+  assert.equal(presets, 9);
   // The tilt slider stops short of the angle where the rim meets the table.
   assert.ok(ranges.tilt[1] * deg < floorAngle());
 });
@@ -49,7 +49,9 @@ test('each preset shows the motion its name promises', () => {
     'Nearly upright, fast': 'cusps',
     'Nearly upright, slow': 'falls',
   };
-  for (const m of html.matchAll(/<button type="button" data-rpm="([\d.]+)" data-tilt="([\d.]+)" data-push="([-\d.]+)">([^<]+)</g)) {
+  let checked = 0;
+  for (const m of html.matchAll(/<button type="button" data-rpm="([\d.]+)" data-tilt="([\d.]+)" data-push="([-\d.]+)" data-friction="0">([^<]+)</g)) {
+    checked++;
     const [rpm, tilt, push] = m.slice(1, 4).map(Number);
     const omega3 = rpmToRad(rpm);
     const sp = steadyPrecession(tilt * deg, omega3);
@@ -59,6 +61,26 @@ test('each preset shows the motion its name promises', () => {
     const got = tp.thetaMax >= floorAngle() ? 'falls' : classify(c, tp);
     assert.equal(got, expect[m[4]], m[4]);
   }
+  assert.equal(checked, Object.keys(expect).length);
+});
+
+test('preset friction and playback values are options of their menus', () => {
+  const options = (id) => {
+    const start = html.indexOf(`<select id="${id}">`);
+    const block = html.slice(start, html.indexOf('</select>', start));
+    return new Set([...block.matchAll(/value="([\d.]+)"/g)].map((m) => m[1]));
+  };
+  const friction = options('friction');
+  const speed = options('speed');
+  assert.deepEqual([...friction].sort(), ['0', '15', '30', '60']);
+  let withFriction = 0;
+  for (const m of html.matchAll(/<button type="button"[^>]*data-friction="([\d.]+)"([^>]*)>/g)) {
+    assert.ok(friction.has(m[1]), m[0]);
+    const sp = m[2].match(/data-speed="([\d.]+)"/);
+    if (sp) assert.ok(speed.has(sp[1]), m[0]);
+    if (m[1] !== '0') withFriction++;
+  }
+  assert.equal(withFriction, 2);
 });
 
 test('the page loads only relative files', () => {
@@ -89,7 +111,10 @@ test('labels read naturally', () => {
   assert.equal(perSecond(0.088), '11 a second');
   assert.equal(shapeLabel('loops', false), 'loops');
   assert.equal(shapeLabel('cusps', true), 'none: it falls over');
-  assert.match(fallStory(0.115, floorAngle()), /115 ms .* 53°/);
+  assert.match(fallStory(0.115, floorAngle(), 2000), /115 ms .* 53° from upright and the spin at 2,000 rpm\./);
+  assert.equal(frictionNote(0), '');
+  assert.match(frictionNote(15), /runs out in 15 s/);
+  assert.equal(nowLabel(3.25, 1849.6, 26.31 * deg), '3.25 s after release: spin 1,850 rpm, tilt 26.3°.');
 });
 
 test('the story matches the motion and shows narrow nods with a decimal', () => {
@@ -176,4 +201,34 @@ test('the story says sinks or rises from the actual first motion', () => {
   assert.ok(thetaAccel(25 * deg, c) > 0);
   const c2 = constants({ theta: 25 * deg, phiDot: 1.8 * steadyPrecession(25 * deg, rpmToRad(2000)).slow, omega3: rpmToRad(2000) });
   assert.ok(thetaAccel(25 * deg, c2) < 0);
+});
+
+test('the history chart maps time, tilt and spin onto the canvas', () => {
+  const floor = floorAngle();
+  const hist = [[0, 25 * deg, 2000], [5, 30 * deg, 1500], [10, floor, 950]];
+  const sc = historyScales(hist, 820, 240, floor, 2000);
+  assert.equal(sc.X(0), sc.pad.l);
+  assert.ok(Math.abs(sc.X(10.5) - (820 - sc.pad.r)) < 1e-9);
+  assert.equal(sc.Ytilt(0), 240 - sc.pad.b);
+  assert.ok(sc.Ytilt(floor) > sc.pad.t);
+  assert.ok(sc.Yspin(2000) >= sc.pad.t && sc.Yspin(2000) < sc.Yspin(950));
+  assert.equal(historyScales([], 820, 240, floor, 2000).tMax, 1);
+});
+
+test('the history chart keeps the critical spin and its time ticks in view', () => {
+  const floor = floorAngle();
+  const crit = 1135.76;
+  for (const rpm0 of [900, 1000, 2000, 5000]) {
+    const sc = historyScales([[0, 25 * deg, rpm0]], 820, 240, floor, rpm0, crit);
+    assert.ok(sc.Yspin(crit) >= sc.pad.t && sc.Yspin(crit) <= 240 - sc.pad.b, `${rpm0}`);
+    assert.ok(sc.Yspin(rpm0) >= sc.pad.t);
+  }
+  for (const tMax of [1, 7.3, 46, 480, 500, 12345]) {
+    const step = niceStep(tMax / 8);
+    const ticks = Math.floor(tMax / step) + 1;
+    assert.ok(ticks >= 4 && ticks <= 9, `${tMax}: ${step}`);
+  }
+  assert.equal(niceStep(0.5), 0.5);
+  assert.equal(niceStep(0.51), 1);
+  assert.equal(niceStep(60.1), 100);
 });
