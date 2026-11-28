@@ -7,6 +7,7 @@ Gallery: https://fushanbobfan.github.io/
 
 | Project | What it shows | Folder |
 |---|---|---|
+| [whirligig](https://fushanbobfan.github.io/whirligig/) | Why a spinning top does not fall: give a tilted top a spin and a push, and watch its axle swing round and nod in cusps, waves or loops. | [`whirligig/`](whirligig/) |
 | [nimbus](https://fushanbobfan.github.io/nimbus/) | The electron clouds of the hydrogen atom: see any orbital up to n = 6 as a turnable cloud, a cut through the nucleus and a chart of how far out it sits, mix two orbitals to watch the cloud beat at the frequency of the light it gives out, or build sp, sp² and sp³ hybrids. | [`nimbus/`](nimbus/) |
 | [dusk](https://fushanbobfan.github.io/dusk/) | Why the sky is blue and the setting sun red: follow sunlight through the air colour by colour, lower the sun, add haze or climb to 30 km, and watch the whole sky change. | [`dusk/`](dusk/) |
 | [mirage](https://fushanbobfan.github.io/mirage/) | Why a hot road looks wet: trace light through the hot air above the asphalt, see the sky on the road and a board hanging upside down beneath itself. | [`mirage/`](mirage/) |
