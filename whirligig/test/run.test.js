@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TOY, floorAngle, rpmToRad, steadyPrecession, constants, turningPoints, nodding, integrate,
-  bodyState, bodyStep, bodyStepSize, bodyTilt, bodyEnergy, bodySpin, criticalSpin,
+  bodyState, bodyStep, bodyStepSize, bodyTilt, bodyEnergy, bodySpin, criticalSpin, constantsFromBody,
 } from '../src/top.js';
 import { createRun } from '../src/run.js';
 
@@ -191,4 +191,40 @@ test('as the spin dies the precession speeds up', () => {
   const late = turnRate(2);
   assert.equal(run.fell, false);
   assert.ok(late > early * 1.3, `${early} ${late}`);
+});
+
+test('the frictionless constants can be read back from the vector state', () => {
+  const rel = release(1500, 30, -0.5);
+  const c0 = constants(rel);
+  let s = bodyState(rel);
+  const close = (x, y) => Math.abs(x - y) <= 1e-9 * (Math.abs(y) + 1);
+  for (const k of ['a', 'b', 'alpha', 'beta', 'omega3', 'u0']) assert.ok(close(constantsFromBody(s)[k], c0[k]), k);
+  const h = bodyStepSize(s);
+  for (let i = 0; i < 1 / h; i++) s = bodyStep(s, h);
+  const c1 = constantsFromBody(s);
+  for (const k of ['a', 'b', 'alpha']) assert.ok(close(c1[k], c0[k]), `${k} after 1 s`);
+  // With friction they drift, but the present tilt always lies inside the present band.
+  const run = createRun(rel, TOY, FLOOR, false, (TOY.I3 * rel.omega3) / 15);
+  for (let i = 0; i < 12; i++) {
+    run.advance(0.4, null, 1, 1e9);
+    if (run.fell) break;
+    const c = constantsFromBody(run.state);
+    const tp = turningPoints(c);
+    const tilt = bodyTilt(run.state);
+    assert.ok(tilt >= tp.thetaMin - 1e-9 && tilt <= tp.thetaMax + 1e-9, `${run.state.t}`);
+  }
+  const drifted = constantsFromBody(run.state).a;
+  assert.ok(run.state.t > 0.5);
+  assert.ok(Math.abs(drifted - c0.a * (1 - run.state.t / 15)) < 1e-9 * c0.a);
+});
+
+test('friction stops the spin at zero and never reverses it', () => {
+  // Exactly upright, gravity has no lever, so the top just stands while the spin runs out.
+  const rel = { theta: 0, phiDot: 0, omega3: rpmToRad(3000) };
+  let s = bodyState(rel);
+  const k = (TOY.I3 * rel.omega3) / 15;
+  const h = bodyStepSize(s);
+  for (let i = 0; i < 16 / h; i++) s = bodyStep(s, h, TOY, k);
+  assert.equal(bodySpin(s), 0);
+  assert.ok(Math.abs(s.e3[2] - 1) < 1e-12);
 });
