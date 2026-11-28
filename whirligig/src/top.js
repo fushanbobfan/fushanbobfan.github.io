@@ -66,7 +66,9 @@ export function rates(theta, c) {
   return { phiDot, psiDot: c.omega3 - phiDot * u };
 }
 
-function thetaAccel(theta, c) {
+// Angular acceleration of the tilt; at a release with no nodding speed its
+// sign says whether the top first sinks (positive) or rises (negative).
+export function thetaAccel(theta, c) {
   const s = Math.sin(theta);
   const u = Math.cos(theta);
   const phiDot = (c.b - c.a * u) / (s * s);
@@ -174,21 +176,125 @@ export function classify(c, tp = turningPoints(c)) {
 //   dt = du / sqrt(f(u))   and   dphi = (b - a u) / (1 - u^2) dt,
 // with u = m + h sin(s), which turns f = beta (u - uLow)(uHigh - u)(u3 - u)
 // into a smooth integrand.
-export function nodding(c, tp = turningPoints(c), n = 256) {
+// The turn integrand peaks sharply when the nod passes close to upright, so
+// it is integrated adaptively.
+export function nodding(c, tp = turningPoints(c)) {
   const m = 0.5 * (tp.uLow + tp.uHigh);
   const h = 0.5 * (tp.uHigh - tp.uLow);
-  let T = 0;
-  let P = 0;
-  for (let i = 0; i <= n; i++) {
-    const s = -Math.PI / 2 + (Math.PI * i) / n;
-    const u = m + h * Math.sin(s);
-    const w = i === 0 || i === n ? 1 : i % 2 ? 4 : 2;
-    const dt = 1 / Math.sqrt(c.beta * (tp.u3 - u));
-    T += w * dt;
-    P += w * dt * ((c.b - c.a * u) / (1 - u * u));
-  }
-  const ds = Math.PI / n / 3;
-  const period = 2 * T * ds;
-  const turn = 2 * P * ds;
+  const uAt = (s) => m + h * Math.sin(s);
+  const dt = (s) => 1 / Math.sqrt(c.beta * (tp.u3 - uAt(s)));
+  const dphi = (s) => {
+    const u = uAt(s);
+    return dt(s) * ((c.b - c.a * u) / (1 - u * u));
+  };
+  const period = 2 * integrate(dt, -Math.PI / 2, Math.PI / 2, 1e-12);
+  const turn = 2 * integrate(dphi, -Math.PI / 2, Math.PI / 2, 1e-10 * period * (Math.abs(c.a) + Math.abs(c.b) + 1));
   return { period, turn, precessionRate: turn / period };
+}
+
+// Adaptive Simpson's rule to an absolute tolerance.
+export function integrate(f, a, b, tol) {
+  const simpson = (a, fa, b, fb) => {
+    const m = 0.5 * (a + b);
+    const fm = f(m);
+    return { m, fm, S: ((b - a) / 6) * (fa + 4 * fm + fb) };
+  };
+  const recurse = (a, fa, b, fb, whole, tol, depth) => {
+    const left = simpson(a, fa, whole.m, whole.fm);
+    const right = simpson(whole.m, whole.fm, b, fb);
+    const diff = left.S + right.S - whole.S;
+    if (depth <= 0 || Math.abs(diff) <= 15 * tol) return left.S + right.S + diff / 15;
+    return (
+      recurse(a, fa, whole.m, whole.fm, left, tol / 2, depth - 1) +
+      recurse(whole.m, whole.fm, b, fb, right, tol / 2, depth - 1)
+    );
+  };
+  // Start from 16 panels so a narrow peak cannot hide between the first samples.
+  let total = 0;
+  const n = 16;
+  for (let i = 0; i < n; i++) {
+    const x0 = a + ((b - a) * i) / n;
+    const x1 = a + ((b - a) * (i + 1)) / n;
+    const f0 = f(x0);
+    const f1 = f(x1);
+    total += recurse(x0, f0, x1, f1, simpson(x0, f0, x1, f1), tol / n, 50);
+  }
+  return total;
+}
+
+// Axes of the body: e3 along the axle, leaning towards phi; e1 and e2 turn
+// with the body through psi.
+export function bodyAxes(theta, phi, psi) {
+  const st = Math.sin(theta);
+  const ct = Math.cos(theta);
+  const e3 = [st * Math.cos(phi), st * Math.sin(phi), ct];
+  const n = [-Math.sin(phi), Math.cos(phi), 0];
+  const m = cross(e3, n);
+  const c = Math.cos(psi);
+  const s = Math.sin(psi);
+  return {
+    e1: n.map((v, i) => c * v + s * m[i]),
+    e2: n.map((v, i) => -s * v + c * m[i]),
+    e3,
+  };
+}
+
+const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+function cross(p, q) {
+  return [p[1] * q[2] - p[2] * q[1], p[2] * q[0] - p[0] * q[2], p[0] * q[1] - p[1] * q[0]];
+}
+
+// The same motion integrated as vectors: angular momentum L about the tip and
+// two body axes. Unlike the Euler angles, nothing here is singular when the
+// axle passes through upright, so the animation uses this form.
+export function bodyState(release, top = TOY) {
+  const { theta, phiDot, omega3 } = release;
+  const thetaDot = release.thetaDot || 0;
+  const { e1, e3 } = bodyAxes(theta, 0, 0);
+  const node = [0, 1, 0];
+  const L = [0, 1, 2].map(
+    (i) => top.I1 * phiDot * ((i === 2 ? 1 : 0) - Math.cos(theta) * e3[i]) + top.I1 * thetaDot * node[i] + top.I3 * omega3 * e3[i],
+  );
+  return { t: 0, L, e1, e3 };
+}
+
+function bodyDeriv(L, e1, e3, top) {
+  const l3 = dot(L, e3);
+  const w = L.map((v, i) => v / top.I1 + (1 / top.I3 - 1 / top.I1) * l3 * e3[i]);
+  return [cross(e3, [0, 0, -top.mgl]), cross(w, e1), cross(w, e3)];
+}
+
+export function bodyStep(st, h, top = TOY) {
+  const at = (k, f) => [0, 1, 2].map((j) => [st.L, st.e1, st.e3][j].map((v, i) => v + f * k[j][i]));
+  const k1 = bodyDeriv(st.L, st.e1, st.e3, top);
+  const k2 = bodyDeriv(...at(k1, h / 2), top);
+  const k3 = bodyDeriv(...at(k2, h / 2), top);
+  const k4 = bodyDeriv(...at(k3, h), top);
+  const next = [st.L, st.e1, st.e3].map((x, j) => x.map((v, i) => v + (h / 6) * (k1[j][i] + 2 * k2[j][i] + 2 * k3[j][i] + k4[j][i])));
+  const [L, e1raw, e3raw] = next;
+  const n3 = Math.hypot(...e3raw);
+  const e3 = e3raw.map((v) => v / n3);
+  const p = dot(e1raw, e3);
+  const e1o = e1raw.map((v, i) => v - p * e3[i]);
+  const n1 = Math.hypot(...e1o);
+  return { t: st.t + h, L, e1: e1o.map((v) => v / n1), e3 };
+}
+
+export function bodyTilt(st) {
+  return Math.acos(Math.max(-1, Math.min(1, st.e3[2])));
+}
+
+// Kinetic plus potential energy of the vector state, in joules.
+export function bodyEnergy(st, top = TOY) {
+  const l3 = dot(st.L, st.e3);
+  const L2 = dot(st.L, st.L);
+  return 0.5 * ((L2 - l3 * l3) / top.I1 + (l3 * l3) / top.I3) + top.mgl * st.e3[2];
+}
+
+// A step that keeps every rotation per step small: the fastest the body can
+// turn is bounded by its energy, since |omega|^2 <= 2 KE / min(I1, I3).
+export function bodyStepSize(st, top = TOY) {
+  const ke = bodyEnergy(st, top) + top.mgl;
+  const wmax = Math.sqrt((2 * ke) / Math.min(top.I1, top.I3));
+  return Math.min(2e-4, 0.03 / wmax);
 }
