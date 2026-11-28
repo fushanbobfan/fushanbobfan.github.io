@@ -2,22 +2,7 @@
 
 import { effectivePotential, energyJoules } from './top.js';
 
-// Body axes of the top: e3 along the axle, leaning towards phi; e1 and e2
-// turn with the body through psi.
-export function bodyAxes(theta, phi, psi) {
-  const st = Math.sin(theta);
-  const ct = Math.cos(theta);
-  const e3 = [st * Math.cos(phi), st * Math.sin(phi), ct];
-  const n = [-Math.sin(phi), Math.cos(phi), 0];
-  const m = [e3[1] * n[2] - e3[2] * n[1], e3[2] * n[0] - e3[0] * n[2], e3[0] * n[1] - e3[1] * n[0]];
-  const c = Math.cos(psi);
-  const s = Math.sin(psi);
-  return {
-    e1: n.map((v, i) => c * v + s * m[i]),
-    e2: n.map((v, i) => -s * v + c * m[i]),
-    e3,
-  };
-}
+const cross = (p, q) => [p[1] * q[2] - p[2] * q[1], p[2] * q[0] - p[0] * q[2], p[0] * q[1] - p[1] * q[0]];
 
 // Orthographic camera looking down at `elev` from the side.
 export function makeView(width, height, scale, elev = 0.38, yaw = -0.5) {
@@ -48,7 +33,9 @@ export function drawTop(ctx, width, height, st, top, trail, colours) {
   const scale = (height * 0.62) / (top.height * 1.9);
   const view = makeView(width, height, scale);
   const P = (p) => view.project(p);
-  const { e1, e2, e3 } = bodyAxes(st.theta, st.phi, st.psi);
+  // `st` is the vector state: the axle e3 and a body axis e1 turning with the spin.
+  const { e1, e3 } = st;
+  const e2 = cross(e3, e1);
   const at = (k) => e3.map((v) => v * k);
 
   // Table: rings around the tip and the disc's shadow straight below it.
@@ -187,24 +174,33 @@ export function drawPath(ctx, size, trail, band, floor, colours) {
 
 // Energy picture for the tilt alone: the effective potential, the energy
 // line, and the band between the walls where the nod is allowed.
-export function potentialCurve(c, n = 240) {
-  const pts = [];
-  for (let i = 0; i <= n; i++) {
-    const theta = ((0.4 + (89.6 * i) / n) * Math.PI) / 180;
-    pts.push([theta, effectivePotential(theta, c)]);
+// Extra samples inside the band catch a minimum narrower than the grid.
+export function potentialCurve(c, band, n = 240) {
+  const thetas = [];
+  for (let i = 0; i <= n; i++) thetas.push(((0.4 + (89.6 * i) / n) * Math.PI) / 180);
+  if (band) {
+    for (let i = 0; i <= 60; i++) thetas.push(band.thetaMin + ((band.thetaMax - band.thetaMin) * i) / 60);
   }
-  return pts;
+  return thetas
+    .filter((t) => t > 0 && t <= Math.PI / 2)
+    .sort((x, y) => x - y)
+    .map((t) => [t, effectivePotential(t, c)]);
+}
+
+// Vertical range of the energy chart: always increasing upwards, and never
+// thinner than a small fraction of m g l, so a steady cone still shows its well.
+export function potentialRange(pts, E, mgl) {
+  const vmin = Math.min(E, ...pts.map((p) => p[1]));
+  const span = Math.max(E - vmin, 0.002 * mgl);
+  return { ylo: vmin - 0.25 * span, yhi: E + 1.2 * span };
 }
 
 export function drawPotential(ctx, width, height, c, band, theta, floor, colours) {
   ctx.clearRect(0, 0, width, height);
   const pad = { l: 56, r: 14, t: 14, b: 34 };
   const E = energyJoules(c);
-  const pts = potentialCurve(c);
-  const vmin = Math.min(...pts.map((p) => p[1]));
-  const span = Math.max(E - vmin, 1e-9);
-  const ylo = vmin - 0.25 * span;
-  const yhi = E + 1.2 * span;
+  const pts = potentialCurve(c, band.touches ? null : band);
+  const { ylo, yhi } = potentialRange(pts, E, c.top.mgl);
   const X = (t) => pad.l + ((t * 180) / Math.PI / 90) * (width - pad.l - pad.r);
   const Y = (v) => pad.t + (1 - (v - ylo) / (yhi - ylo)) * (height - pad.t - pad.b);
   ctx.font = '12px Georgia, serif';
