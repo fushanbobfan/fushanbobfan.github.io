@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { rpmLabel, angleLabel, pushLabel, seconds, perSecond, shapeLabel, describe, fallStory } from '../src/readout.js';
-import { bodyAxes, makeView, pathPoint, potentialCurve } from '../src/draw.js';
-import { TOY, constants, turningPoints, classify, floorAngle, rpmToRad, steadyPrecession, effectivePotential } from '../src/top.js';
+import { makeView, pathPoint, potentialCurve, potentialRange } from '../src/draw.js';
+import { TOY, bodyAxes, thetaAccel, constants, turningPoints, classify, floorAngle, rpmToRad, steadyPrecession, effectivePotential } from '../src/top.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
@@ -96,11 +96,12 @@ test('the story matches the motion and shows narrow nods with a decimal', () => 
   const base = { tilt: 25 * deg, floor: floorAngle(), touches: false, push: 0, precessionPeriod: 1.4 };
   assert.match(describe({ ...base, kind: 'cusps', thetaMin: 25 * deg, thetaMax: 30 * deg }), /from 25° to 30°.*cusps/);
   assert.match(describe({ ...base, kind: 'cusps', thetaMin: 3 * deg, thetaMax: 3.2 * deg }), /from 3\.0° to 3\.2°/);
+  assert.match(describe({ ...base, kind: 'waves', push: 2.5, rises: true, thetaMin: 0.0104 * deg, thetaMax: 17 * deg }), /between 0\.01° and 17°/);
   assert.match(describe({ ...base, kind: 'loops', thetaMin: 25 * deg, thetaMax: 34 * deg }), /backwards.*loops/);
-  assert.match(describe({ ...base, kind: 'waves', push: 1.8, thetaMin: 21 * deg, thetaMax: 25 * deg }), /rises.*waves/);
-  assert.match(describe({ ...base, kind: 'waves', push: 0.5, thetaMin: 25 * deg, thetaMax: 27 * deg }), /sinks.*waves/);
+  assert.match(describe({ ...base, kind: 'waves', push: 1.8, rises: true, thetaMin: 21 * deg, thetaMax: 25 * deg }), /1\.8 × the steady rate, the top first rises.*waves/);
+  assert.match(describe({ ...base, kind: 'waves', push: 0.5, rises: false, thetaMin: 25 * deg, thetaMax: 27 * deg }), /first sinks.*waves/);
   assert.match(describe({ ...base, kind: 'steady', thetaMin: 25 * deg, thetaMax: 25 * deg }), /cone, once every 1\.40 s/);
-  assert.match(describe({ ...base, touches: true, kind: 'cusps', thetaMin: 25 * deg, thetaMax: 83 * deg }), /out to 83°, and the rim hits the table at 53°/);
+  assert.match(describe({ ...base, touches: true, kind: 'cusps', thetaMin: 25 * deg, thetaMax: 83 * deg }), /With this spin and push.*out to 83°, and the rim hits the table at 53°/);
   assert.match(describe({ ...base, touches: true, kind: 'cusps', thetaMin: 25 * deg, thetaMax: Math.PI / 2 }), /beyond the horizontal/);
 });
 
@@ -142,8 +143,37 @@ test('the map puts tilt as distance from the centre', () => {
 test('the potential curve is the effective potential and dips inside the band', () => {
   const c = constants({ theta: 25 * deg, phiDot: 0, omega3: rpmToRad(2000) });
   const tp = turningPoints(c);
-  const pts = potentialCurve(c);
+  const pts = potentialCurve(c, tp);
   assert.ok(pts.every(([t, v]) => v === effectivePotential(t, c)));
+  assert.ok(pts.every((p, i) => i === 0 || p[0] >= pts[i - 1][0]));
   const lowest = pts.reduce((a, b) => (b[1] < a[1] ? b : a));
   assert.ok(lowest[0] > tp.thetaMin && lowest[0] < tp.thetaMax);
+});
+
+test('the energy chart range always runs upwards and contains the energy', () => {
+  const omega = rpmToRad(2000);
+  const steady = steadyPrecession(25 * deg, omega);
+  for (const rel of [
+    { theta: 25 * deg, phiDot: steady.slow, omega3: omega },
+    { theta: 2 * deg, phiDot: 0, omega3: rpmToRad(5000) },
+    { theta: 25 * deg, phiDot: 0, omega3: omega },
+  ]) {
+    const c = constants(rel);
+    const tp = turningPoints(c);
+    const E = 0.5 * c.top.I1 * c.alpha;
+    const { ylo, yhi } = potentialRange(potentialCurve(c, tp), E, c.top.mgl);
+    assert.ok(ylo < E && E < yhi);
+    assert.ok(effectivePotential(0.5 * (tp.thetaMin + tp.thetaMax), c) >= ylo);
+  }
+});
+
+test('the story says sinks or rises from the actual first motion', () => {
+  // Pushed past both steady rates at 1,100 rpm the top sinks, though the push is above 1.
+  const omega3 = rpmToRad(1100);
+  const sp = steadyPrecession(25 * deg, omega3);
+  const c = constants({ theta: 25 * deg, phiDot: 2.5 * sp.slow, omega3 });
+  assert.ok(2.5 * sp.slow > sp.fast);
+  assert.ok(thetaAccel(25 * deg, c) > 0);
+  const c2 = constants({ theta: 25 * deg, phiDot: 1.8 * steadyPrecession(25 * deg, rpmToRad(2000)).slow, omega3: rpmToRad(2000) });
+  assert.ok(thetaAccel(25 * deg, c2) < 0);
 });

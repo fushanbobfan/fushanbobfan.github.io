@@ -49,24 +49,24 @@ export function shapeLabel(kind, touches) {
 }
 
 // One or two sentences about the motion that the controls have set up.
-export function describe({ kind, thetaMin, thetaMax, tilt, floor, touches, push, precessionPeriod }) {
+export function describe({ kind, thetaMin, thetaMax, tilt, floor, touches, push, rises, precessionPeriod }) {
   // A nod narrower than 3 degrees needs a decimal place to show at all.
   const digits = !touches && thetaMax - thetaMin < (3 * Math.PI) / 180 ? 1 : 0;
-  const a = (x) => angleLabel(x, digits);
+  // Angles within a degree of upright keep two decimals, so 0.01° does not read as 0°.
+  const a = (x) => angleLabel(x, x < Math.PI / 180 ? 2 : digits);
   if (touches) {
-    return `Spun this slowly, the top cannot hold itself up. Its first nod would carry the axle from ${a(tilt)} out to ${thetaMax >= Math.PI / 2 - 1e-9 ? 'beyond the horizontal' : a(thetaMax)}, and the rim hits the table at ${a(floor)}.`;
+    return `With this spin and push, the top cannot hold itself up. Its first nod would carry the axle from ${a(tilt)} out to ${thetaMax >= Math.PI / 2 - 1e-9 ? 'beyond the horizontal' : a(thetaMax)}, and the rim hits the table at ${a(floor)}.`;
   }
   if (kind === 'steady') {
-    return `Pushed sideways at exactly the steady rate, the axle keeps its ${a(tilt)} tilt and sweeps out a cone, once every ${seconds(precessionPeriod)}.`;
+    return `Pushed sideways at exactly the steady rate, the axle keeps its ${angleLabel(tilt)} tilt and sweeps out a cone, once every ${seconds(precessionPeriod)}.`;
   }
   if (kind === 'cusps') {
     return `Let go from rest, the top first drops, from ${a(thetaMin)} to ${a(thetaMax)}, and the falling itself swings it sideways. It climbs back to ${a(thetaMin)} and stops dead there every time, so the tip of the axle draws cusps.`;
   }
   if (kind === 'loops') {
-    return `Pushed backwards, the axle nods between ${a(thetaMin)} and ${a(thetaMax)} and runs backwards for part of every nod, so its tip draws loops while the whole pattern still creeps forwards.`;
+    return `The axle nods between ${a(thetaMin)} and ${a(thetaMax)} and runs backwards for part of every nod, so its tip draws loops.`;
   }
-  const rises = push > 1;
-  return `Pushed ${rises ? 'faster than the steady rate, the top first rises' : 'slower than the steady rate, the top first sinks'}; the axle nods between ${a(thetaMin)} and ${a(thetaMax)} while it keeps going round the same way, so its tip draws waves.`;
+  return `Pushed sideways at ${pushLabel(push)}, the top first ${rises ? 'rises' : 'sinks'}; the axle nods between ${a(thetaMin)} and ${a(thetaMax)} while it keeps going round the same way, so its tip draws waves.`;
 }
 
 export function fallStory(t, floor) {
