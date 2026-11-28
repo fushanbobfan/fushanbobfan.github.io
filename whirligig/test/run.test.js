@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TOY, floorAngle, rpmToRad, steadyPrecession, constants, turningPoints, nodding, integrate,
-  bodyState, bodyStep, bodyStepSize, bodyTilt, bodyEnergy,
+  bodyState, bodyStep, bodyStepSize, bodyTilt, bodyEnergy, bodySpin, criticalSpin,
 } from '../src/top.js';
 import { createRun } from '../src/run.js';
 
@@ -133,4 +133,62 @@ test('the nod integrals stay quick near upright', () => {
   }
   const near = nodding(constants(release(1300, 3, 1.95)));
   assert.ok(Math.abs(near.precessionRate - 8.6072646) < 1e-5);
+});
+
+test('a steady friction couple drains the spin at a constant rate', () => {
+  const rel = release(2000, 25, 0);
+  const k = (TOY.I3 * rel.omega3) / 20;
+  let s = bodyState(rel);
+  const L30 = dot(s.L, s.e3);
+  const Lz0 = s.L[2];
+  const h = bodyStepSize(s);
+  let integral = 0;
+  for (let i = 0; i < 2 / h; i++) {
+    const before = s.e3[2];
+    s = bodyStep(s, h, TOY, k);
+    integral += 0.5 * h * (before + s.e3[2]);
+  }
+  // d(L . e3)/dt = -k, and dLz/dt = -k e3z.
+  assert.ok(Math.abs(dot(s.L, s.e3) - (L30 - k * s.t)) / L30 < 1e-9);
+  assert.ok(Math.abs(s.L[2] - (Lz0 - k * integral)) / Math.abs(Lz0) < 1e-7);
+  assert.ok(Math.abs(bodySpin(s) - rel.omega3 * (1 - s.t / 20)) / rel.omega3 < 1e-9);
+});
+
+test('an upright top spinning down stands until its spin passes the critical rate', () => {
+  const rel = release(3000, 3, 0);
+  const life = 15;
+  const run = createRun(rel, TOY, FLOOR, false, (TOY.I3 * rel.omega3) / life);
+  const crit = criticalSpin();
+  let worstAbove = 0;
+  run.advance(life, (s) => {
+    if (bodySpin(s) > 1.1 * crit) worstAbove = Math.max(worstAbove, bodyTilt(s));
+  }, 1e9, 1e9);
+  assert.ok(worstAbove < 5 * deg, `${worstAbove / deg}`);
+  assert.equal(run.fell, true);
+  assert.ok(bodySpin(run.state) < crit);
+  assert.ok(run.state.t < life);
+});
+
+test('as the spin dies the precession speeds up', () => {
+  const rel = release(2000, 25, 1);
+  const run = createRun(rel, TOY, FLOOR, false, (TOY.I3 * rel.omega3) / 30);
+  const turnRate = (seconds) => {
+    let prev = Math.atan2(run.state.e3[1], run.state.e3[0]);
+    let phi = 0;
+    const t0 = run.state.t;
+    run.advance(seconds, (s) => {
+      const now = Math.atan2(s.e3[1], s.e3[0]);
+      let d = now - prev;
+      if (d > Math.PI) d -= 2 * Math.PI;
+      if (d < -Math.PI) d += 2 * Math.PI;
+      phi += d;
+      prev = now;
+    }, 1e9, 1e9);
+    return phi / (run.state.t - t0);
+  };
+  const early = turnRate(2);
+  run.advance(8, null, 1, 1e9);
+  const late = turnRate(2);
+  assert.equal(run.fell, false);
+  assert.ok(late > early * 1.3, `${early} ${late}`);
 });

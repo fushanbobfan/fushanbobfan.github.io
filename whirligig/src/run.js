@@ -6,15 +6,17 @@ import { bodyState, bodyStep, bodyStepSize, bodyTilt } from './top.js';
 // `touches` is the prediction from the turning points. When the outer turning
 // point sits right at the floor the sampled tilt may only graze it, so a run
 // predicted to touch stops within a millionth of a radian of the floor.
-export function createRun(release, top, floor, touches) {
+// With friction the prediction no longer holds, so the plain tilt decides.
+export function createRun(release, top, floor, touches, friction = 0) {
   const run = {
     state: bodyState(release, top),
     fell: false,
     pending: 0,
     h: 0,
+    friction,
   };
   run.h = bodyStepSize(run.state, top);
-  const limit = floor - (touches ? 1e-6 : 0);
+  const limit = floor - (touches && !friction ? 1e-6 : 0);
 
   // Advance by `seconds` of simulated time; leftover time shorter than one
   // step carries over to the next call. `onSample` sees about `samples` states.
@@ -26,7 +28,7 @@ export function createRun(release, top, floor, touches) {
     if (n === maxSteps) run.pending = 0;
     const every = Math.max(1, Math.floor(n / samples));
     for (let i = 1; i <= n; i++) {
-      run.state = bodyStep(run.state, run.h, top);
+      run.state = bodyStep(run.state, run.h, top, friction);
       if (bodyTilt(run.state) >= limit) {
         run.fell = true;
         if (onSample) onSample(run.state);
